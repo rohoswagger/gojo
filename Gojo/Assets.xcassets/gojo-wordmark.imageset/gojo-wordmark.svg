@@ -1,0 +1,22 @@
+<svg width="760" height="220" viewBox="0 0 760 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gojoStroke" x1="40" y1="20" x2="220" y2="180" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#59E9FF"/>
+      <stop offset="1" stop-color="#8C62FF"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="760" height="220" rx="36" fill="#08101F"/>
+  <path d="M44 110C72 70 111 50 160 50C209 50 248 70 276 110C248 150 209 170 160 170C111 170 72 150 44 110Z" stroke="url(#gojoStroke)" stroke-width="14" stroke-linejoin="round"/>
+  <circle cx="160" cy="110" r="42" stroke="#59E9FF" stroke-width="10"/>
+  <circle cx="160" cy="110" r="15" fill="#F3F8FF"/>
+  <circle cx="160" cy="52" r="8" fill="#59E9FF"/>
+  <circle cx="210" cy="81" r="8" fill="#8C62FF"/>
+  <circle cx="210" cy="139" r="8" fill="#59E9FF"/>
+  <circle cx="160" cy="168" r="8" fill="#8C62FF"/>
+  <circle cx="110" cy="139" r="8" fill="#59E9FF"/>
+  <circle cx="110" cy="81" r="8" fill="#8C62FF"/>
+  <path d="M113 110C126 95 138 88 160 88C182 88 194 95 207 110" stroke="#F3F8FF" stroke-width="7" stroke-linecap="round"/>
+  <path d="M113 110C126 125 138 132 160 132C182 132 194 125 207 110" stroke="#F3F8FF" stroke-width="7" stroke-linecap="round"/>
+  <text x="320" y="103" fill="#F3F8FF" font-size="76" font-family="Helvetica, Arial, sans-serif" font-weight="700" letter-spacing="8">GOJO</text>
+  <text x="323" y="148" fill="#8DBBFF" font-size="26" font-family="Helvetica, Arial, sans-serif" font-weight="500">quick access to useful macOS controls</text>
+</svg>

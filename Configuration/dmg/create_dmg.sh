@@ -27,12 +27,14 @@ ensure_dmgbuild_and_badge_support() {
     return 0
   fi
 
-  local req_file="$SCRIPT_DIR/requirements.txt"
-  if [ ! -f "$req_file" ]; then
-    die "Dependency lock file not found: $req_file"
+  if ! command -v pip3 >/dev/null 2>&1; then
+    die "dmgbuild is not installed and pip3 is not available. Please install dmgbuild."
   fi
 
-  die "dmgbuild is not installed. Install hash-pinned dependencies first: python3 -m pip install --require-hashes -r $req_file"
+  echo "dmgbuild not found — installing via pip3 (user scope)..."
+  python3 -m pip install --user "dmgbuild[badge_icons]" || python3 -m pip install "dmgbuild[badge_icons]"
+  USER_BIN="$(python3 -c 'import site,sys; print(site.getuserbase() + "/bin")')"
+  export PATH="$USER_BIN:$PATH"
 }
 
 find_app_icns() {
@@ -96,7 +98,7 @@ echo "Creating DMG via dmgbuild: app=$DMG_APP_PATH output=$DMG_OUTPUT volume=$DM
 # Validate inputs early to give clearer errors for common typos
 if [ ! -e "$DMG_APP_PATH" ]; then
   echo "Error: App path not found: $DMG_APP_PATH" >&2
-  echo "Make sure you passed the correct .app path (e.g. Release/boringNotch.app)" >&2
+  echo "Make sure you passed the correct .app path (e.g. Release/Gojo.app)" >&2
   exit 2
 fi
 

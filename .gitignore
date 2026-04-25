@@ -1,3 +1,5 @@
+.omx/
+
 # Xcode
 *.xcuserstate
 *.xcuserdata
@@ -52,4 +54,3 @@ build/
 *.ipa
 *.xcarchive
 *.dSYM
-

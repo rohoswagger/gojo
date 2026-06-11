@@ -150,13 +150,17 @@ final class FluxManager: ObservableObject {
     }
 
     private func moveToward(_ target: Double) {
+        // A still-running transition means changes are arriving faster than the
+        // ease completes (slider scrubbing) — track the target live instead of
+        // restarting the ease and lagging behind.
+        let isScrubbing = transitionTimer?.isValid == true
         transitionTimer?.invalidate()
         let start = appliedKelvin
         let delta = target - start
 
-        // Small periodic drift applies directly; bigger jumps (toggle, phase
-        // boundary, settings change) ease in over a second.
-        guard abs(delta) > 25 else {
+        // Small periodic drift applies directly; bigger one-shot jumps (toggle,
+        // phase boundary) ease in over a second.
+        guard abs(delta) > 25, !isScrubbing else {
             apply(target)
             return
         }

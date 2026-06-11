@@ -145,10 +145,12 @@ struct FluxSettings: View {
                         .foregroundStyle(Color.effectiveAccent)
                         .frame(maxWidth: .infinity, alignment: .center)
 
+                    // The dot tracks the schedule (same source as the curve), not the
+                    // eased on-screen temperature, so it follows the slider live.
                     FluxScheduleChart(
                         samples: curveSamples,
                         nowMinute: nowMinute,
-                        nowKelvin: fluxEnabled ? fluxManager.currentKelvin : currentScheduleKelvin,
+                        nowKelvin: currentScheduleKelvin,
                         sunlightLabel: sunlightHoursLabel
                     )
                     .frame(height: 130)

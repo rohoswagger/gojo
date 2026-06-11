@@ -112,9 +112,39 @@ while time.time() < deadline:
             assert os.path.getsize(blob) == image["byteCount"], "byteCount mismatch"
             assert any(item.get("kind") == "text" and item["content"] == "gojo-image-smoke-spacer" for item in items), \
                 "text capture should still work alongside images"
-            print("clipboard-image-roundtrip-pass")
-            raise SystemExit(0)
+            break
+    time.sleep(0.25)
+else:
+    raise SystemExit("clipboard image roundtrip smoke failed")
+PY
+
+# Pasteboards carrying BOTH real text and image flavors (Excel cells,
+# Keynote objects) must be captured as text, not as an image.
+swift -e "
+import AppKit
+let pb = NSPasteboard.general
+pb.clearContents()
+pb.setString(\"gojo-dual-flavor-text\", forType: .string)
+pb.setData(try! Data(contentsOf: URL(fileURLWithPath: \"$TEST_PNG\")), forType: .png)
+"
+
+python3 - <<'PY'
+import json
+import os
+import time
+
+history_path = os.path.expanduser("~/Library/Application Support/Gojo/Clipboard/history.json")
+
+deadline = time.time() + 8
+while time.time() < deadline:
+    with open(history_path, "r", encoding="utf-8") as f:
+        items = json.load(f)
+    match = [item for item in items if item["content"] == "gojo-dual-flavor-text"]
+    if match:
+        assert match[0].get("kind") == "text", "text+image pasteboard must be stored as text"
+        print("clipboard-image-roundtrip-pass")
+        raise SystemExit(0)
     time.sleep(0.25)
 
-raise SystemExit("clipboard image roundtrip smoke failed")
+raise SystemExit("dual-flavor pasteboard was not captured as text")
 PY

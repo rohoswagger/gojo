@@ -19,6 +19,11 @@ final class ClipboardMonitorService {
 
     private let queue = DispatchQueue(label: "rohoswagger.gojo.clipboard-monitor", qos: .utility)
     private var timer: DispatchSourceTimer?
+
+    // Guarded by stateLock, not the poll queue: the poll handler can spend
+    // seconds converting a large image, and the main actor must be able to
+    // sync the change count without waiting behind it.
+    private let stateLock = NSLock()
     private var lastChangeCount = NSPasteboard.general.changeCount
 
     // Markers used by password managers and other apps to flag pasteboard
@@ -55,17 +60,21 @@ final class ClipboardMonitorService {
     }
 
     func syncChangeCountToCurrentPasteboard() {
-        queue.sync {
-            lastChangeCount = NSPasteboard.general.changeCount
-        }
+        let current = NSPasteboard.general.changeCount
+        stateLock.lock()
+        lastChangeCount = current
+        stateLock.unlock()
     }
 
     private func pollPasteboard() {
         let pasteboard = NSPasteboard.general
         let currentChangeCount = pasteboard.changeCount
 
-        guard currentChangeCount != lastChangeCount else { return }
+        stateLock.lock()
+        let changed = currentChangeCount != lastChangeCount
         lastChangeCount = currentChangeCount
+        stateLock.unlock()
+        guard changed else { return }
 
         guard let capture = extractCapture(from: pasteboard) else { return }
         Task { @MainActor [weak self] in
@@ -80,11 +89,18 @@ final class ClipboardMonitorService {
         }
 
         let sourceApp = NSWorkspace.shared.frontmostApplication
+        let text = pasteboard.string(forType: .string)
 
-        // File copies (Finder etc.) also carry image data for image files;
-        // treat those as text so the path string is what gets stored.
+        // Many apps publish image data alongside real text (Excel cell ranges,
+        // Keynote/PowerPoint objects, rich Word content) — those must stay
+        // text so history remains searchable and copy-back pastes text.
+        // A lone URL string next to image data is browser "Copy Image";
+        // keep the image there. File copies (Finder) stay text via the path
+        // string since their image flavor is just a preview.
         let hasFileURL = types.contains(.fileURL)
-        if !hasFileURL, let imagePayload = extractImagePayload(from: pasteboard) {
+        let hasMeaningfulText = text.map { !$0.isEmpty && !Self.isSingleURL($0) } ?? false
+        if !hasFileURL, !hasMeaningfulText,
+           let imagePayload = extractImagePayload(from: pasteboard) {
             return ClipboardCapture(
                 payload: imagePayload,
                 sourceAppName: sourceApp?.localizedName,
@@ -92,16 +108,24 @@ final class ClipboardMonitorService {
             )
         }
 
-        guard let text = pasteboard.string(forType: .string),
-              !text.isEmpty else {
-            return nil
-        }
+        guard let text, !text.isEmpty else { return nil }
 
         return ClipboardCapture(
             payload: .text(text),
             sourceAppName: sourceApp?.localizedName,
             sourceBundleID: sourceApp?.bundleIdentifier
         )
+    }
+
+    private static func isSingleURL(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              trimmed.rangeOfCharacter(from: .whitespacesAndNewlines) == nil,
+              let url = URL(string: trimmed),
+              let scheme = url.scheme?.lowercased() else {
+            return false
+        }
+        return ["http", "https", "file", "data"].contains(scheme)
     }
 
     private func extractImagePayload(from pasteboard: NSPasteboard) -> ClipboardCapture.Payload? {

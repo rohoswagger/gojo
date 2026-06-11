@@ -298,10 +298,16 @@ private struct ClipboardImageThumbnailView: View {
     let maxPixelSize: CGFloat
     @State private var image: NSImage?
 
+    // Cache hits render on the first frame; only uncached thumbnails go
+    // through the async generation path.
+    private var resolvedImage: NSImage? {
+        image ?? ClipboardImageStore.shared.cachedThumbnail(named: payload.fileName, maxPixelSize: maxPixelSize)
+    }
+
     var body: some View {
         Group {
-            if let image {
-                Image(nsImage: image)
+            if let resolvedImage {
+                Image(nsImage: resolvedImage)
                     .resizable()
                     .interpolation(.high)
                     .aspectRatio(contentMode: .fit)
@@ -316,11 +322,14 @@ private struct ClipboardImageThumbnailView: View {
             }
         }
         .task(id: "\(payload.fileName)#\(Int(maxPixelSize))") {
+            guard resolvedImage == nil else { return }
             let fileName = payload.fileName
             let size = maxPixelSize
-            image = await Task.detached(priority: .utility) {
+            let loaded = await Task.detached(priority: .utility) {
                 ClipboardImageStore.shared.thumbnail(named: fileName, maxPixelSize: size)
             }.value
+            guard !Task.isCancelled, fileName == payload.fileName else { return }
+            image = loaded
         }
     }
 }

@@ -7,9 +7,8 @@ import SwiftUI
 final class ClipboardStateViewModel: ObservableObject {
     static let shared = ClipboardStateViewModel()
     private static let hoverPreviewDelay: TimeInterval = 0.5
-    private static let screenshotBundleID = "com.apple.screencaptureui"
 
-    // Mirrors macOS screenshot file naming: "Screenshot 2026-06-11 at 12.24.01 PM".
+    // Mirrors macOS screenshot file naming: "Image 2026-06-11 at 12.24.01 PM".
     private static let imageNameFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd 'at' h.mm.ss a"
@@ -40,17 +39,25 @@ final class ClipboardStateViewModel: ObservableObject {
     private var isPointerOverHoveredRow = false
     private var isPointerOverPreviewPanel = false
     private var didStart = false
+    // One-shot sha256 marker so a copy-back picked up by the poller isn't
+    // re-registered as a fresh capture from an unrelated frontmost app.
+    private var suppressedCaptureFingerprint: String?
+    private var knownImageFileNames: Set<String> = []
 
     private init() {
+        let loadedItems = persistence.load()
         let collection = ClipboardCollection(
-            items: persistence.load(),
+            items: loadedItems ?? [],
             maxStoredItems: Defaults[.clipboardMaxEntries]
         )
         self.collection = collection
         self.items = collection.orderedItems
-        ClipboardImageStore.shared.pruneOrphans(
-            keeping: Set(collection.orderedItems.compactMap { $0.image?.fileName })
-        )
+        self.knownImageFileNames = Set(collection.orderedItems.compactMap { $0.image?.fileName })
+        // A failed load (loadedItems == nil) must not be mistaken for an
+        // empty history — pruning against it would delete every blob.
+        if loadedItems != nil {
+            ClipboardImageStore.shared.pruneOrphans(keeping: knownImageFileNames)
+        }
         configureMonitor()
         observeDefaults()
     }
@@ -89,28 +96,45 @@ final class ClipboardStateViewModel: ObservableObject {
     }
 
     func copy(_ item: ClipboardItem) {
-        let pasteboard = NSPasteboard.general
-
         switch item.kind {
         case .text:
+            let pasteboard = NSPasteboard.general
             pasteboard.clearContents()
             pasteboard.setString(item.content, forType: .string)
+            monitor.syncChangeCountToCurrentPasteboard()
+            presentCopiedFeedback(message: "Copied to clipboard")
+            presentCopiedRowFeedback(for: item.id)
         case .image:
-            guard let image = item.image,
-                  let data = ClipboardImageStore.shared.loadData(named: image.fileName) else {
-                presentCopiedFeedback(message: "Image is no longer available")
-                return
-            }
-            pasteboard.clearContents()
-            pasteboard.setData(data, forType: .png)
-            if let tiff = NSImage(data: data)?.tiffRepresentation {
-                pasteboard.setData(tiff, forType: .tiff)
+            guard let image = item.image else { return }
+            suppressedCaptureFingerprint = image.sha256
+            Task { [weak self] in
+                let fileName = image.fileName
+                let prepared = await Task.detached(priority: .userInitiated) { () -> (Data, Data?)? in
+                    guard let data = ClipboardImageStore.shared.loadData(named: fileName) else {
+                        return nil
+                    }
+                    return (data, NSImage(data: data)?.tiffRepresentation)
+                }.value
+
+                guard let self else { return }
+                guard let (data, tiff) = prepared else {
+                    // The blob is gone; the entry can never be copied again.
+                    self.suppressedCaptureFingerprint = nil
+                    self.delete(item)
+                    return
+                }
+
+                let pasteboard = NSPasteboard.general
+                pasteboard.clearContents()
+                pasteboard.setData(data, forType: .png)
+                if let tiff {
+                    pasteboard.setData(tiff, forType: .tiff)
+                }
+                self.monitor.syncChangeCountToCurrentPasteboard()
+                self.presentCopiedFeedback(message: "Copied to clipboard")
+                self.presentCopiedRowFeedback(for: item.id)
             }
         }
-
-        monitor.syncChangeCountToCurrentPasteboard()
-        presentCopiedFeedback(message: "Copied to clipboard")
-        presentCopiedRowFeedback(for: item.id)
     }
 
     func togglePin(_ item: ClipboardItem) {
@@ -120,9 +144,6 @@ final class ClipboardStateViewModel: ObservableObject {
     }
 
     func delete(_ item: ClipboardItem) {
-        if let fileName = item.image?.fileName {
-            ClipboardImageStore.shared.delete(named: fileName)
-        }
         collection.delete(item.id)
         syncItemsFromCollection()
         if hoveredItemID == item.id {
@@ -133,11 +154,6 @@ final class ClipboardStateViewModel: ObservableObject {
     }
 
     func clearNonPinned() {
-        for item in collection.orderedItems where !item.isPinned {
-            if let fileName = item.image?.fileName {
-                ClipboardImageStore.shared.delete(named: fileName)
-            }
-        }
         collection.clearNonPinned()
         syncItemsFromCollection()
         hoveredItemID = nil
@@ -275,6 +291,9 @@ final class ClipboardStateViewModel: ObservableObject {
             return
         }
 
+        let suppressedFingerprint = suppressedCaptureFingerprint
+        suppressedCaptureFingerprint = nil
+
         switch capture.payload {
         case .text(let text):
             collection.registerCopy(
@@ -282,29 +301,47 @@ final class ClipboardStateViewModel: ObservableObject {
                 sourceAppName: capture.sourceAppName,
                 sourceBundleID: capture.sourceBundleID
             )
+            finishCaptureRegistration()
         case .image(let data, let sha256, let pixelWidth, let pixelHeight):
-            let existingPayload = collection.orderedItems
-                .first { $0.kind == .image && $0.image?.sha256 == sha256 }?
-                .image
-            let payload = existingPayload ?? ClipboardImagePayload(
+            // Our own copy-back re-observed by the poller — not a new copy.
+            if sha256 == suppressedFingerprint { return }
+
+            if let existingPayload = collection.orderedItems
+                .first(where: { $0.kind == .image && $0.image?.sha256 == sha256 })?
+                .image {
+                registerImageCapture(payload: existingPayload, capture: capture)
+                return
+            }
+
+            let payload = ClipboardImagePayload(
                 fileName: "\(UUID().uuidString).png",
                 sha256: sha256,
                 pixelWidth: pixelWidth,
                 pixelHeight: pixelHeight,
                 byteCount: data.count
             )
-            if existingPayload == nil {
-                guard ClipboardImageStore.shared.save(data, named: payload.fileName) else { return }
+            Task { [weak self] in
+                let saved = await Task.detached(priority: .utility) {
+                    ClipboardImageStore.shared.save(data, named: payload.fileName)
+                }.value
+                guard saved, let self else { return }
+                self.registerImageCapture(payload: payload, capture: capture)
             }
-            let baseName = capture.sourceBundleID == Self.screenshotBundleID ? "Screenshot" : "Image"
-            collection.registerCopy(
-                content: "\(baseName) \(Self.imageNameFormatter.string(from: Date()))",
-                kind: .image,
-                image: payload,
-                sourceAppName: capture.sourceAppName,
-                sourceBundleID: capture.sourceBundleID
-            )
         }
+    }
+
+    private func registerImageCapture(payload: ClipboardImagePayload, capture: ClipboardCapture) {
+        collection.registerCopy(
+            content: "Image \(Self.imageNameFormatter.string(from: Date()))",
+            kind: .image,
+            image: payload,
+            sourceAppName: capture.sourceAppName,
+            sourceBundleID: capture.sourceBundleID
+        )
+        finishCaptureRegistration()
+    }
+
+    private func finishCaptureRegistration() {
         syncItemsFromCollection()
         persistItems()
         presentCopiedFeedback(message: "Copied to clipboard")
@@ -313,9 +350,15 @@ final class ClipboardStateViewModel: ObservableObject {
     private func persistItems() {
         let orderedItems = collection.orderedItems
         persistence.save(orderedItems)
-        ClipboardImageStore.shared.pruneOrphans(
-            keeping: Set(orderedItems.compactMap { $0.image?.fileName })
-        )
+
+        // Blobs whose items just left the history (deleted, cleared, or
+        // evicted by the entry limit) are removed immediately; the age-guarded
+        // orphan sweep at launch only handles crash leftovers.
+        let currentFileNames = Set(orderedItems.compactMap { $0.image?.fileName })
+        for removed in knownImageFileNames.subtracting(currentFileNames) {
+            ClipboardImageStore.shared.delete(named: removed)
+        }
+        knownImageFileNames = currentFileNames
     }
 
     private func syncItemsFromCollection() {

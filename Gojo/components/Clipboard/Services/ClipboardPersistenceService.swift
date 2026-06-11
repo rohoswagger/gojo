@@ -30,6 +30,7 @@ final class ClipboardImageStore {
 
         try? fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
         thumbnailCache.countLimit = 200
+        thumbnailCache.totalCostLimit = 64 * 1024 * 1024
     }
 
     func url(for fileName: String) -> URL {
@@ -52,7 +53,9 @@ final class ClipboardImageStore {
 
     func delete(named fileName: String) {
         let target = url(for: fileName)
-        thumbnailCache.removeObject(forKey: fileName as NSString)
+        // Cache keys are per-size composites; deletes are rare enough that
+        // dropping the whole cache is simpler than tracking keys per file.
+        thumbnailCache.removeAllObjects()
         pruneQueue.async {
             try? FileManager.default.removeItem(at: target)
         }
@@ -78,9 +81,14 @@ final class ClipboardImageStore {
         }
     }
 
+    /// Cached thumbnail only — never touches disk, safe to call from `body`.
+    func cachedThumbnail(named fileName: String, maxPixelSize: CGFloat) -> NSImage? {
+        thumbnailCache.object(forKey: Self.cacheKey(fileName: fileName, maxPixelSize: maxPixelSize))
+    }
+
     /// Downsampled image for display, cached per file + size.
     func thumbnail(named fileName: String, maxPixelSize: CGFloat) -> NSImage? {
-        let cacheKey = "\(fileName)#\(Int(maxPixelSize))" as NSString
+        let cacheKey = Self.cacheKey(fileName: fileName, maxPixelSize: maxPixelSize)
         if let cached = thumbnailCache.object(forKey: cacheKey) {
             return cached
         }
@@ -99,8 +107,12 @@ final class ClipboardImageStore {
         }
 
         let image = NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
-        thumbnailCache.setObject(image, forKey: cacheKey)
+        thumbnailCache.setObject(image, forKey: cacheKey, cost: cgImage.bytesPerRow * cgImage.height)
         return image
+    }
+
+    private static func cacheKey(fileName: String, maxPixelSize: CGFloat) -> NSString {
+        "\(fileName)#\(Int(maxPixelSize))" as NSString
     }
 }
 
@@ -132,12 +144,24 @@ final class ClipboardPersistenceService {
         decoder.dateDecodingStrategy = .iso8601
     }
 
-    func load() -> [ClipboardItem] {
-        guard let data = try? Data(contentsOf: fileURL),
-              let items = try? decoder.decode([ClipboardItem].self, from: data) else {
+    /// Returns nil when the history file exists but could not be read or
+    /// decoded — callers must not treat that as an empty history (e.g. by
+    /// pruning image blobs against it).
+    func load() -> [ClipboardItem]? {
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
             return []
         }
-        return items
+        guard let data = try? Data(contentsOf: fileURL) else {
+            return nil
+        }
+        if let items = try? decoder.decode([ClipboardItem].self, from: data) {
+            return items
+        }
+        // Salvage what decodes; drop only the malformed entries.
+        if let partial = try? decoder.decode([FailableClipboardItem].self, from: data) {
+            return partial.compactMap(\.item)
+        }
+        return nil
     }
 
     func save(_ items: [ClipboardItem]) {
@@ -147,5 +171,13 @@ final class ClipboardPersistenceService {
         } catch {
             NSLog("ClipboardPersistenceService.save failed: %@", error.localizedDescription)
         }
+    }
+}
+
+private struct FailableClipboardItem: Decodable {
+    let item: ClipboardItem?
+
+    init(from decoder: Decoder) throws {
+        item = try? ClipboardItem(from: decoder)
     }
 }

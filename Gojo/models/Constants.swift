@@ -197,6 +197,7 @@ extension Defaults.Keys {
     
     // MARK: Flux (night shift)
     static let fluxEnabled = Key<Bool>("fluxEnabled", default: false)
+    static let fluxStartAtLogin = Key<Bool>("fluxStartAtLogin", default: false)
     static let fluxShowInNotch = Key<Bool>("fluxShowInNotch", default: true)
     static let fluxDayKelvin = Key<Double>("fluxDayKelvin", default: 6500)
     static let fluxSunsetKelvin = Key<Double>("fluxSunsetKelvin", default: 3400)

@@ -43,6 +43,10 @@ final class FluxManager: ObservableObject {
         guard !started else { return }
         started = true
 
+        if Defaults[.fluxStartAtLogin], !Defaults[.fluxEnabled] {
+            Defaults[.fluxEnabled] = true
+        }
+
         let fluxKeys: [Defaults._AnyKey] = [
             .fluxEnabled, .fluxDayKelvin, .fluxSunsetKelvin, .fluxBedtimeKelvin,
             .fluxBedtimeMinutes, .fluxWindDownMinutes, .fluxLocation,

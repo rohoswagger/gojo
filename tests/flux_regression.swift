@@ -76,6 +76,15 @@ struct FluxRegressionRunner {
                     "kelvin clamps at the low end")
         assertEqual(FluxColorMath.whitePoint(kelvin: 20000), FluxColorMath.whitePoint(kelvin: 6500),
                     "kelvin clamps at the high end")
+
+        // Human-readable descriptors
+        assertEqual(FluxColorMath.descriptor(kelvin: 6500), "Normal (Daylight)", "6500K descriptor")
+        assertEqual(FluxColorMath.descriptor(kelvin: 10000), "Normal (Daylight)", "descriptor clamps high")
+        assertEqual(FluxColorMath.descriptor(kelvin: 5000), "5000K (Sunlight)", "5000K descriptor")
+        assertEqual(FluxColorMath.descriptor(kelvin: 3400), "3400K (Halogen)", "3400K descriptor")
+        assertEqual(FluxColorMath.descriptor(kelvin: 2700), "2700K (Incandescent)", "2700K descriptor")
+        assertEqual(FluxColorMath.descriptor(kelvin: 2300), "2300K (Dim Incandescent)", "2300K descriptor")
+        assertEqual(FluxColorMath.descriptor(kelvin: 1900), "1900K (Candle)", "1900K descriptor")
     }
 
     // MARK: - Solar calculator

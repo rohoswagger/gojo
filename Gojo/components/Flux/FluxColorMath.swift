@@ -18,6 +18,24 @@ enum FluxColorMath {
     static let minKelvin: Double = 1000
     static let maxKelvin: Double = 6500
 
+    /// f.lux-style human-readable name for a color temperature,
+    /// e.g. "3400K (Halogen)" or "Normal (Daylight)" at the top of the range.
+    static func descriptor(kelvin: Double) -> String {
+        let k = min(max(kelvin, minKelvin), maxKelvin)
+        if k >= 6450 { return "Normal (Daylight)" }
+        let name: String
+        switch k {
+        case ..<2100: name = "Candle"
+        case ..<2500: name = "Dim Incandescent"
+        case ..<3000: name = "Incandescent"
+        case ..<3800: name = "Halogen"
+        case ..<4600: name = "Fluorescent"
+        case ..<5700: name = "Sunlight"
+        default: name = "Daylight"
+        }
+        return "\(Int(k.rounded()))K (\(name))"
+    }
+
     /// Per-channel gamma scale factors (0...1) for a blackbody color temperature.
     /// Uses the Tanner Helland blackbody approximation, normalized so the
     /// brightest channel stays at 1 — gamma should only attenuate, never boost.

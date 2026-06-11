@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F1AC100000000000000000B8 /* FluxTemperatureEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1AC100000000000000000A8 /* FluxTemperatureEditor.swift */; };
 		F1AC100000000000000000B1 /* FluxColorMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1AC100000000000000000A1 /* FluxColorMath.swift */; };
 		F1AC100000000000000000B2 /* SolarCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1AC100000000000000000A2 /* SolarCalculator.swift */; };
 		F1AC100000000000000000B3 /* FluxSchedule.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1AC100000000000000000A3 /* FluxSchedule.swift */; };
@@ -207,6 +208,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		F1AC100000000000000000A8 /* FluxTemperatureEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FluxTemperatureEditor.swift; sourceTree = "<group>"; };
 		F1AC100000000000000000A1 /* FluxColorMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FluxColorMath.swift; sourceTree = "<group>"; };
 		F1AC100000000000000000A2 /* SolarCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SolarCalculator.swift; sourceTree = "<group>"; };
 		F1AC100000000000000000A3 /* FluxSchedule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FluxSchedule.swift; sourceTree = "<group>"; };
@@ -779,6 +781,7 @@
 				F1AC100000000000000000A5 /* FluxLocationManager.swift */,
 				F1AC100000000000000000A6 /* FluxManager.swift */,
 				F1AC100000000000000000A7 /* FluxSettings.swift */,
+				F1AC100000000000000000A8 /* FluxTemperatureEditor.swift */,
 			);
 			path = Flux;
 			sourceTree = "<group>";
@@ -1139,6 +1142,7 @@
 				F1AC100000000000000000B5 /* FluxLocationManager.swift in Sources */,
 				F1AC100000000000000000B6 /* FluxManager.swift in Sources */,
 				F1AC100000000000000000B7 /* FluxSettings.swift in Sources */,
+				F1AC100000000000000000B8 /* FluxTemperatureEditor.swift in Sources */,
 				1153BD932D986E4300979FB0 /* AppleMusicController.swift in Sources */,
 				11C5E3132DFE85970065821E /* SettingsWindowController.swift in Sources */,
 				110029272E84FD4C00035A57 /* TemporaryFileStorageService.swift in Sources */,

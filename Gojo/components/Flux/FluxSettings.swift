@@ -20,6 +20,7 @@ struct FluxSettings: View {
     @Default(.fluxBedtimeKelvin) var bedtimeKelvin
 
     @State private var locationQuery = ""
+    @State private var selectedPhase: FluxEditablePhase = .daytime
 
     var body: some View {
         Form {
@@ -47,6 +48,12 @@ struct FluxSettings: View {
                 Defaults.Toggle(key: .fluxShowInNotch) {
                     Text("Show toggle in notch")
                 }
+                Defaults.Toggle(key: .fluxStartAtLogin) {
+                    Text("Start night shift at login")
+                }
+                Text("Turns night shift on whenever Gojo starts. Pair with “Launch at login” in General settings so Gojo starts with your Mac.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             } header: {
                 Text("General")
             }
@@ -120,9 +127,33 @@ struct FluxSettings: View {
             }
 
             Section {
-                kelvinSlider("Daytime", value: $dayKelvin, in: 5000...6500)
-                kelvinSlider("After sunset", value: $sunsetKelvin, in: 2700...5000)
-                kelvinSlider("Bedtime", value: $bedtimeKelvin, in: 1900...3400)
+                VStack(alignment: .leading, spacing: 14) {
+                    FluxKelvinSlider(kelvin: selectedKelvinBinding)
+
+                    Picker("Phase", selection: $selectedPhase) {
+                        ForEach(FluxEditablePhase.allCases) { phase in
+                            Text(phase.rawValue).tag(phase)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .frame(maxWidth: 320)
+                    .frame(maxWidth: .infinity)
+
+                    Text(phaseStatusDescription)
+                        .font(.callout)
+                        .foregroundStyle(Color.effectiveAccent)
+                        .frame(maxWidth: .infinity, alignment: .center)
+
+                    FluxScheduleChart(
+                        samples: curveSamples,
+                        nowMinute: nowMinute,
+                        nowKelvin: fluxEnabled ? fluxManager.currentKelvin : currentScheduleKelvin,
+                        sunlightLabel: sunlightHoursLabel
+                    )
+                    .frame(height: 130)
+                }
+                .padding(.vertical, 6)
             } header: {
                 Text("Color Temperature")
             }
@@ -179,18 +210,91 @@ struct FluxSettings: View {
         return date.formatted(date: .omitted, time: .shortened)
     }
 
-    private func kelvinSlider(
-        _ label: String, value: Binding<Double>, in range: ClosedRange<Double>
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(label)
-                Spacer()
-                Text("\(Int(value.wrappedValue))K")
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
+    // MARK: - Temperature editor helpers
+
+    private var selectedKelvinBinding: Binding<Double> {
+        switch selectedPhase {
+        case .daytime: return $dayKelvin
+        case .sunset: return $sunsetKelvin
+        case .bedtime: return $bedtimeKelvin
+        }
+    }
+
+    private var scheduleConfig: FluxScheduleConfig {
+        FluxScheduleConfig(
+            dayKelvin: dayKelvin,
+            sunsetKelvin: sunsetKelvin,
+            bedtimeKelvin: bedtimeKelvin,
+            bedtimeMinutes: Double(bedtimeMinutes),
+            windDownMinutes: Double(windDownMinutes),
+            transitionMinutes: 60
+        )
+    }
+
+    private var curveSamples: [FluxCurveSample] {
+        FluxScheduleChart.sampleCurve(config: scheduleConfig, solar: FluxManager.solarEventsToday())
+    }
+
+    private var nowMinute: Double {
+        let components = Calendar.current.dateComponents([.hour, .minute], from: Date())
+        return Double((components.hour ?? 0) * 60 + (components.minute ?? 0))
+    }
+
+    private var currentScheduleKelvin: Double {
+        FluxScheduleEngine.evaluate(
+            nowMinutes: nowMinute, solar: FluxManager.solarEventsToday(), config: scheduleConfig
+        ).kelvin
+    }
+
+    /// f.lux-style context line, e.g. "Sunrise: 6 hours ago (6500K)".
+    private var phaseStatusDescription: String {
+        let (eventName, eventMinutes, kelvin): (String, Double?, Double)
+        let solar = FluxManager.solarEventsToday()
+        switch selectedPhase {
+        case .daytime:
+            if case .regular(let rise, _)? = solar {
+                (eventName, eventMinutes, kelvin) = ("Sunrise", rise, dayKelvin)
+            } else {
+                (eventName, eventMinutes, kelvin) =
+                    ("Sunrise", solar == nil ? FluxScheduleEngine.fallbackSunriseMinutes : nil, dayKelvin)
             }
-            Slider(value: value, in: range, step: 50)
+        case .sunset:
+            if case .regular(_, let set)? = solar {
+                (eventName, eventMinutes, kelvin) = ("Sunset", set, sunsetKelvin)
+            } else {
+                (eventName, eventMinutes, kelvin) =
+                    ("Sunset", solar == nil ? FluxScheduleEngine.fallbackSunsetMinutes : nil, sunsetKelvin)
+            }
+        case .bedtime:
+            (eventName, eventMinutes, kelvin) = ("Bedtime", Double(bedtimeMinutes), bedtimeKelvin)
+        }
+
+        guard let eventMinutes else {
+            // Polar day/night: there is no sunrise/sunset today
+            return "\(eventName): not today (\(Int(kelvin))K)"
+        }
+        let total = Int(eventMinutes.rounded())
+        let eventDate = Calendar.current.date(
+            bySettingHour: (total / 60) % 24, minute: total % 60, second: 0, of: Date()
+        ) ?? Date()
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        let relative = formatter.localizedString(for: eventDate, relativeTo: Date())
+        return "\(eventName): \(relative) (\(Int(kelvin))K)"
+    }
+
+    private var sunlightHoursLabel: String {
+        switch FluxManager.solarEventsToday() {
+        case .regular(let rise, let set):
+            let minutes = set - rise >= 0 ? set - rise : set - rise + 1440
+            let hours = (minutes / 60).rounded()
+            return "\(Int(hours)) sunlight hours"
+        case .polarDay:
+            return "24 sunlight hours (polar day)"
+        case .polarNight:
+            return "0 sunlight hours (polar night)"
+        case nil:
+            return "12 sunlight hours (assumed — no location set)"
         }
     }
 }

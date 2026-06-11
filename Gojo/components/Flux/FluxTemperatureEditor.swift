@@ -124,9 +124,12 @@ struct FluxScheduleChart: View {
         VStack(alignment: .leading, spacing: 6) {
             Chart {
                 ForEach(samples) { sample in
+                    // Explicit baseline at the domain minimum — an implicit
+                    // y=0 baseline lies outside the clipped 1500...6700 domain
                     AreaMark(
                         x: .value("Time", sample.minute),
-                        y: .value("Temperature", sample.kelvin)
+                        yStart: .value("Temperature", 1500),
+                        yEnd: .value("Temperature", sample.kelvin)
                     )
                     .interpolationMethod(.monotone)
                     .foregroundStyle(

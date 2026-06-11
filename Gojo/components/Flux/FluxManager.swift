@@ -24,6 +24,7 @@ final class FluxManager: ObservableObject {
     private var transitionTimer: Timer?
     private var resumeTimer: Timer?
     private var appliedKelvin: Double = FluxColorMath.maxKelvin
+    private var transitionTarget: Double?
     private var cancellables: Set<AnyCancellable> = []
     private var started = false
 
@@ -55,9 +56,12 @@ final class FluxManager: ObservableObject {
             .sink { [weak self] in self?.refresh() }
             .store(in: &cancellables)
 
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+        // .common mode so the schedule keeps ticking during menu/drag tracking
+        let timer = Timer(timeInterval: 30, repeats: true) { [weak self] _ in
             self?.refresh()
         }
+        RunLoop.main.add(timer, forMode: .common)
+        refreshTimer = timer
 
         NSWorkspace.shared.notificationCenter.addObserver(
             self, selector: #selector(handleWake),
@@ -86,9 +90,11 @@ final class FluxManager: ObservableObject {
         resumeTimer?.invalidate()
         DispatchQueue.main.async {
             self.pausedUntil = Date().addingTimeInterval(interval)
-            self.resumeTimer = Timer.scheduledTimer(withTimeInterval: interval + 1, repeats: false) { [weak self] _ in
+            let timer = Timer(timeInterval: interval + 1, repeats: false) { [weak self] _ in
                 self?.resume()
             }
+            RunLoop.main.add(timer, forMode: .common)
+            self.resumeTimer = timer
             self.refresh()
         }
     }
@@ -121,19 +127,22 @@ final class FluxManager: ObservableObject {
         )
     }
 
-    static func evaluateSchedule(at date: Date = Date()) -> (kelvin: Double, phase: FluxPhase) {
-        let components = Calendar.current.dateComponents([.hour, .minute], from: date)
-        let nowMinutes = Double((components.hour ?? 0) * 60 + (components.minute ?? 0))
-        let config = FluxScheduleConfig(
+    /// The schedule configuration as currently stored in Defaults.
+    static var currentConfig: FluxScheduleConfig {
+        FluxScheduleConfig(
             dayKelvin: Defaults[.fluxDayKelvin],
             sunsetKelvin: Defaults[.fluxSunsetKelvin],
             bedtimeKelvin: Defaults[.fluxBedtimeKelvin],
             bedtimeMinutes: Double(Defaults[.fluxBedtimeMinutes]),
-            windDownMinutes: Double(Defaults[.fluxWindDownMinutes]),
-            transitionMinutes: 60
+            windDownMinutes: Double(Defaults[.fluxWindDownMinutes])
         )
+    }
+
+    static func evaluateSchedule(at date: Date = Date()) -> (kelvin: Double, phase: FluxPhase) {
+        let components = Calendar.current.dateComponents([.hour, .minute], from: date)
+        let nowMinutes = Double((components.hour ?? 0) * 60 + (components.minute ?? 0))
         return FluxScheduleEngine.evaluate(
-            nowMinutes: nowMinutes, solar: solarEventsToday(at: date), config: config)
+            nowMinutes: nowMinutes, solar: solarEventsToday(at: date), config: currentConfig)
     }
 
     private func refreshOnMain() {
@@ -150,24 +159,35 @@ final class FluxManager: ObservableObject {
     }
 
     private func moveToward(_ target: Double) {
-        // A still-running transition means changes are arriving faster than the
-        // ease completes (slider scrubbing) — track the target live instead of
-        // restarting the ease and lagging behind.
-        let isScrubbing = transitionTimer?.isValid == true
+        if transitionTimer?.isValid == true, let inFlight = transitionTarget {
+            // A periodic refresh re-derived the target we're already easing
+            // toward — let the ease finish instead of snapping to the end.
+            if abs(target - inFlight) < 1 {
+                return
+            }
+            // The target moved while easing (slider scrubbing) — track it live.
+            transitionTimer?.invalidate()
+            transitionTarget = nil
+            apply(target)
+            return
+        }
+
         transitionTimer?.invalidate()
         let start = appliedKelvin
         let delta = target - start
 
         // Small periodic drift applies directly; bigger one-shot jumps (toggle,
         // phase boundary) ease in over a second.
-        guard abs(delta) > 25, !isScrubbing else {
+        guard abs(delta) > 25 else {
             apply(target)
             return
         }
 
         let steps = 30
         var step = 0
-        transitionTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) { [weak self] timer in
+        transitionTarget = target
+        // .common mode so the ease keeps animating during menu/drag tracking
+        let timer = Timer(timeInterval: 1.0 / 30.0, repeats: true) { [weak self] timer in
             guard let self else {
                 timer.invalidate()
                 return
@@ -178,9 +198,12 @@ final class FluxManager: ObservableObject {
             self.apply(start + delta * eased)
             if step >= steps {
                 timer.invalidate()
+                self.transitionTarget = nil
                 self.apply(target)
             }
         }
+        RunLoop.main.add(timer, forMode: .common)
+        transitionTimer = timer
     }
 
     private func apply(_ kelvin: Double) {

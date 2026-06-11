@@ -85,6 +85,8 @@ struct FluxRegressionRunner {
         assertEqual(FluxColorMath.descriptor(kelvin: 2700), "2700K (Incandescent)", "2700K descriptor")
         assertEqual(FluxColorMath.descriptor(kelvin: 2300), "2300K (Dim Incandescent)", "2300K descriptor")
         assertEqual(FluxColorMath.descriptor(kelvin: 1900), "1900K (Candle)", "1900K descriptor")
+        assertEqual(FluxColorMath.descriptor(kelvin: 6449), "6449K (Daylight)", "just below the Normal cutoff")
+        assertEqual(FluxColorMath.descriptor(kelvin: 6450), "Normal (Daylight)", "Normal cutoff boundary")
     }
 
     // MARK: - Solar calculator
@@ -204,6 +206,45 @@ struct FluxRegressionRunner {
         let earlyBed = FluxScheduleEngine.evaluate(nowMinutes: 17 * 60, solar: solar, config: earlyConfig)
         assertEqual(earlyBed.kelvin, 2300, "bedtime before sunset overrides daylight")
         assertEqual(earlyBed.phase, .bedtime, "bedtime-before-sunset phase")
+
+        // ...and its wind-down starts from the daylight temperature, with no
+        // cliff at the window boundary (15:00 for a 16:00 bedtime)
+        let windEntry = FluxScheduleEngine.evaluate(nowMinutes: 15 * 60, solar: solar, config: earlyConfig)
+        assertClose(windEntry.kelvin, 6500, tolerance: 1, "daytime wind-down enters continuously")
+        var previousEarly = windEntry.kelvin
+        for minute in [10, 20, 30, 40, 50, 59] {
+            let kelvin = FluxScheduleEngine.evaluate(
+                nowMinutes: Double(15 * 60 + minute), solar: solar, config: earlyConfig).kelvin
+            assertTrue(kelvin < previousEarly, "daytime wind-down decreases (15:\(minute))")
+            previousEarly = kelvin
+        }
+
+        // Default-style bedtime with a late sunset: the wind-down window starts
+        // inside the sunset transition and must hand off continuously
+        let lateSunset = SolarDayEvents.regular(sunriseMinutes: 4 * 60 + 45, sunsetMinutes: 21 * 60 + 21)
+        let handoff = FluxScheduleEngine.evaluate(nowMinutes: 22 * 60, solar: lateSunset, config: config)
+        let solarAtHandoff = 6500 + (3400 - 6500) * (39.0 / 60.0)
+        assertClose(handoff.kelvin, solarAtHandoff, tolerance: 1,
+                    "wind-down inside the sunset transition starts at the solar value")
+        let beforeHandoff = FluxScheduleEngine.evaluate(nowMinutes: 22 * 60 - 1, solar: lateSunset, config: config)
+        assertTrue(abs(beforeHandoff.kelvin - handoff.kelvin) < 120,
+                   "no cliff crossing the wind-down boundary (late sunset)")
+
+        // Bedtime after sunrise (night-shift worker): the hold is capped at a
+        // night's sleep instead of pinning the screen warm all day
+        var morningConfig = config
+        morningConfig.bedtimeMinutes = 6 * 60 // 06:00, sunrise is 05:30
+        let asleep = FluxScheduleEngine.evaluate(nowMinutes: 12 * 60, solar: solar, config: morningConfig)
+        assertEqual(asleep.kelvin, 2300, "morning bedtime holds through the sleep window")
+        let awake = FluxScheduleEngine.evaluate(nowMinutes: 16 * 60 + 30, solar: solar, config: morningConfig)
+        assertEqual(awake.kelvin, 6500, "morning bedtime releases to day after the capped hold")
+        assertEqual(awake.phase, .day, "post-release phase is day")
+
+        // Zero wind-down doesn't divide by zero and still hits bedtime kelvin
+        var instantConfig = config
+        instantConfig.windDownMinutes = 0
+        let instant = FluxScheduleEngine.evaluate(nowMinutes: 23 * 60, solar: solar, config: instantConfig)
+        assertEqual(instant.kelvin, 2300, "zero wind-down reaches bedtime kelvin at bedtime")
 
         // No location: falls back to 07:00/19:00
         let fallbackNoon = FluxScheduleEngine.evaluate(nowMinutes: 12 * 60, solar: nil, config: config)

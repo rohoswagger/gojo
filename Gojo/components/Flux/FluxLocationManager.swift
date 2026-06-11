@@ -28,6 +28,9 @@ final class FluxLocationManager: NSObject, ObservableObject, CLLocationManagerDe
     private let geocoder = CLGeocoder()
     private var wantsCurrentLocation = false
 
+    private static let deniedErrorMessage =
+        "Location access is denied. Enable it for Gojo in System Settings → Privacy & Security → Location Services, or set a city/ZIP below."
+
     override private init() {
         super.init()
         manager.delegate = self
@@ -41,7 +44,7 @@ final class FluxLocationManager: NSObject, ObservableObject, CLLocationManagerDe
         case .notDetermined:
             manager.requestWhenInUseAuthorization()
         case .denied, .restricted:
-            finish(error: "Location access is denied. Enable it for Gojo in System Settings → Privacy & Security → Location Services, or set a city/ZIP below.")
+            finish(error: Self.deniedErrorMessage)
         default:
             manager.requestLocation()
         }
@@ -51,9 +54,15 @@ final class FluxLocationManager: NSObject, ObservableObject, CLLocationManagerDe
     func setLocation(query: String) {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
+        // A manual entry supersedes any in-flight current-location request
+        wantsCurrentLocation = false
+        geocoder.cancelGeocode()
         beginResolving()
         geocoder.geocodeAddressString(trimmed) { [weak self] placemarks, error in
             guard let self else { return }
+            if let clError = error as? CLError, clError.code == .geocodeCanceled {
+                return // superseded by a newer request
+            }
             guard error == nil, let placemark = placemarks?.first, let location = placemark.location else {
                 self.finish(error: "Couldn't find “\(trimmed)”. Try a city name or ZIP code.")
                 return
@@ -63,9 +72,9 @@ final class FluxLocationManager: NSObject, ObservableObject, CLLocationManagerDe
     }
 
     func clearLocation() {
+        wantsCurrentLocation = false
         Defaults[.fluxLocation] = nil
         DispatchQueue.main.async { self.lastError = nil }
-        FluxManager.shared.refresh()
     }
 
     private func beginResolving() {
@@ -86,8 +95,8 @@ final class FluxLocationManager: NSObject, ObservableObject, CLLocationManagerDe
                 longitude: coordinate.longitude,
                 name: name.isEmpty ? fallbackName : name
             )
+            // FluxManager observes .fluxLocation, so no explicit refresh needed
             self.isResolving = false
-            FluxManager.shared.refresh()
         }
     }
 
@@ -107,7 +116,7 @@ final class FluxLocationManager: NSObject, ObservableObject, CLLocationManagerDe
         case .authorizedAlways, .authorizedWhenInUse:
             manager.requestLocation()
         case .denied, .restricted:
-            finish(error: "Location access is denied. Enable it for Gojo in System Settings → Privacy & Security → Location Services, or set a city/ZIP below.")
+            finish(error: Self.deniedErrorMessage)
         default:
             break
         }
@@ -116,6 +125,7 @@ final class FluxLocationManager: NSObject, ObservableObject, CLLocationManagerDe
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard wantsCurrentLocation, let location = locations.last else { return }
         wantsCurrentLocation = false
+        geocoder.cancelGeocode()
         geocoder.reverseGeocodeLocation(location) { [weak self] placemarks, _ in
             self?.store(coordinate: location.coordinate, placemark: placemarks?.first)
         }

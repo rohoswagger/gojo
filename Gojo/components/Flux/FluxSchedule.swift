@@ -38,6 +38,11 @@ enum FluxScheduleEngine {
     static let fallbackSunriseMinutes: Double = 7 * 60
     static let fallbackSunsetMinutes: Double = 19 * 60
 
+    /// The bedtime hold normally ends at sunrise, but never runs longer than
+    /// this — an early-morning bedtime (later than sunrise) would otherwise
+    /// pin the screen at the bedtime temperature for the entire waking day.
+    static let maxBedtimeHoldMinutes: Double = 9 * 60
+
     /// Evaluates the schedule at a moment in time.
     /// - Parameters:
     ///   - nowMinutes: minutes after local midnight (0..<1440)
@@ -64,8 +69,15 @@ enum FluxScheduleEngine {
 
         let (solarKelvin, solarPhase) = solarComponent(
             now: now, sunrise: sunrise, sunset: sunset, solar: solar, config: config)
+
+        // The wind-down ramp starts from whatever the solar cycle shows at
+        // that moment, so the hand-off stays continuous even when the window
+        // begins in daylight or inside the sunset transition.
+        let windStart = wrap(config.bedtimeMinutes - max(config.windDownMinutes, 1))
+        let (windStartKelvin, _) = solarComponent(
+            now: windStart, sunrise: sunrise, sunset: sunset, solar: solar, config: config)
         let (bedKelvin, bedPhase) = bedtimeComponent(
-            now: now, sunrise: sunrise, config: config)
+            now: now, sunrise: sunrise, windStartKelvin: windStartKelvin, config: config)
 
         // The dimmer of the two wins, so a bedtime before sunset (or a late
         // sunset) never produces a brighter screen than the other component.
@@ -113,12 +125,13 @@ enum FluxScheduleEngine {
         return (config.sunsetKelvin, .evening)
     }
 
-    /// Bedtime override: ramps from the sunset temperature down to the bedtime
-    /// temperature across the wind-down window, holds it until sunrise, then
-    /// releases back to day across the sunrise transition.
+    /// Bedtime override: ramps from the solar temperature at the wind-down
+    /// start down to the bedtime temperature, holds it until sunrise (capped
+    /// at a night's sleep), then releases back to day across the transition.
     private static func bedtimeComponent(
         now: Double,
         sunrise: Double,
+        windStartKelvin: Double,
         config: FluxScheduleConfig
     ) -> (Double, FluxPhase) {
         let windDown = max(config.windDownMinutes, 1)
@@ -127,18 +140,20 @@ enum FluxScheduleEngine {
         let sinceWindStart = forwardDistance(from: windStart, to: now)
         if sinceWindStart < windDown {
             let progress = sinceWindStart / windDown
-            return (lerp(config.sunsetKelvin, config.bedtimeKelvin, progress), .windDown)
+            return (lerp(windStartKelvin, config.bedtimeKelvin, progress), .windDown)
         }
 
         let bedtime = wrap(config.bedtimeMinutes)
+        let holdLength = min(forwardDistance(from: bedtime, to: sunrise), maxBedtimeHoldMinutes)
         let sinceBedtime = forwardDistance(from: bedtime, to: now)
-        if sinceBedtime < forwardDistance(from: bedtime, to: sunrise) {
+        if sinceBedtime < holdLength {
             return (config.bedtimeKelvin, .bedtime)
         }
 
-        let sinceSunrise = forwardDistance(from: sunrise, to: now)
-        if sinceSunrise < config.transitionMinutes {
-            let progress = sinceSunrise / config.transitionMinutes
+        let releaseStart = wrap(bedtime + holdLength)
+        let sinceRelease = forwardDistance(from: releaseStart, to: now)
+        if sinceRelease < config.transitionMinutes {
+            let progress = sinceRelease / config.transitionMinutes
             return (lerp(config.bedtimeKelvin, config.dayKelvin, progress), .sunrise)
         }
 

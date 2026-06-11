@@ -223,14 +223,8 @@ struct FluxSettings: View {
     }
 
     private var scheduleConfig: FluxScheduleConfig {
-        FluxScheduleConfig(
-            dayKelvin: dayKelvin,
-            sunsetKelvin: sunsetKelvin,
-            bedtimeKelvin: bedtimeKelvin,
-            bedtimeMinutes: Double(bedtimeMinutes),
-            windDownMinutes: Double(windDownMinutes),
-            transitionMinutes: 60
-        )
+        // The @Default properties above keep the view re-rendering on changes
+        FluxManager.currentConfig
     }
 
     private var curveSamples: [FluxCurveSample] {

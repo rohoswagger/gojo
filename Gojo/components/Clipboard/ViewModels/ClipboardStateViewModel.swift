@@ -40,6 +40,9 @@ final class ClipboardStateViewModel: ObservableObject {
         )
         self.collection = collection
         self.items = collection.orderedItems
+        ClipboardImageStore.shared.pruneOrphans(
+            keeping: Set(collection.orderedItems.compactMap { $0.image?.fileName })
+        )
         configureMonitor()
         observeDefaults()
     }
@@ -79,8 +82,24 @@ final class ClipboardStateViewModel: ObservableObject {
 
     func copy(_ item: ClipboardItem) {
         let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(item.content, forType: .string)
+
+        switch item.kind {
+        case .text:
+            pasteboard.clearContents()
+            pasteboard.setString(item.content, forType: .string)
+        case .image:
+            guard let image = item.image,
+                  let data = ClipboardImageStore.shared.loadData(named: image.fileName) else {
+                presentCopiedFeedback(message: "Image is no longer available")
+                return
+            }
+            pasteboard.clearContents()
+            pasteboard.setData(data, forType: .png)
+            if let tiff = NSImage(data: data)?.tiffRepresentation {
+                pasteboard.setData(tiff, forType: .tiff)
+            }
+        }
+
         monitor.syncChangeCountToCurrentPasteboard()
         presentCopiedFeedback(message: "Copied to clipboard")
         presentCopiedRowFeedback(for: item.id)
@@ -93,6 +112,9 @@ final class ClipboardStateViewModel: ObservableObject {
     }
 
     func delete(_ item: ClipboardItem) {
+        if let fileName = item.image?.fileName {
+            ClipboardImageStore.shared.delete(named: fileName)
+        }
         collection.delete(item.id)
         syncItemsFromCollection()
         if hoveredItemID == item.id {
@@ -103,6 +125,11 @@ final class ClipboardStateViewModel: ObservableObject {
     }
 
     func clearNonPinned() {
+        for item in collection.orderedItems where !item.isPinned {
+            if let fileName = item.image?.fileName {
+                ClipboardImageStore.shared.delete(named: fileName)
+            }
+        }
         collection.clearNonPinned()
         syncItemsFromCollection()
         hoveredItemID = nil
@@ -240,18 +267,46 @@ final class ClipboardStateViewModel: ObservableObject {
             return
         }
 
-        collection.registerCopy(
-            content: capture.content,
-            sourceAppName: capture.sourceAppName,
-            sourceBundleID: capture.sourceBundleID
-        )
+        switch capture.payload {
+        case .text(let text):
+            collection.registerCopy(
+                content: text,
+                sourceAppName: capture.sourceAppName,
+                sourceBundleID: capture.sourceBundleID
+            )
+        case .image(let data, let sha256, let pixelWidth, let pixelHeight):
+            let existingPayload = collection.orderedItems
+                .first { $0.kind == .image && $0.image?.sha256 == sha256 }?
+                .image
+            let payload = existingPayload ?? ClipboardImagePayload(
+                fileName: "\(UUID().uuidString).png",
+                sha256: sha256,
+                pixelWidth: pixelWidth,
+                pixelHeight: pixelHeight,
+                byteCount: data.count
+            )
+            if existingPayload == nil {
+                guard ClipboardImageStore.shared.save(data, named: payload.fileName) else { return }
+            }
+            collection.registerCopy(
+                content: "Image \(payload.dimensionsLabel)",
+                kind: .image,
+                image: payload,
+                sourceAppName: capture.sourceAppName,
+                sourceBundleID: capture.sourceBundleID
+            )
+        }
         syncItemsFromCollection()
         persistItems()
         presentCopiedFeedback(message: "Copied to clipboard")
     }
 
     private func persistItems() {
-        persistence.save(collection.orderedItems)
+        let orderedItems = collection.orderedItems
+        persistence.save(orderedItems)
+        ClipboardImageStore.shared.pruneOrphans(
+            keeping: Set(orderedItems.compactMap { $0.image?.fileName })
+        )
     }
 
     private func syncItemsFromCollection() {

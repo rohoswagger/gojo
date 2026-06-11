@@ -7,6 +7,14 @@ import SwiftUI
 final class ClipboardStateViewModel: ObservableObject {
     static let shared = ClipboardStateViewModel()
     private static let hoverPreviewDelay: TimeInterval = 0.5
+    private static let screenshotBundleID = "com.apple.screencaptureui"
+
+    // Mirrors macOS screenshot file naming: "Screenshot 2026-06-11 at 12.24.01 PM".
+    private static let imageNameFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd 'at' h.mm.ss a"
+        return formatter
+    }()
 
     @Published private(set) var items: [ClipboardItem] = []
     @Published var searchQuery: String = ""
@@ -288,8 +296,9 @@ final class ClipboardStateViewModel: ObservableObject {
             if existingPayload == nil {
                 guard ClipboardImageStore.shared.save(data, named: payload.fileName) else { return }
             }
+            let baseName = capture.sourceBundleID == Self.screenshotBundleID ? "Screenshot" : "Image"
             collection.registerCopy(
-                content: "Image \(payload.dimensionsLabel)",
+                content: "\(baseName) \(Self.imageNameFormatter.string(from: Date()))",
                 kind: .image,
                 image: payload,
                 sourceAppName: capture.sourceAppName,

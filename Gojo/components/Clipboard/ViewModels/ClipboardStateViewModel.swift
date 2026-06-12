@@ -248,6 +248,7 @@ final class ClipboardStateViewModel: ObservableObject {
         monitor.onCapture = { [weak self] capture in
             self?.handleCapture(capture)
         }
+        monitor.setIgnoredBundleIDs(Set(ignoredBundleIDs))
     }
 
     private func observeDefaults() {
@@ -277,6 +278,7 @@ final class ClipboardStateViewModel: ObservableObject {
         Defaults.publisher(.clipboardIgnoredBundleIDs)
             .sink { [weak self] change in
                 self?.ignoredBundleIDs = change.newValue
+                self?.monitor.setIgnoredBundleIDs(Set(change.newValue))
             }
             .store(in: &cancellables)
     }

@@ -1,5 +1,6 @@
 import AppKit
 import CryptoKit
+import ImageIO
 
 struct ClipboardCapture {
     enum Payload {
@@ -25,6 +26,7 @@ final class ClipboardMonitorService {
     // sync the change count without waiting behind it.
     private let stateLock = NSLock()
     private var lastChangeCount = NSPasteboard.general.changeCount
+    private var ignoredBundleIDs: Set<String> = []
 
     // Markers used by password managers and other apps to flag pasteboard
     // contents that should never be recorded (http://nspasteboard.org).
@@ -59,6 +61,12 @@ final class ClipboardMonitorService {
         timer = nil
     }
 
+    func setIgnoredBundleIDs(_ ids: Set<String>) {
+        stateLock.lock()
+        ignoredBundleIDs = ids
+        stateLock.unlock()
+    }
+
     func syncChangeCountToCurrentPasteboard() {
         let current = NSPasteboard.general.changeCount
         stateLock.lock()
@@ -89,6 +97,17 @@ final class ClipboardMonitorService {
         }
 
         let sourceApp = NSWorkspace.shared.frontmostApplication
+
+        // Filter ignored sources before doing any image conversion/hashing —
+        // the view model re-checks, but by then the expensive work is done.
+        if let bundleID = sourceApp?.bundleIdentifier {
+            if bundleID == Bundle.main.bundleIdentifier { return nil }
+            stateLock.lock()
+            let isIgnored = ignoredBundleIDs.contains(bundleID)
+            stateLock.unlock()
+            if isIgnored { return nil }
+        }
+
         let text = pasteboard.string(forType: .string)
 
         // Many apps publish image data alongside real text (Excel cell ranges,
@@ -129,25 +148,50 @@ final class ClipboardMonitorService {
     }
 
     private func extractImagePayload(from pasteboard: NSPasteboard) -> ClipboardCapture.Payload? {
-        let pngData: Data?
-        if let png = pasteboard.data(forType: .png) {
-            pngData = png
-        } else if let tiff = pasteboard.data(forType: .tiff) {
-            pngData = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:])
-        } else {
-            pngData = nil
-        }
+        let data: Data
+        let pixelWidth: Int
+        let pixelHeight: Int
 
-        guard let data = pngData,
-              !data.isEmpty,
-              data.count <= Self.maxImageByteCount,
-              let rep = NSBitmapImageRep(data: data),
-              rep.pixelsWide > 0, rep.pixelsHigh > 0 else {
+        if let png = pasteboard.data(forType: .png) {
+            guard !png.isEmpty,
+                  png.count <= Self.maxImageByteCount,
+                  let dimensions = Self.imageDimensions(of: png) else {
+                return nil
+            }
+            data = png
+            (pixelWidth, pixelHeight) = dimensions
+        } else if let tiff = pasteboard.data(forType: .tiff) {
+            // Cap on the raw size before decoding, and reuse the one decode
+            // for both the PNG conversion and the dimensions.
+            guard !tiff.isEmpty,
+                  tiff.count <= Self.maxImageByteCount,
+                  let rep = NSBitmapImageRep(data: tiff),
+                  rep.pixelsWide > 0, rep.pixelsHigh > 0,
+                  let png = rep.representation(using: .png, properties: [:]),
+                  png.count <= Self.maxImageByteCount else {
+                return nil
+            }
+            data = png
+            pixelWidth = rep.pixelsWide
+            pixelHeight = rep.pixelsHigh
+        } else {
             return nil
         }
 
         let digest = SHA256.hash(data: data)
         let sha256 = digest.map { String(format: "%02x", $0) }.joined()
-        return .image(data: data, sha256: sha256, pixelWidth: rep.pixelsWide, pixelHeight: rep.pixelsHigh)
+        return .image(data: data, sha256: sha256, pixelWidth: pixelWidth, pixelHeight: pixelHeight)
+    }
+
+    /// Reads dimensions from the image header without decoding pixels.
+    private static func imageDimensions(of data: Data) -> (Int, Int)? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let width = properties[kCGImagePropertyPixelWidth] as? Int,
+              let height = properties[kCGImagePropertyPixelHeight] as? Int,
+              width > 0, height > 0 else {
+            return nil
+        }
+        return (width, height)
     }
 }

@@ -5,6 +5,28 @@
     <link>https://rohoswagger.github.io/gojo/appcast.xml</link>
     <description>Most recent changes to Gojo, with download links.</description>
     <language>en</language>
+    <item>
+      <title>Version 1.0.0</title>
+      <pubDate>Thu, 25 Jun 2026 17:31:12 +0000</pubDate>
+      <sparkle:version>1782408653</sparkle:version>
+      <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+<p>First public release of Gojo as a standalone product, distinct from the upstream `boring.notch` fork it grew out of.</p>
+<h4>Added</h4>
+<ul><li>**Windows tab.** Stage strip of on-screen apps with real app icons + per-window position glyphs; live monitor preview with animated window rect; identity row + 3×2 grid of snap chips (left, right, top, bottom halves, fill, zoom). All cross-app — click any window, snap it. Six keyboard shortcuts (⌃⌥← / → / ↑ / ↓ / ↩ for halves+fill, ⌃⌥Z for zoom) shown under each chip and rebindable in Settings.</li><li>**XPC helper** (`GojoXPCHelper`) isolates Accessibility-trusted work in its own process so the main app doesn't need direct AX permission. New helper RPCs: `setWindowFrame(pid:windowID:)`, `raiseWindow`, `enumerateWindows`, `performZoom`.</li><li>**Stage strip** filters to regular activation-policy apps with usable window sizes; preserves stable ordering across enumerations (clicking a window raises it without reordering the strip).</li><li>**Zoom action** triggers the window's native zoom button (same effect as double-clicking the title bar) — toggles between custom size and the app's standard frame.</li></ul>
+<h4>Changed</h4>
+<ul><li>Branding, copy, and product framing rewritten for Gojo as a standalone tool, with new fork-provenance documentation.</li><li>Local build/run workflow consolidated under a `Makefile` (`make build`, `make run`, `make stop`, `make test-window`, etc.).</li></ul>
+<h4>Project & process</h4>
+<ul><li>README rewritten for v1.0.</li><li>GitHub Actions build workflow (`build.yml`) — Debug + Release-unsigned builds on every push and PR, with SPM dependency caching.</li><li>Issue templates (bug, feature) and PR template.</li><li>This `CHANGELOG.md`.</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/rohoswagger/gojo/releases/download/v1.0.0/Gojo-1.0.0.dmg"
+        sparkle:edSignature="eRTuF7rDH8L8ug6rVtrGqK+q/yZUvHOdCqhukyerU4SiiaPqH8zQdYFi69Kz7daYb+nn6yGOFaPZzaNfHwjfCA=="
+        length="6992690"
+        type="application/octet-stream" />
+    </item>
+
     <!-- Release items are inserted here by scripts/release.sh -->
   </channel>
 </rss>

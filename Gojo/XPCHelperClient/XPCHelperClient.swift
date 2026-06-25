@@ -1,0 +1,390 @@
+import Foundation
+import Cocoa
+import AsyncXPCConnection
+
+/// Result of a helper frame mutation. `resultingFrame` is the window's actual
+/// frame read back from AX (source of truth, no CGWindowList lag) — nil when the
+/// move failed or the helper couldn't read it back.
+struct WindowFrameResult {
+    let success: Bool
+    let resultingFrame: CGRect?
+
+    static let failure = WindowFrameResult(success: false, resultingFrame: nil)
+
+    init(success: Bool, resultingFrame: CGRect?) {
+        self.success = success
+        self.resultingFrame = resultingFrame
+    }
+
+    init(reply: NSDictionary) {
+        success = (reply["success"] as? NSNumber)?.boolValue ?? false
+        resultingFrame = (reply["frame"] as? NSDictionary)
+            .flatMap { CGRect(dictionaryRepresentation: $0 as CFDictionary) }
+    }
+}
+
+final class XPCHelperClient: NSObject {
+    nonisolated static let shared = XPCHelperClient()
+    
+    private let serviceName = "rohoswagger.gojo.GojoXPCHelper"
+    
+    private var remoteService: RemoteXPCService<GojoXPCHelperProtocol>?
+    private var connection: NSXPCConnection?
+    private var lastKnownAuthorization: Bool?
+    private var monitoringTask: Task<Void, Never>?
+    
+    deinit {
+        connection?.invalidate()
+        stopMonitoringAccessibilityAuthorization()
+    }
+    
+    // MARK: - Connection Management (Main Actor Isolated)
+    
+    @MainActor
+    private func ensureRemoteService() -> RemoteXPCService<GojoXPCHelperProtocol> {
+        if let existing = remoteService {
+            return existing
+        }
+        
+        let conn = NSXPCConnection(serviceName: serviceName)
+        
+        conn.interruptionHandler = { [weak self] in
+            Task { @MainActor in
+                self?.connection = nil
+                self?.remoteService = nil
+            }
+        }
+        
+        conn.invalidationHandler = { [weak self] in
+            Task { @MainActor in
+                self?.connection = nil
+                self?.remoteService = nil
+            }
+        }
+        
+        conn.resume()
+        
+        let service = RemoteXPCService<GojoXPCHelperProtocol>(
+            connection: conn,
+            remoteInterface: GojoXPCHelperProtocol.self
+        )
+        
+        connection = conn
+        remoteService = service
+        return service
+    }
+    
+    @MainActor
+    private func getRemoteService() -> RemoteXPCService<GojoXPCHelperProtocol>? {
+        remoteService
+    }
+    
+    @MainActor
+    private func notifyAuthorizationChange(_ granted: Bool) {
+        guard lastKnownAuthorization != granted else { return }
+        lastKnownAuthorization = granted
+        NotificationCenter.default.post(
+            name: .accessibilityAuthorizationChanged,
+            object: nil,
+            userInfo: ["granted": granted]
+        )
+    }
+
+    // MARK: - Monitoring
+    nonisolated func startMonitoringAccessibilityAuthorization(every interval: TimeInterval = 3.0) {
+        // Ensure only one monitor exists
+        stopMonitoringAccessibilityAuthorization()
+        monitoringTask = Task.detached { [weak self] in
+            guard let self = self else { return }
+            while !Task.isCancelled {
+                // Call the helper method periodically which will notify on change
+                _ = await self.isAccessibilityAuthorized()
+                do {
+                    try await Task.sleep(for: .seconds(interval))
+                } catch { break }
+            }
+        }
+    }
+
+    nonisolated func stopMonitoringAccessibilityAuthorization() {
+        monitoringTask?.cancel()
+        monitoringTask = nil
+    }
+
+    // Expose whether the client is actively monitoring (useful for tests/debug)
+    var isMonitoring: Bool {
+        return monitoringTask != nil
+    }
+    
+    // MARK: - Accessibility
+    
+    nonisolated func requestAccessibilityAuthorization() {
+        Task {
+            let service = await MainActor.run {
+                ensureRemoteService()
+            }
+            try? await service.withService { service in
+                service.requestAccessibilityAuthorization()
+            }
+        }
+    }
+    
+    nonisolated func isAccessibilityAuthorized() async -> Bool {
+        do {
+            let service = await MainActor.run {
+                ensureRemoteService()
+            }
+            let result: Bool = try await service.withContinuation { service, continuation in
+                service.isAccessibilityAuthorized { authorized in
+                    continuation.resume(returning: authorized)
+                }
+            }
+            await MainActor.run {
+                notifyAuthorizationChange(result)
+            }
+            return result
+        } catch {
+            return false
+        }
+    }
+    
+    nonisolated func ensureAccessibilityAuthorization(promptIfNeeded: Bool) async -> Bool {
+        do {
+            let service = await MainActor.run {
+                ensureRemoteService()
+            }
+            let result: Bool = try await service.withContinuation { service, continuation in
+                service.ensureAccessibilityAuthorization(promptIfNeeded) { authorized in
+                    continuation.resume(returning: authorized)
+                }
+            }
+            await MainActor.run {
+                notifyAuthorizationChange(result)
+            }
+            return result
+        } catch {
+            return false
+        }
+    }
+
+    nonisolated func focusedWindowSnapshot(promptIfNeeded: Bool) async -> NSDictionary? {
+        do {
+            let service = await MainActor.run {
+                ensureRemoteService()
+            }
+            let result: NSDictionary = try await service.withContinuation { service, continuation in
+                service.focusedWindowSnapshot(promptIfNeeded) { snapshot in
+                    continuation.resume(returning: snapshot)
+                }
+            }
+            await MainActor.run {
+                notifyAuthorizationChange((result["authorized"] as? NSNumber)?.boolValue == true)
+            }
+            guard result["error"] == nil else { return nil }
+            return result
+        } catch {
+            return nil
+        }
+    }
+
+    nonisolated func setFocusedWindowFrame(_ normalFrame: CGRect, windowID: CGWindowID?) async -> Bool {
+        do {
+            let service = await MainActor.run {
+                ensureRemoteService()
+            }
+            let frameDictionary = normalFrame.dictionaryRepresentation as NSDictionary
+            let windowIDNumber = windowID.map { NSNumber(value: $0) }
+            return try await service.withContinuation { service, continuation in
+                service.setFocusedWindowFrame(frameDictionary, windowID: windowIDNumber) { success in
+                    continuation.resume(returning: success)
+                }
+            }
+        } catch {
+            return false
+        }
+    }
+
+    nonisolated func setWindowFrame(_ normalFrame: CGRect, pid: pid_t, windowID: CGWindowID?) async -> WindowFrameResult {
+        do {
+            let service = await MainActor.run { ensureRemoteService() }
+            let frameDictionary = normalFrame.dictionaryRepresentation as NSDictionary
+            let pidNumber = NSNumber(value: pid)
+            let windowIDNumber = windowID.map { NSNumber(value: $0) }
+            let reply: NSDictionary = try await service.withContinuation { service, continuation in
+                service.setWindowFrame(frameDictionary, pid: pidNumber, windowID: windowIDNumber) { reply in
+                    continuation.resume(returning: reply)
+                }
+            }
+            return WindowFrameResult(reply: reply)
+        } catch {
+            return .failure
+        }
+    }
+
+    nonisolated func performZoom(pid: pid_t, windowID: CGWindowID?) async -> WindowFrameResult {
+        do {
+            let service = await MainActor.run { ensureRemoteService() }
+            let pidNumber = NSNumber(value: pid)
+            let windowIDNumber = windowID.map { NSNumber(value: $0) }
+            let reply: NSDictionary = try await service.withContinuation { service, continuation in
+                service.performZoom(pidNumber, windowID: windowIDNumber) { reply in
+                    continuation.resume(returning: reply)
+                }
+            }
+            return WindowFrameResult(reply: reply)
+        } catch {
+            return .failure
+        }
+    }
+
+    nonisolated func raiseWindow(pid: pid_t, windowID: CGWindowID?) async -> Bool {
+        do {
+            let service = await MainActor.run { ensureRemoteService() }
+            let pidNumber = NSNumber(value: pid)
+            let windowIDNumber = windowID.map { NSNumber(value: $0) }
+            return try await service.withContinuation { service, continuation in
+                service.raiseWindow(pidNumber, windowID: windowIDNumber) { success in
+                    continuation.resume(returning: success)
+                }
+            }
+        } catch {
+            return false
+        }
+    }
+
+    nonisolated func enumerateWindows(screenUUID: String?) async -> [[String: Any]] {
+        do {
+            let service = await MainActor.run { ensureRemoteService() }
+            let result: NSArray = try await service.withContinuation { service, continuation in
+                service.enumerateWindows(forScreen: screenUUID as NSString?) { array in
+                    continuation.resume(returning: array)
+                }
+            }
+            return (result as? [[String: Any]]) ?? []
+        } catch {
+            return []
+        }
+    }
+    
+    nonisolated func windowTitles(for windows: [(pid: pid_t, windowID: CGWindowID)]) async -> [CGWindowID: String] {
+        guard !windows.isEmpty else { return [:] }
+        do {
+            let service = await MainActor.run { ensureRemoteService() }
+            let requests: NSArray = windows.map { pair -> NSDictionary in
+                ["pid": NSNumber(value: pair.pid), "windowID": NSNumber(value: pair.windowID)] as NSDictionary
+            } as NSArray
+            let reply: NSDictionary = try await service.withContinuation { service, continuation in
+                service.windowTitles(requests) { dict in
+                    continuation.resume(returning: dict)
+                }
+            }
+            var result: [CGWindowID: String] = [:]
+            for case let (key as String, value as String) in reply {
+                if let wid = UInt32(key) { result[CGWindowID(wid)] = value }
+            }
+            return result
+        } catch {
+            return [:]
+        }
+    }
+
+    // MARK: - Keyboard Brightness
+    
+    nonisolated func isKeyboardBrightnessAvailable() async -> Bool {
+        do {
+            let service = await MainActor.run {
+                ensureRemoteService()
+            }
+            return try await service.withContinuation { service, continuation in
+                service.isKeyboardBrightnessAvailable { available in
+                    continuation.resume(returning: available)
+                }
+            }
+        } catch {
+            return false
+        }
+    }
+    
+    nonisolated func currentKeyboardBrightness() async -> Float? {
+        do {
+            let service = await MainActor.run {
+                ensureRemoteService()
+            }
+            let result: NSNumber? = try await service.withContinuation { service, continuation in
+                service.currentKeyboardBrightness { value in
+                    continuation.resume(returning: value)
+                }
+            }
+            return result?.floatValue
+        } catch {
+            return nil
+        }
+    }
+    
+    nonisolated func setKeyboardBrightness(_ value: Float) async -> Bool {
+        do {
+            let service = await MainActor.run {
+                ensureRemoteService()
+            }
+            return try await service.withContinuation { service, continuation in
+                service.setKeyboardBrightness(value) { success in
+                    continuation.resume(returning: success)
+                }
+            }
+        } catch {
+            return false
+        }
+    }
+    
+    // MARK: - Screen Brightness
+    
+    nonisolated func isScreenBrightnessAvailable() async -> Bool {
+        do {
+            let service = await MainActor.run {
+                ensureRemoteService()
+            }
+            return try await service.withContinuation { service, continuation in
+                service.isScreenBrightnessAvailable { available in
+                    continuation.resume(returning: available)
+                }
+            }
+        } catch {
+            return false
+        }
+    }
+    
+    nonisolated func currentScreenBrightness() async -> Float? {
+        do {
+            let service = await MainActor.run {
+                ensureRemoteService()
+            }
+            let result: NSNumber? = try await service.withContinuation { service, continuation in
+                service.currentScreenBrightness { value in
+                    continuation.resume(returning: value)
+                }
+            }
+            return result?.floatValue
+        } catch {
+            return nil
+        }
+    }
+    
+    nonisolated func setScreenBrightness(_ value: Float) async -> Bool {
+        do {
+            let service = await MainActor.run {
+                ensureRemoteService()
+            }
+            return try await service.withContinuation { service, continuation in
+                service.setScreenBrightness(value) { success in
+                    continuation.resume(returning: success)
+                }
+            }
+        } catch {
+            return false
+        }
+    }
+}
+
+extension Notification.Name {
+    static let accessibilityAuthorizationChanged = Notification.Name("accessibilityAuthorizationChanged")
+}

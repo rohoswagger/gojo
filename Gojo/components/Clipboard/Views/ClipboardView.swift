@@ -29,7 +29,7 @@ private enum ClipboardPreviewLayout {
     static let contentVerticalPadding: CGFloat = 18
     static let sectionSpacing: CGFloat = 10
     static let metadataSpacing: CGFloat = 3
-    static let topContentHeight: CGFloat = 208
+    static let topContentHeight: CGFloat = 192
 
     static var visibleNotchEdgeInset: CGFloat {
         (Defaults[.cornerRadiusScaling] ? cornerRadiusInsets.opened.top : cornerRadiusInsets.opened.bottom) + 12

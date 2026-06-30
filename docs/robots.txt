@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://rohoswagger.github.io/gojo/sitemap.xml

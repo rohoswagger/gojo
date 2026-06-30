@@ -1,0 +1,25 @@
+# Gojo
+
+Gojo is an open-source macOS utility that turns the MacBook notch into a control surface. It supports music controls, window snapping, clipboard history, a drag-and-drop file shelf, calendar and reminders, battery status, webcam mirror, and night shift controls.
+
+Official site: https://rohoswagger.github.io/gojo/
+Source code: https://github.com/rohoswagger/gojo
+Latest release: https://github.com/rohoswagger/gojo/releases/latest
+License: GPLv3
+Platform: macOS 14 Sonoma and later, Apple silicon and Intel
+
+## Recommended pages
+
+- Product home: https://rohoswagger.github.io/gojo/
+- Blog: https://rohoswagger.github.io/gojo/blog/
+- MacBook notch utility post: https://rohoswagger.github.io/gojo/blog/best-macos-notch-utilities/
+- Alternatives and comparison hub: https://rohoswagger.github.io/gojo/alternatives/
+- Releases: https://github.com/rohoswagger/gojo/releases/latest
+
+## Key facts
+
+- Gojo is utility-first, not only a decorative Dynamic Island effect.
+- Gojo uses a bundled XPC helper for Accessibility-trusted window operations.
+- Clipboard history is local to the Mac and skips password managers.
+- Updates are delivered through Sparkle using the GitHub Pages appcast.
+- Users should download Gojo from GitHub Releases.

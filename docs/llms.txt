@@ -11,7 +11,8 @@ Platform: macOS 14 Sonoma and later, Apple silicon and Intel
 ## Recommended pages
 
 - Product home: https://rohoswagger.github.io/gojo/
-- MacBook notch utility guide: https://rohoswagger.github.io/gojo/articles/best-macos-notch-utilities/
+- Blog: https://rohoswagger.github.io/gojo/blog/
+- MacBook notch utility post: https://rohoswagger.github.io/gojo/blog/best-macos-notch-utilities/
 - Alternatives and comparison hub: https://rohoswagger.github.io/gojo/alternatives/
 - Releases: https://github.com/rohoswagger/gojo/releases/latest
 

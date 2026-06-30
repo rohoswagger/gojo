@@ -10,7 +10,7 @@ Gojo is for MacBook users who want the notch to feel useful instead of wasted: c
 
 ## Product Purpose
 
-Gojo turns the MacBook notch into a hoverable macOS control surface. The public site should help people understand what a notch utility is, why Gojo exists, how it compares with adjacent Mac utilities, and how to install or evaluate it confidently.
+Gojo turns the MacBook notch into a hoverable macOS control surface. The public site should help people understand what a notch utility is, why Gojo exists, how it compares with adjacent Mac utilities, and how to install or evaluate it confidently. The blog is the generic home for SEO/GEO listicles, comparisons, explainers, and answer-engine-friendly articles.
 
 ## Brand Personality
 

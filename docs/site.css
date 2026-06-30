@@ -467,7 +467,7 @@ h1 {
 }
 
 @media (max-width: 720px) {
-  .site-header,
+  .page > .site-header,
   .footer {
     align-items: flex-start;
     flex-direction: column;

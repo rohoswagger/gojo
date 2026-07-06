@@ -65,6 +65,9 @@ struct SettingsView: View {
                 NavigationLink(value: "Shortcuts") {
                     Label("Shortcuts", systemImage: "keyboard")
                 }
+                NavigationLink(value: "License") {
+                    Label("License", systemImage: "key.fill")
+                }
                 NavigationLink(value: "Advanced") {
                     Label("Advanced", systemImage: "gearshape.2")
                 }
@@ -101,6 +104,8 @@ struct SettingsView: View {
                     AltTabSettings()
                 case "Shortcuts":
                     Shortcuts()
+                case "License":
+                    LicenseSettings()
                 case "Extensions":
                     GeneralSettings()
                 case "Advanced":

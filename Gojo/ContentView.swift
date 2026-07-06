@@ -24,6 +24,7 @@ struct ContentView: View {
     @ObservedObject var batteryModel = BatteryStatusViewModel.shared
     @ObservedObject var brightnessManager = BrightnessManager.shared
     @ObservedObject var volumeManager = VolumeManager.shared
+    @ObservedObject var licenseManager = LicenseManager.shared
     @State private var hoverTask: Task<Void, Never>?
     @State private var isHovering: Bool = false
     @State private var anyDropDebounceTask: Task<Void, Never>?
@@ -349,15 +350,19 @@ struct ContentView: View {
               .zIndex(2)
             if vm.notchState == .open && !coordinator.helloAnimationRunning {
                 VStack {
-                    switch coordinator.currentView {
-                    case .home:
-                        NotchHomeView(albumArtNamespace: albumArtNamespace)
-                    case .shelf:
-                        ShelfView()
-                    case .clipboard:
-                        ClipboardView()
-                    case .windows:
-                        WindowPowerView()
+                    if licenseManager.isLocked {
+                        NotchLockView()
+                    } else {
+                        switch coordinator.currentView {
+                        case .home:
+                            NotchHomeView(albumArtNamespace: albumArtNamespace)
+                        case .shelf:
+                            ShelfView()
+                        case .clipboard:
+                            ClipboardView()
+                        case .windows:
+                            WindowPowerView()
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

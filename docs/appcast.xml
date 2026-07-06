@@ -5,23 +5,9 @@
     <link>https://rohoswagger.github.io/gojo/appcast.xml</link>
     <description>Most recent changes to Gojo, with download links.</description>
     <language>en</language>
-    <item>
-      <title>Version 1.0.0</title>
-      <pubDate>Thu, 25 Jun 2026 17:31:12 +0000</pubDate>
-      <sparkle:version>1782408653</sparkle:version>
-      <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
-      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <description><![CDATA[
-<p>Meet Gojo — it turns the dead space around your MacBook's notch into a control surface for the things you reach for all day. Hover the notch and it opens; everything's a glance and a click away.</p>
-<h4>What's inside</h4>
-<ul><li><strong>Music</strong> — see and control whatever's playing (Apple Music, Spotify, browser audio) right in the notch: album art, scrubbing, and playback controls.</li><li><strong>Window snapping</strong> — a live strip of your open windows with one-click snapping (halves, fill, zoom) and keyboard shortcuts, across any app.</li><li><strong>Clipboard history</strong> — browse, search, pin, and paste your recent copies. Password managers are skipped automatically.</li><li><strong>File shelf</strong> — drag files into the notch from anywhere and pick them back up in any other app.</li><li><strong>Night shift</strong> — warm your screen on a schedule with location-aware sunset, down to a cozy 750K.</li><li><strong>Calendar &amp; reminders</strong> — your next events and to-dos, glanceable the moment the notch opens.</li><li><strong>Webcam mirror</strong> — a quick mirror to check your framing before a call.</li><li><strong>Battery</strong> — charge level and power status, always in reach.</li><li><strong>Guided setup</strong> — a polished first launch that gets you going in seconds.</li><li><strong>Automatic updates</strong> — new versions install themselves; no re-downloading.</li></ul>
-      ]]></description>
-      <enclosure
-        url="https://github.com/rohoswagger/gojo/releases/download/v1.0.0/Gojo-1.0.0.dmg"
-        sparkle:edSignature="eRTuF7rDH8L8ug6rVtrGqK+q/yZUvHOdCqhukyerU4SiiaPqH8zQdYFi69Kz7daYb+nn6yGOFaPZzaNfHwjfCA=="
-        length="6992690"
-        type="application/octet-stream" />
-    </item>
+    <!-- Free-channel binaries were retired 2026-07-06; Gojo is now sold via a
+         paid channel with its own update feed. This feed stays intentionally
+         empty so existing free installs receive no further updates. -->
 
     <!-- Release items are inserted here by scripts/release.sh -->
   </channel>

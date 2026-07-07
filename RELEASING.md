@@ -1,11 +1,11 @@
 # Releasing Gojo
 
-Gojo cuts releases from your local machine via [`scripts/release.sh`](./scripts/release.sh), wrapped as a Makefile target. The script handles build → sign → notarize → DMG → Sparkle-sign → appcast → GitHub Release in one command.
+Gojo cuts releases from your local machine via [`scripts/release.sh`](./scripts/release.sh), wrapped as a Makefile target. The script handles build → sign → notarize → DMG → Sparkle-sign → appcast → upload to Cloudflare R2 (downloads.rohoswagger.com) in one command.
 
 CI (`.github/workflows/build.yml`) verifies every PR/push compiles, but does **not** publish releases.
 
 ```
-make release VERSION=1.0.0       # publish to GitHub Releases + public appcast
+make release VERSION=1.0.0       # upload DMG to R2 + update public appcast
 make release-dry VERSION=1.0.0   # build, sign, notarize, appcast — but don't publish
 make release VERSION=1.0.0 ARGS=--adhoc           # ad-hoc signed, no Apple account
 make release VERSION=1.0.0 ARGS=--private         # paid channel: notarized DMG only
@@ -35,7 +35,7 @@ You'll do this once per machine you cut releases from.
 
 ```bash
 brew install gh
-gh auth login   # for creating the GitHub Release + uploading the DMG
+npx wrangler login   # Cloudflare auth, for uploading the DMG to R2
 ```
 
 You also need a working Xcode (`xcrun`, `codesign`, `hdiutil`, `notarytool`, `stapler` come with it) and Python 3 (preinstalled on macOS).
@@ -103,13 +103,13 @@ $EDITOR .env.local   # fill in real values
 make release-dry VERSION=0.0.0-test
 ```
 
-This builds, signs, notarizes, and produces a real DMG + appcast entry in `.build/`, but stops before tagging, creating the GitHub Release, or committing back. Inspect the artifacts. If anything throws, fix it before doing a real release.
+This builds, signs, notarizes, and produces a real DMG + appcast entry in `.build/`, but stops before tagging, uploading to R2, or committing back. Inspect the artifacts. If anything throws, fix it before doing a real release.
 
 ---
 
 ## Cutting a release
 
-1. **Update `CHANGELOG.md`.** Promote the `[Unreleased]` section to `[<version>] — YYYY-MM-DD`. Add a fresh empty `[Unreleased]` block. The release script extracts this version's block verbatim as the GitHub Release body and as the Sparkle update notes — make sure the markdown is right.
+1. **Update `CHANGELOG.md`.** Promote the `[Unreleased]` section to `[<version>] — YYYY-MM-DD`. Add a fresh empty `[Unreleased]` block. The release script extracts this version's block verbatim as the Sparkle update notes — make sure the markdown is right.
 
 2. **Bump `MARKETING_VERSION`** in `Gojo.xcodeproj/project.pbxproj` (4 occurrences across Debug/Release and main/helper targets):
 
@@ -143,14 +143,14 @@ This builds, signs, notarizes, and produces a real DMG + appcast entry in `.buil
    6. Notarize and staple the DMG
    7. Run Sparkle's `sign_update` to produce the EdDSA signature line
    8. Prepend a new `<item>` to `appcast.xml`
-   9. `gh release create v<version>` with the DMG as an asset
+   9. `wrangler r2 object put` uploads the DMG to the gojo-downloads bucket
    10. Commit + push the updated `appcast.xml`
 
    Existing installs auto-update via Sparkle within ~24h (or immediately on a manual "Check for Updates").
 
 ## If something fails mid-release
 
-The script is mostly idempotent up to step 9 (GitHub Release creation). Common issues:
+The script is mostly idempotent up to step 9 (R2 upload). Common issues:
 
 | Failure | Fix |
 |---------|-----|
@@ -158,12 +158,12 @@ The script is mostly idempotent up to step 9 (GitHub Release creation). Common i
 | Signing identity not found | Run `security find-identity -v -p codesigning`. If missing, regenerate the cert (Xcode → Settings → Accounts). |
 | `sign_update` not found | The cached Sparkle CLI may be corrupt — `rm -rf .build/sparkle-tools` and re-run. |
 | Bad Sparkle signature | The private key in `SPARKLE_PRIVATE_ED_KEY` doesn't match the public key in `Info.plist`. Recover or regenerate. |
-| `gh release create` fails | Check `gh auth status`. Tag might already exist on origin — delete it with `git push origin :refs/tags/v<version>`. |
+| R2 upload fails | Check `npx wrangler whoami`; re-auth with `npx wrangler login`. Re-running overwrites the same object keys safely. |
 | Appcast commit conflict | Pull `origin/main` and re-run `make release` (the script is idempotent; build/notarize will be skipped to the extent steps re-detect existing artifacts — easier to just clean `.build/` and start over). |
 
 ## Rolling back a release
 
-1. Delete the GitHub Release: `gh release delete v<version> --yes`
+1. Delete the DMG from R2: `npx wrangler r2 object delete gojo-downloads/Gojo-<version>.dmg --remote` (and re-point `Gojo.dmg` to the prior version if needed).
 2. Delete the git tag locally and remote:
    ```bash
    git tag -d v<version>

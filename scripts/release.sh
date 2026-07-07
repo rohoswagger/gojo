@@ -25,7 +25,7 @@
 #
 # Required tools:
 #   Xcode (xcrun, codesign, hdiutil, notarytool, stapler)
-#   gh CLI, authenticated (`gh auth status` should be green)
+#   wrangler (via npx), authenticated to Cloudflare (`npx wrangler login`) — publishes the DMG to R2
 #   python3
 #   curl, tar
 #
@@ -115,8 +115,8 @@ fi
 
 command -v python3 >/dev/null || die "python3 not on PATH"
 if [ "$PRIVATE" != "1" ]; then
-  command -v gh >/dev/null    || die "Install GitHub CLI: brew install gh"
-  gh auth status >/dev/null 2>&1 || die "gh is not authenticated. Run: gh auth login"
+  # The DMG is published to the Cloudflare R2 bucket via wrangler (fetched with npx).
+  command -v npx >/dev/null || die "npx not on PATH (need Node.js for wrangler)"
 fi
 
 # -------- 1. Pre-flight checks --------
@@ -311,7 +311,7 @@ else
     --appcast docs/appcast.xml \
     --version "$VERSION" \
     --build "$BUILD_NUMBER" \
-    --dmg-url "https://github.com/rohoswagger/gojo/releases/download/v$VERSION/$DMG_NAME" \
+    --dmg-url "https://downloads.rohoswagger.com/$DMG_NAME" \
     --dmg-size "$DMG_SIZE" \
     --ed-signature-line "$SIGNATURE_LINE" \
     --release-notes-out ".build/release-notes-$VERSION.md"
@@ -349,18 +349,28 @@ if [ "$PRIVATE" = "1" ]; then
   exit 0
 fi
 
-# -------- 9. Create GitHub Release --------
+# -------- 9. Upload the DMG to Cloudflare R2 --------
 
-log "Creating GitHub Release v$VERSION"
+log "Uploading DMG to R2 (gojo-downloads)"
 
-gh release create "v$VERSION" \
-  -R rohoswagger/gojo \
-  --title "Gojo $VERSION" \
-  --notes-file ".build/release-notes-$VERSION.md" \
-  --target main \
-  "$DMG_PATH"
+# wrangler picks up its own OAuth login; pin the account so it never prompts.
+export CLOUDFLARE_ACCOUNT_ID=54b7185040a2db03ec87bee9cd65135f
+R2_PUT=( npx --yes wrangler@4 r2 object put --remote --content-type application/x-apple-diskimage --file "$DMG_PATH" )
 
-ok "GitHub Release published"
+# Versioned, immutable object so historical appcast entries keep resolving.
+"${R2_PUT[@]}" "gojo-downloads/$DMG_NAME" \
+  || die "R2 upload failed for $DMG_NAME (is wrangler authenticated? run: npx wrangler login)"
+# Always-latest object for the marketing site's download button.
+"${R2_PUT[@]}" "gojo-downloads/Gojo.dmg" \
+  || die "R2 upload failed for Gojo.dmg"
+
+ok "DMG uploaded to https://downloads.rohoswagger.com/$DMG_NAME (and /Gojo.dmg)"
+
+# -------- 9b. Tag the release --------
+
+log "Tagging v$VERSION"
+git tag -a "v$VERSION" -m "Gojo $VERSION"
+git push origin "v$VERSION"
 
 # -------- 10. Commit appcast.xml back to main --------
 
@@ -375,6 +385,7 @@ ok "appcast.xml committed and pushed"
 # -------- Done --------
 
 log "Released Gojo v$VERSION"
-info "  GitHub Release: $(gh release view "v$VERSION" -R rohoswagger/gojo --json url -q .url)"
+info "  Download (versioned): https://downloads.rohoswagger.com/$DMG_NAME"
+info "  Download (latest):    https://downloads.rohoswagger.com/Gojo.dmg"
 info "  Appcast: https://rohoswagger.github.io/gojo/appcast.xml"
 info "  DMG SHA-256: $(shasum -a 256 "$DMG_PATH" | awk '{print $1}')"

@@ -25,7 +25,7 @@
 #
 # Required tools:
 #   Xcode (xcrun, codesign, hdiutil, notarytool, stapler)
-#   gh CLI, authenticated (`gh auth status` should be green)
+#   wrangler (via npx), authenticated to Cloudflare (`npx wrangler login`) — publishes the DMG to R2
 #   python3
 #   curl, tar
 #
@@ -115,8 +115,8 @@ fi
 
 command -v python3 >/dev/null || die "python3 not on PATH"
 if [ "$PRIVATE" != "1" ]; then
-  command -v gh >/dev/null    || die "Install GitHub CLI: brew install gh"
-  gh auth status >/dev/null 2>&1 || die "gh is not authenticated. Run: gh auth login"
+  # The DMG is published to the Cloudflare R2 bucket via wrangler (fetched with npx).
+  command -v npx >/dev/null || die "npx not on PATH (need Node.js for wrangler)"
 fi
 
 # -------- 1. Pre-flight checks --------
@@ -182,7 +182,10 @@ if [ "$ADHOC" = "1" ]; then
   # on launch. Hardened runtime is only needed for notarization, so disable it.
   SIGN_ARGS=( CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=YES CODE_SIGNING_ALLOWED=YES ENABLE_HARDENED_RUNTIME=NO )
 else
-  SIGN_ARGS=( CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="$MACOS_SIGNING_IDENTITY" DEVELOPMENT_TEAM=L6U44C67P5 OTHER_CODE_SIGN_FLAGS="--timestamp --options=runtime" )
+  # CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO stops Xcode auto-adding the debug-only
+  # get-task-allow entitlement (a `build` invocation is treated as development);
+  # notarization rejects get-task-allow in a distribution build.
+  SIGN_ARGS=( CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="$MACOS_SIGNING_IDENTITY" DEVELOPMENT_TEAM=L6U44C67P5 CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO OTHER_CODE_SIGN_FLAGS="--timestamp --options=runtime" )
 fi
 
 xcodebuild \
@@ -200,10 +203,37 @@ xcodebuild \
 
 [ -d "$APP_PATH" ] || die "Build did not produce $APP_PATH"
 
+ok "Built and signed $APP_PATH"
+
+# -------- 2b. Re-sign vendored binaries (Developer ID path only) --------
+# Xcode signs the app + its own targets, but pre-built vendored binaries stay
+# ad-hoc: Sparkle's nested XPC helpers and the MediaRemoteAdapter test client.
+# Notarization requires every Mach-O to carry a Developer ID signature + secure
+# timestamp + hardened runtime, so re-sign them inside-out, then re-seal the app.
+if [ "$ADHOC" != "1" ]; then
+  log "Re-signing vendored components with Developer ID"
+  RESIGN=( codesign --force --timestamp --options runtime --preserve-metadata=entitlements --sign "$MACOS_SIGNING_IDENTITY" )
+  SPK="$APP_PATH/Contents/Frameworks/Sparkle.framework/Versions/B"
+  for item in \
+    "$SPK/XPCServices/Downloader.xpc" \
+    "$SPK/XPCServices/Installer.xpc" \
+    "$SPK/Autoupdate" \
+    "$SPK/Updater.app" \
+    "$APP_PATH/Contents/Frameworks/Sparkle.framework" \
+    "$APP_PATH/Contents/Resources/MediaRemoteAdapterTestClient"; do
+    [ -e "$item" ] && { "${RESIGN[@]}" "$item" || die "re-sign failed: $item"; }
+  done
+  # Re-seal the outer app (nested hashes changed); keep its own entitlements.
+  codesign --force --timestamp --options runtime \
+    --entitlements Gojo/Gojo.entitlements \
+    --sign "$MACOS_SIGNING_IDENTITY" "$APP_PATH" || die "re-seal failed: $APP_PATH"
+  ok "Vendored components re-signed"
+fi
+
 codesign --verify --deep --strict --verbose=2 "$APP_PATH" 2>/dev/null \
   || die "Codesign verification failed on $APP_PATH"
 
-ok "Built and signed $APP_PATH"
+ok "Signature verified"
 
 # -------- 3. Notarize app --------
 
@@ -311,7 +341,7 @@ else
     --appcast docs/appcast.xml \
     --version "$VERSION" \
     --build "$BUILD_NUMBER" \
-    --dmg-url "https://github.com/rohoswagger/gojo/releases/download/v$VERSION/$DMG_NAME" \
+    --dmg-url "https://downloads.rohoswagger.com/$DMG_NAME" \
     --dmg-size "$DMG_SIZE" \
     --ed-signature-line "$SIGNATURE_LINE" \
     --release-notes-out ".build/release-notes-$VERSION.md"
@@ -349,18 +379,28 @@ if [ "$PRIVATE" = "1" ]; then
   exit 0
 fi
 
-# -------- 9. Create GitHub Release --------
+# -------- 9. Upload the DMG to Cloudflare R2 --------
 
-log "Creating GitHub Release v$VERSION"
+log "Uploading DMG to R2 (gojo-downloads)"
 
-gh release create "v$VERSION" \
-  -R rohoswagger/gojo \
-  --title "Gojo $VERSION" \
-  --notes-file ".build/release-notes-$VERSION.md" \
-  --target main \
-  "$DMG_PATH"
+# wrangler picks up its own OAuth login; pin the account so it never prompts.
+export CLOUDFLARE_ACCOUNT_ID=54b7185040a2db03ec87bee9cd65135f
+R2_PUT=( npx --yes wrangler@4 r2 object put --remote --content-type application/x-apple-diskimage --file "$DMG_PATH" )
 
-ok "GitHub Release published"
+# Versioned, immutable object so historical appcast entries keep resolving.
+"${R2_PUT[@]}" "gojo-downloads/$DMG_NAME" \
+  || die "R2 upload failed for $DMG_NAME (is wrangler authenticated? run: npx wrangler login)"
+# Always-latest object for the marketing site's download button.
+"${R2_PUT[@]}" "gojo-downloads/Gojo.dmg" \
+  || die "R2 upload failed for Gojo.dmg"
+
+ok "DMG uploaded to https://downloads.rohoswagger.com/$DMG_NAME (and /Gojo.dmg)"
+
+# -------- 9b. Tag the release --------
+
+log "Tagging v$VERSION"
+git tag -a "v$VERSION" -m "Gojo $VERSION"
+git push origin "v$VERSION"
 
 # -------- 10. Commit appcast.xml back to main --------
 
@@ -375,6 +415,7 @@ ok "appcast.xml committed and pushed"
 # -------- Done --------
 
 log "Released Gojo v$VERSION"
-info "  GitHub Release: $(gh release view "v$VERSION" -R rohoswagger/gojo --json url -q .url)"
+info "  Download (versioned): https://downloads.rohoswagger.com/$DMG_NAME"
+info "  Download (latest):    https://downloads.rohoswagger.com/Gojo.dmg"
 info "  Appcast: https://rohoswagger.github.io/gojo/appcast.xml"
 info "  DMG SHA-256: $(shasum -a 256 "$DMG_PATH" | awk '{print $1}')"

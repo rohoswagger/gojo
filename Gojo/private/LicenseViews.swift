@@ -136,10 +136,10 @@ struct LicenseSettings: View {
     private var statusLabel: some View {
         switch licenseManager.state {
         case .trial(let daysRemaining):
-            Text("Trial — \(daysRemaining) day\(daysRemaining == 1 ? "" : "s") left")
+            Text("\(daysRemaining) day\(daysRemaining == 1 ? "" : "s") left in trial")
                 .foregroundStyle(.orange)
         case .licensed(let plan):
-            Text("\(plan.displayName) — active")
+            Text("\(plan.displayName) active")
                 .foregroundStyle(.green)
         case .locked:
             Text("Locked")
@@ -155,6 +155,187 @@ struct LicenseSettings: View {
             do {
                 try await licenseManager.activate(key: keyInput)
                 keyInput = ""
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            isBusy = false
+        }
+    }
+}
+
+/// Onboarding step: start the free trial or activate a purchased license.
+/// Matches the visual language of PermissionRequestView (badge, title,
+/// description, glass primary button on the sunset background).
+struct OnboardingLicenseView: View {
+    @ObservedObject var licenseManager = LicenseManager.shared
+    let onContinue: () -> Void
+
+    @State private var keyInput = ""
+    @State private var isBusy = false
+    @State private var errorMessage: String?
+    @State private var appeared = false
+    @FocusState private var keyFieldFocused: Bool
+
+    private var isLicensed: Bool {
+        if case .licensed = licenseManager.state { return true }
+        return false
+    }
+
+    private var hasKeyInput: Bool {
+        !keyInput.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    private var fieldStroke: Color {
+        if errorMessage != nil { return .red.opacity(0.7) }
+        if keyFieldFocused { return Color.effectiveAccent.opacity(0.7) }
+        return .white.opacity(0.12)
+    }
+
+    var body: some View {
+        ZStack {
+            SunsetBackground()
+
+            VStack(spacing: 24) {
+                badge
+                    .padding(.top, 32)
+                    .scaleEffect(appeared ? 1 : 0.8)
+                    .opacity(appeared ? 1 : 0)
+
+                VStack(spacing: 16) {
+                    Text(isLicensed ? "You're All Set" : "Try Gojo Free")
+                        .font(.title)
+                        .fontWeight(.semibold)
+
+                    Text(isLicensed
+                        ? "Your license is active on this Mac. Enjoy Gojo!"
+                        : "Everything works for the next \(LicenseConfig.trialDays) days, no strings attached. Whenever you're ready, buy Gojo once or subscribe. One license covers up to 3 Macs.")
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal)
+                }
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 12)
+
+                if !isLicensed {
+                    VStack(spacing: 8) {
+                        Text("Already have a license?")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+
+                        TextField("GOJO-XXXX-XXXX-XXXX-XXXX", text: $keyInput)
+                            .textFieldStyle(.plain)
+                            .font(.callout.monospaced())
+                            .multilineTextAlignment(.center)
+                            .autocorrectionDisabled()
+                            .focused($keyFieldFocused)
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 14)
+                            .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 9))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 9)
+                                    .stroke(fieldStroke, lineWidth: 1)
+                            )
+                            .frame(maxWidth: 280)
+                            .animation(.easeOut(duration: 0.18), value: keyFieldFocused)
+                            .onSubmit(activate)
+                            .onChange(of: keyInput) { _, newValue in
+                                let cleaned = newValue.uppercased()
+                                if cleaned != newValue { keyInput = cleaned }
+                                if errorMessage != nil { errorMessage = nil }
+                            }
+
+                        if let errorMessage {
+                            Text(errorMessage)
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal)
+                                .transition(.opacity)
+                        }
+                    }
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 12)
+                }
+
+                HStack {
+                    if isLicensed {
+                        Button("Continue") { onContinue() }
+                            .buttonStyle(GlassButtonStyle())
+                    } else {
+                        Button("Buy Gojo") {
+                            NSWorkspace.shared.open(LicenseConfig.purchaseURL)
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button {
+                            hasKeyInput ? activate() : onContinue()
+                        } label: {
+                            if isBusy {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .frame(minWidth: 110)
+                            } else {
+                                Text(hasKeyInput ? "Activate" : "Start Free Trial")
+                                    .frame(minWidth: 110)
+                            }
+                        }
+                        .buttonStyle(GlassButtonStyle())
+                        .disabled(isBusy)
+                    }
+                }
+                .padding(.top, 6)
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 12)
+
+                if !isLicensed {
+                    Text("No account needed. You can always add your license later in Settings.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                        .opacity(appeared ? 1 : 0)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.7).delay(0.1)) {
+                appeared = true
+            }
+        }
+    }
+
+    private var badge: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [Color.effectiveAccent.opacity(0.28), .clear],
+                        center: .center, startRadius: 0, endRadius: 70
+                    )
+                )
+                .frame(width: 150, height: 150)
+
+            Circle()
+                .fill(.ultraThinMaterial)
+                .overlay(Circle().stroke(Color.effectiveAccent.opacity(0.35), lineWidth: 1))
+                .frame(width: 96, height: 96)
+
+            Image(systemName: isLicensed ? "checkmark.seal.fill" : "sparkles")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 40, height: 40)
+                .foregroundColor(.effectiveAccent)
+        }
+    }
+
+    private func activate() {
+        guard !isBusy, hasKeyInput else { return }
+        errorMessage = nil
+        isBusy = true
+        Task {
+            do {
+                try await licenseManager.activate(key: keyInput)
             } catch {
                 errorMessage = error.localizedDescription
             }

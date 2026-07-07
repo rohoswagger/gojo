@@ -15,6 +15,7 @@ enum OnboardingStep {
     case remindersPermission
     case accessibilityPermission
     case musicPermission
+    case license
     case finished
 }
 
@@ -126,6 +127,16 @@ struct OnboardingView: View {
                 
             case .musicPermission:
                 MusicControllerSelectionView(
+                    onContinue: {
+                        withAnimation(.easeInOut(duration: 0.6)) {
+                            step = .license
+                        }
+                    }
+                )
+                .transition(.opacity)
+
+            case .license:
+                OnboardingLicenseView(
                     onContinue: {
                         withAnimation(.easeInOut(duration: 0.6)) {
                             GojoViewCoordinator.shared.firstLaunch = false

@@ -785,3 +785,198 @@ h1 {
     transform: none !important;
   }
 }
+
+/* -------- Pricing (#buy) -------- */
+
+.buy-head {
+  max-width: 56ch;
+}
+
+.buy-head h2 {
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 1.08;
+  margin: 0;
+}
+
+.buy-sub {
+  margin: 14px 0 0;
+  font-size: clamp(15px, 1.6vw, 17px);
+  color: var(--paper-muted);
+  text-wrap: pretty;
+}
+
+.pricing {
+  margin-top: clamp(30px, 4.5vw, 48px);
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: clamp(18px, 3vw, 32px);
+  align-items: stretch;
+}
+
+.price-main {
+  background: var(--ink);
+  color: var(--text);
+  border-radius: 16px;
+  padding: clamp(26px, 3.6vw, 44px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.price-main::after {
+  content: "";
+  position: absolute;
+  inset: auto -80px -120px auto;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(139, 140, 255, 0.34), transparent 70%);
+  pointer-events: none;
+}
+
+.price-plan {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+.price-figure {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.price-amount {
+  font-family: var(--display);
+  font-weight: 650;
+  font-size: clamp(40px, 5vw, 56px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.price-amount.alt {
+  font-size: clamp(28px, 3.4vw, 36px);
+}
+
+.price-per {
+  font-size: 15px;
+  opacity: 0.66;
+}
+
+.price-copy {
+  margin: 0;
+  max-width: 38ch;
+  font-size: 15px;
+  line-height: 1.55;
+  color: inherit;
+  opacity: 0.92;
+  text-wrap: pretty;
+}
+
+.price-main .btn {
+  margin-top: 8px;
+}
+
+.price-fine {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  opacity: 0.74;
+}
+
+.price-side {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(18px, 2.6vw, 26px);
+}
+
+.price-alt {
+  border: 1px solid var(--paper-line);
+  border-radius: 16px;
+  padding: clamp(20px, 2.6vw, 30px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--paper-ink);
+}
+
+.price-alt .price-plan {
+  color: var(--paper-muted);
+  opacity: 1;
+}
+
+.price-alt .price-per {
+  color: var(--paper-muted);
+  opacity: 1;
+}
+
+.price-alt .price-copy {
+  color: var(--paper-muted);
+  opacity: 1;
+}
+
+.btn-ink {
+  background: var(--ink);
+  color: #fff;
+}
+
+.btn-ink:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 34px -14px rgba(10, 11, 18, 0.55);
+}
+
+.buy-steps {
+  margin: 0;
+  padding: 0 0 0 4px;
+  list-style: none;
+  counter-reset: step;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.buy-steps li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 38px;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--paper-ink);
+}
+
+.buy-steps li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 1px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #eceef8;
+  color: var(--paper-ink);
+  font-family: var(--mono);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.buy-note {
+  margin: clamp(26px, 4vw, 40px) 0 0;
+  font-size: 13.5px;
+  color: var(--paper-muted);
+  max-width: 62ch;
+  text-wrap: pretty;
+}
+
+@media (max-width: 760px) {
+  .pricing {
+    grid-template-columns: 1fr;
+  }
+}

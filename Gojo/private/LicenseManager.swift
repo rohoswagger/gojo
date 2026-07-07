@@ -62,6 +62,14 @@ struct LicenseToken: Codable {
     let exp: TimeInterval
 }
 
+struct TrialToken: Codable {
+    let v: Int
+    let kind: String
+    let machineId: String
+    let iat: TimeInterval
+    let exp: TimeInterval
+}
+
 struct LicenseError: LocalizedError {
     let message: String
     var errorDescription: String? { message }
@@ -104,7 +112,10 @@ final class LicenseManager: ObservableObject {
             return
         }
         #endif
-        Task { await revalidationLoop() }
+        Task {
+            await ensureTrialToken()
+            await revalidationLoop()
+        }
     }
 
     // MARK: - State evaluation
@@ -135,21 +146,56 @@ final class LicenseManager: ObservableObject {
 
         licenseKeyMasked = nil
         paidThrough = nil
-        let trialStart: TimeInterval
-        if let stored = Keychain.getString(.trialStart), let epoch = TimeInterval(stored) {
-            trialStart = epoch
+
+        // Trial expiry comes from the server-signed trial token when present
+        // (authoritative and offline-verified, so wiping local state can't reset
+        // it). Before that token has been fetched — first launch, or offline — a
+        // local provisional start keeps the app usable. ensureTrialToken() fetches
+        // the server token once and hardens this.
+        let trialExp: TimeInterval
+        if let trialString = Keychain.getString(.trialToken),
+           let trial = Self.verifyTrial(trialString) {
+            trialExp = trial.exp
         } else {
-            trialStart = now
-            Keychain.setString(String(trialStart), for: .trialStart)
+            let start: TimeInterval
+            if let stored = Keychain.getString(.trialStart), let epoch = TimeInterval(stored) {
+                start = epoch
+            } else {
+                start = now
+                Keychain.setString(String(start), for: .trialStart)
+            }
+            trialExp = start + TimeInterval(LicenseConfig.trialDays * 86_400)
         }
 
-        let elapsedDays = Int((now - trialStart) / 86_400)
-        let remaining = LicenseConfig.trialDays - elapsedDays
-        if remaining > 0 {
-            state = .trial(daysRemaining: remaining)
+        let secondsLeft = trialExp - now
+        if secondsLeft > 0 {
+            state = .trial(daysRemaining: max(1, Int(ceil(secondsLeft / 86_400))))
         } else {
             state = .locked(reason: "Your \(LicenseConfig.trialDays)-day free trial has ended.")
         }
+    }
+
+    /// One-time fetch of the server-signed trial token, only when this machine
+    /// has no license and no token yet. The trial start is recorded server-side
+    /// (keyed by machine id), so it survives a local wipe. Verified offline
+    /// afterward — this never runs on notch open, only at launch.
+    private func ensureTrialToken() async {
+        guard Keychain.getString(.licenseKey) == nil,
+              Keychain.getString(.trialToken) == nil else { return }
+        var req = URLRequest(url: LicenseConfig.serverBaseURL.appending(path: "/v1/trial"))
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
+        req.httpBody = try? JSONEncoder().encode(["machineId": Self.machineID, "appVersion": appVersion])
+        guard req.httpBody != nil else { return }
+        struct TrialResponse: Codable { let token: String? }
+        guard let (data, response) = try? await URLSession.shared.data(for: req),
+              let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
+              let token = (try? JSONDecoder().decode(TrialResponse.self, from: data))?.token,
+              Self.verifyTrial(token) != nil
+        else { return }  // offline or error: keep the local provisional trial, retry next launch
+        Keychain.setString(token, for: .trialToken)
+        evaluate()
     }
 
     // MARK: - Server calls
@@ -215,6 +261,9 @@ final class LicenseManager: ObservableObject {
 
     private func revalidationLoop() async {
         while true {
+            // Reconcile a provisional (offline-started) trial to the server
+            // token once connectivity returns. No-op once a token is stored.
+            await ensureTrialToken()
             if Keychain.getString(.licenseKey) != nil,
                let tokenString = Keychain.getString(.licenseToken),
                let token = Self.verify(tokenString) {
@@ -280,6 +329,21 @@ final class LicenseManager: ObservableObject {
         return token
     }
 
+    static func verifyTrial(_ tokenString: String) -> TrialToken? {
+        let parts = tokenString.split(separator: ".")
+        guard parts.count == 2,
+              let payload = Data(base64URLEncoded: String(parts[0])),
+              let signature = Data(base64URLEncoded: String(parts[1])),
+              let keyData = Data(base64Encoded: LicenseConfig.publicKeyBase64),
+              let publicKey = try? Curve25519.Signing.PublicKey(rawRepresentation: keyData),
+              publicKey.isValidSignature(signature, for: payload),
+              let token = try? JSONDecoder().decode(TrialToken.self, from: payload),
+              token.kind == "trial",
+              token.machineId == machineID
+        else { return nil }
+        return token
+    }
+
     // MARK: - Machine identity
 
     static let machineID: String = {
@@ -308,6 +372,7 @@ final class LicenseManager: ObservableObject {
 private enum Keychain {
     enum Key: String {
         case trialStart = "gojo.trialStart"
+        case trialToken = "gojo.trialToken"
         case licenseKey = "gojo.licenseKey"
         case licenseToken = "gojo.licenseToken"
         case lastSeenTime = "gojo.lastSeenTime"

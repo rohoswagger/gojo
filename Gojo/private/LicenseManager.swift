@@ -47,9 +47,6 @@ enum LicenseConfig {
     static let publicKeyBase64 = "n0QJXkS73SlMR/dGLUWWD5CG0PB4lWsfU6WhuhsH4QY="
 
     static let purchaseURL = URL(string: "https://rohoswagger.github.io/gojo/#buy")!
-    // Stripe customer-portal login link. Subscribers enter their email and
-    // Stripe emails them a link to manage or cancel their plan.
-    static let portalLoginURL = URL(string: "https://billing.stripe.com/p/login/fZueVd5ccg7ybxMgoueAg00")!
     static let trialDays = 3
     // If the server is unreachable, a previously-valid license keeps working
     // this long past its token expiry before the app locks.

@@ -157,6 +157,30 @@ final class LicenseManager: ObservableObject {
         evaluate()
     }
 
+    /// Fetch a Stripe customer-portal URL so subscribers can manage billing
+    /// (update card, invoices, cancel — where the retention offer appears).
+    func managePortalURL() async throws -> URL {
+        guard let key = Keychain.getString(.licenseKey) else {
+            throw LicenseError(message: "No license is active on this Mac.")
+        }
+        var req = URLRequest(url: LicenseConfig.serverBaseURL.appending(path: "/v1/portal"))
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONEncoder().encode(["licenseKey": key])
+        let (data, response) = try await URLSession.shared.data(for: req)
+        struct PortalResponse: Codable {
+            let url: String?
+            let error: String?
+        }
+        let decoded = try? JSONDecoder().decode(PortalResponse.self, from: data)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
+              let urlString = decoded?.url, let url = URL(string: urlString)
+        else {
+            throw LicenseError(message: decoded?.error ?? "Couldn't open the billing portal.")
+        }
+        return url
+    }
+
     /// Refresh the signed token from the server. A definitive server rejection
     /// (revoked, canceled, unknown key) locks the app; network failures keep
     /// the current state and rely on the offline grace window.

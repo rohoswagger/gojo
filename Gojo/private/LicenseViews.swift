@@ -62,7 +62,7 @@ struct LicenseSettings: View {
                     Spacer()
                     statusLabel
                 }
-                if case .licensed = licenseManager.state {
+                if case .licensed(let plan) = licenseManager.state {
                     if let masked = licenseManager.licenseKeyMasked {
                         HStack {
                             Text("License key")
@@ -71,6 +71,20 @@ struct LicenseSettings: View {
                                 .foregroundStyle(.secondary)
                                 .font(.body.monospaced())
                         }
+                    }
+                    if plan == .monthly {
+                        Button("Manage Subscription…") {
+                            openPortal()
+                        }
+                        .disabled(isBusy)
+                        Text("Update your payment method, view invoices, or cancel.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    if let errorMessage {
+                        Text(errorMessage)
+                            .font(.caption)
+                            .foregroundStyle(.red)
                     }
                     Button("Deactivate This Mac", role: .destructive) {
                         Task {
@@ -155,6 +169,21 @@ struct LicenseSettings: View {
             do {
                 try await licenseManager.activate(key: keyInput)
                 keyInput = ""
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            isBusy = false
+        }
+    }
+
+    private func openPortal() {
+        guard !isBusy else { return }
+        errorMessage = nil
+        isBusy = true
+        Task {
+            do {
+                let url = try await licenseManager.managePortalURL()
+                NSWorkspace.shared.open(url)
             } catch {
                 errorMessage = error.localizedDescription
             }

@@ -40,7 +40,7 @@ enum LicenseConfig {
             return url
         }
         #endif
-        return URL(string: "https://gojo-license.rohoswagger.workers.dev")!
+        return URL(string: "https://gojo-license.rohoswagger.com")!
     }
 
     // Raw Ed25519 public key matching the Worker's ED_PRIVATE_KEY.

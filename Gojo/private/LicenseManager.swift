@@ -31,13 +31,15 @@ enum LicenseState: Equatable {
 }
 
 enum LicenseConfig {
-    // The deployed gojo-license Worker. Override for local testing with:
+    // The deployed gojo-license Worker. Debug builds can point elsewhere with:
     //   defaults write <bundle-id> licenseServerURL http://localhost:8787
     static var serverBaseURL: URL {
+        #if DEBUG
         if let override = UserDefaults.standard.string(forKey: "licenseServerURL"),
            let url = URL(string: override) {
             return url
         }
+        #endif
         return URL(string: "https://gojo-license.rohoswagger.workers.dev")!
     }
 
@@ -69,8 +71,14 @@ struct LicenseError: LocalizedError {
 final class LicenseManager: ObservableObject {
     static let shared = LicenseManager()
 
-    @Published private(set) var state: LicenseState = .trial(daysRemaining: LicenseConfig.trialDays)
+    @Published private(set) var state: LicenseState = .trial(daysRemaining: LicenseConfig.trialDays) {
+        didSet { Self.lockedFlag = isLocked }
+    }
     @Published private(set) var licenseKeyMasked: String?
+
+    /// Mirror of `isLocked` readable from non-main-actor call sites
+    /// (CGEvent tap callbacks). Only written on the main actor.
+    nonisolated(unsafe) private(set) static var lockedFlag = false
 
     var isLocked: Bool {
         if case .locked = state { return true }
@@ -79,16 +87,29 @@ final class LicenseManager: ObservableObject {
 
     private init() {
         evaluate()
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--print-license-state") {
+            print("license-state: \(state)")
+            exit(0)
+        }
+        #endif
         Task { await revalidationLoop() }
     }
 
     // MARK: - State evaluation
 
     func evaluate() {
+        // Trial and grace math run on the latest wall clock this app has ever
+        // seen, so winding the Mac's clock back can't extend either.
+        let now = max(
+            Date().timeIntervalSince1970,
+            Keychain.getString(.lastSeenTime).flatMap(TimeInterval.init) ?? 0
+        )
+        Keychain.setString(String(now), for: .lastSeenTime)
+
         if let tokenString = Keychain.getString(.licenseToken),
            let token = Self.verify(tokenString) {
             licenseKeyMasked = Self.mask(token.key)
-            let now = Date().timeIntervalSince1970
             let graceEnd = token.exp + TimeInterval(LicenseConfig.offlineGraceDays * 86_400)
             if now < graceEnd {
                 state = .licensed(plan: token.plan)
@@ -99,15 +120,15 @@ final class LicenseManager: ObservableObject {
         }
 
         licenseKeyMasked = nil
-        let trialStart: Date
+        let trialStart: TimeInterval
         if let stored = Keychain.getString(.trialStart), let epoch = TimeInterval(stored) {
-            trialStart = Date(timeIntervalSince1970: epoch)
+            trialStart = epoch
         } else {
-            trialStart = Date()
-            Keychain.setString(String(trialStart.timeIntervalSince1970), for: .trialStart)
+            trialStart = now
+            Keychain.setString(String(trialStart), for: .trialStart)
         }
 
-        let elapsedDays = Int(Date().timeIntervalSince(trialStart) / 86_400)
+        let elapsedDays = Int((now - trialStart) / 86_400)
         let remaining = LicenseConfig.trialDays - elapsedDays
         if remaining > 0 {
             state = .trial(daysRemaining: remaining)
@@ -250,6 +271,7 @@ private enum Keychain {
         case trialStart = "gojo.trialStart"
         case licenseKey = "gojo.licenseKey"
         case licenseToken = "gojo.licenseToken"
+        case lastSeenTime = "gojo.lastSeenTime"
     }
 
     private static let service = "GojoLicense"

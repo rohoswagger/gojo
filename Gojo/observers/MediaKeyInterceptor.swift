@@ -101,6 +101,10 @@ final class MediaKeyInterceptor {
     // MARK: - Event Handling
     
     private func handleEvent(_ cgEvent: CGEvent) -> Unmanaged<CGEvent>? {
+        // Locked app: pass media keys through so the system HUD takes over.
+        guard !LicenseManager.lockedFlag else {
+            return Unmanaged.passRetained(cgEvent)
+        }
         // Ensure the CGEvent has a valid type before converting to NSEvent
         guard cgEvent.type != .null else {
             return Unmanaged.passRetained(cgEvent)

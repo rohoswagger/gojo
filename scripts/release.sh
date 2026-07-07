@@ -5,6 +5,9 @@
 # Usage:
 #   scripts/release.sh <version>            # Developer ID signed + notarized release
 #   scripts/release.sh <version> --adhoc    # ad-hoc signed, no notarization (no paid account)
+#   scripts/release.sh <version> --private  # signed + notarized DMG only: no GitHub
+#                                           # Release, no appcast. For paid/paywalled
+#                                           # distribution — upload the DMG yourself.
 #   DRY_RUN=1 scripts/release.sh <version>  # build the artifacts but don't publish
 #
 # --adhoc cuts a release with NO Apple Developer account: the app is ad-hoc
@@ -56,15 +59,17 @@ require_env() {
 
 VERSION=""
 ADHOC=0
+PRIVATE=0
 for arg in "$@"; do
   case "$arg" in
     --adhoc) ADHOC=1 ;;
+    --private) PRIVATE=1 ;;
     -*) die "Unknown option: $arg" ;;
     *) VERSION="$arg" ;;
   esac
 done
 
-[ -z "$VERSION" ] && die "Usage: scripts/release.sh <version> [--adhoc]"
+[ -z "$VERSION" ] && die "Usage: scripts/release.sh <version> [--adhoc] [--private]"
 
 if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   die "Version must be semver (X.Y.Z), got: $VERSION"
@@ -108,9 +113,11 @@ else
   trap 'rm -f "$SPARKLE_KEY_FILE"' EXIT
 fi
 
-command -v gh >/dev/null    || die "Install GitHub CLI: brew install gh"
 command -v python3 >/dev/null || die "python3 not on PATH"
-gh auth status >/dev/null 2>&1 || die "gh is not authenticated. Run: gh auth login"
+if [ "$PRIVATE" != "1" ]; then
+  command -v gh >/dev/null    || die "Install GitHub CLI: brew install gh"
+  gh auth status >/dev/null 2>&1 || die "gh is not authenticated. Run: gh auth login"
+fi
 
 # -------- 1. Pre-flight checks --------
 
@@ -295,18 +302,22 @@ ok "Sparkle signature: $SIGNATURE_LINE"
 
 # -------- 7. Update appcast.xml + extract release notes --------
 
-log "Updating appcast.xml"
+if [ "$PRIVATE" = "1" ]; then
+  warn "Skipping appcast update (--private): the public appcast must not list paid builds."
+else
+  log "Updating appcast.xml"
 
-python3 .github/scripts/update_appcast.py \
-  --appcast docs/appcast.xml \
-  --version "$VERSION" \
-  --build "$BUILD_NUMBER" \
-  --dmg-url "https://github.com/rohoswagger/gojo/releases/download/v$VERSION/$DMG_NAME" \
-  --dmg-size "$DMG_SIZE" \
-  --ed-signature-line "$SIGNATURE_LINE" \
-  --release-notes-out ".build/release-notes-$VERSION.md"
+  python3 .github/scripts/update_appcast.py \
+    --appcast docs/appcast.xml \
+    --version "$VERSION" \
+    --build "$BUILD_NUMBER" \
+    --dmg-url "https://github.com/rohoswagger/gojo/releases/download/v$VERSION/$DMG_NAME" \
+    --dmg-size "$DMG_SIZE" \
+    --ed-signature-line "$SIGNATURE_LINE" \
+    --release-notes-out ".build/release-notes-$VERSION.md"
 
-ok "appcast.xml updated, release notes at .build/release-notes-$VERSION.md"
+  ok "appcast.xml updated, release notes at .build/release-notes-$VERSION.md"
+fi
 
 # -------- 8. Dry run stops here --------
 
@@ -314,8 +325,27 @@ if [ "$DRY_RUN" = "1" ]; then
   log "DRY_RUN=1 — stopping before publish"
   info "Artifacts:"
   info "  DMG:    $DMG_PATH"
-  info "  Notes:  .build/release-notes-$VERSION.md"
+  [ "$PRIVATE" = "1" ] || info "  Notes:  .build/release-notes-$VERSION.md"
   info "Inspect, then re-run without DRY_RUN to publish."
+  exit 0
+fi
+
+# -------- 8b. Private release stops after tagging --------
+
+if [ "$PRIVATE" = "1" ]; then
+  log "Tagging v$VERSION (private release)"
+  git tag -a "v$VERSION" -m "Gojo $VERSION (private)"
+  git push origin "v$VERSION"
+
+  log "Private release v$VERSION ready"
+  info "  DMG:               $DMG_PATH"
+  info "  DMG SHA-256:       $(shasum -a 256 "$DMG_PATH" | awk '{print $1}')"
+  info "  DMG size:          $DMG_SIZE bytes"
+  info "  Build number:      $BUILD_NUMBER"
+  info "  Sparkle signature: $SIGNATURE_LINE"
+  info ""
+  info "Upload the DMG to your distribution channel. Keep the size, build number,"
+  info "and Sparkle signature — a private appcast entry needs all three."
   exit 0
 fi
 

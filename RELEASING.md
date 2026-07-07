@@ -5,9 +5,10 @@ Gojo cuts releases from your local machine via [`scripts/release.sh`](./scripts/
 CI (`.github/workflows/build.yml`) verifies every PR/push compiles, but does **not** publish releases.
 
 ```
-make release VERSION=1.0.0       # publish
+make release VERSION=1.0.0       # publish to GitHub Releases + public appcast
 make release-dry VERSION=1.0.0   # build, sign, notarize, appcast — but don't publish
 make release VERSION=1.0.0 ARGS=--adhoc           # ad-hoc signed, no Apple account
+make release VERSION=1.0.0 ARGS=--private         # paid channel: notarized DMG only
 ```
 
 > `--adhoc` cuts a release with **no Apple Developer account**: the app is
@@ -16,6 +17,13 @@ make release VERSION=1.0.0 ARGS=--adhoc           # ad-hoc signed, no Apple acco
 > `xattr -dr com.apple.quarantine /Applications/Gojo.app`. Good for free/OSS
 > distribution; use the default (Developer ID + notarized) path for a polished
 > public launch.
+
+> `--private` is the **paid-distribution** mode: it builds the signed +
+> notarized DMG and Sparkle-signs it, but publishes nothing — no GitHub
+> Release, no appcast entry. It tags `vX.Y.Z` (source correspondence for GPL)
+> and prints the DMG path, SHA-256, size, build number, and Sparkle signature;
+> upload the DMG to the sales platform yourself. The public appcast was
+> retired when Gojo went paid — do not add new items to it.
 
 ---
 

@@ -367,7 +367,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         KeyboardShortcuts.onKeyDown(for: .toggleSneakPeek) { [weak self] in
-            guard let self = self else { return }
+            guard let self = self, !LicenseManager.shared.isLocked else { return }
             if Defaults[.sneakPeekStyles] == .inline {
                 let newStatus = !self.coordinator.expandingView.show
                 self.coordinator.toggleExpandingView(status: newStatus, type: .music)

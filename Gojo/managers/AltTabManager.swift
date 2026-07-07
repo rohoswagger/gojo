@@ -61,6 +61,7 @@ final class AltTabManager: ObservableObject {
     // MARK: - Switching
 
     func handleTrigger(reverse: Bool) {
+        guard !LicenseManager.lockedFlag else { return }
         if session == nil {
             open(reverse: reverse)
         } else {

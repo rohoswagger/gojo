@@ -75,6 +75,9 @@ final class LicenseManager: ObservableObject {
         didSet { Self.lockedFlag = isLocked }
     }
     @Published private(set) var licenseKeyMasked: String?
+    /// For subscriptions: the end of the paid period (token exp minus the
+    /// offline grace window). Nil for trial and lifetime licenses.
+    @Published private(set) var paidThrough: Date?
 
     /// Mirror of `isLocked` readable from non-main-actor call sites
     /// (CGEvent tap callbacks). Only written on the main actor.
@@ -88,9 +91,17 @@ final class LicenseManager: ObservableObject {
     private init() {
         evaluate()
         #if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("--print-license-state") {
+        let args = ProcessInfo.processInfo.arguments
+        if args.contains("--print-license-state") {
             print("license-state: \(state)")
             exit(0)
+        }
+        // Screenshot/QA hook: force a state without touching Keychain or network.
+        if args.contains("--fake-monthly") {
+            licenseKeyMasked = "GOJO-••••-••••-••••-DEMO"
+            paidThrough = Date(timeIntervalSince1970: Date().timeIntervalSince1970 + 26 * 86_400)
+            state = .licensed(plan: .monthly)
+            return
         }
         #endif
         Task { await revalidationLoop() }
@@ -110,6 +121,9 @@ final class LicenseManager: ObservableObject {
         if let tokenString = Keychain.getString(.licenseToken),
            let token = Self.verify(tokenString) {
             licenseKeyMasked = Self.mask(token.key)
+            paidThrough = token.plan == .monthly
+                ? Date(timeIntervalSince1970: token.exp - TimeInterval(LicenseConfig.offlineGraceDays * 86_400))
+                : nil
             let graceEnd = token.exp + TimeInterval(LicenseConfig.offlineGraceDays * 86_400)
             if now < graceEnd {
                 state = .licensed(plan: token.plan)
@@ -120,6 +134,7 @@ final class LicenseManager: ObservableObject {
         }
 
         licenseKeyMasked = nil
+        paidThrough = nil
         let trialStart: TimeInterval
         if let stored = Keychain.getString(.trialStart), let epoch = TimeInterval(stored) {
             trialStart = epoch

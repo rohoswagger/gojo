@@ -73,11 +73,26 @@ struct LicenseSettings: View {
                         }
                     }
                     if plan == .monthly {
+                        if let paidThrough = licenseManager.paidThrough {
+                            HStack {
+                                Text("Paid through")
+                                Spacer()
+                                Text(paidThrough, style: .date)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                         Button("Manage Subscription…") {
                             openPortal()
                         }
                         .disabled(isBusy)
-                        Text("Update your payment method, view invoices, or cancel.")
+                        Text("Update your payment method or view invoices. Opens your billing portal in the browser.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Button("Cancel Subscription…", role: .destructive) {
+                            openPortal()
+                        }
+                        .disabled(isBusy)
+                        Text("Cancelling keeps Gojo running until the end of your paid month. After that it locks until you resubscribe, or buy a lifetime license.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

@@ -82,9 +82,10 @@ struct LicenseSettings: View {
                             }
                         }
                         Button("Manage Subscription…") {
-                            NSWorkspace.shared.open(LicenseConfig.portalLoginURL)
+                            openPortal()
                         }
-                        Text("Update your payment method, view invoices, or cancel. Enter your email and Stripe sends you a secure link.")
+                        .disabled(isBusy)
+                        Text("Update your payment method, view invoices, or cancel. Opens your billing portal in the browser.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -183,6 +184,20 @@ struct LicenseSettings: View {
         }
     }
 
+    private func openPortal() {
+        guard !isBusy else { return }
+        errorMessage = nil
+        isBusy = true
+        Task {
+            do {
+                let url = try await licenseManager.managePortalURL()
+                NSWorkspace.shared.open(url)
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            isBusy = false
+        }
+    }
 }
 
 /// Onboarding step: start the free trial or activate a purchased license.

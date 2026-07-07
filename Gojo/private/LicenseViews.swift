@@ -82,17 +82,9 @@ struct LicenseSettings: View {
                             }
                         }
                         Button("Manage Subscription…") {
-                            openPortal()
+                            NSWorkspace.shared.open(LicenseConfig.portalLoginURL)
                         }
-                        .disabled(isBusy)
-                        Text("Update your payment method or view invoices. Opens your billing portal in the browser.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Button("Cancel Subscription…", role: .destructive) {
-                            openPortal()
-                        }
-                        .disabled(isBusy)
-                        Text("Cancelling keeps Gojo running until the end of your paid month. After that it locks until you resubscribe, or buy a lifetime license.")
+                        Text("Update your payment method, view invoices, or cancel. Enter your email and Stripe sends you a secure link.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -191,20 +183,6 @@ struct LicenseSettings: View {
         }
     }
 
-    private func openPortal() {
-        guard !isBusy else { return }
-        errorMessage = nil
-        isBusy = true
-        Task {
-            do {
-                let url = try await licenseManager.managePortalURL()
-                NSWorkspace.shared.open(url)
-            } catch {
-                errorMessage = error.localizedDescription
-            }
-            isBusy = false
-        }
-    }
 }
 
 /// Onboarding step: start the free trial or activate a purchased license.

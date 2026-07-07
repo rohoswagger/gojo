@@ -65,3 +65,8 @@ AuthKey_*.p8
 *.mobileprovision
 .env.local
 .env.*.local
+
+# Local tooling / ephemeral
+.worktrees/
+.playwright-mcp/
+/*.png

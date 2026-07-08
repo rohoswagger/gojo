@@ -65,7 +65,7 @@ struct MusicControllerSelectionView: View {
                 onContinue()
             })
                 .buttonStyle(GlassButtonStyle())
-                .padding(.bottom, 24)
+                .padding(.bottom, OnboardingLayout.actionsBottom)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(SunsetBackground())

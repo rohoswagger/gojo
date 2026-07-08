@@ -83,6 +83,9 @@ final class LicenseManager: ObservableObject {
         didSet { Self.lockedFlag = isLocked }
     }
     @Published private(set) var licenseKeyMasked: String?
+    /// The full, unmasked license key from the Keychain — for copy-to-clipboard
+    /// only. The UI keeps the key masked and never displays this.
+    var fullLicenseKey: String? { Keychain.getString(.licenseKey) }
     /// For subscriptions: the end of the paid period (token exp minus the
     /// offline grace window). Nil for trial and lifetime licenses.
     @Published private(set) var paidThrough: Date?

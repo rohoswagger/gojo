@@ -19,6 +19,16 @@ extension Color {
     static let onboardingControl = Color(red: 0.62, green: 0.61, blue: 0.66).opacity(0.85)  // soft translucent slate (buttons)
 }
 
+/// Shared vertical rhythm for the onboarding steps so the badge and the action
+/// buttons land at the same position on every screen (no layout shift between
+/// steps). Content flows from the badge downward; a Spacer pushes the actions to
+/// a fixed distance from the bottom.
+enum OnboardingLayout {
+    static let badgeTop: CGFloat = 42
+    static let titleGap: CGFloat = 24
+    static let actionsBottom: CGFloat = 30
+}
+
 /// Simple translucent + blurred square button for the onboarding flow.
 struct GlassButtonStyle: ButtonStyle {
     private let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -189,12 +199,23 @@ struct MarkHero: View {
 struct SunsetBackground: View {
     var body: some View {
         ZStack {
-            VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
+            // Self-contained dark cool-slate base. Deliberately NOT a
+            // behind-window material: that sampled the desktop / whatever window
+            // sat behind onboarding, so the palette went pale and muddy in light
+            // mode (and over bright windows). A fixed gradient renders the same
+            // sunset-over-slate look everywhere, with healthy text contrast.
+            LinearGradient(
+                colors: [
+                    Color(red: 0.105, green: 0.115, blue: 0.165),
+                    Color(red: 0.050, green: 0.055, blue: 0.085),
+                ],
+                startPoint: .top, endPoint: .bottom
+            )
 
             // Soft light-blue horizon glow across the center.
             GeometryReader { geo in
                 RadialGradient(
-                    colors: [Color(red: 0.62, green: 0.78, blue: 0.95).opacity(0.20), .clear],
+                    colors: [Color(red: 0.62, green: 0.78, blue: 0.95).opacity(0.24), .clear],
                     center: .center, startRadius: 0, endRadius: geo.size.width * 0.62
                 )
                 .frame(width: geo.size.width, height: geo.size.height)
@@ -208,15 +229,22 @@ struct SunsetBackground: View {
                 GeometryReader { geo in
                     ZStack {
                         blob(.sunsetSky, at: CGPoint(x: 0.28, y: 0.24),
-                             speed: 0.05, wobble: 1.0, radius: 300, opacity: 0.16, geo: geo, t: t)
+                             speed: 0.05, wobble: 1.0, radius: 300, opacity: 0.24, geo: geo, t: t)
                         blob(.sunsetPeach, at: CGPoint(x: 0.70, y: 0.74),
-                             speed: 0.045, wobble: 1.3, radius: 320, opacity: 0.18, geo: geo, t: t)
+                             speed: 0.045, wobble: 1.3, radius: 320, opacity: 0.28, geo: geo, t: t)
                         blob(.sunsetCoral, at: CGPoint(x: 0.66, y: 0.30),
-                             speed: 0.05, wobble: 0.8, radius: 240, opacity: 0.13, geo: geo, t: t)
+                             speed: 0.05, wobble: 0.8, radius: 240, opacity: 0.20, geo: geo, t: t)
                     }
                     .blendMode(.plusLighter)
                 }
             }
+
+            // Gentle edge vignette so the card reads as an intentional surface.
+            RadialGradient(
+                colors: [.clear, Color.black.opacity(0.30)],
+                center: .center, startRadius: 130, endRadius: 420
+            )
+            .blendMode(.multiply)
         }
         .ignoresSafeArea()
     }

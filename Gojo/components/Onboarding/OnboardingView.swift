@@ -104,17 +104,10 @@ struct OnboardingView: View {
                     .transition(.opacity)
                 
             case .accessibilityPermission:
-                PermissionRequestView(
-                    icon: Image(systemName: "hand.raised.fill"),
-                    title: "Enable Accessibility Access",
-                    description: "Accessibility access is required to replace system notifications with the Gojo HUD. This allows the app to intercept media and brightness events to display custom HUD overlays.",
-                    privacyNote: "Accessibility access is used only to improve media and brightness notifications. No data is collected or shared.",
-                    onAllow: {
-                        Task {
-                            await requestAccessibilityPermission()
-                            withAnimation(.easeInOut(duration: 0.6)) {
-                                step = .musicPermission
-                            }
+                AccessibilityRequestView(
+                    onGranted: {
+                        withAnimation(.easeInOut(duration: 0.6)) {
+                            step = .musicPermission
                         }
                     },
                     onSkip: {
@@ -167,9 +160,5 @@ struct OnboardingView: View {
 
     func requestRemindersPermission() async {
         _ = try? await calendarService.requestAccess(to: .reminder)
-    }
-    
-    func requestAccessibilityPermission() async {
-        await XPCHelperClient.shared.ensureAccessibilityAuthorization(promptIfNeeded: true)
     }
 }

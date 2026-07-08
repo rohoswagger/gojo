@@ -6,6 +6,23 @@
     <description>Most recent changes to Gojo, with download links.</description>
     <language>en</language>
     <item>
+      <title>Version 1.0.1</title>
+      <pubDate>Wed, 08 Jul 2026 16:17:05 +0000</pubDate>
+      <sparkle:version>1783527344</sparkle:version>
+      <sparkle:shortVersionString>1.0.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+<h4>Fixed</h4>
+<ul><li>**Onboarding** — the accessibility permission step is now a Codex-style drag-to-grant flow: drag the app icon straight into System Settings instead of hunting through panes.</li><li>**Onboarding** — the setup flow now renders correctly in light mode, with a consistent look across every step.</li><li>**Installer** — the DMG install window is redesigned to match the marketing site, and window chrome/layout issues on open are fixed.</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://downloads.rohoswagger.com/Gojo-1.0.1.dmg"
+        sparkle:edSignature="clMn5SBl5IbAVYy/Jxr0zFRfSPF3W8gyTMRGJnQnE1ltv6FYcl0ZfVqJLG5Vnl7ZuR0gbJpUcwlzphtFh0uJCQ=="
+        length="8024107"
+        type="application/octet-stream" />
+    </item>
+
+    <item>
       <title>Version 1.0.0</title>
       <pubDate>Tue, 07 Jul 2026 23:17:04 +0000</pubDate>
       <sparkle:version>1783466113</sparkle:version>

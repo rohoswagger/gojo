@@ -53,6 +53,7 @@ struct LicenseSettings: View {
     @State private var keyInput = ""
     @State private var isBusy = false
     @State private var errorMessage: String?
+    @State private var didCopyKey = false
 
     var body: some View {
         Form {
@@ -67,9 +68,21 @@ struct LicenseSettings: View {
                         HStack {
                             Text("License key")
                             Spacer()
-                            Text(masked)
-                                .foregroundStyle(.secondary)
-                                .font(.body.monospaced())
+                            Button {
+                                copyLicenseKey()
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Text(masked)
+                                        .font(.body.monospaced())
+                                    Image(systemName: didCopyKey ? "checkmark" : "doc.on.doc")
+                                        .font(.caption.weight(.semibold))
+                                }
+                                .foregroundStyle(didCopyKey ? Color.green : .secondary)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(licenseManager.fullLicenseKey == nil)
+                            .help(didCopyKey ? "Copied" : "Copy license key")
                         }
                     }
                     if plan == .monthly {
@@ -198,6 +211,16 @@ struct LicenseSettings: View {
             isBusy = false
         }
     }
+
+    private func copyLicenseKey() {
+        guard let key = licenseManager.fullLicenseKey else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(key, forType: .string)
+        withAnimation(.easeOut(duration: 0.15)) { didCopyKey = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+            withAnimation(.easeOut(duration: 0.2)) { didCopyKey = false }
+        }
+    }
 }
 
 /// Onboarding step: start the free trial or activate a purchased license.
@@ -232,9 +255,9 @@ struct OnboardingLicenseView: View {
         ZStack {
             SunsetBackground()
 
-            VStack(spacing: 24) {
+            VStack(spacing: 0) {
                 badge
-                    .padding(.top, 32)
+                    .padding(.top, OnboardingLayout.badgeTop)
                     .scaleEffect(appeared ? 1 : 0.8)
                     .opacity(appeared ? 1 : 0)
 
@@ -250,6 +273,7 @@ struct OnboardingLicenseView: View {
                         .foregroundStyle(.secondary)
                         .padding(.horizontal)
                 }
+                .padding(.top, OnboardingLayout.titleGap)
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 12)
 
@@ -290,8 +314,21 @@ struct OnboardingLicenseView: View {
                                 .transition(.opacity)
                         }
                     }
+                    .padding(.top, 22)
                     .opacity(appeared ? 1 : 0)
                     .offset(y: appeared ? 0 : 12)
+                }
+
+                Spacer(minLength: 16)
+
+                if !isLicensed {
+                    Text("No account needed. You can always add your license later in Settings.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                        .padding(.bottom, 12)
+                        .opacity(appeared ? 1 : 0)
                 }
 
                 HStack {
@@ -320,20 +357,11 @@ struct OnboardingLicenseView: View {
                         .disabled(isBusy)
                     }
                 }
-                .padding(.top, 6)
+                .padding(.bottom, OnboardingLayout.actionsBottom)
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 12)
-
-                if !isLicensed {
-                    Text("No account needed. You can always add your license later in Settings.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
-                        .opacity(appeared ? 1 : 0)
-                }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .onAppear {
             withAnimation(.spring(response: 0.55, dampingFraction: 0.7).delay(0.1)) {

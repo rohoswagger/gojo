@@ -143,7 +143,7 @@ struct OnboardingView: View {
                 OnboardingFinishView(onFinish: onFinish, onOpenSettings: onOpenSettings)
             }
         }
-        .frame(width: 400, height: 600)
+        .frame(width: 400, height: 540)
         .tint(Color.onboardingControl)
         .environment(\.colorScheme, .dark)
     }

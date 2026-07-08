@@ -628,7 +628,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func showOnboardingWindow(step: OnboardingStep = .welcome) {
         if onboardingWindowController == nil {
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 400, height: 600),
+                contentRect: NSRect(x: 0, y: 0, width: 400, height: 540),
                 styleMask: [.titled, .fullSizeContentView],
                 backing: .buffered,
                 defer: false
@@ -661,6 +661,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 ))
             window.isRestorable = false
             window.identifier = NSUserInterfaceItemIdentifier("OnboardingWindow")
+            // Keep onboarding visible above other apps for the whole flow — as
+            // an accessory app its window would otherwise slip behind and get
+            // lost. (The accessibility step fades this out on its own while the
+            // drag companion is up, then refocuses it once access is granted.)
+            window.level = .floating
+            window.collectionBehavior.insert(.canJoinAllSpaces)
+            // Onboarding is designed dark end-to-end; pin the window appearance
+            // so materials (badges, glass buttons) don't render pale in light mode.
+            window.appearance = NSAppearance(named: .darkAqua)
 
             onboardingWindowController = NSWindowController(window: window)
         }

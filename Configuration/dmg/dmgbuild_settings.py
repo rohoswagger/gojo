@@ -41,10 +41,16 @@ icon_locations = {
     'Applications': (510, 180),
 }
 
-# Misc Finder options
-show_statusbar = False
-show_tabview = False
+# Clean, chromeless icon-view window: just the background art and the two
+# icons, no sidebar / toolbar / path bar / status bar / tabs. (dmgbuild's keys
+# use underscores; the earlier show_statusbar/show_tabview names were silently
+# ignored, which is why the window opened with Finder chrome.)
+default_view = 'icon-view'
+show_status_bar = False
+show_tab_view = False
 show_toolbar = False
+show_pathbar = False
+show_sidebar = False
 
 # Optionally set a custom icon for the DMG volume (leave empty to skip)
 if BADGE_ICON and os.path.exists(BADGE_ICON):

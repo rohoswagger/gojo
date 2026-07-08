@@ -141,6 +141,13 @@ cd - >/dev/null && rm -rf /tmp/rv
   it breaks auto-updates for all installs.
 - **GitHub Pages** must stay enabled (Settings → Pages → `main` / `/docs`) or the
   appcast (auto-update feed) 404s.
+- **Pages HTTPS enforcement must stay ON** (found broken 2026-07-08): with
+  `https_enforced: false`, the feed URL baked into shipped apps redirects to
+  `http://`, App Transport Security blocks it, and **every install silently stops
+  auto-updating**. Check: `gh api repos/rohoswagger/gojo/pages --jq '.https_enforced'`
+  → must be `true`. Fix: `gh api -X PUT repos/rohoswagger/gojo/pages -F https_enforced=true`.
+  Verify: `curl -fsSI https://rohoswagger.github.io/gojo/appcast.xml | grep -i location`
+  → must be `https://`.
 
 ## After publishing
 

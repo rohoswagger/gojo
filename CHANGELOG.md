@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] — 2026-07-10
+
+### Changed
+
+- **Clipboard history** and the **calendar view** are now enabled by default on fresh installs.
+
+### Fixed
+
+- **Night shift** — the notch toggle now works even without a location set, assuming a 7 AM sunrise / 7 PM sunset. The first time you turn it on without a location, settings opens once so you can set one.
+- **Window snapping** — the window strip now scrolls smoothly when you have many windows open, instead of hiding anything past the sixth. Edge fades and a peeking card show when there's more to scroll, and the focused window scrolls into view automatically.
+
 ## [1.0.1] — 2026-07-08
 
 ### Fixed
@@ -32,6 +43,7 @@ Meet Gojo — it turns the dead space around your MacBook's notch into a control
 - **Guided setup** — a polished first launch that gets you going in seconds.
 - **Automatic updates** — new versions install themselves; no re-downloading.
 
-[Unreleased]: https://github.com/rohoswagger/gojo/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/rohoswagger/gojo/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/rohoswagger/gojo/releases/tag/v1.0.2
 [1.0.1]: https://github.com/rohoswagger/gojo/releases/tag/v1.0.1
 [1.0.0]: https://github.com/rohoswagger/gojo/releases/tag/v1.0.0

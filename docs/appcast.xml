@@ -6,6 +6,25 @@
     <description>Most recent changes to Gojo, with download links.</description>
     <language>en</language>
     <item>
+      <title>Version 1.0.2</title>
+      <pubDate>Fri, 10 Jul 2026 14:04:58 +0000</pubDate>
+      <sparkle:version>1783692170</sparkle:version>
+      <sparkle:shortVersionString>1.0.2</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+<h4>Changed</h4>
+<ul><li>**Clipboard history** and the **calendar view** are now enabled by default on fresh installs.</li></ul>
+<h4>Fixed</h4>
+<ul><li>**Night shift** — the notch toggle now works even without a location set, assuming a 7 AM sunrise / 7 PM sunset. The first time you turn it on without a location, settings opens once so you can set one.</li><li>**Window snapping** — the window strip now scrolls smoothly when you have many windows open, instead of hiding anything past the sixth. Edge fades and a peeking card show when there's more to scroll, and the focused window scrolls into view automatically.</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://downloads.rohoswagger.com/Gojo-1.0.2.dmg"
+        sparkle:edSignature="FtCu7AuITFSF+rai82jsgnuipJpJADOsickkJA8Qx+BKatTIaKA1cVM1Cy+VEEiQgIJX9WV8d1W+Qcl01o8VCw=="
+        length="8033334"
+        type="application/octet-stream" />
+    </item>
+
+    <item>
       <title>Version 1.0.1</title>
       <pubDate>Wed, 08 Jul 2026 16:17:05 +0000</pubDate>
       <sparkle:version>1783527344</sparkle:version>

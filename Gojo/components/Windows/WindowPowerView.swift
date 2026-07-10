@@ -129,17 +129,18 @@ private struct StageStrip: View {
     let focusedID: String?
     let onSelect: (WindowSummary) -> Void
 
-    private let maxVisibleWindows: Int = 6
+    /// Up to this many windows the cards flex-fill the column; beyond it the
+    /// strip scrolls at a fixed card height so cards never compress or vanish.
+    private let flexThreshold: Int = 5
 
     var body: some View {
         if windows.isEmpty {
             EmptyStagePlaceholder()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else {
+        } else if windows.count <= flexThreshold {
             // Cards flex-fill so the strip bottoms out with the other columns.
-            // Cap at 6 to avoid sub-20px cards when many windows are open.
-            VStack(spacing: 3) {
-                ForEach(windows.prefix(maxVisibleWindows)) { window in
+            VStack(spacing: StageStripMetrics.spacing) {
+                ForEach(windows) { window in
                     StageCard(
                         summary: window,
                         isFocused: window.id == focusedID,
@@ -149,6 +150,126 @@ private struct StageStrip: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            ScrollingStageStrip(
+                windows: windows,
+                focusedID: focusedID,
+                onSelect: onSelect
+            )
+        }
+    }
+}
+
+private enum StageStripMetrics {
+    static let spacing: CGFloat = 2
+    /// Preferred card height in scroll mode; the actual height is re-derived
+    /// so the card at the fold is half-clipped (the "there's more" affordance).
+    static let targetCardHeight: CGFloat = 26
+    static let fadeHeight: CGFloat = 14
+
+    /// Card height such that a whole number of cards fits plus a half-clipped
+    /// one peeking at the fold.
+    static func cardHeight(available: CGFloat) -> CGFloat {
+        let fullRows = max(
+            2, ((available + spacing) / (targetCardHeight + spacing)).rounded(.down))
+        return max(20, (available - spacing * fullRows) / (fullRows + 0.5))
+    }
+}
+
+private struct StageScrollMetrics: Equatable {
+    var offset: CGFloat = 0
+    var contentHeight: CGFloat = 0
+}
+
+private struct StageScrollMetricsKey: PreferenceKey {
+    static var defaultValue = StageScrollMetrics()
+    static func reduce(value: inout StageScrollMetrics, nextValue: () -> StageScrollMetrics) {
+        value = nextValue()
+    }
+}
+
+/// Overflow variant of the stage strip: fixed-height cards in a hidden-indicator
+/// scroll view, edge fades that appear only toward more content, and auto-scroll
+/// that keeps the focused window's card in view.
+private struct ScrollingStageStrip: View {
+    let windows: [WindowSummary]
+    let focusedID: String?
+    let onSelect: (WindowSummary) -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var metrics = StageScrollMetrics()
+
+    var body: some View {
+        GeometryReader { viewport in
+            let cardHeight = StageStripMetrics.cardHeight(available: viewport.size.height)
+            let canScrollUp = metrics.offset > 2
+            let canScrollDown = metrics.contentHeight - metrics.offset - viewport.size.height > 2
+
+            ScrollViewReader { proxy in
+                ScrollView(.vertical) {
+                    VStack(spacing: StageStripMetrics.spacing) {
+                        ForEach(windows) { window in
+                            StageCard(
+                                summary: window,
+                                isFocused: window.id == focusedID,
+                                onSelect: { onSelect(window) }
+                            )
+                            .frame(height: cardHeight)
+                            .id(window.id)
+                        }
+                    }
+                    .background(
+                        GeometryReader { content in
+                            Color.clear.preference(
+                                key: StageScrollMetricsKey.self,
+                                value: StageScrollMetrics(
+                                    offset: -content.frame(in: .named("stageStrip")).minY,
+                                    contentHeight: content.size.height
+                                )
+                            )
+                        }
+                    )
+                }
+                .coordinateSpace(name: "stageStrip")
+                .scrollIndicators(.hidden)
+                .onPreferenceChange(StageScrollMetricsKey.self) { metrics = $0 }
+                .mask(edgeFadeMask(top: canScrollUp, bottom: canScrollDown))
+                .animation(.easeOut(duration: 0.2), value: canScrollUp)
+                .animation(.easeOut(duration: 0.2), value: canScrollDown)
+                .onAppear { scrollToFocused(proxy, animated: false) }
+                .onChange(of: focusedID) { _, _ in
+                    scrollToFocused(proxy, animated: !reduceMotion)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Alpha mask: opaque body with a soft ramp at whichever edges have more
+    /// content beyond them. Toggling an edge animates via the color change.
+    private func edgeFadeMask(top: Bool, bottom: Bool) -> some View {
+        VStack(spacing: 0) {
+            LinearGradient(
+                colors: [.black.opacity(top ? 0 : 1), .black],
+                startPoint: .top, endPoint: .bottom
+            )
+            .frame(height: StageStripMetrics.fadeHeight)
+            Rectangle().fill(Color.black)
+            LinearGradient(
+                colors: [.black, .black.opacity(bottom ? 0 : 1)],
+                startPoint: .top, endPoint: .bottom
+            )
+            .frame(height: StageStripMetrics.fadeHeight)
+        }
+    }
+
+    private func scrollToFocused(_ proxy: ScrollViewProxy, animated: Bool) {
+        guard let focusedID else { return }
+        if animated {
+            withAnimation(.smooth(duration: 0.35)) {
+                proxy.scrollTo(focusedID)
+            }
+        } else {
+            proxy.scrollTo(focusedID)
         }
     }
 }
@@ -614,5 +735,24 @@ private struct WindowPositionGlyph: View {
     WindowPowerView()
         .environmentObject(GojoViewModel())
         .frame(width: openNotchSize.width, height: openNotchSize.height)
+        .background(Color.black)
+}
+
+#Preview("Stage strip overflow") {
+    let mocks: [WindowSummary] = (0..<9).map { idx in
+        WindowSummary(
+            id: "mock-\(idx)",
+            pid: pid_t(idx),
+            windowID: nil,
+            appName: ["Brave", "Xcode", "Figma", "Notes", "Terminal", "Music", "Slack", "Mail", "Finder"][idx],
+            bundleIdentifier: nil,
+            icon: nil,
+            title: nil,
+            normalFrame: .zero,
+            currentAction: idx == 0 ? .maximize : nil
+        )
+    }
+    return StageStrip(windows: mocks, focusedID: "mock-7", onSelect: { _ in })
+        .frame(width: 68, height: 170)
         .background(Color.black)
 }

@@ -217,6 +217,7 @@ extension Defaults.Keys {
     static let fluxWindDownMinutes = Key<Int>("fluxWindDownMinutes", default: 60)
     static let fluxTransitionMinutes = Key<Int>("fluxTransitionMinutes", default: 60)
     static let fluxLocation = Key<FluxStoredLocation?>("fluxLocation", default: nil)
+    static let fluxLocationNudgeShown = Key<Bool>("fluxLocationNudgeShown", default: false)
 
     // MARK: Window Switcher (Alt-Tab)
     static let altTabEnabled = Key<Bool>("altTabEnabled", default: false)

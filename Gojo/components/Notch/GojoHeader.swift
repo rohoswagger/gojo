@@ -15,7 +15,6 @@ struct GojoHeader: View {
     @StateObject var tvm = ShelfStateViewModel.shared
     @Default(.fluxEnabled) var fluxEnabled
     @Default(.fluxShowInNotch) var fluxShowInNotch
-    @Default(.fluxLocation) var fluxLocation
     var body: some View {
         HStack(spacing: 0) {
             HStack {
@@ -64,10 +63,15 @@ struct GojoHeader: View {
                         }
                         if fluxShowInNotch {
                             Button(action: {
-                                if fluxLocation == nil {
+                                FluxManager.shared.toggle()
+                                // One-time nudge: the first time night shift turns on
+                                // without a location, open settings so the user can set
+                                // one. The toggle still works on the 7am/7pm fallback.
+                                if Defaults[.fluxEnabled],
+                                    Defaults[.fluxLocation] == nil,
+                                    !Defaults[.fluxLocationNudgeShown] {
+                                    Defaults[.fluxLocationNudgeShown] = true
                                     SettingsWindowController.shared.showWindow(tab: "Flux")
-                                } else {
-                                    FluxManager.shared.toggle()
                                 }
                             }) {
                                 Capsule()

@@ -123,7 +123,7 @@ extension Defaults.Keys {
 
     static let showNotHumanFace = Key<Bool>("showNotHumanFace", default: false)
     static let tileShowLabels = Key<Bool>("tileShowLabels", default: false)
-    static let showCalendar = Key<Bool>("showCalendar", default: false)
+    static let showCalendar = Key<Bool>("showCalendar", default: true)
     static let hideCompletedReminders = Key<Bool>("hideCompletedReminders", default: true)
     static let sliderColor = Key<SliderColorEnum>(
         "sliderUseAlbumArtColor",
@@ -182,7 +182,7 @@ extension Defaults.Keys {
     static let expandedDragDetection = Key<Bool>("expandedDragDetection", default: true)
 
     // MARK: Clipboard
-    static let clipboardHistoryEnabled = Key<Bool>("clipboardHistoryEnabled", default: false)
+    static let clipboardHistoryEnabled = Key<Bool>("clipboardHistoryEnabled", default: true)
     static let clipboardMaxEntries = Key<Int>("clipboardMaxEntries", default: 100)
     static let clipboardIgnoredBundleIDs = Key<[String]>(
         "clipboardIgnoredBundleIDs",

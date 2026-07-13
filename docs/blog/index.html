@@ -3,28 +3,89 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gojo Blog - MacBook notch utility articles and comparisons</title>
-<meta name="description" content="SEO and GEO articles about MacBook notch utilities, macOS Accessibility permissions, Gojo alternatives, clipboard tools, window snapping, and ways to make the notch useful.">
+<title>Gojo Blog: MacBook notch utility guides and comparisons</title>
+<meta name="description" content="Practical Gojo articles about MacBook notch utilities, macOS Accessibility permissions, clipboard tools, window snapping, file shelves, and app comparisons.">
 <link rel="canonical" href="https://rohoswagger.github.io/gojo/blog/">
-<meta property="og:title" content="Gojo Blog - MacBook notch utility articles and comparisons">
-<meta property="og:description" content="Search-friendly articles about MacBook notch utilities, macOS permissions, and Gojo alternatives.">
+<meta property="og:title" content="Gojo Blog: MacBook notch utility guides and comparisons">
+<meta property="og:description" content="Practical articles about MacBook notch utilities, macOS permissions, and Gojo alternatives.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://rohoswagger.github.io/gojo/blog/">
 <meta property="og:image" content="https://rohoswagger.github.io/gojo/assets/og.jpg">
+<meta property="og:image:alt" content="Gojo running as a MacBook notch control surface.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Gojo Blog: MacBook notch utility guides and comparisons">
+<meta name="twitter:description" content="Practical articles about MacBook notch utilities, macOS permissions, and Gojo alternatives.">
+<meta name="twitter:image" content="https://rohoswagger.github.io/gojo/assets/og.jpg">
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../site.css">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "CollectionPage",
-  "name": "Gojo Blog",
-  "description": "SEO and GEO articles about MacBook notch utilities, macOS Accessibility permissions, Gojo alternatives, and Gojo features.",
-  "url": "https://rohoswagger.github.io/gojo/blog/",
-  "hasPart": [
+  "@graph": [
     {
-      "@type": "Article",
-      "headline": "Best macOS notch utilities: what to look for before installing one",
-      "url": "https://rohoswagger.github.io/gojo/blog/best-macos-notch-utilities/"
+      "@type": "WebSite",
+      "@id": "https://rohoswagger.github.io/gojo/#website",
+      "name": "Gojo",
+      "url": "https://rohoswagger.github.io/gojo/",
+      "publisher": {
+        "@id": "https://rohoswagger.github.io/gojo/#organization"
+      }
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://rohoswagger.github.io/gojo/#organization",
+      "name": "Gojo",
+      "url": "https://rohoswagger.github.io/gojo/",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://rohoswagger.github.io/gojo/assets/og.jpg"
+      }
+    },
+    {
+      "@type": "CollectionPage",
+      "@id": "https://rohoswagger.github.io/gojo/blog/#collection",
+      "name": "Gojo Blog",
+      "description": "Practical Gojo articles about MacBook notch utilities, macOS Accessibility permissions, Gojo alternatives, clipboard tools, window snapping, file shelves, and app comparisons.",
+      "url": "https://rohoswagger.github.io/gojo/blog/",
+      "inLanguage": "en-US",
+      "isPartOf": {
+        "@id": "https://rohoswagger.github.io/gojo/#website"
+      },
+      "mainEntity": {
+        "@id": "https://rohoswagger.github.io/gojo/blog/#posts"
+      }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://rohoswagger.github.io/gojo/blog/#breadcrumb",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Gojo",
+          "item": "https://rohoswagger.github.io/gojo/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Blog",
+          "item": "https://rohoswagger.github.io/gojo/blog/"
+        }
+      ]
+    },
+    {
+      "@type": "ItemList",
+      "@id": "https://rohoswagger.github.io/gojo/blog/#posts",
+      "name": "Gojo blog posts",
+      "numberOfItems": 1,
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "url": "https://rohoswagger.github.io/gojo/blog/best-macos-notch-utilities/",
+          "name": "Best macOS notch utilities: what to look for before installing one"
+        }
+      ]
     }
   ]
 }
@@ -44,14 +105,27 @@
       <section class="blog-hero" aria-labelledby="blog-title">
         <p class="blog-label">Gojo Blog</p>
         <h1 id="blog-title">Mac utility writing from inside the notch.</h1>
-        <p>Articles on notch workflows, macOS permissions, alternatives, and the small interface details that make a Mac feel sharper.</p>
+        <p>Short, practical writing on notch workflows, macOS permissions, alternatives, and the small interface details that make a Mac feel sharper.</p>
       </section>
 
-      <section class="blog-posts" aria-label="Published posts">
-        <a class="blog-post-card" href="best-macos-notch-utilities/">
-          <span class="blog-card-topline">Published June 30, 2026</span>
-          <h2>Best macOS notch utilities: what to look for before installing one</h2>
-        </a>
+      <section class="blog-archive" aria-labelledby="archive-title">
+        <div class="archive-head">
+          <div>
+            <p class="archive-kicker">Archive</p>
+            <h2 id="archive-title">Published notes</h2>
+          </div>
+          <span>1 post</span>
+        </div>
+
+        <ol class="blog-posts" aria-label="Published posts">
+          <li>
+            <a class="blog-post-card" href="best-macos-notch-utilities/">
+              <span class="blog-card-topline">Guide · June 30, 2026</span>
+              <h3>Best macOS notch utilities: what to look for before installing one</h3>
+              <span class="blog-card-summary">Music controls, window snapping, clipboard history, file shelves, and the permissions worth checking first.</span>
+            </a>
+          </li>
+        </ol>
       </section>
     </main>
   </div>

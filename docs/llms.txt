@@ -12,13 +12,14 @@ Platform: macOS 14 Sonoma and later, Apple silicon and Intel
 
 - Product home: https://rohoswagger.github.io/gojo/
 - Blog: https://rohoswagger.github.io/gojo/blog/
-- MacBook notch utility post: https://rohoswagger.github.io/gojo/blog/best-macos-notch-utilities/
+- MacBook notch utility guide: https://rohoswagger.github.io/gojo/blog/best-macos-notch-utilities/
 - Alternatives and comparison hub: https://rohoswagger.github.io/gojo/alternatives/
 - Releases: https://github.com/rohoswagger/gojo/releases/latest
 
 ## Key facts
 
 - Gojo is utility-first, not only a decorative Dynamic Island effect.
+- The blog article explains how to evaluate notch utilities by workflow fit, permissions, and focused alternatives.
 - Gojo uses a bundled XPC helper for Accessibility-trusted window operations.
 - Clipboard history is local to the Mac and skips password managers.
 - Updates are delivered through Sparkle using the GitHub Pages appcast.

@@ -13,7 +13,6 @@
 <p align="center">
   <a href="https://github.com/rohoswagger/gojo/releases/latest"><img src="https://img.shields.io/github/v/release/rohoswagger/gojo?display_name=tag&sort=semver&label=release" alt="Latest release"></a>
   <a href="https://github.com/rohoswagger/gojo/actions/workflows/build.yml"><img src="https://github.com/rohoswagger/gojo/actions/workflows/build.yml/badge.svg" alt="Build"></a>
-  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-GPLv3-blue" alt="GPL-3.0"></a>
   <img src="https://img.shields.io/badge/macOS-14%2B-black" alt="macOS 14+">
 </p>
 
@@ -77,16 +76,9 @@ A guided first launch opens with an animated aperture welcome, walks you through
 
 1. Download **Gojo-x.y.z.dmg** from the [latest release](https://github.com/rohoswagger/gojo/releases/latest).
 2. Open the DMG and drag **Gojo.app** into **Applications**.
-3. **Run this once** to launch it (see below).
+3. Open Gojo from **Applications**.
 
-> [!IMPORTANT]
-> Gojo isn't notarized yet, so on first launch macOS will say it's **"damaged"** or that it **can't verify the developer**. This is expected — clear the quarantine flag, then open it normally:
->
-> ```bash
-> xattr -dr com.apple.quarantine /Applications/Gojo.app
-> ```
->
-> You only need to do this once.
+Official Gojo releases are signed with a Developer ID certificate and notarized by Apple, so they open normally with macOS Gatekeeper enabled.
 
 Updates after that are delivered automatically via [Sparkle](https://sparkle-project.org/).
 
@@ -176,9 +168,6 @@ Gojo only sees changes while it's running. Launch Gojo first, then copy. If you 
 
 **Notch doesn't show on a connected display**
 Settings → General → Display lets you pick which screen Gojo lives on, and whether to mirror it across all displays.
-
-**App is blocked on first launch**
-macOS quarantine; run `xattr -dr com.apple.quarantine /Applications/Gojo.app` and re-open.
 
 ## Contributing
 

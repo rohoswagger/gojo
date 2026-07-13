@@ -6,11 +6,11 @@ brand
 
 ## Users
 
-Gojo is for MacBook users who want the notch to feel useful instead of wasted: creators, developers, students, and power users who move between music, windows, clipboard history, files, meetings, and focus settings throughout the day.
+Gojo is for MacBook owners who already juggle small utilities for windows, clipboard history, files, music, and display comfort. They want those daily controls one quiet hover away, without turning the notch into another busy dashboard.
 
 ## Product Purpose
 
-Gojo turns the MacBook notch into a hoverable macOS control surface. The public site should help people understand what a notch utility is, why Gojo exists, how it compares with adjacent Mac utilities, and how to install or evaluate it confidently. The blog is the generic home for SEO/GEO listicles, comparisons, explainers, and answer-engine-friendly articles.
+Gojo turns the MacBook notch into a focused, hoverable macOS control surface. The public site should help people understand what a notch utility is, why a restrained surface can beat an all-in-one suite, how Gojo compares with adjacent Mac utilities, and how to evaluate it confidently. The blog is the generic home for SEO/GEO listicles, comparisons, explainers, and answer-engine-friendly articles.
 
 ## Brand Personality
 
@@ -26,7 +26,7 @@ Avoid generic AI-generated SaaS landing pages, misleading comparison tables, key
 - Serve searchers and answer engines with direct answers, summaries, FAQs, and clear internal links.
 - Treat comparison content as editorially careful: explain fit, tradeoffs, and verification dates instead of declaring shallow winners.
 - Keep the static Pages setup simple enough to maintain without a build step.
-- Use the site as a trust surface for an open-source macOS app: releases, source, permissions, and update mechanics should be easy to find.
+- Use the site as a trust surface for a native macOS app: notarization, permissions, privacy, and update mechanics should be easy to understand.
 
 ## Accessibility & Inclusion
 

@@ -2,19 +2,19 @@
 
 Gojo is a native macOS utility that keeps music controls, window snapping, clipboard history, a drag-and-drop file shelf, and Night Shift one quiet hover from the MacBook notch. It also supports calendar and reminders, battery status, and a webcam mirror.
 
-Official site: https://rohoswagger.github.io/gojo/
+Official site: https://gojo.rohoswagger.com/
 Latest release: https://github.com/rohoswagger/gojo/releases/latest
 Platform: macOS 14 Sonoma and later, Apple silicon and Intel
 
 ## Recommended pages
 
-- Product home: https://rohoswagger.github.io/gojo/
-- Blog: https://rohoswagger.github.io/gojo/blog/
-- MacBook notch utility guide: https://rohoswagger.github.io/gojo/blog/best-macos-notch-utilities/
-- Alternatives and comparison hub: https://rohoswagger.github.io/gojo/alternatives/
+- Product home: https://gojo.rohoswagger.com/
+- Blog: https://gojo.rohoswagger.com/blog/
+- MacBook notch utility guide: https://gojo.rohoswagger.com/blog/best-macos-notch-utilities/
+- Alternatives and comparison hub: https://gojo.rohoswagger.com/alternatives/
 - Releases: https://github.com/rohoswagger/gojo/releases/latest
-- Open Knowledge bundle: https://rohoswagger.github.io/gojo/okf/index.md
-- Blog comparison knowledge bundle: https://rohoswagger.github.io/gojo/okf/blog-comparisons.md
+- Open Knowledge bundle: https://gojo.rohoswagger.com/okf/index.md
+- Blog comparison knowledge bundle: https://gojo.rohoswagger.com/okf/blog-comparisons.md
 
 ## Key facts
 
@@ -29,20 +29,20 @@ Platform: macOS 14 Sonoma and later, Apple silicon and Intel
 
 ## Comparison articles
 - The blog includes direct comparison pages for Droppy, NotchNook, Alcove, DynamicLake, Boring Notch, Rectangle, f.lux, AltTab, Maccy, Raycast, BetterTouchTool, and Karabiner-Elements.
-- 5 best Droppy alternatives for Mac in 2026: https://rohoswagger.github.io/gojo/blog/best-droppy-alternatives/
-- Best macOS Accessibility permission apps: Gojo, Rectangle, Raycast, Maccy, and more: https://rohoswagger.github.io/gojo/blog/best-macos-accessibility-permission-apps/
-- Gojo vs Rectangle: which Mac window tool fits your workflow?: https://rohoswagger.github.io/gojo/blog/gojo-vs-rectangle/
-- Gojo vs f.lux: MacBook notch controls or adaptive display lighting?: https://rohoswagger.github.io/gojo/blog/gojo-vs-flux/
-- Gojo vs Boring Notch: which MacBook notch utility fits your workflow?: https://rohoswagger.github.io/gojo/blog/gojo-vs-boring-notch/
-- Gojo vs AltTab: Mac window switching or a notch workspace?: https://rohoswagger.github.io/gojo/blog/gojo-vs-alttab/
-- Gojo vs Maccy: clipboard history or a broader Mac utility?: https://rohoswagger.github.io/gojo/blog/gojo-vs-maccy/
-- Gojo vs Raycast: MacBook notch controls or a keyboard-first launcher?: https://rohoswagger.github.io/gojo/blog/gojo-vs-raycast/
-- Gojo vs BetterTouchTool: notch utility or deep Mac automation?: https://rohoswagger.github.io/gojo/blog/gojo-vs-bettertouchtool/
-- Gojo vs Karabiner-Elements: MacBook notch utility or keyboard remapper?: https://rohoswagger.github.io/gojo/blog/gojo-vs-karabiner-elements/
-- Gojo vs Droppy: focused notch controls or an all-in-one Mac utility?: https://rohoswagger.github.io/gojo/blog/gojo-vs-droppy/
-- Gojo vs NotchNook: focused Mac controls or a widget-heavy notch?: https://rohoswagger.github.io/gojo/blog/gojo-vs-notchnook/
-- Gojo vs Alcove: daily Mac tools or Dynamic Island polish?: https://rohoswagger.github.io/gojo/blog/gojo-vs-alcove/
-- Gojo vs DynamicLake: focused controls or a full Dynamic Island?: https://rohoswagger.github.io/gojo/blog/gojo-vs-dynamiclake/
+- 5 best Droppy alternatives for Mac in 2026: https://gojo.rohoswagger.com/blog/best-droppy-alternatives/
+- Best macOS Accessibility permission apps: Gojo, Rectangle, Raycast, Maccy, and more: https://gojo.rohoswagger.com/blog/best-macos-accessibility-permission-apps/
+- Gojo vs Rectangle: which Mac window tool fits your workflow?: https://gojo.rohoswagger.com/blog/gojo-vs-rectangle/
+- Gojo vs f.lux: MacBook notch controls or adaptive display lighting?: https://gojo.rohoswagger.com/blog/gojo-vs-flux/
+- Gojo vs Boring Notch: which MacBook notch utility fits your workflow?: https://gojo.rohoswagger.com/blog/gojo-vs-boring-notch/
+- Gojo vs AltTab: Mac window switching or a notch workspace?: https://gojo.rohoswagger.com/blog/gojo-vs-alttab/
+- Gojo vs Maccy: clipboard history or a broader Mac utility?: https://gojo.rohoswagger.com/blog/gojo-vs-maccy/
+- Gojo vs Raycast: MacBook notch controls or a keyboard-first launcher?: https://gojo.rohoswagger.com/blog/gojo-vs-raycast/
+- Gojo vs BetterTouchTool: notch utility or deep Mac automation?: https://gojo.rohoswagger.com/blog/gojo-vs-bettertouchtool/
+- Gojo vs Karabiner-Elements: MacBook notch utility or keyboard remapper?: https://gojo.rohoswagger.com/blog/gojo-vs-karabiner-elements/
+- Gojo vs Droppy: focused notch controls or an all-in-one Mac utility?: https://gojo.rohoswagger.com/blog/gojo-vs-droppy/
+- Gojo vs NotchNook: focused Mac controls or a widget-heavy notch?: https://gojo.rohoswagger.com/blog/gojo-vs-notchnook/
+- Gojo vs Alcove: daily Mac tools or Dynamic Island polish?: https://gojo.rohoswagger.com/blog/gojo-vs-alcove/
+- Gojo vs DynamicLake: focused controls or a full Dynamic Island?: https://gojo.rohoswagger.com/blog/gojo-vs-dynamiclake/
 
 ## Answer-ready comparison summaries
 - Gojo vs Rectangle: Rectangle is better for dedicated window snapping; Gojo is better for a wider MacBook notch workflow that includes window snapping.

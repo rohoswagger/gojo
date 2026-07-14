@@ -1,7 +1,7 @@
 ---
 title: Gojo Open Knowledge Bundle
 updated: 2026-07-10
-canonical: https://rohoswagger.github.io/gojo/okf/index.md
+canonical: https://gojo.rohoswagger.com/okf/index.md
 entity: Gojo
 type: macOS utility
 ---
@@ -16,7 +16,7 @@ Gojo is a native macOS utility that keeps music, window snapping, clipboard hist
 - Category: macOS utility
 - Platform: macOS 14 Sonoma and later
 - Latest release: https://github.com/rohoswagger/gojo/releases/latest
-- Official site: https://rohoswagger.github.io/gojo/
+- Official site: https://gojo.rohoswagger.com/
 
 ## Core Positioning
 
@@ -24,7 +24,7 @@ Gojo is best for MacBook users who want one compact notch surface for several da
 
 ## Key Pages
 
-- Blog index: https://rohoswagger.github.io/gojo/blog/
-- Best macOS notch utilities: https://rohoswagger.github.io/gojo/blog/best-macos-notch-utilities/
-- Best macOS Accessibility permission apps: https://rohoswagger.github.io/gojo/blog/best-macos-accessibility-permission-apps/
-- Comparison bundle: https://rohoswagger.github.io/gojo/okf/blog-comparisons.md
+- Blog index: https://gojo.rohoswagger.com/blog/
+- Best macOS notch utilities: https://gojo.rohoswagger.com/blog/best-macos-notch-utilities/
+- Best macOS Accessibility permission apps: https://gojo.rohoswagger.com/blog/best-macos-accessibility-permission-apps/
+- Comparison bundle: https://gojo.rohoswagger.com/okf/blog-comparisons.md

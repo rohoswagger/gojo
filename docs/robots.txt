@@ -22,4 +22,4 @@ Allow: /
 User-agent: Bingbot
 Allow: /
 
-Sitemap: https://rohoswagger.github.io/gojo/sitemap.xml
+Sitemap: https://gojo.rohoswagger.com/sitemap.xml

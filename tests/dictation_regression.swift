@@ -538,6 +538,16 @@ struct DictationRegressionRunner {
         assertEqual(machine.state, .inserting, "completed transcription should enter inserting")
         assertEqual(machine.handle(.insertionCompleted("hello")), .none, "insertion completion needs no follow-up action")
         assertEqual(machine.state, .succeeded("hello"), "successful insertion should retain the transcript")
+        assertEqual(
+            DictationSettingsStatus.title(for: .succeeded("hello")),
+            "Ready",
+            "settings should show readiness after a completed dictation"
+        )
+        assertEqual(
+            DictationSettingsStatus.title(for: .listening),
+            "Listening",
+            "settings should still expose active dictation work"
+        )
 
         let policy = DictationAudioPolicy(minimumDuration: 0.10)
         assertCondition(!policy.shouldTranscribe(DictationAudio(samples: [])), "zero audio should be ignored")

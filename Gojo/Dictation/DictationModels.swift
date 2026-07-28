@@ -319,6 +319,25 @@ enum DictationState: Equatable, Sendable {
     case error(DictationFailure)
 }
 
+enum DictationSettingsStatus {
+    static func title(for state: DictationState) -> String {
+        switch state {
+        case .idle, .succeeded:
+            return "Ready"
+        case .requestingPermission:
+            return "Getting ready"
+        case .listening:
+            return "Listening"
+        case .transcribing:
+            return "Transcribing"
+        case .inserting:
+            return "Adding text"
+        case .error:
+            return "Could not dictate"
+        }
+    }
+}
+
 enum DictationShortcutEvent: Sendable {
     case keyDown
     case keyUp

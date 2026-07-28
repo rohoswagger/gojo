@@ -35,7 +35,7 @@ private final class DictationModelDownloadPromptController {
         let alert = NSAlert()
         alert.alertStyle = .informational
         alert.messageText = "Download a voice model"
-        alert.informativeText = "Gojo needs a voice model before dictation can start. Choose one in Local Dictation settings."
+        alert.informativeText = "Gojo needs a voice model before dictation can start. Choose one in Dictation settings."
         alert.addButton(withTitle: "Open Settings")
         alert.addButton(withTitle: "Not Now")
 
@@ -168,18 +168,6 @@ final class GojoDictationService: ObservableObject {
         }
         Task { [weak self] in
             await self?.loadInitialModelStatusIfNeeded()
-        }
-    }
-
-    var stateTitle: String {
-        switch state {
-        case .idle: return "Ready"
-        case .requestingPermission: return "Getting ready"
-        case .listening: return "Listening"
-        case .transcribing: return "Transcribing"
-        case .inserting: return "Adding text"
-        case .succeeded: return "Done"
-        case .error: return "Could not dictate"
         }
     }
 

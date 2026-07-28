@@ -60,7 +60,7 @@ struct SettingsView: View {
                     Label("Clipboard", systemImage: "doc.on.clipboard")
                 }
                 NavigationLink(value: "Dictation") {
-                    Label("Local Dictation", systemImage: "waveform.and.mic")
+                    Label("Dictation", systemImage: "waveform.and.mic")
                 }
                 NavigationLink(value: "Window Switcher") {
                     Label("Window Switcher", systemImage: "macwindow.on.rectangle")
@@ -1304,7 +1304,7 @@ struct Shortcuts: View {
                     value: "⌃⌥"
                 )
             } header: {
-                Text("Local Dictation")
+                Text("Dictation")
             } footer: {
                 Text(dictationShortcutHelp)
                     .multilineTextAlignment(.trailing)
@@ -1375,7 +1375,7 @@ struct DictationSettings: View {
                 .pickerStyle(.segmented)
 
                 LabeledContent("Shortcut", value: "⌃⌥")
-                LabeledContent("Status", value: dictation.stateTitle)
+                LabeledContent("Status", value: DictationSettingsStatus.title(for: dictation.state))
                 if let detail = dictation.stateDetail {
                     Text(detail)
                         .foregroundStyle(.orange)
@@ -1459,7 +1459,7 @@ struct DictationSettings: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .navigationTitle("Local Dictation")
+        .navigationTitle("Dictation")
         .alert(item: $modelToRemove) { model in
             let descriptor = DictationModelDescriptor.descriptor(for: model)
             return Alert(

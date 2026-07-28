@@ -40,9 +40,9 @@ Recent clipboard items, browsable from the notch. Pin entries, search, paste bac
 
 <!-- <p align="center"><img src="./docs/screenshots/clipboard.png" alt="Clipboard tab" width="640"></p> -->
 
-### Local dictation
+### Dictation
 
-Choose a speech model in **Settings > Local Dictation**, then click **Download**. Gojo never downloads a model by itself. Hold **Control–Option**, speak, and release both keys to type into the field you selected.
+Choose a speech model in **Settings > Dictation**, then click **Download**. Gojo never downloads a model by itself. Hold **Control–Option**, speak, and release both keys to type into the field you selected.
 
 Parakeet Unified is tuned for high-quality English with punctuation and capitalization. Parakeet v3 covers 25 European languages. Whisper Small is the quickest Whisper option, while Whisper Large v3 is the larger English Whisper option. After download, recognition stays on this Mac. Gojo does not use an API key or cloud transcription.
 
@@ -175,8 +175,8 @@ Open **System Settings → Privacy & Security → Accessibility**, make sure **G
 **Clipboard history isn't capturing**
 Gojo only sees changes while it's running. Launch Gojo first, then copy. If you toggle **Launch at login** in Settings, history starts being captured at boot.
 
-**Local dictation does not start**
-Open **System Settings > Privacy & Security** and allow microphone access for Gojo. Accessibility access is also required to insert text into other apps. Then open **Settings > Local Dictation**, download a model, and choose it before using the shortcut.
+**Dictation does not start**
+Open **System Settings > Privacy & Security** and allow microphone access for Gojo. Accessibility access is also required to insert text into other apps. Then open **Settings > Dictation**, download a model, and choose it before using the shortcut.
 
 **Notch doesn't show on a connected display**
 Settings → General → Display lets you pick which screen Gojo lives on, and whether to mirror it across all displays.

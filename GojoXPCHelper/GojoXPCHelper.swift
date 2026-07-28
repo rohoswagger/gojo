@@ -20,12 +20,79 @@ private func helperDebug(_ message: String) {
     os_log("%{public}@", log: gojoHelperDebugLog, type: .default, "[GOJO-HELPER] " + message)
 }
 
+private enum CapturedTextTargetKind: Equatable {
+    case accessibility
+    case applicationPaste
+    case applicationUnicode
+}
+
+private struct CapturedTextTarget {
+    let element: AXUIElement
+    let pid: pid_t
+    let windowID: CGWindowID?
+    let displayID: CGDirectDisplayID?
+    let allowsPasteFallback: Bool
+    let kind: CapturedTextTargetKind
+}
+
+private struct PasteboardSnapshot {
+    let items: [[NSPasteboard.PasteboardType: Data]]
+    let isComplete: Bool
+
+    init(pasteboard: NSPasteboard) {
+        var capturedItems: [[NSPasteboard.PasteboardType: Data]] = []
+        var capturedEveryType = true
+        for item in pasteboard.pasteboardItems ?? [] {
+            var capturedItem: [NSPasteboard.PasteboardType: Data] = [:]
+            for type in item.types {
+                guard let data = item.data(forType: type) else {
+                    capturedEveryType = false
+                    continue
+                }
+                capturedItem[type] = data
+            }
+            capturedItems.append(capturedItem)
+        }
+        items = capturedItems
+        isComplete = capturedEveryType
+    }
+
+    @discardableResult
+    func restore(to pasteboard: NSPasteboard) -> Bool {
+        pasteboard.clearContents()
+        guard !items.isEmpty else { return true }
+
+        let restoredItems = items.map { storedItem -> NSPasteboardItem in
+            let item = NSPasteboardItem()
+            for (type, data) in storedItem {
+                item.setData(data, forType: type)
+            }
+            return item
+        }
+        return pasteboard.writeObjects(restoredItems)
+    }
+}
+
 @_silgen_name("_AXUIElementGetWindow")
 private func _AXUIElementGetWindow(_ element: AXUIElement, _ identifier: UnsafeMutablePointer<CGWindowID>) -> AXError
 
 class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
+    private enum TextTargetResolution {
+        case editable(AXUIElement, allowsPasteFallback: Bool)
+        case secure
+        case nonEditable
+    }
+
     private var activationObserver: Any?
     private var lastWindowTargetApplication: NSRunningApplication?
+    private var capturedTextTargets: [String: CapturedTextTarget] = [:]
+
+    private static let pasteKeyCode: CGKeyCode = 9
+    private static let transientPasteboardType = NSPasteboard.PasteboardType(
+        "org.nspasteboard.TransientType"
+    )
+    private static let protectedContentAttribute = "AXContainsProtectedContent"
+    private static let isFocusedAttribute = kAXFocusedAttribute as String
 
     override init() {
         super.init()
@@ -73,6 +140,295 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             reply(AXIsProcessTrusted())
+        }
+    }
+
+    @objc func captureFocusedTextTarget(
+        _ promptIfNeeded: Bool,
+        preferredTarget: NSDictionary?,
+        with reply: @escaping (NSDictionary) -> Void
+    ) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else {
+                reply([
+                    "authorized": false,
+                    "success": false,
+                    "error": "helperUnavailable",
+                ])
+                return
+            }
+
+            // A new capture attempt supersedes every earlier destination, even
+            // when the new focus is invalid or authorization was revoked.
+            self.capturedTextTargets.removeAll(keepingCapacity: true)
+            guard self.ensureAccessibilityAuthorizationSync(promptIfNeeded: promptIfNeeded) else {
+                reply(self.textCaptureFailure(authorized: false, error: "permissionMissing"))
+                return
+            }
+            let topmostApplication = self.topmostTargetApplication()
+            let focusedElements = self.focusedTextTargetCandidates(
+                preferredApplication: topmostApplication
+            )
+            let preferredApplicationTarget = preferredTarget.flatMap(
+                self.applicationPasteTarget(from:)
+            )
+            if let preferredApplicationTarget,
+               WindowTargetResolver.shouldUsePreferredApplicationPasteTarget(
+                   preferredPID: preferredApplicationTarget.pid,
+                   focusedCandidatePIDs: focusedElements.compactMap(self.elementPID)
+               ) {
+                let token = UUID().uuidString
+                self.capturedTextTargets[token] = preferredApplicationTarget
+                helperDebug(
+                    "captureFocusedTextTarget using main-app application paste target"
+                        + " pid=\(preferredApplicationTarget.pid)"
+                        + " windowID=\(preferredApplicationTarget.windowID.map { String($0) } ?? "none")"
+                )
+                var captureReply: [String: Any] = [
+                    "authorized": true,
+                    "success": true,
+                    "token": token,
+                    "pid": NSNumber(value: preferredApplicationTarget.pid),
+                    "windowID": NSNumber(value: preferredApplicationTarget.windowID ?? 0),
+                ]
+                if let displayID = preferredApplicationTarget.displayID {
+                    captureReply["displayID"] = NSNumber(value: displayID)
+                }
+                reply(NSDictionary(dictionary: captureReply))
+                return
+            }
+            guard !focusedElements.isEmpty else {
+                let target = preferredApplicationTarget
+                    ?? (preferredTarget == nil ? self.topmostApplicationPasteTarget() : nil)
+                if let target {
+                    let token = UUID().uuidString
+                    self.capturedTextTargets[token] = target
+                    helperDebug(
+                        "captureFocusedTextTarget using main-app application paste target"
+                            + " pid=\(target.pid)"
+                            + " windowID=\(target.windowID.map { String($0) } ?? "none")"
+                    )
+                    var captureReply: [String: Any] = [
+                        "authorized": true,
+                        "success": true,
+                        "token": token,
+                        "pid": NSNumber(value: target.pid),
+                        "windowID": NSNumber(value: target.windowID ?? 0),
+                    ]
+                    if let displayID = target.displayID {
+                        captureReply["displayID"] = NSNumber(value: displayID)
+                    }
+                    reply(NSDictionary(dictionary: captureReply))
+                    return
+                }
+                reply(self.textCaptureFailure(authorized: true, error: "noFocusedTextTarget"))
+                return
+            }
+
+            for focusedElement in focusedElements {
+                var focusedPID = pid_t(0)
+                AXUIElementGetPid(focusedElement, &focusedPID)
+                let focusedRole = self.copyString(
+                    focusedElement,
+                    attribute: kAXRoleAttribute as String
+                ) ?? "unknown"
+                let focusedSubrole = self.copyString(
+                    focusedElement,
+                    attribute: kAXSubroleAttribute as String
+                ) ?? "none"
+                helperDebug(
+                    "captureFocusedTextTarget pid=\(focusedPID) role=\(focusedRole) subrole=\(focusedSubrole) selectedTextSettable=\(self.isAttributeSettable(focusedElement, attribute: kAXSelectedTextAttribute as String)) selectedRangeSettable=\(self.isAttributeSettable(focusedElement, attribute: kAXSelectedTextRangeAttribute as String)) valueSettable=\(self.isAttributeSettable(focusedElement, attribute: kAXValueAttribute as String))"
+                )
+
+                switch self.resolveEditableTextTarget(from: focusedElement) {
+                case .secure:
+                    reply(self.textCaptureFailure(authorized: true, error: "secureTextTarget"))
+                    return
+                case .nonEditable:
+                    guard let target = self.applicationPasteTarget(focusedElement) else {
+                        continue
+                    }
+                    let token = UUID().uuidString
+                    self.capturedTextTargets[token] = target
+                    helperDebug(
+                        "captureFocusedTextTarget using application paste target"
+                            + " pid=\(target.pid)"
+                            + " windowID=\(target.windowID.map { String($0) } ?? "none")"
+                    )
+                    var captureReply: [String: Any] = [
+                        "authorized": true,
+                        "success": true,
+                        "token": token,
+                        "pid": NSNumber(value: target.pid),
+                        "windowID": NSNumber(value: target.windowID ?? 0),
+                    ]
+                    if let displayID = target.displayID {
+                        captureReply["displayID"] = NSNumber(value: displayID)
+                    }
+                    reply(NSDictionary(dictionary: captureReply))
+                    return
+                case let .editable(element, allowsPasteFallback):
+                    var pid = pid_t(0)
+                    guard AXUIElementGetPid(element, &pid) == .success, pid != 0 else {
+                        continue
+                    }
+
+                    let token = UUID().uuidString
+                    self.capturedTextTargets[token] = CapturedTextTarget(
+                        element: element,
+                        pid: pid,
+                        windowID: self.windowID(of: element),
+                        displayID: self.frame(of: element).flatMap(self.displayID(containing:)),
+                        allowsPasteFallback: allowsPasteFallback,
+                        kind: .accessibility
+                    )
+                    var captureReply: [String: Any] = [
+                        "authorized": true,
+                        "success": true,
+                        "token": token,
+                        "pid": NSNumber(value: pid),
+                    ]
+                    if let windowID = self.windowID(of: element) {
+                        captureReply["windowID"] = NSNumber(value: windowID)
+                    }
+                    if let frame = self.frame(of: element),
+                       let displayID = self.displayID(containing: frame) {
+                        captureReply["displayID"] = NSNumber(value: displayID)
+                    }
+                    reply(NSDictionary(dictionary: captureReply))
+                    return
+                }
+            }
+
+            if let target = preferredApplicationTarget,
+               target.kind == .applicationUnicode {
+                let token = UUID().uuidString
+                self.capturedTextTargets[token] = target
+                helperDebug(
+                    "captureFocusedTextTarget using opaque application target"
+                        + " pid=\(target.pid)"
+                        + " windowID=\(target.windowID.map { String($0) } ?? "none")"
+                )
+                var captureReply: [String: Any] = [
+                    "authorized": true,
+                    "success": true,
+                    "token": token,
+                    "pid": NSNumber(value: target.pid),
+                    "windowID": NSNumber(value: target.windowID ?? 0),
+                ]
+                if let displayID = target.displayID {
+                    captureReply["displayID"] = NSNumber(value: displayID)
+                }
+                reply(NSDictionary(dictionary: captureReply))
+                return
+            }
+
+            reply(self.textCaptureFailure(authorized: true, error: "nonEditableTarget"))
+        }
+    }
+
+    @objc func insertText(
+        _ text: String,
+        token: String,
+        with reply: @escaping (NSDictionary) -> Void
+    ) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else {
+                reply([
+                    "authorized": false,
+                    "success": false,
+                    "method": "none",
+                    "error": "helperUnavailable",
+                ])
+                return
+            }
+            guard AXIsProcessTrusted() else {
+                self.capturedTextTargets.removeValue(forKey: token)
+                reply(self.textInsertionFailure(authorized: false, error: "permissionMissing"))
+                return
+            }
+            guard !text.isEmpty else {
+                self.capturedTextTargets.removeValue(forKey: token)
+                reply(self.textInsertionFailure(authorized: true, error: "emptyText"))
+                return
+            }
+            guard let target = self.capturedTextTargets.removeValue(forKey: token) else {
+                reply(self.textInsertionFailure(authorized: true, error: "invalidToken"))
+                return
+            }
+            if target.kind == .applicationPaste {
+                guard let windowID = target.windowID else {
+                    reply(self.textInsertionFailure(authorized: true, error: "focusChanged"))
+                    return
+                }
+                let applicationPasteReply: [String: Any] = [
+                    "authorized": true,
+                    "success": false,
+                    "method": "application-paste",
+                    "verified": false,
+                    "error": "applicationPasteRequired",
+                    "pid": NSNumber(value: target.pid),
+                    "windowID": NSNumber(value: windowID),
+                ]
+                reply(NSDictionary(dictionary: applicationPasteReply))
+                return
+            }
+            if target.kind == .applicationUnicode {
+                guard let windowID = target.windowID else {
+                    reply(self.textInsertionFailure(authorized: true, error: "focusChanged"))
+                    return
+                }
+                reply([
+                    "authorized": true,
+                    "success": false,
+                    "method": "application-unicode",
+                    "verified": false,
+                    "error": "applicationUnicodeRequired",
+                    "pid": NSNumber(value: target.pid),
+                    "windowID": NSNumber(value: windowID),
+                ])
+                return
+            }
+
+            guard self.isStillFocused(target) else {
+                reply(self.textInsertionFailure(authorized: true, error: "focusChanged"))
+                return
+            }
+
+            let accessibilityExpectation = self.pasteMutationExpectation(
+                text,
+                into: target.element
+            )
+            let axResult = AXUIElementSetAttributeValue(
+                target.element,
+                kAXSelectedTextAttribute as CFString,
+                text as CFString
+            )
+            if axResult == .success {
+                guard let accessibilityExpectation else {
+                    reply([
+                        "authorized": true,
+                        "success": false,
+                        "method": "accessibility",
+                        "verified": false,
+                        "error": "axInsertionNotConfirmed",
+                    ])
+                    return
+                }
+                self.waitForAccessibilityConfirmation(
+                    expectation: accessibilityExpectation,
+                    target: target,
+                    attemptsRemaining: 20,
+                    reply: reply
+                )
+                return
+            }
+
+            guard target.allowsPasteFallback else {
+                reply(self.textInsertionFailure(authorized: true, error: "axInsertionFailed"))
+                return
+            }
+            self.insertWithGuardedPaste(text, target: target, reply: reply)
         }
     }
 
@@ -300,6 +656,744 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
         return AXIsProcessTrusted()
     }
 
+    private func focusedTextTargetCandidates(
+        preferredApplication: NSRunningApplication?
+    ) -> [AXUIElement] {
+        let systemWide = AXUIElementCreateSystemWide()
+        let systemFocused = copyElement(
+            systemWide,
+            attribute: kAXFocusedUIElementAttribute as String
+        )
+        let focusedApplication = copyElement(
+            systemWide,
+            attribute: kAXFocusedApplicationAttribute as String
+        )
+        let applicationFocused = focusedApplication.flatMap {
+            copyElement(
+                $0,
+                attribute: kAXFocusedUIElementAttribute as String
+            )
+        }
+        let frontmost = NSWorkspace.shared.frontmostApplication
+        let frontmostFocused = frontmost.flatMap {
+            focusedUIElement(in: $0.processIdentifier)
+        }
+        let preferredFocused = preferredApplication.flatMap {
+            focusedUIElement(in: $0.processIdentifier)
+        }
+
+        helperDebug(
+            "focused candidates system=\(debugElementDescription(systemFocused))"
+                + " application=\(debugElementDescription(applicationFocused))"
+                + " frontmost=\(frontmost?.bundleIdentifier ?? frontmost?.localizedName ?? "none")"
+                + ":\(frontmost?.processIdentifier ?? 0)"
+                + " focused=\(debugElementDescription(frontmostFocused))"
+                + " preferred=\(debugElementDescription(preferredFocused))"
+        )
+
+        var candidates: [AXUIElement] = []
+        for element in [
+            systemFocused,
+            applicationFocused,
+            frontmostFocused,
+            preferredFocused,
+        ].compactMap({ $0 }) {
+            let resolvedElement = focusedDescendantTextTarget(from: element)
+                ?? element
+            var pid = pid_t(0)
+            guard AXUIElementGetPid(resolvedElement, &pid) == .success,
+                  let application = NSRunningApplication(processIdentifier: pid),
+                  isTargetApplication(application),
+                  !candidates.contains(where: { CFEqual($0, resolvedElement) }) else {
+                continue
+            }
+            candidates.append(resolvedElement)
+        }
+        return candidates
+    }
+
+    private func focusedDescendantTextTarget(
+        from coarseElement: AXUIElement
+    ) -> AXUIElement? {
+        let role = copyString(
+            coarseElement,
+            attribute: kAXRoleAttribute as String
+        ) ?? ""
+        guard role == "AXWebArea"
+                || role == kAXGroupRole as String
+                || role == "AXGenericElement"
+                || role == "AXUnknown" else {
+            return nil
+        }
+
+        if let nestedFocusedElement = copyElement(
+            coarseElement,
+            attribute: kAXFocusedUIElementAttribute as String
+        ),
+        !CFEqual(nestedFocusedElement, coarseElement),
+        isFocusedEditableTextTarget(nestedFocusedElement) {
+            return nestedFocusedElement
+        }
+
+        var stack: [(element: AXUIElement, depth: Int)] = [(coarseElement, 0)]
+        var visited: [AXUIElement] = []
+        var bestMatch: (element: AXUIElement, depth: Int)?
+
+        while let candidate = stack.popLast(), visited.count < 256 {
+            guard candidate.depth <= 12,
+                  !visited.contains(where: { CFEqual($0, candidate.element) }) else {
+                continue
+            }
+            visited.append(candidate.element)
+
+            if candidate.depth > 0,
+               copyBool(
+                   candidate.element,
+                   attribute: Self.isFocusedAttribute
+               ) == true,
+               isFocusedEditableTextTarget(candidate.element),
+               candidate.depth > (bestMatch?.depth ?? -1) {
+                bestMatch = candidate
+            }
+
+            let children = copyElements(
+                candidate.element,
+                attribute: kAXChildrenAttribute as String
+            ) ?? []
+            for child in children.reversed() {
+                stack.append((child, candidate.depth + 1))
+            }
+        }
+
+        return bestMatch?.element
+    }
+
+    private func isFocusedEditableTextTarget(_ element: AXUIElement) -> Bool {
+        switch DictationTextTargetPolicy.decision(
+            for: textTargetCapabilities(for: element)
+        ) {
+        case .directAccessibility, .guardedApplicationPaste:
+            return true
+        case .reject:
+            return false
+        }
+    }
+
+    private func focusedUIElement() -> AXUIElement? {
+        let systemWide = AXUIElementCreateSystemWide()
+        let systemFocused = copyElement(
+            systemWide,
+            attribute: kAXFocusedUIElementAttribute as String
+        )
+        let focusedApplication = copyElement(
+            systemWide,
+            attribute: kAXFocusedApplicationAttribute as String
+        )
+        let applicationFocused = focusedApplication.flatMap {
+            copyElement(
+                $0,
+                attribute: kAXFocusedUIElementAttribute as String
+            )
+        }
+
+        let frontmost = NSWorkspace.shared.frontmostApplication
+        let frontmostFocused = frontmost.flatMap {
+            copyElement(
+                AXUIElementCreateApplication($0.processIdentifier),
+                attribute: kAXFocusedUIElementAttribute as String
+            )
+        }
+
+        helperDebug(
+            "focused candidates system=\(debugElementDescription(systemFocused))"
+                + " application=\(debugElementDescription(applicationFocused))"
+                + " frontmost=\(frontmost?.bundleIdentifier ?? frontmost?.localizedName ?? "none")"
+                + ":\(frontmost?.processIdentifier ?? 0)"
+                + " focused=\(debugElementDescription(frontmostFocused))"
+        )
+
+        if let systemFocused {
+            return systemFocused
+        }
+        if let applicationFocused {
+            return applicationFocused
+        }
+        if let frontmostFocused {
+            return frontmostFocused
+        }
+        guard let frontmost else {
+            helperDebug("captureFocusedTextTarget: no focused AX element and no frontmost app")
+            return nil
+        }
+        helperDebug(
+            "captureFocusedTextTarget: no focused AX element frontmost=\(frontmost.bundleIdentifier ?? frontmost.localizedName ?? "unknown"):\(frontmost.processIdentifier)"
+        )
+        return nil
+    }
+
+    private func debugElementDescription(_ element: AXUIElement?) -> String {
+        guard let element else { return "nil" }
+        var pid = pid_t(0)
+        AXUIElementGetPid(element, &pid)
+        let role = copyString(element, attribute: kAXRoleAttribute as String) ?? "unknown"
+        let subrole = copyString(element, attribute: kAXSubroleAttribute as String) ?? "none"
+        return "\(pid):\(role):\(subrole)"
+    }
+
+    private func resolveEditableTextTarget(from focusedElement: AXUIElement) -> TextTargetResolution {
+        var candidate: AXUIElement? = focusedElement
+        var editableTarget: (element: AXUIElement, allowsPasteFallback: Bool)?
+
+        // Web and custom controls sometimes focus a descendant of the element
+        // that owns AXSelectedText. Walk only a bounded ancestor chain, but scan
+        // the full chain for inherited protection before accepting a descendant.
+        for _ in 0..<8 {
+            guard let element = candidate else { break }
+            if isSecureTextElement(element) {
+                return .secure
+            }
+            if editableTarget == nil,
+               let allowsPasteFallback = editableTextCapabilities(for: element) {
+                editableTarget = (element, allowsPasteFallback)
+            }
+            candidate = copyElement(element, attribute: kAXParentAttribute as String)
+        }
+
+        if let editableTarget {
+            return .editable(
+                editableTarget.element,
+                allowsPasteFallback: editableTarget.allowsPasteFallback
+            )
+        }
+        return .nonEditable
+    }
+
+    private func applicationPasteTarget(_ focusedElement: AXUIElement) -> CapturedTextTarget? {
+        guard supportsGuardedApplicationPaste(from: focusedElement) else {
+            return nil
+        }
+        var focusedPID = pid_t(0)
+        guard AXUIElementGetPid(focusedElement, &focusedPID) == .success,
+              focusedPID != 0,
+              let application = NSRunningApplication(processIdentifier: focusedPID),
+              application.processIdentifier != 0,
+              isTargetApplication(application) else {
+            return nil
+        }
+        let appElement = AXUIElementCreateApplication(application.processIdentifier)
+        let kind = application.bundleIdentifier.flatMap(opaqueTextTargetKind)
+            ?? .applicationPaste
+        let focusedFrame = frame(of: focusedElement)
+        let capturedWindowID = windowID(of: focusedElement)
+            ?? focusedFrame.flatMap {
+                WindowTargetResolver.windowID(
+                    containing: $0,
+                    targetPID: application.processIdentifier,
+                    topWindows: topWindowSnapshots(),
+                    ownPID: pid_t(ProcessInfo.processInfo.processIdentifier)
+                )
+            }
+        guard let capturedWindowID else {
+            return nil
+        }
+
+        return CapturedTextTarget(
+            element: appElement,
+            pid: application.processIdentifier,
+            windowID: capturedWindowID,
+            displayID: focusedFrame.flatMap(displayID(containing:)),
+            allowsPasteFallback: true,
+            kind: kind
+        )
+    }
+
+    private func topmostTargetApplication() -> NSRunningApplication? {
+        for window in topWindowSnapshots() {
+            guard let application = NSRunningApplication(
+                processIdentifier: window.pid
+            ), isTargetApplication(application) else {
+                continue
+            }
+            return application
+        }
+        return nil
+    }
+
+    private func topmostApplicationPasteTarget() -> CapturedTextTarget? {
+        let topWindows = topWindowSnapshots()
+        var applicationsByPID: [pid_t: NSRunningApplication] = [:]
+        for window in topWindows where applicationsByPID[window.pid] == nil {
+            applicationsByPID[window.pid] = NSRunningApplication(
+                processIdentifier: window.pid
+            )
+        }
+        let target = WindowTargetResolver.topmostApplicationPasteTarget(
+            topWindows: topWindows,
+            applicationsByPID: applicationsByPID.compactMapValues(applicationSnapshot),
+            ownPID: pid_t(ProcessInfo.processInfo.processIdentifier),
+            excludedBundleIDs: excludedWindowTargetBundleIDs,
+            allowedBundleIDs: WindowTargetResolver.axOpaqueDictationBundleIDs
+        )
+        guard let target,
+              let application = applicationsByPID[target.pid],
+              let bundleIdentifier = application.bundleIdentifier,
+              let kind = opaqueTextTargetKind(for: bundleIdentifier),
+              let window = topWindows.first(where: {
+                  $0.pid == target.pid && $0.windowID == target.windowID
+              }) else {
+            return nil
+        }
+        return CapturedTextTarget(
+            element: AXUIElementCreateApplication(target.pid),
+            pid: target.pid,
+            windowID: target.windowID,
+            displayID: displayID(containing: window.bounds),
+            allowsPasteFallback: true,
+            kind: kind
+        )
+    }
+
+    private func applicationPasteTarget(
+        from preferredTarget: NSDictionary
+    ) -> CapturedTextTarget? {
+        guard let pidNumber = preferredTarget["pid"] as? NSNumber,
+              let windowIDNumber = preferredTarget["windowID"] as? NSNumber else {
+            return nil
+        }
+        let pid = pid_t(pidNumber.int32Value)
+        let windowID = CGWindowID(truncating: windowIDNumber)
+        guard pid != 0,
+              windowID != 0,
+              let application = NSRunningApplication(processIdentifier: pid),
+              let bundleIdentifier = application.bundleIdentifier,
+              let kind = opaqueTextTargetKind(for: bundleIdentifier),
+              isTargetApplication(application) else {
+            return nil
+        }
+        let displayID = (preferredTarget["displayID"] as? NSNumber).map {
+            CGDirectDisplayID(truncating: $0)
+        }
+        return CapturedTextTarget(
+            element: AXUIElementCreateApplication(pid),
+            pid: pid,
+            windowID: windowID,
+            displayID: displayID,
+            allowsPasteFallback: true,
+            kind: kind
+        )
+    }
+
+    private func opaqueTextTargetKind(
+        for bundleIdentifier: String
+    ) -> CapturedTextTargetKind? {
+        if WindowTargetResolver.guardedUnicodeTypingBundleIDs.contains(
+            bundleIdentifier
+        ) {
+            return .applicationUnicode
+        }
+        if WindowTargetResolver.guardedApplicationPasteBundleIDs.contains(
+            bundleIdentifier
+        ) {
+            return .applicationPaste
+        }
+        return nil
+    }
+
+    private func isSecureTextElement(_ element: AXUIElement) -> Bool {
+        if copyBool(element, attribute: Self.protectedContentAttribute) == true {
+            return true
+        }
+
+        let role = copyString(element, attribute: kAXRoleAttribute as String) ?? ""
+        let subrole = copyString(element, attribute: kAXSubroleAttribute as String) ?? ""
+        let secureSubrole = kAXSecureTextFieldSubrole as String
+        return subrole == secureSubrole
+            || role.localizedCaseInsensitiveContains("secure")
+            || subrole.localizedCaseInsensitiveContains("secure")
+    }
+
+    /// Returns nil for controls that cannot support verified direct insertion.
+    /// Reviewed opaque editors use a guarded app-level insertion path.
+    private func editableTextCapabilities(for element: AXUIElement) -> Bool? {
+        switch DictationTextTargetPolicy.decision(
+            for: textTargetCapabilities(for: element)
+        ) {
+        case .directAccessibility:
+            return true
+        case .guardedApplicationPaste:
+            return nil
+        case .reject:
+            return nil
+        }
+    }
+
+    private func supportsGuardedApplicationPaste(
+        from focusedElement: AXUIElement
+    ) -> Bool {
+        var candidate: AXUIElement? = focusedElement
+        var foundCustomEditor = false
+
+        for _ in 0..<8 {
+            guard let element = candidate else { break }
+            if isSecureTextElement(element) {
+                return false
+            }
+
+            let capabilities = textTargetCapabilities(for: element)
+            if DictationTextTargetPolicy.blocksAncestorFallback(role: capabilities.role) {
+                return false
+            }
+            switch DictationTextTargetPolicy.decision(for: capabilities) {
+            case .guardedApplicationPaste:
+                foundCustomEditor = true
+            case .directAccessibility, .reject:
+                break
+            }
+            candidate = copyElement(element, attribute: kAXParentAttribute as String)
+        }
+
+        return foundCustomEditor
+    }
+
+    private func textTargetCapabilities(
+        for element: AXUIElement
+    ) -> DictationTextTargetCapabilities {
+        DictationTextTargetCapabilities(
+            role: copyString(element, attribute: kAXRoleAttribute as String) ?? "",
+            isEnabled: copyBool(
+                element,
+                attribute: kAXEnabledAttribute as String
+            ) != false,
+            isSelectedTextSettable: isAttributeSettable(
+                element,
+                attribute: kAXSelectedTextAttribute as String
+            ),
+            isSelectedTextRangeSettable: isAttributeSettable(
+                element,
+                attribute: kAXSelectedTextRangeAttribute as String
+            ),
+            isValueSettable: isAttributeSettable(
+                element,
+                attribute: kAXValueAttribute as String
+            )
+        )
+    }
+
+    private func isAttributeSettable(_ element: AXUIElement, attribute: String) -> Bool {
+        var settable = DarwinBoolean(false)
+        return AXUIElementIsAttributeSettable(element, attribute as CFString, &settable) == .success
+            && settable.boolValue
+    }
+
+    private func isStillFocused(_ target: CapturedTextTarget) -> Bool {
+        guard let coarseFocusedElement = activeFocusedUIElement(for: target.pid) else {
+            return false
+        }
+        let focusedElement = focusedDescendantTextTarget(from: coarseFocusedElement)
+            ?? coarseFocusedElement
+        guard case let .editable(currentElement, _) = resolveEditableTextTarget(from: focusedElement) else {
+            return false
+        }
+
+        var currentPID = pid_t(0)
+        guard AXUIElementGetPid(currentElement, &currentPID) == .success,
+              currentPID == target.pid else {
+            return false
+        }
+        guard CFEqual(currentElement, target.element) else {
+            return false
+        }
+        return isElement(
+            focusedElement,
+            inCapturedWindowID: target.windowID
+        )
+    }
+
+    private func activeFocusedUIElement(for expectedPID: pid_t) -> AXUIElement? {
+        if let systemFocusedElement = systemFocusedUIElement(),
+           let systemFocusedPID = elementPID(systemFocusedElement) {
+            if systemFocusedPID == expectedPID {
+                return systemFocusedElement
+            }
+            guard isGojoHostApplication(pid: systemFocusedPID) else {
+                return nil
+            }
+        }
+
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == expectedPID,
+              let applicationFocusedElement = focusedUIElement(in: expectedPID),
+              elementPID(applicationFocusedElement) == expectedPID else {
+            return nil
+        }
+        helperDebug(
+            "focus validation using frontmost fallback"
+                + " pid=\(expectedPID)"
+                + " element=\(debugElementDescription(applicationFocusedElement))"
+        )
+        return applicationFocusedElement
+    }
+
+    private func isGojoHostApplication(pid: pid_t) -> Bool {
+        NSRunningApplication(processIdentifier: pid)?.bundleIdentifier
+            == "rohoswagger.gojo"
+    }
+
+    private func systemFocusedUIElement() -> AXUIElement? {
+        let systemWide = AXUIElementCreateSystemWide()
+        if let systemFocusedElement = copyElement(
+            systemWide,
+            attribute: kAXFocusedUIElementAttribute as String
+        ) {
+            return systemFocusedElement
+        }
+
+        guard let focusedApplication = copyElement(
+            systemWide,
+            attribute: kAXFocusedApplicationAttribute as String
+        ) else {
+            return nil
+        }
+        return copyElement(
+            focusedApplication,
+            attribute: kAXFocusedUIElementAttribute as String
+        )
+    }
+
+    private func elementPID(_ element: AXUIElement) -> pid_t? {
+        var pid = pid_t(0)
+        guard AXUIElementGetPid(element, &pid) == .success, pid != 0 else {
+            return nil
+        }
+        return pid
+    }
+
+    private func isElement(
+        _ element: AXUIElement,
+        inCapturedWindowID expectedWindowID: CGWindowID?
+    ) -> Bool {
+        guard let expectedWindowID else { return true }
+        return windowID(of: element) == expectedWindowID
+    }
+
+    private func focusedUIElement(in pid: pid_t) -> AXUIElement? {
+        copyElement(
+            AXUIElementCreateApplication(pid),
+            attribute: kAXFocusedUIElementAttribute as String
+        )
+    }
+
+    private func insertWithGuardedPaste(
+        _ text: String,
+        target: CapturedTextTarget,
+        reply: @escaping (NSDictionary) -> Void
+    ) {
+        guard isStillFocused(target) else {
+            reply(textInsertionFailure(authorized: true, error: "focusChanged"))
+            return
+        }
+        guard let eventSource = CGEventSource(stateID: .hidSystemState),
+              let keyDown = CGEvent(
+                keyboardEventSource: eventSource,
+                virtualKey: Self.pasteKeyCode,
+                keyDown: true
+              ),
+              let keyUp = CGEvent(
+                keyboardEventSource: eventSource,
+                virtualKey: Self.pasteKeyCode,
+                keyDown: false
+              ) else {
+            reply(textInsertionFailure(authorized: true, error: "pasteEventUnavailable"))
+            return
+        }
+
+        keyDown.flags = .maskCommand
+        keyUp.flags = .maskCommand
+
+        let pasteboard = NSPasteboard.general
+        let snapshot = PasteboardSnapshot(pasteboard: pasteboard)
+        guard snapshot.isComplete else {
+            reply(textInsertionFailure(authorized: true, error: "clipboardSnapshotUnavailable"))
+            return
+        }
+        let transcriptItem = NSPasteboardItem()
+        transcriptItem.setString(text, forType: .string)
+        transcriptItem.setData(Data(), forType: Self.transientPasteboardType)
+
+        pasteboard.clearContents()
+        guard pasteboard.writeObjects([transcriptItem]) else {
+            _ = snapshot.restore(to: pasteboard)
+            reply(textInsertionFailure(authorized: true, error: "pasteboardWriteFailed"))
+            return
+        }
+        let injectedChangeCount = pasteboard.changeCount
+
+        // Re-check after touching the pasteboard and immediately before sending
+        // Cmd-V. This closes the last focus-change window before the side effect.
+        guard isStillFocused(target) else {
+            if pasteboard.changeCount == injectedChangeCount {
+                _ = snapshot.restore(to: pasteboard)
+            }
+            reply(textInsertionFailure(authorized: true, error: "focusChanged"))
+            return
+        }
+        guard let expectation = pasteMutationExpectation(text, into: target.element) else {
+            if pasteboard.changeCount == injectedChangeCount {
+                _ = snapshot.restore(to: pasteboard)
+            }
+            reply(textInsertionFailure(authorized: true, error: "pasteVerificationUnavailable"))
+            return
+        }
+
+        keyDown.post(tap: .cghidEventTap)
+        keyUp.post(tap: .cghidEventTap)
+
+        waitForPasteConfirmation(
+            expectation: expectation,
+            target: target,
+            pasteboard: pasteboard,
+            injectedChangeCount: injectedChangeCount,
+            snapshot: snapshot,
+            attemptsRemaining: 20,
+            reply: reply
+        )
+    }
+
+    private func waitForAccessibilityConfirmation(
+        expectation: PasteMutationExpectation,
+        target: CapturedTextTarget,
+        attemptsRemaining: Int,
+        reply: @escaping (NSDictionary) -> Void
+    ) {
+        if expectation.confirms(
+            currentValue: copyString(target.element, attribute: kAXValueAttribute as String)
+        ) {
+            reply([
+                "authorized": true,
+                "success": true,
+                "method": "accessibility",
+                "verified": true,
+            ])
+            return
+        }
+        guard attemptsRemaining > 0 else {
+            let currentValue = copyString(
+                target.element,
+                attribute: kAXValueAttribute as String
+            )
+            if target.allowsPasteFallback,
+               expectation.confirmsNoMutation(currentValue: currentValue),
+               isStillFocused(target) {
+                insertWithGuardedPaste(
+                    expectation.insertionText,
+                    target: target,
+                    reply: reply
+                )
+                return
+            }
+            reply([
+                "authorized": true,
+                "success": false,
+                "method": "accessibility",
+                "verified": false,
+                "error": "axInsertionNotConfirmed",
+            ])
+            return
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.025) { [weak self] in
+            self?.waitForAccessibilityConfirmation(
+                expectation: expectation,
+                target: target,
+                attemptsRemaining: attemptsRemaining - 1,
+                reply: reply
+            )
+        }
+    }
+
+    private func waitForPasteConfirmation(
+        expectation: PasteMutationExpectation,
+        target: CapturedTextTarget,
+        pasteboard: NSPasteboard,
+        injectedChangeCount: Int,
+        snapshot: PasteboardSnapshot,
+        attemptsRemaining: Int,
+        reply: @escaping (NSDictionary) -> Void
+    ) {
+        if expectation.confirms(
+            currentValue: copyString(target.element, attribute: kAXValueAttribute as String)
+        ) {
+            let shouldRestore = pasteboard.changeCount == injectedChangeCount
+            let restored = shouldRestore ? snapshot.restore(to: pasteboard) : false
+            reply([
+                "authorized": true,
+                "success": true,
+                "method": "paste",
+                "verified": true,
+                "clipboardRestored": restored,
+            ])
+            return
+        }
+        guard attemptsRemaining > 0 else {
+            // Keep the transcript on the clipboard when consumption is not
+            // confirmed. Restoring here could make a delayed Cmd-V insert the
+            // user's previous clipboard contents.
+            reply([
+                "authorized": true,
+                "success": false,
+                "method": "paste",
+                "verified": false,
+                "clipboardRestored": false,
+                "error": "pasteNotConfirmed",
+            ])
+            return
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            self?.waitForPasteConfirmation(
+                expectation: expectation,
+                target: target,
+                pasteboard: pasteboard,
+                injectedChangeCount: injectedChangeCount,
+                snapshot: snapshot,
+                attemptsRemaining: attemptsRemaining - 1,
+                reply: reply
+            )
+        }
+    }
+
+    private func pasteMutationExpectation(
+        _ text: String,
+        into element: AXUIElement
+    ) -> PasteMutationExpectation? {
+        guard let originalValue = copyString(element, attribute: kAXValueAttribute as String),
+              let selectedRange = copyCFRange(
+                  element,
+                  attribute: kAXSelectedTextRangeAttribute as String
+              ) else {
+            return nil
+        }
+        return PasteMutationExpectation(
+            originalValue: originalValue,
+            selectedRange: selectedRange,
+            insertionText: text
+        )
+    }
+
+    private func textCaptureFailure(authorized: Bool, error: String) -> NSDictionary {
+        [
+            "authorized": authorized,
+            "success": false,
+            "error": error,
+        ]
+    }
+
+    private func textInsertionFailure(authorized: Bool, error: String) -> NSDictionary {
+        [
+            "authorized": authorized,
+            "success": false,
+            "method": "none",
+            "error": error,
+        ]
+    }
+
     private func focusedWindowSnapshotDictionary() -> NSDictionary? {
         guard let app = targetApplication() else {
             return nil
@@ -490,6 +1584,37 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
         return windowID
     }
 
+    private func displayID(containing frame: CGRect) -> CGDirectDisplayID? {
+        guard !frame.isNull, frame.width > 0, frame.height > 0 else {
+            return nil
+        }
+
+        var displayCount: UInt32 = 0
+        guard CGGetOnlineDisplayList(0, nil, &displayCount) == .success,
+              displayCount > 0 else {
+            return nil
+        }
+        var displays = [CGDirectDisplayID](repeating: 0, count: Int(displayCount))
+        let result = displays.withUnsafeMutableBufferPointer { buffer in
+            CGGetOnlineDisplayList(
+                displayCount,
+                buffer.baseAddress,
+                &displayCount
+            )
+        }
+        guard result == .success else { return nil }
+
+        let availableDisplays = Array(displays.prefix(Int(displayCount)))
+        let displayBounds = availableDisplays.map(CGDisplayBounds)
+        guard let index = WindowTargetResolver.displayIndex(
+            containing: frame,
+            displayBounds: displayBounds
+        ) else {
+            return nil
+        }
+        return availableDisplays[index]
+    }
+
     private func setAXFrame(_ frame: CGRect, for element: AXUIElement, pid: pid_t) -> Bool {
         var size = frame.size
         var position = frame.origin
@@ -546,6 +1671,18 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
         var value: CFTypeRef?
         guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else { return nil }
         return value as? Bool
+    }
+
+    private func copyCFRange(_ element: AXUIElement, attribute: String) -> CFRange? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success,
+              let value,
+              CFGetTypeID(value) == AXValueGetTypeID() else { return nil }
+        let axValue = value as! AXValue
+        guard AXValueGetType(axValue) == .cfRange else { return nil }
+        var range = CFRange()
+        guard AXValueGetValue(axValue, .cfRange, &range) else { return nil }
+        return range
     }
 
     @discardableResult

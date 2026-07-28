@@ -1,0 +1,20 @@
+{"id":"gojo-01","voice":"Samantha","reference":"Gojo local dictation types into the focused field."}
+{"id":"gojo-02","voice":"Daniel","spoken":"Please schedule a meeting for Tuesday at three thirty.","reference":"Please schedule a meeting for Tuesday at 3.30."}
+{"id":"gojo-03","voice":"Karen","reference":"Send the revised proposal to the design team tomorrow morning."}
+{"id":"gojo-04","voice":"Moira","reference":"The pull request fixes a race condition in the audio recorder."}
+{"id":"gojo-05","voice":"Samantha","spoken":"Open example dot com slash account slash settings.","reference":"Open example.com/account/settings"}
+{"id":"gojo-06","voice":"Daniel","spoken":"My confirmation number is seven four two nine one six.","reference":"My confirmation number is 742916."}
+{"id":"gojo-07","voice":"Karen","reference":"Can you add milk, coffee, apples, and brown rice to the list?"}
+{"id":"gojo-08","voice":"Moira","reference":"Actually, move that paragraph above the final section."}
+{"id":"gojo-09","voice":"Samantha","reference":"The local model must work without an API key or internet connection."}
+{"id":"gojo-10","voice":"Daniel","reference":"Run make test dictation before you merge the branch."}
+{"id":"gojo-11","voice":"Karen","spoken":"I will arrive at San Francisco International Airport at eight fifteen.","reference":"I will arrive at San Francisco International Airport at 8.15."}
+{"id":"gojo-12","voice":"Moira","spoken":"Set the temperature to sixty eight degrees for two hours.","reference":"Set the temperature to 68 degrees for 2 hours."}
+{"id":"gojo-13","voice":"Samantha","reference":"This sentence includes commas, pauses, and a final period."}
+{"id":"gojo-14","voice":"Daniel","reference":"WhisperKit uses Core ML acceleration on Apple silicon."}
+{"id":"gojo-15","voice":"Karen","reference":"Cancel the recording if the focused text field changes."}
+{"id":"gojo-16","voice":"Moira","reference":"The quick brown fox jumps over the lazy dog."}
+{"id":"gojo-17","voice":"Samantha","reference":"Please remind me to call the dentist next Thursday afternoon."}
+{"id":"gojo-18","voice":"Daniel","spoken":"Version two point four point zero shipped on July sixteenth.","reference":"Version 2.4.0 shipped on July 16th."}
+{"id":"gojo-19","voice":"Karen","reference":"Create a new note titled local speech recognition research."}
+{"id":"gojo-20","voice":"Moira","reference":"Free and private on device transcription is the hard requirement."}

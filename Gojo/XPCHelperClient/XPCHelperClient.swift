@@ -1,6 +1,400 @@
 import Foundation
 import Cocoa
-import AsyncXPCConnection
+@preconcurrency import AsyncXPCConnection
+import os
+
+private let dictationPasteLogger = Logger(
+    subsystem: "rohoswagger.gojo.dictation",
+    category: "application-paste"
+)
+
+private struct DictationCaptureTargetHint: Sendable {
+    let pid: pid_t
+    let windowID: CGWindowID
+    let displayID: CGDirectDisplayID?
+
+    var xpcDictionary: NSDictionary {
+        var result: [String: Any] = [
+            "pid": NSNumber(value: pid),
+            "windowID": NSNumber(value: windowID),
+        ]
+        if let displayID {
+            result["displayID"] = NSNumber(value: displayID)
+        }
+        return NSDictionary(dictionary: result)
+    }
+}
+
+@_silgen_name("_AXUIElementGetWindow")
+private func _AXUIElementGetWindow(_ element: AXUIElement, _ identifier: UnsafeMutablePointer<CGWindowID>) -> AXError
+
+private struct DictationPasteboardSnapshot {
+    let items: [[NSPasteboard.PasteboardType: Data]]
+    let isComplete: Bool
+
+    init(pasteboard: NSPasteboard) {
+        var capturedItems: [[NSPasteboard.PasteboardType: Data]] = []
+        var capturedEveryType = true
+        for item in pasteboard.pasteboardItems ?? [] {
+            var capturedItem: [NSPasteboard.PasteboardType: Data] = [:]
+            for type in item.types {
+                guard let data = item.data(forType: type) else {
+                    capturedEveryType = false
+                    continue
+                }
+                capturedItem[type] = data
+            }
+            capturedItems.append(capturedItem)
+        }
+        items = capturedItems
+        isComplete = capturedEveryType
+    }
+
+    @discardableResult
+    func restore(to pasteboard: NSPasteboard) -> Bool {
+        pasteboard.clearContents()
+        guard !items.isEmpty else { return true }
+
+        let restoredItems = items.map { storedItem -> NSPasteboardItem in
+            let item = NSPasteboardItem()
+            for (type, data) in storedItem {
+                item.setData(data, forType: type)
+            }
+            return item
+        }
+        return pasteboard.writeObjects(restoredItems)
+    }
+}
+
+@MainActor
+private final class DictationApplicationInsertionService {
+    static let shared = DictationApplicationInsertionService()
+
+    private static let commandKeyCode: CGKeyCode = 0x37
+    private static let pasteKeyCode: CGKeyCode = 0x09
+    private static let transientPasteboardType = NSPasteboard.PasteboardType(
+        "org.nspasteboard.TransientType"
+    )
+
+    private init() {}
+
+    // Retained for future scoped compatibility targets that cannot receive
+    // Unicode events. Current opaque dictation targets use insertUnicode so
+    // dictated text never has to touch the global clipboard.
+    // Adapted from Pindrop's MIT-licensed OutputManager. The keyboard events
+    // must come from Gojo, the process the user grants Accessibility access to.
+    func insert(
+        _ text: String,
+        target: DictationApplicationPasteTarget
+    ) async -> NSDictionary {
+        guard let targetApplication = NSRunningApplication(processIdentifier: target.pid),
+              !targetApplication.isTerminated else {
+            return failure("focusChanged")
+        }
+        guard let eventSource = CGEventSource(stateID: .hidSystemState),
+              let commandDown = CGEvent(
+                keyboardEventSource: eventSource,
+                virtualKey: Self.commandKeyCode,
+                keyDown: true
+              ),
+              let pasteDown = CGEvent(
+                keyboardEventSource: eventSource,
+                virtualKey: Self.pasteKeyCode,
+                keyDown: true
+              ),
+              let pasteUp = CGEvent(
+                keyboardEventSource: eventSource,
+                virtualKey: Self.pasteKeyCode,
+                keyDown: false
+              ),
+              let commandUp = CGEvent(
+                keyboardEventSource: eventSource,
+                virtualKey: Self.commandKeyCode,
+                keyDown: false
+              ) else {
+            return failure("pasteEventUnavailable")
+        }
+
+        commandDown.flags = .maskCommand
+        pasteDown.flags = .maskCommand
+        pasteUp.flags = .maskCommand
+
+        let pasteboard = NSPasteboard.general
+        let snapshot = DictationPasteboardSnapshot(pasteboard: pasteboard)
+        guard snapshot.isComplete else {
+            return failure("clipboardSnapshotUnavailable")
+        }
+        guard isTargetProcessFrontmost(target.pid),
+              isCapturedWindowFrontmost(
+                  targetPID: target.pid,
+                  targetWindowID: target.windowID
+              ) else {
+            return failure("focusChanged")
+        }
+
+        let transcriptItem = NSPasteboardItem()
+        transcriptItem.setString(text, forType: .string)
+        transcriptItem.setData(Data(), forType: Self.transientPasteboardType)
+
+        pasteboard.clearContents()
+        guard pasteboard.writeObjects([transcriptItem]) else {
+            _ = snapshot.restore(to: pasteboard)
+            return failure("pasteboardWriteFailed")
+        }
+        let injectedChangeCount = pasteboard.changeCount
+        var commandIsDown = false
+        var pasteIsDown = false
+        var pasteEventPosted = false
+
+        do {
+            try await Task.sleep(for: .milliseconds(80))
+
+            guard isTargetProcessFrontmost(target.pid),
+                  isCapturedWindowFrontmost(
+                    targetPID: target.pid,
+                    targetWindowID: target.windowID
+                  ),
+                  pasteboard.changeCount == injectedChangeCount,
+                  pasteboard.string(forType: .string) == text else {
+                if pasteboard.changeCount == injectedChangeCount {
+                    _ = snapshot.restore(to: pasteboard)
+                }
+                return failure("focusChanged")
+            }
+
+            commandDown.post(tap: .cghidEventTap)
+            commandIsDown = true
+            try await Task.sleep(for: .milliseconds(50))
+            guard isTargetProcessFrontmost(target.pid),
+                  isCapturedWindowFrontmost(
+                    targetPID: target.pid,
+                    targetWindowID: target.windowID
+                  ) else {
+                commandUp.post(tap: .cghidEventTap)
+                commandIsDown = false
+                if pasteboard.changeCount == injectedChangeCount {
+                    _ = snapshot.restore(to: pasteboard)
+                }
+                return failure("focusChanged")
+            }
+            pasteDown.post(tap: .cghidEventTap)
+            pasteIsDown = true
+            pasteEventPosted = true
+            try await Task.sleep(for: .milliseconds(50))
+            pasteUp.post(tap: .cghidEventTap)
+            pasteIsDown = false
+            try await Task.sleep(for: .milliseconds(50))
+            commandUp.post(tap: .cghidEventTap)
+            commandIsDown = false
+            try await Task.sleep(for: .milliseconds(300))
+        } catch {
+            if pasteIsDown {
+                pasteUp.post(tap: .cghidEventTap)
+            }
+            if commandIsDown {
+                commandUp.post(tap: .cghidEventTap)
+            }
+            if !pasteEventPosted,
+               pasteboard.changeCount == injectedChangeCount {
+                _ = snapshot.restore(to: pasteboard)
+            }
+            return failure("insertionCancelled")
+        }
+
+        return [
+            "authorized": true,
+            "success": true,
+            "method": "application-paste",
+            "verified": false,
+            "clipboardRestored": false,
+        ]
+    }
+
+    func insertUnicode(
+        _ text: String,
+        target: DictationApplicationPasteTarget
+    ) async -> NSDictionary {
+        guard let targetApplication = NSRunningApplication(
+            processIdentifier: target.pid
+        ), !targetApplication.isTerminated else {
+            return unicodeFailure("focusChanged")
+        }
+        let chunks = DictationUnicodeTextInjector.chunks(for: text)
+        guard !chunks.isEmpty, chunks.joined() == text else {
+            return unicodeFailure("unicodeChunkUnavailable")
+        }
+        var postedChunkCount = 0
+        for (index, chunk) in chunks.enumerated() {
+            guard isTargetProcessFrontmost(target.pid),
+                  isCapturedWindowFrontmost(
+                    targetPID: target.pid,
+                    targetWindowID: target.windowID
+                  ) else {
+                let failure = DictationUnicodeTextInjector.failure(
+                    afterPostedChunks: postedChunkCount,
+                    fallbackCode: "focusChanged"
+                )
+                return unicodeFailure(
+                    failure.code,
+                    partialInsertion: failure.isPartialInsertion
+                )
+            }
+            guard DictationUnicodeTextInjector.post(chunk) else {
+                let failure = DictationUnicodeTextInjector.failure(
+                    afterPostedChunks: postedChunkCount,
+                    fallbackCode: "unicodeEventUnavailable"
+                )
+                return unicodeFailure(
+                    failure.code,
+                    partialInsertion: failure.isPartialInsertion
+                )
+            }
+            postedChunkCount += 1
+
+            if index < chunks.index(before: chunks.endIndex) {
+                do {
+                    try await Task.sleep(for: .milliseconds(2))
+                } catch {
+                    return unicodeFailure(
+                        "partialInsertion",
+                        partialInsertion: true
+                    )
+                }
+            }
+        }
+
+        return [
+            "authorized": true,
+            "success": true,
+            "method": "application-unicode",
+            "verified": false,
+        ]
+    }
+
+    private func failure(_ error: String) -> NSDictionary {
+        [
+            "authorized": true,
+            "success": false,
+            "method": "application-paste",
+            "verified": false,
+            "error": error,
+        ]
+    }
+
+    private func unicodeFailure(
+        _ error: String,
+        partialInsertion: Bool = false
+    ) -> NSDictionary {
+        let result: [String: Any] = [
+            "authorized": true,
+            "success": false,
+            "method": "application-unicode",
+            "verified": false,
+            "error": error,
+        ]
+        guard partialInsertion else {
+            return NSDictionary(dictionary: result)
+        }
+        return NSDictionary(
+            dictionary: result.merging(
+                ["partialInsertion": true],
+                uniquingKeysWith: { _, newValue in newValue }
+            )
+        )
+    }
+
+    private func isCapturedWindowFrontmost(
+        targetPID: pid_t,
+        targetWindowID: CGWindowID
+    ) -> Bool {
+        guard let windowList = CGWindowListCopyWindowInfo(
+            [.optionOnScreenOnly, .excludeDesktopElements],
+            kCGNullWindowID
+        ) as? [[String: Any]] else {
+            return false
+        }
+
+        let ownPID = pid_t(ProcessInfo.processInfo.processIdentifier)
+        let topWindows = windowList
+            .compactMap(WindowTargetWindowSnapshot.init(cgWindowInfo:))
+        let matches = WindowTargetResolver.isCapturedWindowTopmost(
+            targetPID: targetPID,
+            targetWindowID: targetWindowID,
+            topWindows: topWindows,
+            ownPID: ownPID
+        )
+        if matches {
+            return true
+        }
+        if isTargetProcessFrontmost(targetPID),
+           capturedAccessibilityWindowIsActive(
+               targetPID: targetPID,
+               targetWindowID: targetWindowID
+           ) {
+            return true
+        }
+        let targetCandidates = topWindows.filter { $0.pid == targetPID }
+        let candidates = targetCandidates
+            .map {
+                "\($0.windowID.map { String($0) } ?? "none")"
+                    + ":\(Int($0.bounds.width))x\(Int($0.bounds.height))"
+                    + ":layer\($0.layer)"
+            }
+            .joined(separator: ",")
+        let message = "window mismatch pid=\(targetPID)"
+            + " captured=\(targetWindowID)"
+            + " candidates=\(candidates)"
+        dictationPasteLogger.error("\(message, privacy: .public)")
+        return false
+    }
+
+    private func isTargetProcessFrontmost(_ targetPID: pid_t) -> Bool {
+        let systemWide = AXUIElementCreateSystemWide()
+        if let focusedApplication = copyElement(
+            systemWide,
+            attribute: kAXFocusedApplicationAttribute as String
+        ) {
+            var focusedPID = pid_t(0)
+            if AXUIElementGetPid(focusedApplication, &focusedPID) == .success {
+                if focusedPID == targetPID {
+                    return true
+                }
+                guard focusedPID == pid_t(ProcessInfo.processInfo.processIdentifier) else {
+                    return false
+                }
+            }
+        }
+        return NSWorkspace.shared.frontmostApplication?.processIdentifier == targetPID
+    }
+
+    private func capturedAccessibilityWindowIsActive(
+        targetPID: pid_t,
+        targetWindowID: CGWindowID
+    ) -> Bool {
+        let appElement = AXUIElementCreateApplication(targetPID)
+        let candidates = [
+            copyElement(appElement, attribute: kAXFocusedWindowAttribute as String),
+            copyElement(appElement, attribute: kAXMainWindowAttribute as String)
+        ]
+        return candidates.compactMap { $0 }.contains { windowID(of: $0) == targetWindowID }
+    }
+
+    private func copyElement(_ element: AXUIElement, attribute: String) -> AXUIElement? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else {
+            return nil
+        }
+        guard let value, CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
+        return (value as! AXUIElement)
+    }
+
+    private func windowID(of element: AXUIElement) -> CGWindowID? {
+        var windowID = CGWindowID(0)
+        let result = _AXUIElementGetWindow(element, &windowID)
+        guard result == .success else { return nil }
+        return windowID
+    }
+}
 
 /// Result of a helper frame mutation. `resultingFrame` is the window's actual
 /// frame read back from AX (source of truth, no CGWindowList lag) — nil when the
@@ -23,7 +417,7 @@ struct WindowFrameResult {
     }
 }
 
-final class XPCHelperClient: NSObject {
+final class XPCHelperClient: NSObject, @unchecked Sendable {
     nonisolated static let shared = XPCHelperClient()
     
     private let serviceName = "rohoswagger.gojo.GojoXPCHelper"
@@ -167,6 +561,212 @@ final class XPCHelperClient: NSObject {
         }
     }
 
+    nonisolated func captureFocusedTextTarget(promptIfNeeded: Bool = false) async -> NSDictionary {
+        do {
+            let (service, preferredTargetHint) = await MainActor.run {
+                (
+                    ensureRemoteService(),
+                    preferredDictationApplicationPasteTarget()
+                )
+            }
+            let preferredTarget = preferredTargetHint?.xpcDictionary
+            let result: NSDictionary = try await service.withContinuation { service, continuation in
+                service.captureFocusedTextTarget(
+                    promptIfNeeded,
+                    preferredTarget: preferredTarget
+                ) { result in
+                    continuation.resume(returning: result)
+                }
+            }
+            let authorized = (result["authorized"] as? NSNumber)?.boolValue == true
+            await MainActor.run {
+                notifyAuthorizationChange(authorized)
+            }
+            return result
+        } catch {
+            return [
+                "authorized": false,
+                "success": false,
+                "error": "helperUnavailable",
+            ]
+        }
+    }
+
+    @MainActor
+    private func preferredDictationApplicationPasteTarget()
+        -> DictationCaptureTargetHint? {
+        guard let windowList = CGWindowListCopyWindowInfo(
+            [.optionOnScreenOnly, .excludeDesktopElements],
+            kCGNullWindowID
+        ) as? [[String: Any]] else {
+            return nil
+        }
+        let topWindows = windowList.compactMap(
+            WindowTargetWindowSnapshot.init(cgWindowInfo:)
+        )
+        var applicationsByPID: [pid_t: WindowTargetApplicationSnapshot] = [:]
+        for window in topWindows where applicationsByPID[window.pid] == nil {
+            guard let application = NSRunningApplication(
+                processIdentifier: window.pid
+            ) else {
+                continue
+            }
+            applicationsByPID[window.pid] = WindowTargetApplicationSnapshot(
+                pid: application.processIdentifier,
+                bundleIdentifier: application.bundleIdentifier,
+                activationPolicy: dictationActivationPolicy(
+                    application.activationPolicy
+                ),
+                isTerminated: application.isTerminated
+            )
+        }
+        let ownPID = pid_t(ProcessInfo.processInfo.processIdentifier)
+        guard let target = WindowTargetResolver.topmostApplicationPasteTarget(
+            topWindows: topWindows,
+            applicationsByPID: applicationsByPID,
+            ownPID: ownPID,
+            excludedBundleIDs: [Bundle.main.bundleIdentifier].compactMap {
+                $0
+            }.reduce(into: Set<String>()) {
+                $0.insert($1)
+            },
+            allowedBundleIDs: WindowTargetResolver.axOpaqueDictationBundleIDs
+        ) else {
+            return nil
+        }
+        let targetWindow = topWindows.first {
+            $0.pid == target.pid && $0.windowID == target.windowID
+        }
+        let displayID = targetWindow.flatMap {
+            dictationDisplayID(containing: $0.bounds)
+        }
+        return DictationCaptureTargetHint(
+            pid: target.pid,
+            windowID: target.windowID,
+            displayID: displayID
+        )
+    }
+
+    private func dictationActivationPolicy(
+        _ policy: NSApplication.ActivationPolicy
+    ) -> WindowTargetActivationPolicy {
+        switch policy {
+        case .regular:
+            return .regular
+        case .accessory:
+            return .accessory
+        case .prohibited:
+            return .prohibited
+        @unknown default:
+            return .unknown
+        }
+    }
+
+    private func dictationDisplayID(
+        containing frame: CGRect
+    ) -> CGDirectDisplayID? {
+        var displayCount: UInt32 = 0
+        guard CGGetOnlineDisplayList(0, nil, &displayCount) == .success,
+              displayCount > 0 else {
+            return nil
+        }
+        var displays = [CGDirectDisplayID](
+            repeating: 0,
+            count: Int(displayCount)
+        )
+        let result = displays.withUnsafeMutableBufferPointer { buffer in
+            CGGetOnlineDisplayList(
+                displayCount,
+                buffer.baseAddress,
+                &displayCount
+            )
+        }
+        guard result == .success else {
+            return nil
+        }
+        let availableDisplays = Array(displays.prefix(Int(displayCount)))
+        let displayBounds = availableDisplays.map(CGDisplayBounds)
+        guard let index = WindowTargetResolver.displayIndex(
+            containing: frame,
+            displayBounds: displayBounds
+        ) else {
+            return nil
+        }
+        return availableDisplays[index]
+    }
+
+    nonisolated func insertText(_ text: String, token: String) async -> NSDictionary {
+        do {
+            let service = await MainActor.run {
+                ensureRemoteService()
+            }
+            let result: NSDictionary = try await service.withContinuation { service, continuation in
+                service.insertText(text, token: token) { result in
+                    continuation.resume(returning: result)
+                }
+            }
+            let authorized = (result["authorized"] as? NSNumber)?.boolValue == true
+            await MainActor.run {
+                notifyAuthorizationChange(authorized)
+            }
+            if result["error"] as? String == "applicationPasteRequired",
+               let pid = result["pid"] as? NSNumber,
+               let windowID = result["windowID"] as? NSNumber {
+                let targetPID = pid_t(pid.int32Value)
+                let targetWindowID = CGWindowID(truncating: windowID)
+                // Do not activate or raise the destination here. Opaque browser
+                // windows may not expose an AX window element, and stealing focus
+                // would make it possible to paste after the user switched away.
+                // The paste service verifies the captured pid and CGWindowID before
+                // touching the clipboard and again before posting every key event.
+                return await DictationApplicationInsertionService.shared.insert(
+                    text,
+                    target: DictationApplicationPasteTarget(
+                        pid: targetPID,
+                        windowID: targetWindowID
+                    )
+                )
+            }
+            if result["error"] as? String == "applicationPasteRequired" {
+                return [
+                    "authorized": true,
+                    "success": false,
+                    "method": "application-paste",
+                    "verified": false,
+                    "error": "focusChanged",
+                ]
+            }
+            if result["error"] as? String == "applicationUnicodeRequired",
+               let pid = result["pid"] as? NSNumber,
+               let windowID = result["windowID"] as? NSNumber {
+                return await DictationApplicationInsertionService.shared.insertUnicode(
+                    text,
+                    target: DictationApplicationPasteTarget(
+                        pid: pid_t(pid.int32Value),
+                        windowID: CGWindowID(truncating: windowID)
+                    )
+                )
+            }
+            if result["error"] as? String == "applicationUnicodeRequired" {
+                return [
+                    "authorized": true,
+                    "success": false,
+                    "method": "application-unicode",
+                    "verified": false,
+                    "error": "focusChanged",
+                ]
+            }
+            return result
+        } catch {
+            return [
+                "authorized": false,
+                "success": false,
+                "method": "none",
+                "error": "helperUnavailable",
+            ]
+        }
+    }
+
     nonisolated func focusedWindowSnapshot(promptIfNeeded: Bool) async -> NSDictionary? {
         do {
             let service = await MainActor.run {
@@ -177,8 +777,9 @@ final class XPCHelperClient: NSObject {
                     continuation.resume(returning: snapshot)
                 }
             }
+            let authorized = (result["authorized"] as? NSNumber)?.boolValue == true
             await MainActor.run {
-                notifyAuthorizationChange((result["authorized"] as? NSNumber)?.boolValue == true)
+                notifyAuthorizationChange(authorized)
             }
             guard result["error"] == nil else { return nil }
             return result

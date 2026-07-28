@@ -1,0 +1,269 @@
+import Foundation
+
+enum DictationActivationMode: String, CaseIterable, Identifiable {
+    case holdToTalk
+    case tapToTalk
+
+    static let defaultsKey = "dictationActivationMode"
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .holdToTalk:
+            return "Hold to talk"
+        case .tapToTalk:
+            return "Tap to talk"
+        }
+    }
+
+    static func saved(in defaults: UserDefaults = .standard) -> Self {
+        guard let rawValue = defaults.string(forKey: defaultsKey),
+              let mode = Self(rawValue: rawValue) else {
+            return .holdToTalk
+        }
+        return mode
+    }
+
+    func save(in defaults: UserDefaults = .standard) {
+        defaults.set(rawValue, forKey: Self.defaultsKey)
+    }
+}
+
+struct DictationModifierShortcutStateMachine {
+    enum State: Equatable {
+        case idle
+        case arming
+        case active
+        case stopping
+        case blocked
+    }
+
+    enum Event {
+        case flagsChanged(
+            isExactChord: Bool,
+            anyTriggerModifierDown: Bool,
+            hasDisallowedModifiers: Bool
+        )
+        case keyDown
+        case activationDelayElapsed
+        case cancel
+    }
+
+    enum Action: Equatable {
+        case none
+        case scheduleActivation
+        case cancelScheduledActivation
+        case beginDictation
+        case finishDictation
+        case cancelDictation
+    }
+
+    private(set) var state: State = .idle
+    private(set) var mode: DictationActivationMode
+
+    init(mode: DictationActivationMode = .holdToTalk) {
+        self.mode = mode
+    }
+
+    mutating func handle(_ event: Event) -> Action {
+        if case .cancel = event {
+            return reset()
+        }
+
+        switch mode {
+        case .holdToTalk:
+            return handleHoldToTalk(event)
+        case .tapToTalk:
+            return handleTapToTalk(event)
+        }
+    }
+
+    mutating func setMode(_ newMode: DictationActivationMode) -> Action {
+        guard mode != newMode else { return .none }
+        let action = reset()
+        mode = newMode
+        return action
+    }
+
+    mutating func reset() -> Action {
+        let previousState = state
+        state = .idle
+        switch previousState {
+        case .arming where mode == .holdToTalk:
+            return .cancelScheduledActivation
+        case .active, .stopping:
+            return .cancelDictation
+        case .idle, .arming, .blocked:
+            return .none
+        }
+    }
+
+    private mutating func handleHoldToTalk(_ event: Event) -> Action {
+        switch (state, event) {
+        case let (.idle, .flagsChanged(isExactChord, _, hasDisallowedModifiers)):
+            if hasDisallowedModifiers {
+                state = .blocked
+                return .none
+            }
+            guard isExactChord else { return .none }
+            state = .arming
+            return .scheduleActivation
+
+        case (.idle, _):
+            return .none
+
+        case (.arming, .activationDelayElapsed):
+            state = .active
+            return .beginDictation
+
+        case (.arming, .flagsChanged(_, _, hasDisallowedModifiers: true)):
+            state = .blocked
+            return .cancelScheduledActivation
+
+        case (.arming, .flagsChanged(isExactChord: true, _, hasDisallowedModifiers: false)):
+            return .none
+
+        case let (.arming, .flagsChanged(
+            isExactChord: false,
+            anyTriggerModifierDown: anyTriggerDown,
+            hasDisallowedModifiers: hasDisallowedModifiers
+        )):
+            state = anyTriggerDown || hasDisallowedModifiers ? .blocked : .idle
+            return .cancelScheduledActivation
+
+        case (.arming, .keyDown):
+            state = .blocked
+            return .cancelScheduledActivation
+
+        case (.active, .flagsChanged(isExactChord: true, _, hasDisallowedModifiers: false)):
+            return .none
+
+        case let (.active, .flagsChanged(_, anyTriggerDown, hasDisallowedModifiers)):
+            state = anyTriggerDown || hasDisallowedModifiers ? .blocked : .idle
+            return hasDisallowedModifiers ? .cancelDictation : .finishDictation
+
+        case (.active, .keyDown):
+            state = .blocked
+            return .cancelDictation
+
+        case (.active, .activationDelayElapsed):
+            return .none
+
+        case (.stopping, _):
+            state = .idle
+            return .cancelDictation
+
+        case let (.blocked, .flagsChanged(
+            isExactChord: _,
+            anyTriggerModifierDown: anyTriggerDown,
+            hasDisallowedModifiers: hasDisallowedModifiers
+        )):
+            if !anyTriggerDown && !hasDisallowedModifiers {
+                state = .idle
+            }
+            return .none
+
+        case (.blocked, _):
+            return .none
+
+        case (_, .cancel):
+            return .none
+        }
+    }
+
+    private mutating func handleTapToTalk(_ event: Event) -> Action {
+        switch (state, event) {
+        case let (.idle, .flagsChanged(isExactChord, _, hasDisallowedModifiers)):
+            if hasDisallowedModifiers {
+                state = .blocked
+            } else if isExactChord {
+                state = .arming
+            }
+            return .none
+
+        case (.idle, _):
+            return .none
+
+        case (.arming, .flagsChanged(_, _, hasDisallowedModifiers: true)):
+            state = .blocked
+            return .none
+
+        case (.arming, .flagsChanged(isExactChord: true, _, hasDisallowedModifiers: false)):
+            return .none
+
+        case let (.arming, .flagsChanged(
+            isExactChord: false,
+            anyTriggerModifierDown: anyTriggerDown,
+            hasDisallowedModifiers: false
+        )):
+            guard !anyTriggerDown else { return .none }
+            state = .active
+            return .beginDictation
+
+        case (.arming, .keyDown):
+            state = .blocked
+            return .none
+
+        case (.arming, .activationDelayElapsed):
+            return .none
+
+        case (.active, .flagsChanged(_, _, hasDisallowedModifiers: true)):
+            state = .blocked
+            return .cancelDictation
+
+        case (.active, .flagsChanged(isExactChord: true, _, hasDisallowedModifiers: false)):
+            state = .stopping
+            return .none
+
+        case (.active, .flagsChanged(isExactChord: false, _, hasDisallowedModifiers: false)):
+            return .none
+
+        case (.active, .keyDown):
+            state = .blocked
+            return .cancelDictation
+
+        case (.active, .activationDelayElapsed):
+            return .none
+
+        case (.stopping, .flagsChanged(_, _, hasDisallowedModifiers: true)):
+            state = .blocked
+            return .cancelDictation
+
+        case (.stopping, .flagsChanged(isExactChord: true, _, hasDisallowedModifiers: false)):
+            return .none
+
+        case let (.stopping, .flagsChanged(
+            isExactChord: false,
+            anyTriggerModifierDown: anyTriggerDown,
+            hasDisallowedModifiers: false
+        )):
+            guard !anyTriggerDown else { return .none }
+            state = .idle
+            return .finishDictation
+
+        case (.stopping, .keyDown):
+            state = .blocked
+            return .cancelDictation
+
+        case (.stopping, .activationDelayElapsed):
+            return .none
+
+        case let (.blocked, .flagsChanged(
+            isExactChord: _,
+            anyTriggerModifierDown: anyTriggerDown,
+            hasDisallowedModifiers: hasDisallowedModifiers
+        )):
+            if !anyTriggerDown && !hasDisallowedModifiers {
+                state = .idle
+            }
+            return .none
+
+        case (.blocked, _):
+            return .none
+
+        case (_, .cancel):
+            return .none
+        }
+    }
+}

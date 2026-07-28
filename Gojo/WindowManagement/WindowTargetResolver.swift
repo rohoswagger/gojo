@@ -47,7 +47,30 @@ struct WindowTargetWindowSnapshot: Equatable {
     }
 }
 
+struct DictationApplicationPasteTarget: Equatable, Sendable {
+    let pid: pid_t
+    let windowID: CGWindowID
+}
+
 enum WindowTargetResolver {
+    static let guardedApplicationPasteBundleIDs: Set<String> = []
+
+#if DEBUG
+    static let guardedUnicodeTypingBundleIDs: Set<String> = [
+        "com.openai.codex",
+        "com.zarifpour.superconductor",
+        "rohoswagger.gojo.UnicodeTypingE2EFixture",
+    ]
+#else
+    static let guardedUnicodeTypingBundleIDs: Set<String> = [
+        "com.openai.codex",
+        "com.zarifpour.superconductor",
+    ]
+#endif
+
+    static let axOpaqueDictationBundleIDs: Set<String> =
+        guardedApplicationPasteBundleIDs.union(guardedUnicodeTypingBundleIDs)
+
     private static let excludedOwners: Set<String> = [
         "Dock",
         "WindowServer",
@@ -133,6 +156,129 @@ enum WindowTargetResolver {
             return false
         }
         return true
+    }
+
+    static func topmostApplicationPasteTarget(
+        topWindows: [WindowTargetWindowSnapshot],
+        applicationsByPID: [pid_t: WindowTargetApplicationSnapshot],
+        ownPID: pid_t,
+        excludedBundleIDs: Set<String>,
+        allowedBundleIDs: Set<String>
+    ) -> DictationApplicationPasteTarget? {
+        for window in topWindows {
+            guard isTopLevelWindow(window, ownPID: ownPID),
+                  window.bounds.width >= 120,
+                  window.bounds.height >= 80,
+                  let windowID = window.windowID,
+                  windowID != 0,
+                  let application = applicationsByPID[window.pid],
+                  isTargetApplication(
+                      application,
+                      ownPID: ownPID,
+                      excludedBundleIDs: excludedBundleIDs
+                  ) else {
+                continue
+            }
+            guard let bundleIdentifier = application.bundleIdentifier,
+                  allowedBundleIDs.contains(bundleIdentifier) else {
+                return nil
+            }
+            return DictationApplicationPasteTarget(
+                pid: window.pid,
+                windowID: windowID
+            )
+        }
+        return nil
+    }
+
+    static func shouldUsePreferredApplicationPasteTarget(
+        preferredPID: pid_t?,
+        focusedCandidatePIDs: [pid_t]
+    ) -> Bool {
+        guard let preferredPID, preferredPID != 0 else {
+            return false
+        }
+        return !focusedCandidatePIDs.contains(preferredPID)
+    }
+
+    static func isCapturedWindowTopmost(
+        targetPID: pid_t,
+        targetWindowID: CGWindowID,
+        topWindows: [WindowTargetWindowSnapshot],
+        ownPID: pid_t
+    ) -> Bool {
+        let applicationWindows = topWindows.filter {
+            $0.pid == targetPID && isTopLevelWindow($0, ownPID: ownPID)
+        }
+        guard let capturedIndex = applicationWindows.firstIndex(where: {
+            $0.windowID == targetWindowID
+        }) else {
+            return false
+        }
+
+        return !applicationWindows[..<capturedIndex].contains {
+            $0.bounds.width >= 120 && $0.bounds.height >= 80
+        }
+    }
+
+    static func displayIndex(
+        containing frame: CGRect,
+        displayBounds: [CGRect]
+    ) -> Int? {
+        guard !frame.isNull, frame.width > 0, frame.height > 0 else {
+            return nil
+        }
+
+        return displayBounds.enumerated().compactMap {
+            index,
+            bounds -> (index: Int, area: CGFloat)? in
+            let intersection = bounds.intersection(frame)
+            guard !intersection.isNull,
+                  intersection.width > 0,
+                  intersection.height > 0 else {
+                return nil
+            }
+            return (
+                index: index,
+                area: intersection.width * intersection.height
+            )
+        }.max { lhs, rhs in
+            lhs.area < rhs.area
+        }?.index
+    }
+
+    static func windowID(
+        containing controlFrame: CGRect,
+        targetPID: pid_t,
+        topWindows: [WindowTargetWindowSnapshot],
+        ownPID: pid_t
+    ) -> CGWindowID? {
+        guard !controlFrame.isNull,
+              controlFrame.width > 0,
+              controlFrame.height > 0 else {
+            return nil
+        }
+
+        return topWindows.compactMap {
+            window -> (windowID: CGWindowID, area: CGFloat)? in
+            guard window.pid == targetPID,
+                  isTopLevelWindow(window, ownPID: ownPID),
+                  let windowID = window.windowID else {
+                return nil
+            }
+            let intersection = window.bounds.intersection(controlFrame)
+            guard !intersection.isNull,
+                  intersection.width > 0,
+                  intersection.height > 0 else {
+                return nil
+            }
+            return (
+                windowID,
+                intersection.width * intersection.height
+            )
+        }.max { lhs, rhs in
+            lhs.area < rhs.area
+        }?.windowID
     }
 
     static func pidValue(_ value: Any?) -> pid_t? {

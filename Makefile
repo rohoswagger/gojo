@@ -1,4 +1,4 @@
-.PHONY: help build run stop restart smoke reset-onboarding run-onboarding test-window test-window-ui test-window-focus test-flux test-alt-tab release release-dry clean
+.PHONY: help build run stop restart smoke reset-onboarding run-onboarding test-window test-window-ui test-window-focus test-flux test-alt-tab test-dictation test-dictation-live test-dictation-codex-capture-live test-dictation-secure-live test-dictation-multidisplay-live test-dictation-model-live test-dictation-installed-models-live test-dictation-shortcut-live test-dictation-opaque-paste-live test-dictation-unicode-typing-live test-dictation-real-microphone-live release release-dry clean
 
 PROJECT := Gojo.xcodeproj
 SCHEME := Gojo
@@ -20,6 +20,17 @@ help:
 	@echo "  make test-window-focus Run focused-window provider regression checks"
 	@echo "  make test-flux   Run flux night shift regression checks"
 	@echo "  make test-alt-tab Run window switcher selection regression checks"
+	@echo "  make test-dictation Run local dictation regressions and benchmark scorer checks"
+	@echo "  make test-dictation-live Verify focused insertion in TextEdit and Safari (requires Accessibility)"
+	@echo "  make test-dictation-codex-capture-live Verify capture against a running Codex window"
+	@echo "  make test-dictation-secure-live Verify secure fields are rejected"
+	@echo "  make test-dictation-multidisplay-live Verify capture on a secondary display"
+	@echo "  make test-dictation-model-live Run synthesized speech through the app model and TextEdit"
+	@echo "  make test-dictation-installed-models-live Test every installed model without downloading"
+	@echo "  make test-dictation-shortcut-live Exercise the real Control+Option event tap"
+	@echo "  make test-dictation-opaque-paste-live Verify opaque app paste and focus safety"
+	@echo "  make test-dictation-unicode-typing-live Verify guarded Unicode typing and clipboard safety"
+	@echo "  make test-dictation-real-microphone-live Verify real microphone capture, transcription, and insertion"
 	@echo ""
 	@echo "Release:"
 	@echo "  make release VERSION=x.y.z      Cut a signed/notarized release (see RELEASING.md)"
@@ -91,6 +102,47 @@ test-flux:
 
 test-alt-tab:
 	./tests/alt_tab_regression.sh
+
+test-dictation: build
+	./tests/dictation_regression.sh
+	./tests/dictation_offline_policy_regression.sh
+	bash ./tests/dictation_capture_probe_regression.sh
+	./tests/text_insertion_xpc_regression.sh
+	./tests/dictation_unicode_typing_regression.sh
+	bash ./tests/dictation_live_harness_regression.sh
+	./tests/dictation_benchmark_regression.sh
+
+test-dictation-live:
+	./tests/dictation_live_e2e.sh native
+	./tests/dictation_live_e2e.sh browser
+
+test-dictation-codex-capture-live:
+	bash ./tests/dictation_codex_capture_live_e2e.sh
+
+test-dictation-secure-live:
+	bash ./tests/dictation_secure_capture_live_e2e.sh
+
+test-dictation-multidisplay-live:
+	@status=0; bash ./tests/dictation_multidisplay_capture_live_e2e.sh || status=$$?; \
+		test "$$status" -eq 0 -o "$$status" -eq 77
+
+test-dictation-model-live:
+	./tests/dictation_model_live_e2e.sh
+
+test-dictation-installed-models-live:
+	./tests/dictation_installed_models_live_e2e.sh
+
+test-dictation-shortcut-live:
+	./tests/dictation_event_tap_shortcut_live_e2e.sh
+
+test-dictation-opaque-paste-live:
+	./tests/dictation_opaque_paste_live_e2e.sh
+
+test-dictation-unicode-typing-live:
+	./tests/dictation_unicode_typing_live_e2e.sh
+
+test-dictation-real-microphone-live:
+	./tests/dictation_real_microphone_live_e2e.sh
 
 clean:
 	rm -rf "$(DERIVED_DATA_PATH)"

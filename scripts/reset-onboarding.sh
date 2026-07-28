@@ -46,7 +46,7 @@ killall cfprefsd >/dev/null 2>&1 || true
 
 if [ "$KEEP_PERMISSIONS" -eq 0 ]; then
 	echo "==> Resetting TCC permissions"
-	for service in Camera Calendar Reminders Accessibility; do
+	for service in Camera Microphone Calendar Reminders Accessibility; do
 		tccutil reset "$service" "$BUNDLE_ID" >/dev/null 2>&1 || true
 	done
 fi

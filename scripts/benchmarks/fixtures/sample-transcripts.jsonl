@@ -1,0 +1,4 @@
+{"id":"exact","reference":"Hello, world!","hypothesis":"hello world","final_latency_ms":100,"real_time_factor":0.10}
+{"id":"substitution","reference":"gojo types fast","hypothesis":"gojo types last","final_latency_ms":200,"real_time_factor":0.20}
+{"id":"insertion","reference":"open settings","hypothesis":"please open settings","final_latency_ms":300,"real_time_factor":0.30}
+{"id":"silence","reference":"","hypothesis":"ghost words","final_latency_ms":400,"real_time_factor":0.40}

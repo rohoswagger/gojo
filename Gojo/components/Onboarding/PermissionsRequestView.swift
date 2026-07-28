@@ -395,7 +395,7 @@ private struct DragPanelView: View {
     private var granted: Bool { panel.phase == .granted }
 
     private var subtitle: String {
-        if granted { return "Accessibility on — continuing…" }
+        if granted { return "Accessibility is on. Continuing..." }
         return panel.showTip ? "Or click ＋ in the list, then pick Gojo." : "Drop it onto the list above."
     }
 

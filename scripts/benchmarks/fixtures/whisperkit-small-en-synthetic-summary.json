@@ -1,0 +1,43 @@
+{
+  "date": "2026-07-16",
+  "device": "Mac16,7 Apple M4 Pro 48 GB",
+  "macos": "26.5 (25F71)",
+  "xcode": "26.3 (17C529)",
+  "engine": "WhisperKit 1.0.0",
+  "engine_cli_sha256": "1bb1d3ec446362702e7e67c4963d6aa1c139889f29ab6fd7c11f8eeece41ec07",
+  "model": "small.en_217MB",
+  "model_revision": "97a5bf9bbc74c7d9c12c755d04dea59e672e3808",
+  "model_bytes": 217878408,
+  "corpus": "synthetic-dictation-corpus.jsonl",
+  "corpus_sha256": "c3b9dd8b7f61fd5be95ba4b718855db5d456d052db20abdb42409d809cecd72b",
+  "voices": ["Samantha", "Daniel", "Karen", "Moira"],
+  "warmup_runs": 1,
+  "measured_passes": 3,
+  "utterances_per_pass": 20,
+  "measured_utterances": 60,
+  "normalization": "basic",
+  "wer": 0.0055248618784530384,
+  "cer": 0.001145475372279496,
+  "exact_match_rate": 0.95,
+  "latency_ms": {
+    "min": 255.397,
+    "mean": 296.35228333333333,
+    "p50": 292.531,
+    "p95": 354.498,
+    "p99": 369.106,
+    "max": 369.106
+  },
+  "real_time_factor": {
+    "min": 0.0737622,
+    "mean": 0.08818328666666667,
+    "p50": 0.0865871,
+    "p95": 0.105413,
+    "p99": 0.10956,
+    "max": 0.10956
+  },
+  "limitations": [
+    "Synthetic voices are deterministic correctness and performance evidence, not a replacement for a real microphone/user corpus.",
+    "Reported fullPipeline latency is engine finalization time and excludes shortcut capture and XPC insertion.",
+    "No silence clips are included in this corpus."
+  ]
+}

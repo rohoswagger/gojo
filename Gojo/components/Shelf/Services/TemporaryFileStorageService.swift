@@ -47,7 +47,7 @@ class TemporaryFileStorageService {
                 try FileManager.default.removeItem(at: folderURL)
                 print("Folder was empty, deleted folder: \(folderURL.path)")
             } else {
-                print("Folder not deleted — it still contains \(contents.count) item(s).")
+                print("Folder not deleted. It still contains \(contents.count) item(s).")
             }
 
         } catch {

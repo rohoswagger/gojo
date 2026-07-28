@@ -63,7 +63,7 @@ struct FluxSettings: View {
                 HStack {
                     Text("Location")
                     Spacer()
-                    Text(fluxLocation?.name ?? "Not set — assuming 7 AM sunrise / 7 PM sunset")
+                    Text(fluxLocation?.name ?? "Not set. Using 7 AM sunrise and 7 PM sunset")
                         .foregroundStyle(.secondary)
                 }
                 if let solarDescription {
@@ -298,7 +298,7 @@ struct FluxSettings: View {
         case .polarNight:
             return "0 sunlight hours (polar night)"
         case nil:
-            return "12 sunlight hours (assumed — no location set)"
+            return "12 sunlight hours (no location set)"
         }
     }
 }

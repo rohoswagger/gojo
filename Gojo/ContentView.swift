@@ -245,22 +245,10 @@ struct ContentView: View {
         .preferredColorScheme(.dark)
         .environmentObject(vm)
         .onAppear {
-            dictationActivity.update(
-                state: dictation.state,
-                shortcutStarting: dictation.shortcutStarting
-            )
+            dictationActivity.update(state: dictation.state)
         }
         .onChange(of: dictation.state) { _, state in
-            dictationActivity.update(
-                state: state,
-                shortcutStarting: dictation.shortcutStarting
-            )
-        }
-        .onChange(of: dictation.shortcutStarting) { _, shortcutStarting in
-            dictationActivity.update(
-                state: dictation.state,
-                shortcutStarting: shortcutStarting
-            )
+            dictationActivity.update(state: state)
         }
         .onChange(of: clipboardState.keepsNotchOpenOnHoverExit) { _, shouldKeepOpen in
             guard !shouldKeepOpen,

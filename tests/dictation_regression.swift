@@ -467,6 +467,31 @@ struct DictationRegressionRunner {
             "every speech model should have a unique persisted identifier"
         )
         assertEqual(
+            DictationModelID.whisperSmallEnglish.engine,
+            .whisperKit,
+            "Whisper models should use the WhisperKit adapter"
+        )
+        assertEqual(
+            DictationModelID.parakeetUnifiedEnglish.engine,
+            .fluidAudio,
+            "Parakeet models should use the FluidAudio adapter"
+        )
+        assertEqual(
+            DictationModelOperation.installing(.parakeetUnifiedEnglish).model,
+            .parakeetUnifiedEnglish,
+            "model operations should retain their one active model"
+        )
+        assertEqual(
+            DictationModelOperation.selecting(.whisperLargeV3).model,
+            .whisperLargeV3,
+            "model selection should expose its active model"
+        )
+        assertEqual(
+            DictationModelOperation.removing(.parakeetV3Multilingual).model,
+            .parakeetV3Multilingual,
+            "model removal should expose its active model"
+        )
+        assertEqual(
             DictationModelID.resolveSelection(nil),
             .whisperSmallEnglish,
             "a new install should keep the lightweight model selected"
@@ -509,7 +534,7 @@ struct DictationRegressionRunner {
         assertEqual(machine.state, .listening, "successful capture startup should enter listening")
         assertEqual(machine.handle(.hotKeyUp), .finishCapture, "key-up should finish the active capture")
         assertEqual(machine.state, .transcribing, "key-up should enter transcribing")
-        assertEqual(machine.handle(.transcriptionCompleted("hello")), .insert("hello"), "transcription should request insertion")
+        assertEqual(machine.handle(.transcriptionCompleted("hello")), .insert, "transcription should request insertion")
         assertEqual(machine.state, .inserting, "completed transcription should enter inserting")
         assertEqual(machine.handle(.insertionCompleted("hello")), .none, "insertion completion needs no follow-up action")
         assertEqual(machine.state, .succeeded("hello"), "successful insertion should retain the transcript")

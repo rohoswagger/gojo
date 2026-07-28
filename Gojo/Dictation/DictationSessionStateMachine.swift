@@ -17,7 +17,7 @@ struct DictationSessionStateMachine: Sendable {
         case none
         case beginRequest
         case finishCapture
-        case insert(String)
+        case insert
         case cancel
     }
 
@@ -48,9 +48,9 @@ struct DictationSessionStateMachine: Sendable {
             state = .idle
             return .none
 
-        case (.transcribing, .transcriptionCompleted(let transcript)):
+        case (.transcribing, .transcriptionCompleted):
             state = .inserting
-            return .insert(transcript)
+            return .insert
 
         case (.inserting, .insertionCompleted(let transcript)):
             state = .succeeded(transcript)
@@ -74,4 +74,3 @@ struct DictationSessionStateMachine: Sendable {
         }
     }
 }
-

@@ -19,14 +19,9 @@ final class DictationNotchActivityModel: ObservableObject {
 
     private var hideTask: Task<Void, Never>?
 
-    func update(state: DictationState, shortcutStarting: Bool) {
+    func update(state: DictationState) {
         hideTask?.cancel()
         hideTask = nil
-
-        if shortcutStarting {
-            phase = .arming
-            return
-        }
 
         switch state {
         case .requestingPermission:

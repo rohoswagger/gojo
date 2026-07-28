@@ -28,18 +28,32 @@ The feature should be split into independently testable responsibilities:
 
 The engine-facing contract should express behavior rather than SDK types. It needs operations equivalent to prepare, start, append samples, finish, cancel, and unload; events need listening, partial transcript, final transcript, and failure. Only one session may own the engine at a time.
 
+## Extension rules
+
+Keep these rules when adding models, output formatting, vocabulary, or insertion paths:
+
+- Put decisions in small synchronous policies when possible, then test those policies with compiled Swift behavior tests. Do not add source-string assertions for behavior that can be called directly.
+- Keep `DictationController` engine-neutral. Model SDK types belong inside their transcriber adapters.
+- Add model identity and engine ownership to `DictationModelID`. Keep the settings descriptor consistent with that mapping. The regression suite checks this invariant.
+- Represent mutually exclusive work with one enum state. Do not add parallel booleans or optionals for install, select, and remove operations.
+- Keep model downloads behind an explicit settings action. The shortcut path may read cached status, but it must not download or hash model assets.
+- Apply output formatting and vocabulary after transcription and before insertion. Do not duplicate formatting inside WhisperKit or FluidAudio adapters.
+- Capture the destination before showing dictation UI or requesting microphone access. Revalidate the captured process, window, and field before any insertion side effect.
+- Keep client, helper, and insertion focus checks separate. They defend different process and timing boundaries and are not duplicate validation.
+- Add one pure behavior test for every decision policy. Add a focused integration test for XPC routing. Reserve live app tests for final system behavior.
+
 ## Session state machine
 
 Use explicit states so shortcut, permission, model, and microphone failures cannot leave Gojo recording invisibly:
 
 ```text
-idle -> preparingModel -> listening -> finalizing -> inserting -> idle
-  |          |              |             |            |
-  +----------+--------------+-------------+------------+-> failed -> idle
-                             +---------------------------> cancelled -> idle
+idle -> requestingPermission -> listening -> transcribing -> inserting -> succeeded
+  |              |                |              |             |
+  +--------------+----------------+--------------+-------------+-> error
+                                 +-------------------------------> idle (cancel)
 ```
 
-- Shortcut-down begins `preparingModel` or `listening`.
+- Shortcut-down enters `requestingPermission` after the selected model passes cached preflight.
 - Shortcut-up finishes the active utterance. If model preparation is still running, cancel rather than retaining microphone audio indefinitely.
 - Partials may update Gojo's local UI, but v1 inserts only the final transcript. This prevents repeated accessibility edits and unstable partial text in third-party apps.
 - Escape, loss of microphone input, shortcut-tap timeout, app termination, and model failure cancel the session and release the audio tap.

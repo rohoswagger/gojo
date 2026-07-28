@@ -37,10 +37,6 @@ actor LocalDictationTranscriber: LocalDictationTranscribing {
         }
     }
 
-    func isSelectedModelInstalled() async -> Bool {
-        await isModelInstalled(selectedModel)
-    }
-
     func removeModel(_ model: DictationModelID) async throws {
         switch model {
         case .whisperSmallEnglish, .whisperLargeV3:
@@ -72,34 +68,24 @@ actor LocalDictationTranscriber: LocalDictationTranscribing {
     }
 
     func transcribe(_ audio: DictationAudio) async throws -> String {
-        switch selectedModel.engine {
-        case .whisperKit:
+        switch selectedModel {
+        case .whisperSmallEnglish, .whisperLargeV3:
             return try await whisper.transcribe(audio)
-        case .fluidAudio:
-            switch selectedModel {
-            case .parakeetUnifiedEnglish:
-                return try await parakeet.transcribe(audio)
-            case .parakeetV3Multilingual:
-                return try await parakeetV3.transcribe(audio)
-            case .whisperSmallEnglish, .whisperLargeV3:
-                preconditionFailure("A Whisper model cannot use the FluidAudio route")
-            }
+        case .parakeetUnifiedEnglish:
+            return try await parakeet.transcribe(audio)
+        case .parakeetV3Multilingual:
+            return try await parakeetV3.transcribe(audio)
         }
     }
 
     func cancelTranscription() async {
-        switch selectedModel.engine {
-        case .whisperKit:
+        switch selectedModel {
+        case .whisperSmallEnglish, .whisperLargeV3:
             await whisper.cancelTranscription()
-        case .fluidAudio:
-            switch selectedModel {
-            case .parakeetUnifiedEnglish:
-                await parakeet.cancelTranscription()
-            case .parakeetV3Multilingual:
-                await parakeetV3.cancelTranscription()
-            case .whisperSmallEnglish, .whisperLargeV3:
-                break
-            }
+        case .parakeetUnifiedEnglish:
+            await parakeet.cancelTranscription()
+        case .parakeetV3Multilingual:
+            await parakeetV3.cancelTranscription()
         }
     }
 
@@ -111,17 +97,6 @@ actor LocalDictationTranscriber: LocalDictationTranscribing {
             await parakeet.unload()
         case .parakeetV3Multilingual:
             await parakeetV3.unload()
-        }
-    }
-}
-
-private extension DictationModelID {
-    var engine: DictationEngineID {
-        switch self {
-        case .whisperSmallEnglish, .whisperLargeV3:
-            return .whisperKit
-        case .parakeetUnifiedEnglish, .parakeetV3Multilingual:
-            return .fluidAudio
         }
     }
 }

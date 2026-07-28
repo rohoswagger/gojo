@@ -185,6 +185,15 @@ enum DictationModelID: String, CaseIterable, Identifiable, Sendable {
 
     var id: String { rawValue }
 
+    var engine: DictationEngineID {
+        switch self {
+        case .whisperSmallEnglish, .whisperLargeV3:
+            return .whisperKit
+        case .parakeetUnifiedEnglish, .parakeetV3Multilingual:
+            return .fluidAudio
+        }
+    }
+
     static func resolveSelection(_ rawValue: String?) -> DictationModelID {
         if let rawValue, let current = DictationModelID(rawValue: rawValue) {
             return current
@@ -208,50 +217,61 @@ enum DictationModelID: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
+enum DictationModelOperation: Equatable, Sendable {
+    case installing(DictationModelID)
+    case selecting(DictationModelID)
+    case removing(DictationModelID)
+
+    var model: DictationModelID {
+        switch self {
+        case .installing(let model), .selecting(let model), .removing(let model):
+            return model
+        }
+    }
+}
+
 struct DictationModelDescriptor: Identifiable, Sendable {
     let id: DictationModelID
-    let engine: DictationEngineID
     let displayName: String
     let detail: String
     let downloadSizeLabel: String
-    let engineLabel: String
     let isRecommended: Bool
+
+    var engine: DictationEngineID { id.engine }
+    var engineLabel: String {
+        switch engine {
+        case .whisperKit: return "WhisperKit"
+        case .fluidAudio: return "FluidAudio"
+        }
+    }
 
     static let all: [DictationModelDescriptor] = [
         DictationModelDescriptor(
             id: .parakeetUnifiedEnglish,
-            engine: .fluidAudio,
             displayName: "Parakeet Unified",
             detail: "Strong English dictation with punctuation and capitalization",
             downloadSizeLabel: "614 MB",
-            engineLabel: "FluidAudio",
             isRecommended: true
         ),
         DictationModelDescriptor(
             id: .parakeetV3Multilingual,
-            engine: .fluidAudio,
             displayName: "Parakeet v3",
             detail: "Fast dictation in 25 European languages",
             downloadSizeLabel: "483 MB",
-            engineLabel: "FluidAudio",
             isRecommended: false
         ),
         DictationModelDescriptor(
             id: .whisperSmallEnglish,
-            engine: .whisperKit,
             displayName: "Whisper Small",
             detail: "Fast and good for everyday dictation",
             downloadSizeLabel: "217 MB",
-            engineLabel: "WhisperKit",
             isRecommended: false
         ),
         DictationModelDescriptor(
             id: .whisperLargeV3,
-            engine: .whisperKit,
             displayName: "Whisper Large v3",
             detail: "Higher accuracy for English dictation",
             downloadSizeLabel: "626 MB",
-            engineLabel: "WhisperKit",
             isRecommended: false
         ),
     ]

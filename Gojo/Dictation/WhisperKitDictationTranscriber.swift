@@ -66,10 +66,6 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
         Self.cachedModelFolder(for: requestedModel) != nil
     }
 
-    func isSelectedModelInstalled() -> Bool {
-        isModelInstalled(selectedModel)
-    }
-
     func selectModel(_ requestedModel: WhisperDictationModel) async throws {
         guard activeTranscriptionGeneration == nil else {
             throw WhisperKitDictationError.transcriptionAlreadyRunning

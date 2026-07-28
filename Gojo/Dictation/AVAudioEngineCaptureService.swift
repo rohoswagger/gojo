@@ -188,12 +188,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
 
     func stopCapture() async throws -> DictationAudio {
         guard let context else { throw AVAudioEngineCaptureError.notCapturing }
-        self.context = nil
-
-        context.inputNode.removeTap(onBus: 0)
-        context.engine.stop()
-        levelObserver(0)
-        Task { await self.prepareForCaptureIfAuthorized() }
+        stopActiveCapture(context)
 
         let samples = context.accumulator.drain()
         #if DEBUG
@@ -208,10 +203,14 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
 
     func cancelCapture() async {
         guard let context else { return }
+        stopActiveCapture(context)
+        context.accumulator.discard()
+    }
+
+    private func stopActiveCapture(_ context: CaptureContext) {
         self.context = nil
         context.inputNode.removeTap(onBus: 0)
         context.engine.stop()
-        context.accumulator.discard()
         levelObserver(0)
         Task { await self.prepareForCaptureIfAuthorized() }
     }

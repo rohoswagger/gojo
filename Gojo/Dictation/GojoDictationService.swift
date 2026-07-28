@@ -126,10 +126,7 @@ final class GojoDictationService: ObservableObject {
     @Published private(set) var state: DictationState = .idle
     @Published private(set) var selectedModel: DictationModelID
     @Published private(set) var installedModels: Set<DictationModelID> = []
-    @Published private(set) var preparingModel: DictationModelID?
-    @Published private(set) var switchingModel: DictationModelID?
-    @Published private(set) var removingModel: DictationModelID?
-    @Published private(set) var shortcutStarting = false
+    @Published private(set) var modelOperation: DictationModelOperation?
     @Published private(set) var modelErrors: [DictationModelID: String] = [:]
     @Published private(set) var audioLevel: Float = 0
     @Published private(set) var sessionDisplayID: CGDirectDisplayID?
@@ -195,16 +192,23 @@ final class GojoDictationService: ObservableObject {
         installedModels.contains(selectedModel)
     }
 
-    var isPreparingModel: Bool {
-        preparingModel != nil
+    var preparingModel: DictationModelID? {
+        guard case .installing(let model) = modelOperation else { return nil }
+        return model
+    }
+
+    var switchingModel: DictationModelID? {
+        guard case .selecting(let model) = modelOperation else { return nil }
+        return model
+    }
+
+    var removingModel: DictationModelID? {
+        guard case .removing(let model) = modelOperation else { return nil }
+        return model
     }
 
     var canChangeModel: Bool {
-        guard preparingModel == nil,
-              switchingModel == nil,
-              removingModel == nil,
-              !shortcutPreflighting,
-              !shortcutStarting else {
+        guard modelOperation == nil, !shortcutPreflighting else {
             return false
         }
         switch state {
@@ -247,7 +251,6 @@ final class GojoDictationService: ObservableObject {
             #endif
             guard installedModels.contains(selectedModel) else {
                 shortcutPreflighting = false
-                shortcutStarting = false
                 receive(.error(.modelNotInstalled))
                 DictationModelDownloadPromptController.shared.present()
                 return
@@ -278,7 +281,8 @@ final class GojoDictationService: ObservableObject {
 
     func downloadModel(_ model: DictationModelID) {
         guard canChangeModel, !installedModels.contains(model) else { return }
-        preparingModel = model
+        let operation = DictationModelOperation.installing(model)
+        modelOperation = operation
         modelErrors[model] = nil
         Task {
             do {
@@ -287,8 +291,8 @@ final class GojoDictationService: ObservableObject {
             } catch {
                 modelErrors[model] = "Could not download this model. Check your connection and try again."
             }
-            if preparingModel == model {
-                preparingModel = nil
+            if modelOperation == operation {
+                modelOperation = nil
             }
         }
     }
@@ -297,7 +301,8 @@ final class GojoDictationService: ObservableObject {
         guard canChangeModel,
               model != selectedModel,
               installedModels.contains(model) else { return }
-        switchingModel = model
+        let operation = DictationModelOperation.selecting(model)
+        modelOperation = operation
         modelErrors[model] = nil
         Task {
             do {
@@ -307,15 +312,16 @@ final class GojoDictationService: ObservableObject {
             } catch {
                 modelErrors[model] = "Gojo could not switch models. Try again."
             }
-            if switchingModel == model {
-                switchingModel = nil
+            if modelOperation == operation {
+                modelOperation = nil
             }
         }
     }
 
     func removeModel(_ model: DictationModelID) {
         guard canChangeModel, installedModels.contains(model) else { return }
-        removingModel = model
+        let operation = DictationModelOperation.removing(model)
+        modelOperation = operation
         modelErrors[model] = nil
         Task {
             var removalError: String?
@@ -331,8 +337,8 @@ final class GojoDictationService: ObservableObject {
                 installedModels.remove(model)
             }
             modelErrors[model] = removalError
-            if removingModel == model {
-                removingModel = nil
+            if modelOperation == operation {
+                modelOperation = nil
             }
         }
     }
@@ -364,7 +370,6 @@ final class GojoDictationService: ObservableObject {
     }
 
     private func receive(_ newState: DictationState) {
-        shortcutStarting = false
         state = newState
         if newState != .listening {
             audioLevel = 0

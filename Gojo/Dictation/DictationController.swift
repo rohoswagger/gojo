@@ -216,7 +216,7 @@ where TargetProvider: DictationTargetCapturing,
             }
 
             let action = transition(.transcriptionCompleted(transcript))
-            guard action == .insert(transcript), let target else {
+            guard action == .insert, let target else {
                 transition(.failed(.targetUnavailable("The captured text target is no longer available.")))
                 operation = nil
                 return

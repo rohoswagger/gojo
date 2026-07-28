@@ -160,7 +160,6 @@ shortcut_key_down = service[
     service.index("case .keyDown:"):
     service.index("case .keyUp:")
 ]
-assert "shortcutStarting = true" not in shortcut_key_down
 assert "state = await controller.state" not in shortcut_key_down
 
 noneditable_capture = helper[

@@ -59,6 +59,9 @@ struct SettingsView: View {
                 NavigationLink(value: "Clipboard") {
                     Label("Clipboard", systemImage: "doc.on.clipboard")
                 }
+                NavigationLink(value: "Dictation") {
+                    Label("Dictation", systemImage: "waveform.and.mic")
+                }
                 NavigationLink(value: "Window Switcher") {
                     Label("Window Switcher", systemImage: "macwindow.on.rectangle")
                 }
@@ -100,6 +103,8 @@ struct SettingsView: View {
                     Shelf()
                 case "Clipboard":
                     ClipboardSettingsScreen()
+                case "Dictation":
+                    DictationSettings()
                 case "Window Switcher":
                     AltTabSettings()
                 case "Shortcuts":
@@ -510,12 +515,6 @@ struct HUD: View {
         .navigationTitle("HUDs")
         .task {
             accessibilityAuthorized = await XPCHelperClient.shared.isAccessibilityAuthorized()
-        }
-        .onAppear {
-            XPCHelperClient.shared.startMonitoringAccessibilityAuthorization()
-        }
-        .onDisappear {
-            XPCHelperClient.shared.stopMonitoringAccessibilityAuthorization()
         }
         .onReceive(NotificationCenter.default.publisher(for: .accessibilityAuthorizationChanged)) { notification in
             if let granted = notification.userInfo?["granted"] as? Bool {
@@ -1280,6 +1279,13 @@ struct AccentCircleButton: View {
 }
 
 struct Shortcuts: View {
+    @AppStorage(DictationActivationMode.defaultsKey)
+    private var dictationActivationModeRawValue = DictationActivationMode.holdToTalk.rawValue
+
+    private var dictationActivationMode: DictationActivationMode {
+        DictationActivationMode(rawValue: dictationActivationModeRawValue) ?? .holdToTalk
+    }
+
     var body: some View {
         Form {
             Section {
@@ -1288,6 +1294,19 @@ struct Shortcuts: View {
                 Text("Clipboard")
             } footer: {
                 Text("Open Gojo directly into the Clipboard tab and focus search.")
+                    .multilineTextAlignment(.trailing)
+                    .foregroundStyle(.secondary)
+                    .font(.caption)
+            }
+            Section {
+                LabeledContent(
+                    dictationActivationMode == .holdToTalk ? "Hold to Dictate:" : "Tap to Dictate:",
+                    value: "⌃⌥"
+                )
+            } header: {
+                Text("Dictation")
+            } footer: {
+                Text(dictationShortcutHelp)
                     .multilineTextAlignment(.trailing)
                     .foregroundStyle(.secondary)
                     .font(.caption)
@@ -1325,6 +1344,183 @@ struct Shortcuts: View {
         }
         .accentColor(.effectiveAccent)
         .navigationTitle("Shortcuts")
+    }
+
+    private var dictationShortcutHelp: String {
+        switch dictationActivationMode {
+        case .holdToTalk:
+            return "Hold Control and Option while you talk. Release either key when you are done."
+        case .tapToTalk:
+            return "Tap Control and Option to start. Tap them again when you are done."
+        }
+    }
+}
+
+struct DictationSettings: View {
+    @ObservedObject private var dictation = GojoDictationService.shared
+    @AppStorage(DictationActivationMode.defaultsKey)
+    private var dictationActivationModeRawValue = DictationActivationMode.holdToTalk.rawValue
+    @State private var microphoneStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+    @State private var accessibilityAuthorized = false
+    @State private var modelToRemove: DictationModelID?
+
+    var body: some View {
+        Form {
+            Section {
+                Picker("Activation", selection: dictationActivationModeBinding) {
+                    ForEach(DictationActivationMode.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                LabeledContent("Shortcut", value: "⌃⌥")
+                LabeledContent("Status", value: DictationSettingsStatus.title(for: dictation.state))
+                if let detail = dictation.stateDetail {
+                    Text(detail)
+                        .foregroundStyle(.orange)
+                        .font(.caption)
+                }
+            } header: {
+                Text("Voice input")
+            } footer: {
+                Text(dictationActivationHelp)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                LabeledContent("Microphone", value: microphoneStatusLabel)
+                LabeledContent("Accessibility", value: accessibilityAuthorized ? "Allowed" : "Required")
+                if microphoneStatus == .denied || !accessibilityAuthorized {
+                    Button("Open Privacy & Security Settings") {
+                        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy")!)
+                    }
+                }
+            } header: {
+                Text("Permissions")
+            }
+
+            Section {
+                ForEach(DictationModelDescriptor.all) { model in
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(model.displayName)
+                                .fontWeight(.medium)
+                            if model.isRecommended {
+                                Text("Recommended")
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Text("\(model.engineLabel) · \(model.downloadSizeLabel)")
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Text(model.detail)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        if let error = dictation.modelErrors[model.id] {
+                            Text(error)
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
+
+                        HStack {
+                            Button(modelButtonTitle(for: model.id)) {
+                                if dictation.isModelInstalled(model.id) {
+                                    dictation.selectModel(model.id)
+                                } else {
+                                    dictation.downloadModel(model.id)
+                                }
+                            }
+                            .disabled(modelButtonDisabled(for: model.id))
+
+                            if dictation.isModelInstalled(model.id) {
+                                Button(
+                                    dictation.removingModel == model.id ? "Removing…" : "Remove",
+                                    role: .destructive
+                                ) {
+                                    modelToRemove = model.id
+                                }
+                                .disabled(!dictation.canChangeModel)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 3)
+                }
+            } header: {
+                Text("Voice models")
+            } footer: {
+                Text("Download one or more models, then choose which one Gojo should use. Dictation stays on this Mac.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .navigationTitle("Dictation")
+        .alert(item: $modelToRemove) { model in
+            let descriptor = DictationModelDescriptor.descriptor(for: model)
+            return Alert(
+                title: Text("Remove \(descriptor.displayName)?"),
+                message: Text("This frees about \(descriptor.downloadSizeLabel). You can download it again later."),
+                primaryButton: .destructive(Text("Remove")) {
+                    dictation.removeModel(model)
+                },
+                secondaryButton: .cancel()
+            )
+        }
+        .task {
+            microphoneStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+            accessibilityAuthorized = await XPCHelperClient.shared.isAccessibilityAuthorized()
+        }
+    }
+
+    private var microphoneStatusLabel: String {
+        switch microphoneStatus {
+        case .authorized: return "Allowed"
+        case .notDetermined: return "Not asked yet"
+        case .denied: return "Denied"
+        case .restricted: return "Restricted"
+        @unknown default: return "Unknown"
+        }
+    }
+
+    private var dictationActivationMode: DictationActivationMode {
+        DictationActivationMode(rawValue: dictationActivationModeRawValue) ?? .holdToTalk
+    }
+
+    private var dictationActivationModeBinding: Binding<DictationActivationMode> {
+        Binding(
+            get: { dictationActivationMode },
+            set: { mode in
+                dictationActivationModeRawValue = mode.rawValue
+                DictationModifierHotKeyMonitor.shared.setActivationMode(mode)
+            }
+        )
+    }
+
+    private var dictationActivationHelp: String {
+        switch dictationActivationMode {
+        case .holdToTalk:
+            return "Click a text field, then hold Control and Option while you talk. Release either key when you are done."
+        case .tapToTalk:
+            return "Click a text field, then tap Control and Option to start. Tap them again when you are done."
+        }
+    }
+
+    private func modelButtonTitle(for model: DictationModelID) -> String {
+        if dictation.preparingModel == model { return "Downloading…" }
+        if dictation.switchingModel == model { return "Switching…" }
+        if dictation.selectedModel == model, dictation.isModelInstalled(model) { return "In Use" }
+        if dictation.isModelInstalled(model) { return "Use This Model" }
+        return "Download"
+    }
+
+    private func modelButtonDisabled(for model: DictationModelID) -> Bool {
+        if dictation.preparingModel != nil { return true }
+        if !dictation.canChangeModel { return true }
+        return dictation.selectedModel == model && dictation.isModelInstalled(model)
     }
 }
 

@@ -25,7 +25,7 @@ struct MusicControllerSelectionView: View {
     @State private var selectedMediaController: MediaControllerType = Defaults[.mediaController]
     
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 0) {
             Text("Choose a Music Source")
                 .font(.title)
                 .fontWeight(.bold)
@@ -35,10 +35,12 @@ struct MusicControllerSelectionView: View {
                 .multilineTextAlignment(.center)
                 .font(.body)
                 .foregroundColor(.secondary)
-                .padding(.horizontal)
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 12)
 
             ScrollView {
-                VStack(spacing: 12) {
+                LazyVStack(spacing: 12) {
                     ForEach(availableMediaControllers) { controller in
                         ControllerOptionView(
                             controller: controller,
@@ -49,23 +51,27 @@ struct MusicControllerSelectionView: View {
                         }
                     }
                 }
-                .padding()
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
             }
-            //Disable scroll if there are 4 or fewer to avoid unnecessary scroll behavior
-            .scrollDisabled(availableMediaControllers.count <= 4)
+            .scrollIndicators(.visible)
 
-//            Spacer()
+            Divider()
+                .opacity(0.25)
 
-            Button("Continue", action: {
-                self.mediaController = self.selectedMediaController
+            Button("Continue") {
+                mediaController = selectedMediaController
                 NotificationCenter.default.post(
                     name: Notification.Name.mediaControllerChanged,
                     object: nil
                 )
                 onContinue()
-            })
+            }
                 .buttonStyle(GlassButtonStyle())
+                .padding(.top, 16)
                 .padding(.bottom, OnboardingLayout.actionsBottom)
+                .frame(maxWidth: .infinity)
+                .background(.ultraThinMaterial)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(SunsetBackground())
@@ -101,7 +107,7 @@ struct ControllerOptionView: View {
             
             Spacer()
         }
-        .padding()
+        .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(.ultraThinMaterial)
@@ -123,7 +129,7 @@ extension MediaControllerType {
     var description: String {
         switch self {
         case .nowPlaying:
-            return "Works with most media apps, including browsers, to detect what's playing. Note: This may be removed in a future macOS version."
+            return "Works with most media apps and browsers. This option may stop working in a future macOS update."
         case .spotify:
             return "Connects directly to the Spotify app."
         case .appleMusic:

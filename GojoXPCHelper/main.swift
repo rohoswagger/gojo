@@ -6,11 +6,90 @@
 //
 
 import Foundation
+import Security
+import os.log
+
+private let clientValidationLog = OSLog(
+    subsystem: "rohoswagger.gojo.helper",
+    category: "client-validation"
+)
+
+private enum XPCClientValidator {
+    private static let requirementString =
+        #"identifier "rohoswagger.gojo" and anchor apple generic and certificate leaf[subject.OU] = "L6U44C67P5""#
+
+    private static let requirement: SecRequirement? = {
+        var requirement: SecRequirement?
+        let status = SecRequirementCreateWithString(
+            requirementString as CFString,
+            SecCSFlags(),
+            &requirement
+        )
+        guard status == errSecSuccess else {
+            os_log(
+                "failed to create client requirement: %{public}d",
+                log: clientValidationLog,
+                type: .fault,
+                status
+            )
+            return nil
+        }
+        return requirement
+    }()
+
+    static func accepts(_ connection: NSXPCConnection) -> Bool {
+        guard let requirement else { return false }
+        let attributes = [
+            kSecGuestAttributePid as String: NSNumber(
+                value: connection.processIdentifier
+            ),
+        ]
+
+        var clientCode: SecCode?
+        let copyStatus = SecCodeCopyGuestWithAttributes(
+            nil,
+            attributes as CFDictionary,
+            SecCSFlags(),
+            &clientCode
+        )
+        guard copyStatus == errSecSuccess, let clientCode else {
+            os_log(
+                "rejected XPC client: code lookup failed pid=%{public}d status=%{public}d",
+                log: clientValidationLog,
+                type: .error,
+                connection.processIdentifier,
+                copyStatus
+            )
+            return false
+        }
+
+        let checkStatus = SecCodeCheckValidity(
+            clientCode,
+            SecCSFlags(),
+            requirement
+        )
+        guard checkStatus == errSecSuccess else {
+            os_log(
+                "rejected XPC client: requirement mismatch pid=%{public}d status=%{public}d",
+                log: clientValidationLog,
+                type: .error,
+                connection.processIdentifier,
+                checkStatus
+            )
+            return false
+        }
+        return true
+    }
+}
 
 class ServiceDelegate: NSObject, NSXPCListenerDelegate {
     
     /// This method is where the NSXPCListener configures, accepts, and resumes a new incoming NSXPCConnection.
     func listener(_ listener: NSXPCListener, shouldAcceptNewConnection newConnection: NSXPCConnection) -> Bool {
+        guard XPCClientValidator.accepts(newConnection) else {
+            newConnection.invalidate()
+            return false
+        }
         
         // Configure the connection.
         // First, set the interface that the exported object implements.

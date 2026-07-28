@@ -40,6 +40,14 @@ Recent clipboard items, browsable from the notch. Pin entries, search, paste bac
 
 <!-- <p align="center"><img src="./docs/screenshots/clipboard.png" alt="Clipboard tab" width="640"></p> -->
 
+### Dictation
+
+Choose a speech model in **Settings > Dictation**, then click **Download**. Gojo never downloads a model by itself. Hold **Control–Option**, speak, and release both keys to type into the field you selected.
+
+Parakeet Unified is tuned for high-quality English with punctuation and capitalization. Parakeet v3 covers 25 European languages. Whisper Small is the quickest Whisper option, while Whisper Large v3 is the larger English Whisper option. After download, recognition stays on this Mac. Gojo does not use an API key or cloud transcription.
+
+Gojo refuses password fields and cancels insertion if you move to another field while it is transcribing. The Control and Option shortcut is fixed so it is always easy to remember.
+
 ### Drag-and-drop shelf
 
 Drop files into the notch from anywhere; pick them up later from any other app. Lightweight staging without a Finder tab open.
@@ -119,6 +127,7 @@ Gojo asks for a few macOS permissions on first use of the relevant feature:
 | Permission | Why |
 |------------|-----|
 | **Accessibility** | Required for the window manager — read and resize windows of other apps via AX. |
+| **Microphone** | Required only while local dictation is listening. Audio is processed on-device and is not uploaded. |
 | **Apple Events** | Reading the now-playing track from Music/Spotify. |
 | **Camera** | Optional, for the webcam mirror. |
 | **Calendar & Reminders** | Optional, for displaying upcoming events and reminders. |
@@ -136,7 +145,7 @@ Defaults — all rebindable in **Settings → Shortcuts**.
 | Open clipboard history panel | ⇧⌘C |
 | Toggle notch open | ⇧⌘I |
 | Toggle sneak peek | ⇧⌘H |
-| Toggle microphone | fn-F5 |
+| Hold for local dictation | ⌃⌥ |
 
 ### Window manager
 
@@ -166,6 +175,9 @@ Open **System Settings → Privacy & Security → Accessibility**, make sure **G
 **Clipboard history isn't capturing**
 Gojo only sees changes while it's running. Launch Gojo first, then copy. If you toggle **Launch at login** in Settings, history starts being captured at boot.
 
+**Dictation does not start**
+Open **System Settings > Privacy & Security** and allow microphone access for Gojo. Accessibility access is also required to insert text into other apps. Then open **Settings > Dictation**, download a model, and choose it before using the shortcut.
+
 **Notch doesn't show on a connected display**
 Settings → General → Display lets you pick which screen Gojo lives on, and whether to mirror it across all displays.
 
@@ -186,4 +198,4 @@ Gojo is licensed under the [GNU General Public License v3.0](./LICENSE).
 
 ## Acknowledgments
 
-Built on Sparkle, KeyboardShortcuts, Defaults, swift-collections, Lottie, Pow, SkyLightWindow, MacroVisionKit, AsyncXPCConnection, swiftui-introspect, and LaunchAtLogin.
+Built on Sparkle, WhisperKit, FluidAudio, KeyboardShortcuts, Defaults, swift-collections, Lottie, Pow, SkyLightWindow, MacroVisionKit, AsyncXPCConnection, swiftui-introspect, and LaunchAtLogin.

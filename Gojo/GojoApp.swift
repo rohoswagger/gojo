@@ -9,6 +9,7 @@ import AVFoundation
 import Combine
 import Defaults
 import KeyboardShortcuts
+import os
 import Sparkle
 import SwiftUI
 
@@ -73,6 +74,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var onboardingWindowController: NSWindowController?
     private var screenLockedObserver: Any?
     private var screenUnlockedObserver: Any?
+    private var systemSleepObserver: Any?
+    private var dictationEscapeGlobalMonitor: Any?
+    private var dictationEscapeLocalMonitor: Any?
+    private var dictationAccessibilityObserver: Any?
+#if DEBUG
+    private var dictationCaptureE2EProbeObserver: Any?
+    private var dictationE2EProbeObserver: Any?
+    private var dictationModelE2EProbeObserver: Any?
+    private var dictationInferenceE2EProbeObserver: Any?
+    private var dictationShortcutE2EProbeObserver: Any?
+    private var dictationEventTapShortcutE2EProbeObserver: Any?
+    private var dictationOpaquePasteE2EProbeObserver: Any?
+    private var dictationUnicodeTypingE2EProbeObserver: Any?
+    private var dictationRealMicrophoneShortcutE2EObserver: Any?
+    private var onboardingMusicE2EProbeObserver: Any?
+    private var settingsE2EProbeObserver: Any?
+#endif
     private var isScreenLocked: Bool = false
     private var windowScreenDidChangeObserver: Any?
     private var dragDetectors: [String: DragDetector] = [:] // UUID -> DragDetector
@@ -91,9 +109,75 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             DistributedNotificationCenter.default().removeObserver(observer)
             screenUnlockedObserver = nil
         }
+        if let observer = systemSleepObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+            systemSleepObserver = nil
+        }
+        if let monitor = dictationEscapeGlobalMonitor {
+            NSEvent.removeMonitor(monitor)
+            dictationEscapeGlobalMonitor = nil
+        }
+        if let monitor = dictationEscapeLocalMonitor {
+            NSEvent.removeMonitor(monitor)
+            dictationEscapeLocalMonitor = nil
+        }
+        if let observer = dictationAccessibilityObserver {
+            NotificationCenter.default.removeObserver(observer)
+            dictationAccessibilityObserver = nil
+        }
+#if DEBUG
+        if let observer = dictationCaptureE2EProbeObserver {
+            DistributedNotificationCenter.default().removeObserver(observer)
+            dictationCaptureE2EProbeObserver = nil
+        }
+        if let observer = dictationE2EProbeObserver {
+            DistributedNotificationCenter.default().removeObserver(observer)
+            dictationE2EProbeObserver = nil
+        }
+        if let observer = dictationModelE2EProbeObserver {
+            DistributedNotificationCenter.default().removeObserver(observer)
+            dictationModelE2EProbeObserver = nil
+        }
+        if let observer = dictationInferenceE2EProbeObserver {
+            DistributedNotificationCenter.default().removeObserver(observer)
+            dictationInferenceE2EProbeObserver = nil
+        }
+        if let observer = dictationShortcutE2EProbeObserver {
+            DistributedNotificationCenter.default().removeObserver(observer)
+            dictationShortcutE2EProbeObserver = nil
+        }
+        if let observer = dictationEventTapShortcutE2EProbeObserver {
+            DistributedNotificationCenter.default().removeObserver(observer)
+            dictationEventTapShortcutE2EProbeObserver = nil
+        }
+        if let observer = dictationOpaquePasteE2EProbeObserver {
+            DistributedNotificationCenter.default().removeObserver(observer)
+            dictationOpaquePasteE2EProbeObserver = nil
+        }
+        if let observer = dictationUnicodeTypingE2EProbeObserver {
+            DistributedNotificationCenter.default().removeObserver(observer)
+            dictationUnicodeTypingE2EProbeObserver = nil
+        }
+        if let observer = dictationRealMicrophoneShortcutE2EObserver {
+            DistributedNotificationCenter.default().removeObserver(observer)
+            dictationRealMicrophoneShortcutE2EObserver = nil
+        }
+        if let observer = onboardingMusicE2EProbeObserver {
+            DistributedNotificationCenter.default().removeObserver(observer)
+            onboardingMusicE2EProbeObserver = nil
+        }
+        if let observer = settingsE2EProbeObserver {
+            DistributedNotificationCenter.default().removeObserver(observer)
+            settingsE2EProbeObserver = nil
+        }
+#endif
         MusicManager.shared.destroy()
         ClipboardStateViewModel.shared.stop()
         FluxManager.shared.shutdown()
+        Task { @MainActor in
+            DictationModifierHotKeyMonitor.shared.stop()
+            GojoDictationService.shared.terminate()
+        }
         // Always restore the native ⌘-Tab switcher: the symbolic-hotkey change
         // persists system-wide, so we must undo it even on quit.
         AltTabHotKeyMonitor.shared.restoreNativeSwitcher()
@@ -105,6 +189,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor
     func onScreenLocked(_ notification: Notification) {
         isScreenLocked = true
+        DictationModifierHotKeyMonitor.shared.cancelCurrentSession()
         if !Defaults[.showOnLockScreen] {
             cleanupWindows()
         } else {
@@ -296,6 +381,158 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.shared = self
 
+#if DEBUG
+        dictationCaptureE2EProbeObserver = DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("rohoswagger.gojo.dictation-capture-e2e-probe"),
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            let expectedPID = (notification.userInfo?["expectedPID"] as? NSNumber)?
+                .int32Value
+            Task { @MainActor in
+                await self?.runDictationCaptureE2EProbe(expectedPID: expectedPID)
+            }
+        }
+        dictationE2EProbeObserver = DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("rohoswagger.gojo.dictation-e2e-probe"),
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            let expectedPID = (notification.userInfo?["expectedPID"] as? NSNumber)?
+                .int32Value
+            Task { @MainActor in
+                await self?.runDictationInsertionE2EProbe(expectedPID: expectedPID)
+            }
+        }
+        dictationModelE2EProbeObserver = DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("rohoswagger.gojo.dictation-model-e2e-probe"),
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            let expectedPID = (notification.userInfo?["expectedPID"] as? NSNumber)?
+                .int32Value
+            Task { @MainActor in
+                await self?.runDictationModelE2EProbe(expectedPID: expectedPID)
+            }
+        }
+        dictationInferenceE2EProbeObserver = DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("rohoswagger.gojo.dictation-inference-e2e-probe"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                await self?.runDictationInferenceE2EProbe()
+            }
+        }
+        dictationShortcutE2EProbeObserver = DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("rohoswagger.gojo.dictation-shortcut-e2e-probe"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                await self?.runDictationShortcutE2EProbe()
+            }
+        }
+        dictationEventTapShortcutE2EProbeObserver =
+            DistributedNotificationCenter.default().addObserver(
+                forName: Notification.Name(
+                    "rohoswagger.gojo.dictation-event-tap-shortcut-e2e-probe"
+                ),
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    await self?.runDictationEventTapShortcutE2EProbe()
+                }
+            }
+        dictationOpaquePasteE2EProbeObserver =
+            DistributedNotificationCenter.default().addObserver(
+                forName: Notification.Name(
+                    "rohoswagger.gojo.dictation-opaque-paste-e2e-probe"
+                ),
+                object: nil,
+                queue: .main
+            ) { [weak self] notification in
+                let moveFocus = (notification.userInfo?["moveFocusAfterCapture"] as? NSNumber)?
+                    .boolValue == true
+                let expectedPID = (notification.userInfo?["expectedPID"] as? NSNumber)?
+                    .int32Value
+                Task { @MainActor in
+                    await self?.runDictationOpaquePasteE2EProbe(
+                        moveFocusAfterCapture: moveFocus,
+                        expectedPID: expectedPID
+                    )
+                }
+            }
+        dictationUnicodeTypingE2EProbeObserver =
+            DistributedNotificationCenter.default().addObserver(
+                forName: Notification.Name(
+                    "rohoswagger.gojo.dictation-unicode-typing-e2e-probe"
+                ),
+                object: nil,
+                queue: .main
+            ) { [weak self] notification in
+                let transcript = notification.userInfo?["transcript"] as? String
+                let expectedPID = (notification.userInfo?["expectedPID"] as? NSNumber)?
+                    .int32Value
+                Task { @MainActor in
+                    await self?.runDictationUnicodeTypingE2EProbe(
+                        transcript: transcript,
+                        expectedPID: expectedPID
+                    )
+                }
+            }
+        dictationRealMicrophoneShortcutE2EObserver =
+            DistributedNotificationCenter.default().addObserver(
+                forName: Notification.Name(
+                    "rohoswagger.gojo.dictation-real-microphone-shortcut-e2e"
+                ),
+                object: nil,
+                queue: .main
+            ) { [weak self] notification in
+                let action = notification.userInfo?["action"] as? String
+                let expectedPID = (notification.userInfo?["expectedPID"] as? NSNumber)?
+                    .int32Value
+                Task { @MainActor in
+                    guard await self?.focusDictationE2ETarget(expectedPID) != false else {
+                        return
+                    }
+                    switch action {
+                    case "down":
+                        GojoDictationService.sendShortcutEvent(.keyDown)
+                        await self?.stabilizeDictationE2ETargetFocus(
+                            expectedPID,
+                            attempts: 16
+                        )
+                    case "up":
+                        GojoDictationService.sendShortcutEvent(.keyUp)
+                        await self?.stabilizeDictationE2ETargetFocus(
+                            expectedPID,
+                            attempts: 120
+                        )
+                    default:
+                        break
+                    }
+                }
+            }
+        onboardingMusicE2EProbeObserver = DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("rohoswagger.gojo.onboarding-music-e2e-probe"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.onboardingWindowController?.close()
+            self?.onboardingWindowController = nil
+            self?.showOnboardingWindow(step: .musicPermission)
+        }
+        settingsE2EProbeObserver = DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("rohoswagger.gojo.settings-e2e-probe"),
+            object: nil,
+            queue: .main
+        ) { _ in
+            SettingsWindowController.shared.showWindow(tab: "Dictation")
+        }
+#endif
+
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(screenConfigurationDidChange),
@@ -366,6 +603,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
         }
 
+        systemSleepObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.willSleepNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            Task { @MainActor in
+                DictationModifierHotKeyMonitor.shared.cancelCurrentSession()
+            }
+        }
+
         KeyboardShortcuts.onKeyDown(for: .toggleSneakPeek) { [weak self] in
             guard let self = self, !LicenseManager.shared.isLocked else { return }
             if Defaults[.sneakPeekStyles] == .inline {
@@ -378,6 +625,39 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     duration: 3.0
                 )
             }
+        }
+
+        dictationAccessibilityObserver = NotificationCenter.default.addObserver(
+            forName: .accessibilityAuthorizationChanged,
+            object: nil,
+            queue: .main
+        ) { notification in
+            let granted = notification.userInfo?["granted"] as? Bool ?? false
+            Task { @MainActor in
+                if granted {
+                    await DictationModifierHotKeyMonitor.shared.start()
+                } else {
+                    DictationModifierHotKeyMonitor.shared.stop()
+                }
+            }
+        }
+        XPCHelperClient.shared.startMonitoringAccessibilityAuthorization()
+        Task { await DictationModifierHotKeyMonitor.shared.start() }
+
+        dictationEscapeGlobalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
+            if event.keyCode == 53 {
+                Task { @MainActor in
+                    DictationModifierHotKeyMonitor.shared.cancelCurrentSession()
+                }
+            }
+        }
+        dictationEscapeLocalMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            if event.keyCode == 53 {
+                Task { @MainActor in
+                    DictationModifierHotKeyMonitor.shared.cancelCurrentSession()
+                }
+            }
+            return event
         }
 
         KeyboardShortcuts.onKeyDown(for: .toggleNotchOpen) { [weak self] in
@@ -478,6 +758,450 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         previousScreens = NSScreen.screens
     }
+
+#if DEBUG
+    @MainActor
+    private func runDictationShortcutE2EProbe() async {
+        let logger = Logger(subsystem: "rohoswagger.gojo.dictation-e2e", category: "shortcut")
+        GojoDictationService.sendShortcutEvent(.keyDown)
+
+        for _ in 0..<80 {
+            let state = GojoDictationService.shared.state
+            if state == .listening {
+                break
+            }
+            if case .error = state {
+                break
+            }
+            try? await Task.sleep(for: .milliseconds(25))
+        }
+
+        let state = GojoDictationService.shared.state
+        let success = state == .listening
+        let detail = GojoDictationService.shared.stateDetail ?? "none"
+        logger.notice(
+            "result success=\(success, privacy: .public) state=\(String(describing: state), privacy: .public) detail=\(detail, privacy: .public)"
+        )
+        // Keep the real listening state visible long enough for the DEBUG UI probe to inspect it.
+        if success {
+            try? await Task.sleep(for: .seconds(4))
+        }
+        GojoDictationService.sendShortcutEvent(.cancel)
+    }
+
+    @MainActor
+    private func runDictationEventTapShortcutE2EProbe() async {
+        let logger = Logger(
+            subsystem: "rohoswagger.gojo.dictation-e2e",
+            category: "event-tap-shortcut"
+        )
+        let monitor = DictationModifierHotKeyMonitor.shared
+        for _ in 0..<80 where !monitor.isMonitoring {
+            try? await Task.sleep(for: .milliseconds(25))
+        }
+        guard monitor.isMonitoring else {
+            logger.error("result success=false error=eventTapUnavailable")
+            return
+        }
+
+        let originalMode = monitor.activationMode
+        let hold = await exerciseDictationEventTap(mode: .holdToTalk)
+        let tap = await exerciseDictationEventTap(mode: .tapToTalk)
+        monitor.cancelCurrentSession()
+        GojoDictationService.shared.cancel()
+        monitor.setActivationMode(originalMode)
+
+        let success = hold.started && hold.stopped && tap.started && tap.stopped
+        let message = "result success=\(success)"
+            + " holdStarted=\(hold.started)"
+            + " holdStopped=\(hold.stopped)"
+            + " holdStartMs=\(hold.startMilliseconds)"
+            + " tapStarted=\(tap.started)"
+            + " tapStopped=\(tap.stopped)"
+            + " tapStartMs=\(tap.startMilliseconds)"
+        logger.notice("\(message, privacy: .public)")
+    }
+
+    @MainActor
+    private func exerciseDictationEventTap(
+        mode: DictationActivationMode
+    ) async -> (started: Bool, stopped: Bool, startMilliseconds: Int) {
+        let monitor = DictationModifierHotKeyMonitor.shared
+        monitor.cancelCurrentSession()
+        GojoDictationService.shared.cancel()
+        monitor.setActivationMode(mode)
+        try? await Task.sleep(for: .milliseconds(150))
+
+        let startTime = ProcessInfo.processInfo.systemUptime
+        guard await postControlOptionChordDown() else {
+            return (false, false, 0)
+        }
+        if mode == .tapToTalk {
+            await postControlOptionChordUp()
+        }
+
+        var started = false
+        for _ in 0..<120 {
+            let state = GojoDictationService.shared.state
+            if state == .listening {
+                started = true
+                break
+            }
+            if case .error = state {
+                break
+            }
+            try? await Task.sleep(for: .milliseconds(25))
+        }
+        let startMilliseconds = Int(
+            ((ProcessInfo.processInfo.systemUptime - startTime) * 1_000).rounded()
+        )
+
+        if mode == .holdToTalk {
+            await postControlOptionChordUp()
+        } else if started {
+            guard await postControlOptionChordDown() else {
+                monitor.cancelCurrentSession()
+                GojoDictationService.shared.cancel()
+                return (started, false, startMilliseconds)
+            }
+            await postControlOptionChordUp()
+        }
+
+        var stopped = false
+        if started {
+            for _ in 0..<120 {
+                let state = GojoDictationService.shared.state
+                if state != .requestingPermission && state != .listening {
+                    stopped = true
+                    break
+                }
+                try? await Task.sleep(for: .milliseconds(25))
+            }
+        }
+
+        monitor.cancelCurrentSession()
+        GojoDictationService.shared.cancel()
+        try? await Task.sleep(for: .milliseconds(150))
+        return (started, stopped, startMilliseconds)
+    }
+
+    @MainActor
+    private func postControlOptionChordDown() async -> Bool {
+        guard postModifierEvent(
+            keyCode: 0x3B,
+            keyDown: true,
+            flags: [.maskControl]
+        ) else {
+            return false
+        }
+        try? await Task.sleep(for: .milliseconds(12))
+        return postModifierEvent(
+            keyCode: 0x3A,
+            keyDown: true,
+            flags: [.maskControl, .maskAlternate]
+        )
+    }
+
+    @MainActor
+    private func focusDictationE2ETarget(_ expectedPID: pid_t?) async -> Bool {
+        guard let expectedPID else { return true }
+        guard let application = NSRunningApplication(processIdentifier: expectedPID),
+              !application.isTerminated else {
+            return false
+        }
+
+        application.activate(options: [.activateAllWindows])
+        for _ in 0..<80 {
+            if NSWorkspace.shared.frontmostApplication?.processIdentifier == expectedPID {
+                return true
+            }
+            try? await Task.sleep(for: .milliseconds(25))
+        }
+        return false
+    }
+
+    @MainActor
+    private func stabilizeDictationE2ETargetFocus(
+        _ expectedPID: pid_t?,
+        attempts: Int
+    ) async {
+        guard let expectedPID,
+              let application = NSRunningApplication(processIdentifier: expectedPID),
+              !application.isTerminated else {
+            return
+        }
+
+        for _ in 0..<attempts {
+            application.activate(options: [.activateAllWindows])
+            try? await Task.sleep(for: .milliseconds(25))
+        }
+    }
+
+    @MainActor
+    private func postControlOptionChordUp() async {
+        _ = postModifierEvent(
+            keyCode: 0x3A,
+            keyDown: false,
+            flags: [.maskControl]
+        )
+        try? await Task.sleep(for: .milliseconds(12))
+        _ = postModifierEvent(
+            keyCode: 0x3B,
+            keyDown: false,
+            flags: []
+        )
+    }
+
+    private func postModifierEvent(
+        keyCode: CGKeyCode,
+        keyDown: Bool,
+        flags: CGEventFlags
+    ) -> Bool {
+        guard let source = CGEventSource(stateID: .hidSystemState),
+              let event = CGEvent(
+                  keyboardEventSource: source,
+                  virtualKey: keyCode,
+                  keyDown: keyDown
+              ) else {
+            return false
+        }
+        event.flags = flags
+        event.post(tap: .cghidEventTap)
+        return true
+    }
+
+    @MainActor
+    private func runDictationCaptureE2EProbe(expectedPID: pid_t?) async {
+        let logger = Logger(subsystem: "rohoswagger.gojo.dictation-e2e", category: "capture")
+        let capture = await captureDictationE2ETarget(expectedPID: expectedPID)
+        let success = (capture["success"] as? NSNumber)?.boolValue == true
+        let capturedPID = (capture["pid"] as? NSNumber)?.int32Value
+        let windowID = (capture["windowID"] as? NSNumber)?.uint32Value
+        let displayID = (capture["displayID"] as? NSNumber)?.uint32Value
+        let expectedMatch = expectedPID == nil || capturedPID == expectedPID
+        let error = capture["error"] as? String ?? "none"
+        logger.notice(
+            "result success=\(success, privacy: .public) expectedMatch=\(expectedMatch, privacy: .public) pid=\(capturedPID ?? 0, privacy: .public) windowID=\(windowID ?? 0, privacy: .public) displayID=\(displayID ?? 0, privacy: .public) error=\(error, privacy: .public)"
+        )
+    }
+
+    @MainActor
+    private func runDictationInsertionE2EProbe(expectedPID: pid_t?) async {
+        let logger = Logger(subsystem: "rohoswagger.gojo.dictation-e2e", category: "insertion")
+        let transcript = "Gojo local dictation end to end."
+        let capture = await captureDictationE2ETarget(expectedPID: expectedPID)
+        guard (capture["success"] as? NSNumber)?.boolValue == true,
+              let token = capture["token"] as? String,
+              expectedPID == nil
+                || (capture["pid"] as? NSNumber)?.int32Value == expectedPID else {
+            let error = capture["error"] as? String ?? "captureFailed"
+            logger.error("result success=false stage=capture error=\(error, privacy: .public)")
+            return
+        }
+        let insertion = await XPCHelperClient.shared.insertText(transcript, token: token)
+        let success = (insertion["success"] as? NSNumber)?.boolValue == true
+        let verified = (insertion["verified"] as? NSNumber)?.boolValue == true
+        let method = insertion["method"] as? String ?? "none"
+        let error = insertion["error"] as? String ?? "none"
+        logger.notice(
+            "result success=\(success, privacy: .public) verified=\(verified, privacy: .public) method=\(method, privacy: .public) error=\(error, privacy: .public)"
+        )
+    }
+
+    @MainActor
+    private func runDictationOpaquePasteE2EProbe(
+        moveFocusAfterCapture: Bool,
+        expectedPID: pid_t?
+    ) async {
+        let logger = Logger(subsystem: "rohoswagger.gojo.dictation-e2e", category: "opaque-paste")
+        let transcript = moveFocusAfterCapture
+            ? "Gojo pasted at the active cursor."
+            : "Gojo opaque paste reached the target."
+        let scenario = moveFocusAfterCapture ? "focus-move" : "stable"
+        let capture = await captureDictationE2ETarget(expectedPID: expectedPID)
+        guard (capture["success"] as? NSNumber)?.boolValue == true,
+              let token = capture["token"] as? String,
+              expectedPID == nil
+                || (capture["pid"] as? NSNumber)?.int32Value == expectedPID else {
+            let error = capture["error"] as? String ?? "captureFailed"
+            logger.error(
+                "result success=false scenario=\(scenario, privacy: .public) stage=capture error=\(error, privacy: .public)"
+            )
+            return
+        }
+
+        if moveFocusAfterCapture {
+            DistributedNotificationCenter.default().postNotificationName(
+                Notification.Name("rohoswagger.gojo.dictation-opaque-paste-fixture-focus-next"),
+                object: nil,
+                deliverImmediately: true
+            )
+            try? await Task.sleep(for: .milliseconds(180))
+        }
+
+        let insertion = await XPCHelperClient.shared.insertText(transcript, token: token)
+        let success = (insertion["success"] as? NSNumber)?.boolValue == true
+        let verified = (insertion["verified"] as? NSNumber)?.boolValue == true
+        let method = insertion["method"] as? String ?? "none"
+        let clipboardRestored = (insertion["clipboardRestored"] as? NSNumber)?.boolValue == true
+        let error = insertion["error"] as? String ?? "none"
+        logger.notice(
+            "result success=\(success, privacy: .public) scenario=\(scenario, privacy: .public) method=\(method, privacy: .public) verified=\(verified, privacy: .public) clipboardRestored=\(clipboardRestored, privacy: .public) error=\(error, privacy: .public)"
+        )
+    }
+
+    @MainActor
+    private func runDictationUnicodeTypingE2EProbe(
+        transcript: String?,
+        expectedPID: pid_t?
+    ) async {
+        let logger = Logger(
+            subsystem: "rohoswagger.gojo.dictation-e2e",
+            category: "unicode-typing"
+        )
+        guard let transcript, !transcript.isEmpty else {
+            logger.error("result success=false stage=input error=emptyText")
+            return
+        }
+        let capture = await captureDictationE2ETarget(expectedPID: expectedPID)
+        guard (capture["success"] as? NSNumber)?.boolValue == true,
+              let token = capture["token"] as? String,
+              expectedPID == nil
+                || (capture["pid"] as? NSNumber)?.int32Value == expectedPID else {
+            let error = capture["error"] as? String ?? "captureFailed"
+            logger.error(
+                "result success=false stage=capture error=\(error, privacy: .public)"
+            )
+            return
+        }
+
+        let insertion = await XPCHelperClient.shared.insertText(
+            transcript,
+            token: token
+        )
+        let success = (insertion["success"] as? NSNumber)?.boolValue == true
+        let method = insertion["method"] as? String ?? "none"
+        let partialInsertion =
+            (insertion["partialInsertion"] as? NSNumber)?.boolValue == true
+        let error = insertion["error"] as? String ?? "none"
+        logger.notice(
+            "result success=\(success, privacy: .public) method=\(method, privacy: .public) partialInsertion=\(partialInsertion, privacy: .public) error=\(error, privacy: .public)"
+        )
+    }
+
+    @MainActor
+    private func runDictationModelE2EProbe(expectedPID: pid_t?) async {
+        let logger = Logger(subsystem: "rohoswagger.gojo.dictation-e2e", category: "model")
+        let reference = "Gojo local dictation should type this sentence into the focused text field."
+        let capture = await captureDictationE2ETarget(expectedPID: expectedPID)
+        guard (capture["success"] as? NSNumber)?.boolValue == true,
+              let token = capture["token"] as? String,
+              expectedPID == nil
+                || (capture["pid"] as? NSNumber)?.int32Value == expectedPID else {
+            let error = capture["error"] as? String ?? "captureFailed"
+            logger.error("result success=false stage=capture error=\(error, privacy: .public)")
+            return
+        }
+
+        do {
+            let audio = try await synthesizeDictationFixture(reference)
+            let clock = ContinuousClock()
+            let started = clock.now
+            let rawTranscript = try await GojoDictationService.shared.transcribeE2E(audio)
+            let elapsed = started.duration(to: clock.now)
+            let transcript = DictationTranscriptPolicy.normalize(rawTranscript)
+            let referenceMatch = matchesSyntheticReference(transcript, reference: reference)
+            let insertion = await XPCHelperClient.shared.insertText(transcript, token: token)
+            let success = (insertion["success"] as? NSNumber)?.boolValue == true
+            let verified = (insertion["verified"] as? NSNumber)?.boolValue == true
+            let method = insertion["method"] as? String ?? "none"
+            logger.notice(
+                "result success=\(success, privacy: .public) verified=\(verified, privacy: .public) referenceMatch=\(referenceMatch, privacy: .public) method=\(method, privacy: .public) elapsed=\(String(describing: elapsed), privacy: .public)"
+            )
+        } catch {
+            logger.error("result success=false stage=model error=\(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    @MainActor
+    private func captureDictationE2ETarget(expectedPID: pid_t?) async -> NSDictionary {
+        var capture = await XPCHelperClient.shared.captureFocusedTextTarget(
+            promptIfNeeded: false
+        )
+        if let expectedPID {
+            for _ in 0..<30 where (capture["pid"] as? NSNumber)?.int32Value != expectedPID {
+                try? await Task.sleep(for: .milliseconds(20))
+                capture = await XPCHelperClient.shared.captureFocusedTextTarget(
+                    promptIfNeeded: false
+                )
+            }
+        }
+        return capture
+    }
+
+    @MainActor
+    private func runDictationInferenceE2EProbe() async {
+        let logger = Logger(subsystem: "rohoswagger.gojo.dictation-e2e", category: "inference")
+        let reference = "Gojo local dictation should type this sentence into the focused text field."
+        let selectedModel = GojoDictationService.shared.selectedModel.rawValue
+
+        do {
+            let audio = try await synthesizeDictationFixture(reference)
+            let clock = ContinuousClock()
+            let started = clock.now
+            let rawTranscript = try await GojoDictationService.shared.transcribeE2E(audio)
+            let elapsed = started.duration(to: clock.now)
+            let transcript = DictationTranscriptPolicy.normalize(rawTranscript)
+            let referenceMatch = matchesSyntheticReference(transcript, reference: reference)
+            logger.notice(
+                "result success=true referenceMatch=\(referenceMatch, privacy: .public) model=\(selectedModel, privacy: .public) elapsed=\(String(describing: elapsed), privacy: .public)"
+            )
+        } catch {
+            logger.error(
+                "result success=false model=\(selectedModel, privacy: .public) error=\(error.localizedDescription, privacy: .public)"
+            )
+        }
+    }
+
+    private func synthesizeDictationFixture(_ text: String) async throws -> DictationAudio {
+        let accumulator = DictationE2ESpeechAccumulator()
+        return try await withCheckedThrowingContinuation { continuation in
+            let synthesizer = AVSpeechSynthesizer()
+            let utterance = AVSpeechUtterance(string: text)
+            utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
+            synthesizer.write(utterance) { buffer in
+                _ = synthesizer
+                guard let pcm = buffer as? AVAudioPCMBuffer else {
+                    continuation.resume(throwing: DictationE2EProbeError.invalidSpeechBuffer)
+                    return
+                }
+                if pcm.frameLength == 0 {
+                    guard let snapshot = accumulator.finish() else { return }
+                    do {
+                        let audio = try AVAudioEngineCaptureService.normalize(
+                            samples: snapshot.samples,
+                            from: snapshot.sampleRate
+                        )
+                        continuation.resume(returning: audio)
+                    } catch {
+                        continuation.resume(throwing: error)
+                    }
+                    return
+                }
+                accumulator.append(pcm)
+            }
+        }
+    }
+
+    private func matchesSyntheticReference(_ transcript: String, reference: String) -> Bool {
+        func words(in text: String) -> [Substring] {
+            text.lowercased().split { character in
+                !character.isLetter && !character.isNumber
+            }
+        }
+        return words(in: transcript) == words(in: reference)
+    }
+#endif
 
     func playWelcomeSound() {
         let audioPlayer = AudioPlayer()
@@ -680,6 +1404,44 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         onboardingWindowController?.window?.orderFrontRegardless()
     }
 }
+
+#if DEBUG
+private enum DictationE2EProbeError: Error {
+    case invalidSpeechBuffer
+}
+
+private final class DictationE2ESpeechAccumulator: @unchecked Sendable {
+    private let lock = NSLock()
+    private var samples: [Float] = []
+    private var sampleRate = 0.0
+    private var finished = false
+
+    func append(_ buffer: AVAudioPCMBuffer) {
+        guard let channels = buffer.floatChannelData else { return }
+        let frameCount = Int(buffer.frameLength)
+        let channelCount = Int(buffer.format.channelCount)
+        guard frameCount > 0, channelCount > 0 else { return }
+        var mono = [Float](repeating: 0, count: frameCount)
+        for channelIndex in 0..<channelCount {
+            for frameIndex in 0..<frameCount {
+                mono[frameIndex] += channels[channelIndex][frameIndex] / Float(channelCount)
+            }
+        }
+        lock.withLock {
+            if sampleRate == 0 { sampleRate = buffer.format.sampleRate }
+            samples.append(contentsOf: mono)
+        }
+    }
+
+    func finish() -> (samples: [Float], sampleRate: Double)? {
+        lock.withLock {
+            guard !finished else { return nil }
+            finished = true
+            return (samples, sampleRate)
+        }
+    }
+}
+#endif
 
 extension Notification.Name {
     static let selectedScreenChanged = Notification.Name("SelectedScreenChanged")

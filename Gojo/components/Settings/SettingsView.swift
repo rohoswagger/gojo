@@ -1402,7 +1402,6 @@ struct DictationSettings: View {
             }
 
             Section {
-                LabeledContent("Runs with", value: "WhisperKit and FluidAudio")
                 ForEach(DictationModelDescriptor.all) { model in
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(alignment: .firstTextBaseline) {

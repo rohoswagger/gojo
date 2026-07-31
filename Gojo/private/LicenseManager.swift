@@ -212,10 +212,31 @@ final class LicenseManager: ObservableObject {
         evaluate()
     }
 
-    func deactivate() async {
-        if let key = Keychain.getString(.licenseKey) {
-            _ = try? await request(path: "/v1/deactivate", licenseKey: key)
+    func deactivate() async throws {
+        guard let key = Keychain.getString(.licenseKey) else { return }
+
+        var req = URLRequest(url: LicenseConfig.serverBaseURL.appending(path: "/v1/deactivate"))
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0"
+        req.httpBody = try JSONEncoder().encode([
+            "licenseKey": key,
+            "machineId": Self.machineID,
+            "appVersion": appVersion,
+        ])
+
+        let (data, response) = try await URLSession.shared.data(for: req)
+        struct DeactivateResponse: Codable { let error: String? }
+        let decoded = try? JSONDecoder().decode(DeactivateResponse.self, from: data)
+        guard let http = response as? HTTPURLResponse else {
+            throw LicenseError(message: "The license server returned an invalid response.")
         }
+        // A missing activation is already in the desired state, so deactivation
+        // remains safe to retry after a timeout or interrupted response.
+        guard (200..<300).contains(http.statusCode) || http.statusCode == 404 else {
+            throw LicenseError(message: decoded?.error ?? "Couldn't deactivate this Mac.")
+        }
+
         Keychain.delete(.licenseKey)
         Keychain.delete(.licenseToken)
         evaluate()

@@ -110,7 +110,12 @@ struct LicenseSettings: View {
                     Button("Deactivate This Mac", role: .destructive) {
                         Task {
                             isBusy = true
-                            await licenseManager.deactivate()
+                            errorMessage = nil
+                            do {
+                                try await licenseManager.deactivate()
+                            } catch {
+                                errorMessage = error.localizedDescription
+                            }
                             isBusy = false
                         }
                     }
@@ -141,7 +146,7 @@ struct LicenseSettings: View {
                 } header: {
                     Text("Activate")
                 } footer: {
-                    Text("Your license key was shown after checkout and emailed to you. Each license can be active on up to 3 Macs.")
+                    Text("Your license key was shown after checkout and emailed to you. Choose a 1- or 3-Mac license when you buy.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -268,7 +273,7 @@ struct OnboardingLicenseView: View {
 
                     Text(isLicensed
                         ? "Your license is active on this Mac. Enjoy Gojo!"
-                        : "Everything works for the next \(LicenseConfig.trialDays) days, no strings attached. Whenever you're ready, buy Gojo once or subscribe. One license covers up to 3 Macs.")
+                        : "Everything works for the next \(LicenseConfig.trialDays) days, no strings attached. Whenever you're ready, buy Gojo once or subscribe with a 1- or 3-Mac license.")
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.secondary)
                         .padding(.horizontal)

@@ -53,6 +53,18 @@ video {
   border-radius: 6px;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .shell {
   position: relative;
   margin: var(--mat) var(--mat) 0;
@@ -1307,7 +1319,6 @@ h1 {
 
 .section-kicker,
 .eyebrow,
-.mosaic-copy > span,
 .customize-list span {
   font-family: var(--mono);
   letter-spacing: 0.035em;
@@ -1473,20 +1484,24 @@ h1 {
   transform: translateX(-50%);
 }
 
-.notch-demo-video {
-  aspect-ratio: 1240 / 400;
+.app-screenshot-demo {
+  aspect-ratio: 640 / 210;
+  background: #fff;
 }
 
-.notch-demo-video video,
-.screenshot-demo img {
+.app-screenshot-demo::before {
+  display: none;
+}
+
+.app-screenshot-demo img {
   width: 100%;
   height: 100%;
   display: block;
   object-fit: cover;
 }
 
-.screenshot-demo {
-  aspect-ratio: 1370 / 434;
+.app-screenshot-settings img {
+  object-position: top;
 }
 
 .notch-ui {
@@ -1689,9 +1704,12 @@ h1 {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.choice-pills span {
+.choice-pills li {
   border: 1px solid rgba(10, 11, 18, 0.10);
   border-radius: 7px;
   padding: 6px 9px;
@@ -1715,84 +1733,77 @@ h1 {
 }
 
 .mosaic-heading {
-  max-width: 800px;
-  margin-bottom: clamp(38px, 6vw, 64px);
+  max-width: 920px;
+  margin-bottom: clamp(56px, 8vw, 104px);
+}
+
+.mosaic-intro {
+  max-width: 64ch;
+  margin: 24px 0 0;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: clamp(16px, 1.8vw, 20px);
+  line-height: 1.6;
+  text-wrap: pretty;
 }
 
 .mosaic-grid {
   display: grid;
-  grid-template-columns: 1.12fr 0.88fr;
-  grid-template-areas:
-    "media clipboard"
-    "media windows"
-    "files display";
-  gap: 12px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: clamp(48px, 7vw, 96px) clamp(18px, 3vw, 40px);
+  align-items: start;
 }
 
 .mosaic-card {
   position: relative;
   min-width: 0;
-  min-height: 250px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  border-radius: 12px;
-  overflow: hidden;
-  background: #15171c;
+  background: transparent;
 }
 
 .mosaic-copy {
-  position: relative;
-  z-index: 2;
-  padding: 20px;
-}
-
-.mosaic-copy > span {
-  color: rgba(255, 255, 255, 0.38);
-  font-size: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px 28px;
+  align-items: baseline;
+  padding-top: 14px;
 }
 
 .mosaic-copy h3 {
-  margin: 4px 0 0;
+  margin: 0;
   color: #fff;
-  font-size: 23px;
+  font-size: clamp(18px, 2vw, 24px);
+  line-height: 1.1;
 }
 
 .mosaic-copy p {
-  margin: 4px 0 0;
-  color: rgba(255, 255, 255, 0.58);
-  font-size: 13px;
+  max-width: 34ch;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.60);
+  font-size: 14px;
+  line-height: 1.45;
+  text-align: right;
+  text-wrap: pretty;
 }
 
-.mosaic-media { grid-area: media; min-height: 520px; }
-.mosaic-clipboard { grid-area: clipboard; }
-.mosaic-windows { grid-area: windows; }
-.mosaic-files { grid-area: files; }
-.mosaic-display { grid-area: display; }
+.mosaic-media { grid-column: 1 / span 7; }
+.mosaic-clipboard { grid-column: 8 / span 5; margin-top: clamp(48px, 8vw, 112px); }
+.mosaic-windows { grid-column: 1 / span 5; margin-top: clamp(8px, 2vw, 32px); }
+.mosaic-files { grid-column: 6 / span 7; }
+.mosaic-display { grid-column: 3 / span 6; }
 
-.mosaic-media {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  background:
-    radial-gradient(circle at 62% 30%, rgba(244, 127, 97, 0.24), transparent 42%),
-    #111217;
-}
-
-.mosaic-media video {
-  width: calc(100% - 36px);
-  margin: 0 18px 26px;
-  border-radius: 10px;
+.mosaic-feature-shot {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0;
+  border-radius: 12px;
   background: #000;
-  box-shadow: 0 28px 56px rgba(0, 0, 0, 0.42);
+  box-shadow: 0 28px 64px rgba(0, 0, 0, 0.32);
 }
 
-.mosaic-windows img {
-  position: absolute;
-  right: -15%;
-  bottom: 20px;
-  width: 92%;
-  max-width: none;
-  border-radius: 9px;
-  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.42);
+.mosaic-feature-settings {
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  object-position: top;
 }
 
 .micro-clipboard {
@@ -2527,12 +2538,36 @@ h1 {
     grid-template-columns: 1fr 1fr;
     grid-template-areas:
       "media media"
-      "clipboard windows"
-      "files display";
+      "windows clipboard"
+      "files files"
+      "display display";
+    gap: 64px 24px;
   }
 
   .mosaic-media {
-    min-height: 460px;
+    grid-area: media;
+    width: 86%;
+  }
+
+  .mosaic-clipboard {
+    grid-area: clipboard;
+    margin-top: 64px;
+  }
+
+  .mosaic-windows {
+    grid-area: windows;
+    margin-top: 0;
+  }
+
+  .mosaic-files {
+    grid-area: files;
+    width: 90%;
+    justify-self: end;
+  }
+
+  .mosaic-display {
+    grid-area: display;
+    width: 68%;
   }
 
   .convergence-layout,
@@ -2561,11 +2596,27 @@ h1 {
 
   .module-picker {
     width: 100%;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 2px;
+    overflow-x: visible;
   }
 
   .module-tab {
-    flex: 1 0 auto;
-    padding-inline: 13px;
+    min-width: 0;
+    padding-inline: 4px;
+    font-size: 12px;
+  }
+
+  .stage {
+    width: 100%;
+  }
+
+  .demo-video {
+    width: 100%;
+    aspect-ratio: 16 / 7;
+    object-fit: cover;
+    object-position: center;
   }
 
   .module-panel {
@@ -2604,14 +2655,26 @@ h1 {
       "windows"
       "files"
       "display";
+    gap: 52px;
   }
 
-  .mosaic-media {
-    min-height: 390px;
+  .mosaic-media,
+  .mosaic-clipboard,
+  .mosaic-windows,
+  .mosaic-files,
+  .mosaic-display {
+    width: 100%;
+    margin-top: 0;
+    justify-self: stretch;
   }
 
-  .mosaic-card {
-    min-height: 230px;
+  .mosaic-copy {
+    display: block;
+  }
+
+  .mosaic-copy p {
+    margin-top: 6px;
+    text-align: left;
   }
 
   .convergence-visual {
@@ -2678,5 +2741,47 @@ h1 {
   .control-palette span {
     min-height: 34px;
     font-size: 9px;
+  }
+}
+
+@media (max-width: 360px) {
+  .shell > .site-header {
+    gap: 12px;
+    padding-inline: 16px;
+  }
+
+  .shell > .site-header .brand {
+    gap: 8px;
+    font-size: 17px;
+  }
+
+  .shell > .site-header .brand svg {
+    width: 23px;
+  }
+
+  .shell > .site-header .nav {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .shell > .site-header .nav a {
+    font-size: 12px;
+  }
+
+  .module-picker {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .module-tab {
+    padding-inline: 8px;
+    font-size: 13px;
+  }
+
+  .module-tab:nth-child(-n + 3) {
+    grid-column: span 2;
+  }
+
+  .module-tab:nth-child(n + 4) {
+    grid-column: span 3;
   }
 }

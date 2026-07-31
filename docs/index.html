@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -19,7 +19,7 @@
 <meta name="twitter:description" content="Private local dictation and the Mac tools you reach for, together in your MacBook notch.">
 <meta name="twitter:image" content="https://gojo.rohoswagger.com/assets/og.jpg">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="site.css?v=20260730">
+<link rel="stylesheet" href="site.css?v=20260731-collage">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -97,7 +97,7 @@
       <p class="sub">Dictate anywhere, move windows, recover copied text, stage files, control music, and more from one native workspace in your MacBook notch.</p>
 
       <div class="stage">
-        <video class="demo-video" autoplay loop muted playsinline poster="assets/demo-poster.jpg" aria-label="Gojo notch demo">
+        <video class="demo-video" loop muted playsinline poster="assets/demo-poster.jpg" aria-hidden="true">
           <source src="assets/demo.mp4" type="video/mp4">
         </video>
       </div>
@@ -142,10 +142,8 @@
               <li>Customizable playback controls</li>
             </ul>
           </div>
-          <div class="notch-demo notch-demo-video">
-            <video autoplay loop muted playsinline poster="assets/demo-poster.jpg" aria-label="Gojo media player in the MacBook notch">
-              <source src="assets/demo.mp4" type="video/mp4">
-            </video>
+          <div class="notch-demo app-screenshot-demo">
+            <img src="screenshots/app-media.png" width="640" height="210" alt="Gojo's media controls open beneath the MacBook notch">
           </div>
         </div>
 
@@ -155,12 +153,8 @@
             <h3>Find the thing you copied five minutes ago.</h3>
             <p>Search recent text without opening another window. Content marked private by supported password managers is skipped.</p>
           </div>
-          <div class="notch-demo notch-ui" aria-label="Gojo clipboard history preview">
-            <div class="notch-tabs" aria-hidden="true"><span>⌂</span><span>▰</span><span class="active">▣</span><span>▱</span></div>
-            <div class="search-row"><span aria-hidden="true">⌕</span><span>Search clipboard</span></div>
-            <div class="clipboard-row">Gojo demo — ship the update</div>
-            <div class="clipboard-row">Gojo demo — assets approved</div>
-            <div class="clipboard-row">Gojo demo — meeting notes ready</div>
+          <div class="notch-demo app-screenshot-demo">
+            <img src="screenshots/app-clipboard.png" width="640" height="210" loading="lazy" alt="Gojo's searchable clipboard history open beneath the MacBook notch">
           </div>
         </div>
 
@@ -170,8 +164,8 @@
             <h3>See your open windows before you switch.</h3>
             <p>Preview, focus, and organize windows from the notch, with quick snapping when your workspace needs a reset.</p>
           </div>
-          <div class="notch-demo screenshot-demo">
-            <img src="screenshots/windows-tab.png" width="1370" height="434" loading="lazy" alt="Gojo window switcher showing open Mac windows">
+          <div class="notch-demo app-screenshot-demo app-screenshot-settings">
+            <img src="screenshots/app-windows.png" width="700" height="600" loading="lazy" alt="Gojo Window Switcher settings with trigger and behavior controls">
           </div>
         </div>
 
@@ -181,10 +175,8 @@
             <h3>Put files down without losing them.</h3>
             <p>Stage files in the notch while you move between folders, desktops, and apps—then drag them exactly where they belong.</p>
           </div>
-          <div class="notch-demo notch-ui shelf-ui" aria-label="Gojo temporary file shelf preview">
-            <div class="notch-tabs" aria-hidden="true"><span>⌂</span><span class="active">▰</span><span>▣</span><span>▱</span></div>
-            <div class="airdrop-tile"><span class="shelf-icon" aria-hidden="true">⇧</span><strong>AirDrop</strong></div>
-            <div class="drop-zone"><span class="floating-file" aria-hidden="true">PDF</span><span>Drop files here</span></div>
+          <div class="notch-demo app-screenshot-demo">
+            <img src="screenshots/app-files.png" width="640" height="210" loading="lazy" alt="Gojo's AirDrop and temporary file shelf open beneath the MacBook notch">
           </div>
         </div>
 
@@ -194,19 +186,17 @@
             <h3>Warm the screen when the day winds down.</h3>
             <p>Reach Night Shift and display controls from the same compact workspace, without another menu bar utility.</p>
           </div>
-          <div class="notch-demo notch-ui display-ui" aria-label="Gojo display warmth control preview">
-            <div class="notch-tabs" aria-hidden="true"><span>⌂</span><span>▰</span><span>▣</span><span>▱</span><span class="moon">◒</span></div>
-            <div class="temperature-preview"></div>
-            <div class="display-control"><span>Clear night</span><span class="display-slider"><i></i></span><strong>68%</strong></div>
+          <div class="notch-demo app-screenshot-demo app-screenshot-settings">
+            <img src="screenshots/app-display.png" width="700" height="600" loading="lazy" alt="Gojo Night Shift settings with schedule and warmth controls">
           </div>
         </div>
       </div>
 
       <div class="choice-strip">
         <p><strong>Choose the tools you want.</strong> Keep the rest out of the way.</p>
-        <div class="choice-pills" aria-label="More Gojo tools">
-          <span>Calendar</span><span>Battery</span><span>Camera mirror</span><span>Local dictation</span><span>Shortcuts</span>
-        </div>
+        <ul class="choice-pills">
+          <li>Calendar</li><li>Battery</li><li>Camera mirror</li><li>Local dictation</li><li>Shortcuts</li>
+        </ul>
       </div>
     </div>
   </section>
@@ -214,39 +204,34 @@
   <section class="tool-mosaic" aria-labelledby="mosaic-heading">
     <div class="wrap">
       <header class="mosaic-heading">
-        <p class="section-kicker">Built for the moments between apps</p>
-        <h2 id="mosaic-heading">Five daily tools. One native workspace.</h2>
+        <h2 id="mosaic-heading">One notch. Your whole Mac utility stack.</h2>
+        <p class="mosaic-intro">Gojo turns the space around your notch into a home for the tools you reach for all day—dictation, windows, clipboard, files, media, display controls, shortcuts, and more.</p>
       </header>
 
       <div class="mosaic-grid">
         <article class="mosaic-card mosaic-media">
-          <div class="mosaic-copy"><span>01</span><h3>Media</h3><p>Playback without the context switch.</p></div>
-          <video autoplay loop muted playsinline poster="assets/demo-poster.jpg" aria-label="Gojo media player demo">
-            <source src="assets/demo.mp4" type="video/mp4">
-          </video>
+          <img class="mosaic-feature-shot" src="screenshots/app-media.png" width="640" height="210" loading="lazy" alt="Gojo media controls open beneath the MacBook notch">
+          <div class="mosaic-copy"><h3>Media</h3><p>Control playback without leaving what you’re doing.</p></div>
         </article>
 
         <article class="mosaic-card mosaic-clipboard">
-          <div class="mosaic-copy"><span>02</span><h3>Clipboard</h3><p>Search what you copied.</p></div>
-          <div class="micro-clipboard" aria-hidden="true">
-            <i>⌕ Search clipboard</i>
-            <b>Ship the update</b><b>Assets approved</b><b>Meeting notes</b>
-          </div>
+          <img class="mosaic-feature-shot" src="screenshots/app-clipboard.png" width="640" height="210" loading="lazy" alt="Gojo clipboard history with searchable copied text">
+          <div class="mosaic-copy"><h3>Clipboard</h3><p>Find anything you copied, right when you need it.</p></div>
         </article>
 
         <article class="mosaic-card mosaic-windows">
-          <div class="mosaic-copy"><span>03</span><h3>Windows</h3><p>Preview, focus, and snap.</p></div>
-          <img src="screenshots/windows-tab.png" width="1370" height="434" loading="lazy" alt="Gojo window switcher">
+          <img class="mosaic-feature-shot mosaic-feature-settings" src="screenshots/app-windows.png" width="700" height="600" loading="lazy" alt="Gojo Window Switcher settings">
+          <div class="mosaic-copy"><h3>Windows</h3><p>Switch, focus, and snap without hunting.</p></div>
         </article>
 
         <article class="mosaic-card mosaic-files">
-          <div class="mosaic-copy"><span>04</span><h3>Files</h3><p>A temporary shelf between destinations.</p></div>
-          <div class="micro-shelf" aria-hidden="true"><span>⇧<small>AirDrop</small></span><span class="micro-drop"><i>PNG</i> Drop files here</span></div>
+          <img class="mosaic-feature-shot" src="screenshots/app-files.png" width="640" height="210" loading="lazy" alt="Gojo file shelf with AirDrop and a temporary drop zone">
+          <div class="mosaic-copy"><h3>Files</h3><p>Hold files between folders, desktops, and apps.</p></div>
         </article>
 
         <article class="mosaic-card mosaic-display">
-          <div class="mosaic-copy"><span>05</span><h3>Display</h3><p>Comfort controls at sunset.</p></div>
-          <div class="micro-display" aria-hidden="true"><span>Cool</span><i><b></b></i><span>Warm</span></div>
+          <img class="mosaic-feature-shot mosaic-feature-settings" src="screenshots/app-display.png" width="700" height="600" loading="lazy" alt="Gojo Night Shift settings">
+          <div class="mosaic-copy"><h3>Display</h3><p>Warm the screen when the day winds down.</p></div>
         </article>
       </div>
     </div>
@@ -255,12 +240,12 @@
   <section class="utility-convergence" aria-labelledby="convergence-heading">
     <div class="wrap convergence-layout">
       <div class="convergence-copy">
-        <p class="section-kicker">Less utility pile-up</p>
+        <p class="section-kicker">Clear your menu bar</p>
         <h2 id="convergence-heading">Replace the apps between you and your work.</h2>
-        <p>Media, clipboard history, display comfort, window snapping, and file staging—together in one MacBook notch app.</p>
+        <p>Gojo gathers the utilities scattered across macOS into one customizable workspace, then keeps the ones you use one hover away.</p>
       </div>
 
-      <div class="convergence-visual" aria-label="Gojo combines tools commonly handled by several separate Mac utilities">
+      <div class="convergence-visual" role="group" aria-label="Gojo combines tools commonly handled by several separate Mac utilities">
         <div class="utility-apps">
           <a class="utility-app" href="https://theboring.name/" target="_blank" rel="noopener"><img src="https://framerusercontent.com/images/RFK4vs0kn8pRMuOO58JeyoemXA.png" alt=""><span>Boring Notch</span></a>
           <a class="utility-app" href="https://apps.apple.com/us/app/maccy/id1527619437?mt=12" target="_blank" rel="noopener"><img src="https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/5d/ae/80/5dae80db-2fad-e2d0-d41e-1c4f2e13fd3c/AppIcon-0-0-85-220-0-0-5-0-2x.png/512x512bb.png" alt=""><span>Maccy</span></a>
@@ -292,7 +277,7 @@
         </ul>
       </div>
 
-      <div class="settings-demo" aria-label="Preview of Gojo customization settings">
+      <div class="settings-demo" role="img" aria-label="Preview of Gojo customization settings">
         <div class="settings-sidebar" aria-hidden="true">
           <span>General</span><span>Appearance</span><span class="selected">Media</span><span>Calendar</span><span>Battery</span><span>Shelf</span><span>Clipboard</span><span>Windows</span>
         </div>
@@ -343,7 +328,7 @@
           <div class="plan plan-lifetime">
             <span class="plan-tag">Best value &middot; Save 33%</span>
             <div class="plan-name">Lifetime</div>
-            <div class="plan-figure" aria-label="Originally $14.99, now $9.99 one time"><span class="plan-original" aria-hidden="true">$14.99</span><span class="plan-amount" aria-hidden="true">$9.99</span><span class="plan-per" aria-hidden="true">one time</span></div>
+            <div class="plan-figure"><span class="sr-only">Originally $14.99, now $9.99 one time</span><span class="plan-original" aria-hidden="true">$14.99</span><span class="plan-amount" aria-hidden="true">$9.99</span><span class="plan-per" aria-hidden="true">one time</span></div>
             <p class="plan-copy">Pay once and keep Gojo on one Mac, including future updates.</p>
             <a class="btn btn-buy" href="https://buy.stripe.com/fZu5kD3446wY31gb4aeAg04">Get lifetime access</a>
           </div>
@@ -361,7 +346,7 @@
           <div class="plan plan-lifetime">
             <span class="plan-tag">Best value &middot; Save 20%</span>
             <div class="plan-name">Lifetime</div>
-            <div class="plan-figure" aria-label="Originally $24.99, now $19.99 one time"><span class="plan-original" aria-hidden="true">$24.99</span><span class="plan-amount" aria-hidden="true">$19.99</span><span class="plan-per" aria-hidden="true">one time</span></div>
+            <div class="plan-figure"><span class="sr-only">Originally $24.99, now $19.99 one time</span><span class="plan-original" aria-hidden="true">$24.99</span><span class="plan-amount" aria-hidden="true">$19.99</span><span class="plan-per" aria-hidden="true">one time</span></div>
             <p class="plan-copy">Pay once. Keep every feature and future update on up to three Macs.</p>
             <a class="btn btn-buy" href="https://buy.stripe.com/9B64gzfQQ7B26ds1tAeAg02">Get lifetime access</a>
           </div>
@@ -386,12 +371,22 @@
   </footer>
 
   <script>
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    (function () {
+      var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
       Array.prototype.forEach.call(document.querySelectorAll('video'), function (video) {
-        video.removeAttribute('autoplay');
-        video.addEventListener('canplay', function () { video.pause(); });
+        if (reducedMotion) {
+          video.pause();
+          video.addEventListener('canplay', function () { video.pause(); });
+          return;
+        }
+
+        var playback = video.play();
+        if (playback && typeof playback.catch === 'function') {
+          playback.catch(function () {});
+        }
       });
-    }
+    })();
 
     (function () {
       var tabs = Array.prototype.slice.call(document.querySelectorAll('.module-tab'));

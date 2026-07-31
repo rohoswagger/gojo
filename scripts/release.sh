@@ -407,7 +407,13 @@ git push origin "v$VERSION"
 log "Committing appcast.xml"
 
 git add docs/appcast.xml
-git commit -m "chore: appcast for v$VERSION"
+git commit \
+  -m "Keep existing installs on the v$VERSION update path" \
+  -m "Publish the signed release metadata after the notarized artifact is available." \
+  -m "Constraint: The public Sparkle feed is served from docs/appcast.xml" \
+  -m "Confidence: high" \
+  -m "Scope-risk: narrow" \
+  -m "Tested: Release build, signing, notarization, DMG packaging, and Sparkle signature"
 git push origin main
 
 ok "appcast.xml committed and pushed"

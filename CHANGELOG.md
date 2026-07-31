@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-07-31
+
+Gojo can now type for you from the notch. Choose a local voice model, press Control–Option, speak, and Gojo inserts the final transcript into the field you selected.
+
+### Added
+
+- **Dictation** — pick a speech model in **Settings > Dictation**, download it explicitly, then hold or tap **Control–Option** to speak into the focused text field. Recognition stays on this Mac; Gojo does not use an API key or cloud transcription.
+- **Voice models** — choose from Parakeet Unified, Parakeet v3, Whisper Small, and Whisper Large v3. Models can be downloaded, selected, and removed independently.
+- **Insertion safety** — Gojo refuses password fields, validates the focused target before adding text, and cancels insertion if you move to another field while it is transcribing.
+
+### Changed
+
+- **Dictation settings** now show the activation mode, microphone and Accessibility status, model download size, installed models, and the current model.
+- **Microphone permission copy** now explains exactly when Gojo uses the microphone and that audio is transcribed locally.
+- **License settings** now preserve the local key when server-side deactivation fails and describe the available 1- and 3-Mac plans accurately.
+- **Website** now presents Gojo as an all-in-one MacBook notch workspace with richer feature tours, real app screenshots, comparison pages, clearer pricing, and consistent custom-domain search metadata.
+
+### Fixed
+
+- **Window switching** — per-window recency is preserved across app activation, so quick switching keeps the expected window order.
+- **Multiple displays** — the switcher now appears on the focused app's display and only includes eligible windows from that physical display, even when displays share a Space.
+- **macOS 14 compatibility** — the bundled media adapter is now built for Gojo's advertised minimum system version.
+
 ## [1.0.2] — 2026-07-10
 
 ### Changed
@@ -43,7 +66,8 @@ Meet Gojo — it turns the dead space around your MacBook's notch into a control
 - **Guided setup** — a polished first launch that gets you going in seconds.
 - **Automatic updates** — new versions install themselves; no re-downloading.
 
-[Unreleased]: https://github.com/rohoswagger/gojo/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/rohoswagger/gojo/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/rohoswagger/gojo/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/rohoswagger/gojo/releases/tag/v1.0.2
 [1.0.1]: https://github.com/rohoswagger/gojo/releases/tag/v1.0.1
 [1.0.0]: https://github.com/rohoswagger/gojo/releases/tag/v1.0.0

@@ -8,7 +8,7 @@ CI (`.github/workflows/build.yml`) verifies every PR/push compiles, but does **n
 make release VERSION=1.0.0       # upload DMG to R2 + update public appcast
 make release-dry VERSION=1.0.0   # build, sign, notarize, appcast — but don't publish
 make release VERSION=1.0.0 ARGS=--adhoc           # ad-hoc signed, no Apple account
-make release VERSION=1.0.0 ARGS=--private         # paid channel: notarized DMG only
+make release VERSION=1.0.0 ARGS=--private         # notarized DMG only; no public upload
 ```
 
 > `--adhoc` cuts a release with **no Apple Developer account**: the app is
@@ -18,12 +18,12 @@ make release VERSION=1.0.0 ARGS=--private         # paid channel: notarized DMG 
 > distribution; use the default (Developer ID + notarized) path for a polished
 > public launch.
 
-> `--private` is the **paid-distribution** mode: it builds the signed +
+> `--private` is the **manual-distribution** mode: it builds the signed +
 > notarized DMG and Sparkle-signs it, but publishes nothing — no GitHub
 > Release, no appcast entry. It tags `vX.Y.Z` (source correspondence for GPL)
 > and prints the DMG path, SHA-256, size, build number, and Sparkle signature;
-> upload the DMG to the sales platform yourself. The public appcast was
-> retired when Gojo went paid — do not add new items to it.
+> upload the DMG to the destination yourself. Use the default release path for
+> the public download and Sparkle update channel used by existing installs.
 
 ---
 

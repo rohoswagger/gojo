@@ -59,10 +59,6 @@
         type="application/octet-stream" />
     </item>
 
-    <!-- Free-channel binaries were retired 2026-07-06; Gojo is now sold via a
-         paid channel with its own update feed. This feed stays intentionally
-         empty so existing free installs receive no further updates. -->
-
     <!-- Release items are inserted here by scripts/release.sh -->
   </channel>
 </rss>

@@ -1,5 +1,7 @@
 import Foundation
+#if canImport(KeyboardShortcuts)
 import KeyboardShortcuts
+#endif
 
 /// The small v1 set of Rectangle-style actions Gojo exposes as keyboard-first window power.
 enum WindowAction: CaseIterable, Equatable, Identifiable {
@@ -76,6 +78,7 @@ enum WindowAction: CaseIterable, Equatable, Identifiable {
     }
 
     /// The user-configurable keyboard shortcut bound to this action.
+#if canImport(KeyboardShortcuts)
     var shortcutName: KeyboardShortcuts.Name {
         switch self {
         case .leftHalf: return .windowLeftHalf
@@ -86,4 +89,5 @@ enum WindowAction: CaseIterable, Equatable, Identifiable {
         case .zoom: return .windowZoom
         }
     }
+#endif
 }

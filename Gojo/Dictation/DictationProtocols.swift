@@ -27,4 +27,3 @@ protocol DictationTextInserting: Sendable {
 
     func insert(_ text: String, into target: Target) async throws
 }
-

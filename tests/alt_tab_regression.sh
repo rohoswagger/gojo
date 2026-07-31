@@ -5,6 +5,7 @@ cd "$ROOT"
 BIN="/tmp/gojo-alt-tab-regression"
 swiftc \
   Gojo/WindowManagement/AltTabSelection.swift \
+  Gojo/WindowManagement/WindowTargetResolver.swift \
   tests/alt_tab_regression.swift \
   -o "$BIN"
 "$BIN"

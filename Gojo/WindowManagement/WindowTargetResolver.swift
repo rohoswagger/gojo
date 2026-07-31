@@ -247,6 +247,20 @@ enum WindowTargetResolver {
         }?.index
     }
 
+    static func displayIndex(
+        forTopWindowOwnedBy pid: pid_t,
+        topWindows: [WindowTargetWindowSnapshot],
+        displayBounds: [CGRect],
+        ownPID: pid_t
+    ) -> Int? {
+        guard let window = topWindows.first(where: {
+            $0.pid == pid && isTopLevelWindow($0, ownPID: ownPID)
+        }) else {
+            return nil
+        }
+        return displayIndex(containing: window.bounds, displayBounds: displayBounds)
+    }
+
     static func windowID(
         containing controlFrame: CGRect,
         targetPID: pid_t,

@@ -6,6 +6,28 @@
     <description>Most recent changes to Gojo, with download links.</description>
     <language>en</language>
     <item>
+      <title>Version 1.1.0</title>
+      <pubDate>Fri, 31 Jul 2026 20:00:26 +0000</pubDate>
+      <sparkle:version>1785527934</sparkle:version>
+      <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+<p>Gojo can now type for you from the notch. Choose a local voice model, press Control–Option, speak, and Gojo inserts the final transcript into the field you selected.</p>
+<h4>Added</h4>
+<ul><li>**Dictation** — pick a speech model in **Settings > Dictation**, download it explicitly, then hold or tap **Control–Option** to speak into the focused text field. Recognition stays on this Mac; Gojo does not use an API key or cloud transcription.</li><li>**Voice models** — choose from Parakeet Unified, Parakeet v3, Whisper Small, and Whisper Large v3. Models can be downloaded, selected, and removed independently.</li><li>**Insertion safety** — Gojo refuses password fields, validates the focused target before adding text, and cancels insertion if you move to another field while it is transcribing.</li></ul>
+<h4>Changed</h4>
+<ul><li>**Dictation settings** now show the activation mode, microphone and Accessibility status, model download size, installed models, and the current model.</li><li>**Microphone permission copy** now explains exactly when Gojo uses the microphone and that audio is transcribed locally.</li><li>**License settings** now preserve the local key when server-side deactivation fails and describe the available 1- and 3-Mac plans accurately.</li><li>**Website** now presents Gojo as an all-in-one MacBook notch workspace with richer feature tours, real app screenshots, comparison pages, clearer pricing, and consistent custom-domain search metadata.</li></ul>
+<h4>Fixed</h4>
+<ul><li>**Window switching** — per-window recency is preserved across app activation, so quick switching keeps the expected window order.</li><li>**Multiple displays** — the switcher now appears on the focused app's display and only includes eligible windows from that physical display, even when displays share a Space.</li><li>**macOS 14 compatibility** — the bundled media adapter is now built for Gojo's advertised minimum system version.</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://downloads.rohoswagger.com/Gojo-1.1.0.dmg"
+        sparkle:edSignature="4m8vTx82Cim40lMJO2p5Z9OKV7IxruI80wM7rDUmUEWa3hOOHj8UNQZoer5ry4H8JZDm+fdNWqrlTuT0DW5yBw=="
+        length="11200362"
+        type="application/octet-stream" />
+    </item>
+
+    <item>
       <title>Version 1.0.2</title>
       <pubDate>Fri, 10 Jul 2026 14:04:58 +0000</pubDate>
       <sparkle:version>1783692170</sparkle:version>

@@ -9,6 +9,39 @@
 
 import Foundation
 
+struct AltTabRecency {
+    private var orderedIDs: [String] = []
+
+    mutating func order(freshIDs: [String]) -> [String] {
+        let fresh = deduplicated(freshIDs)
+        guard !fresh.isEmpty else {
+            orderedIDs = []
+            return orderedIDs
+        }
+        guard !orderedIDs.isEmpty else {
+            orderedIDs = fresh
+            return orderedIDs
+        }
+
+        let freshSet = Set(fresh)
+        var next = [fresh[0]]
+        next.append(contentsOf: orderedIDs.filter { $0 != fresh[0] && freshSet.contains($0) })
+        next.append(contentsOf: fresh.filter { !next.contains($0) })
+        orderedIDs = next
+        return orderedIDs
+    }
+
+    mutating func promote(_ id: String) {
+        orderedIDs.removeAll { $0 == id }
+        orderedIDs.insert(id, at: 0)
+    }
+
+    private func deduplicated(_ ids: [String]) -> [String] {
+        var seen = Set<String>()
+        return ids.filter { seen.insert($0).inserted }
+    }
+}
+
 enum AltTabSelection {
     /// The index that should be highlighted when the switcher first opens.
     /// With 2+ windows we preselect index 1 (the window behind the frontmost

@@ -36,6 +36,45 @@ struct AltTabRegressionRunner {
         assertEqual(AltTabSelection.advance(from: 0, count: 1, reverse: false), 0, "single window wraps to itself forward")
         assertEqual(AltTabSelection.advance(from: 0, count: 1, reverse: true), 0, "single window wraps to itself reverse")
 
+        var recency = AltTabRecency()
+        assertEqual(
+            recency.order(freshIDs: ["brave-a", "mail", "brave-b"]),
+            ["brave-a", "mail", "brave-b"],
+            "first capture preserves fresh order"
+        )
+        assertEqual(
+            recency.order(freshIDs: ["brave-a", "brave-a", "mail", "mail", "brave-b"]),
+            ["brave-a", "mail", "brave-b"],
+            "duplicate fresh IDs are removed"
+        )
+
+        recency.promote("brave-b")
+        assertEqual(
+            recency.order(freshIDs: ["brave-b", "brave-a", "mail"]),
+            ["brave-b", "brave-a", "mail"],
+            "promoting one Brave window changes only that window's MRU position"
+        )
+
+        recency = AltTabRecency()
+        _ = recency.order(freshIDs: ["brave-a", "mail", "brave-b"])
+        recency.promote("mail")
+        assertEqual(
+            recency.order(freshIDs: ["brave-a", "brave-b", "mail"]),
+            ["brave-a", "mail", "brave-b"],
+            "fresh macOS grouping keeps prior non-Brave use between Brave siblings"
+        )
+
+        assertEqual(
+            recency.order(freshIDs: ["brave-a", "brave-b", "notes"]),
+            ["brave-a", "brave-b", "notes"],
+            "closed IDs are pruned and new IDs are appended"
+        )
+        assertEqual(
+            recency.order(freshIDs: []),
+            [],
+            "empty input clears history"
+        )
+
         print("alt-tab-regression-pass")
     }
 }

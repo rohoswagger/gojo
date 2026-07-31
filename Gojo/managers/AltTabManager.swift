@@ -21,6 +21,7 @@ final class AltTabManager: ObservableObject {
     private let windowProvider = FocusedWindowProvider()
     private lazy var panel = AltTabPanel()
     private var cancellables = Set<AnyCancellable>()
+    private var recency = AltTabRecency()
     private var started = false
 
     private init() {}
@@ -74,7 +75,12 @@ final class AltTabManager: ObservableObject {
             return
         }
 
-        let screens = Defaults[.altTabCurrentDisplayOnly] ? [activeScreen] : NSScreen.screens
+        let screens: [NSScreen]
+        if Defaults[.altTabCurrentDisplayOnly] {
+            screens = [activeScreen]
+        } else {
+            screens = [activeScreen] + NSScreen.screens.filter { $0.displayUUID != activeScreen.displayUUID }
+        }
         let items = captureItems(on: screens)
 
         guard !items.isEmpty else { return }
@@ -118,7 +124,12 @@ final class AltTabManager: ObservableObject {
             })
             add(AltTabSpaceEnumerator.items(on: screen))
         }
-        return result
+        let orderedIDs = recency.order(freshIDs: result.map(\.id))
+        var itemsByID: [String: AltTabItem] = [:]
+        for item in result where itemsByID[item.id] == nil {
+            itemsByID[item.id] = item
+        }
+        return orderedIDs.compactMap { itemsByID[$0] }
     }
 
     func advance(reverse: Bool) {
@@ -132,6 +143,7 @@ final class AltTabManager: ObservableObject {
             cancel()
             return
         }
+        recency.promote(item.id)
         close()
         Task {
             _ = await XPCHelperClient.shared.raiseWindow(pid: item.pid, windowID: item.windowID)

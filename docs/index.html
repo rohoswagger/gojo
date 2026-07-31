@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gojo - Five daily Mac tools, one quiet notch</title>
-<meta name="description" content="Gojo keeps music, window snapping, clipboard history, file staging, and Night Shift one quiet hover from your MacBook notch.">
+<title>Gojo - Your Mac, one hover away</title>
+<meta name="description" content="Gojo puts private on-device dictation, windows, clipboard, files, media, and system controls one hover away in your MacBook notch.">
 <link rel="canonical" href="https://gojo.rohoswagger.com/">
-<meta property="og:title" content="Gojo - Five daily Mac tools, one quiet notch">
-<meta property="og:description" content="Music, windows, clipboard, files, and Night Shift stay hidden in your MacBook notch until you need them.">
+<meta property="og:title" content="Gojo - Your Mac, one hover away">
+<meta property="og:description" content="Dictate anywhere, move windows, recover copied text, stage files, control music, and more from your MacBook notch.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://gojo.rohoswagger.com/">
 <meta property="og:image" content="https://gojo.rohoswagger.com/assets/og.jpg">
@@ -15,11 +15,11 @@
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Gojo running as a MacBook notch control surface.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Gojo - Five daily Mac tools, one quiet notch">
-<meta name="twitter:description" content="Music, windows, clipboard, files, and Night Shift stay one quiet hover away.">
+<meta name="twitter:title" content="Gojo - Your Mac, one hover away">
+<meta name="twitter:description" content="Private local dictation and the Mac tools you reach for, together in your MacBook notch.">
 <meta name="twitter:image" content="https://gojo.rohoswagger.com/assets/og.jpg">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="site.css?v=20260713">
+<link rel="stylesheet" href="site.css?v=20260730">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -27,22 +27,48 @@
   "name": "Gojo",
   "applicationCategory": "UtilitiesApplication",
   "operatingSystem": "macOS 14+",
-  "description": "Gojo keeps music, window snapping, clipboard history, file staging, and Night Shift one quiet hover from the MacBook notch.",
+  "description": "Gojo is a MacBook productivity hub for private on-device dictation, window management, clipboard history, file staging, media, and system controls.",
   "url": "https://gojo.rohoswagger.com/",
   "softwareVersion": "1.0.0",
+  "featureList": [
+    "Private on-device voice dictation",
+    "Window snapping and management",
+    "Clipboard history",
+    "Drag-and-drop file shelf",
+    "Music and media controls",
+    "Display and system controls"
+  ],
   "offers": [
     {
       "@type": "Offer",
-      "name": "Gojo Lifetime",
-      "price": "19.99",
+      "name": "Gojo Personal Monthly",
+      "price": "2.99",
       "priceCurrency": "USD",
+      "availability": "https://schema.org/InStock",
       "url": "https://gojo.rohoswagger.com/#buy"
     },
     {
       "@type": "Offer",
-      "name": "Gojo Monthly",
+      "name": "Gojo Personal Lifetime",
+      "price": "9.99",
+      "priceCurrency": "USD",
+      "availability": "https://schema.org/InStock",
+      "url": "https://gojo.rohoswagger.com/#buy"
+    },
+    {
+      "@type": "Offer",
+      "name": "Gojo Multi-Mac Monthly",
       "price": "4.99",
       "priceCurrency": "USD",
+      "availability": "https://schema.org/InStock",
+      "url": "https://gojo.rohoswagger.com/#buy"
+    },
+    {
+      "@type": "Offer",
+      "name": "Gojo Multi-Mac Lifetime",
+      "price": "19.99",
+      "priceCurrency": "USD",
+      "availability": "https://schema.org/InStock",
       "url": "https://gojo.rohoswagger.com/#buy"
     }
   ]
@@ -57,6 +83,7 @@
         Gojo
       </a>
       <nav class="nav" aria-label="Site">
+        <a class="ghost-link" href="#features">Features</a>
         <a class="ghost-link" href="#buy">Pricing</a>
         <a class="ghost-link" href="https://downloads.rohoswagger.com/Gojo.dmg">Download</a>
       </nav>
@@ -64,10 +91,10 @@
 
     <main class="hero">
       <h1>
-        <span class="line">Five daily Mac tools.</span>
-        <span class="line">One <span class="glow">quiet hover</span>.</span>
+        <span class="line">Your Mac.</span>
+        <span class="line">One <span class="glow">hover away</span>.</span>
       </h1>
-      <p class="sub">Music, window snapping, clipboard history, files, and Night Shift, hidden in your MacBook notch until you need them.</p>
+      <p class="sub">Dictate anywhere, move windows, recover copied text, stage files, control music, and more from one native workspace in your MacBook notch.</p>
 
       <div class="stage">
         <video class="demo-video" autoplay loop muted playsinline poster="assets/demo-poster.jpg" aria-label="Gojo notch demo">
@@ -82,35 +109,121 @@
         </a>
         <a class="btn btn-ghost" href="#buy">Choose a plan</a>
       </div>
-      <p class="meta">3 days free &middot; No account &middot; No card</p>
+      <p class="meta">3 days free &middot; Private on-device dictation &middot; No card</p>
     </main>
   </div>
+
+  <section class="product-story" id="features" aria-labelledby="features-heading">
+    <div class="wrap">
+      <header class="product-story-head">
+        <p class="section-kicker">One native workspace</p>
+        <h2 id="features-heading">Do more without breaking your flow.</h2>
+        <p>Gojo brings the small jobs that interrupt your day into one calm surface. Everything is built in, close at hand, and out of the way when you are done.</p>
+      </header>
+
+      <div class="capability-grid">
+        <article class="capability capability-featured">
+          <div class="capability-copy">
+            <p class="capability-number">01 &middot; Local dictation</p>
+            <h3>Your words, straight into any app.</h3>
+            <p>Hold Control&ndash;Option, speak, and release. Gojo types into the field you selected while recognition stays on your Mac.</p>
+          </div>
+          <div class="dictation-signal" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <p class="capability-proof">Parakeet + Whisper &middot; 25 European languages &middot; No API key</p>
+        </article>
+
+        <article class="capability">
+          <p class="capability-number">02</p>
+          <h3>Windows</h3>
+          <p>Snap, resize, and move windows without reaching for another utility.</p>
+        </article>
+        <article class="capability">
+          <p class="capability-number">03</p>
+          <h3>Clipboard</h3>
+          <p>Find copied text again, with password-manager content automatically skipped.</p>
+        </article>
+        <article class="capability">
+          <p class="capability-number">04</p>
+          <h3>Files</h3>
+          <p>Hold files in a temporary shelf while you move between folders and apps.</p>
+        </article>
+        <article class="capability">
+          <p class="capability-number">05</p>
+          <h3>Media</h3>
+          <p>See what is playing and control it without leaving the work in front of you.</p>
+        </article>
+        <article class="capability">
+          <p class="capability-number">06</p>
+          <h3>Mac controls</h3>
+          <p>Reach display comfort, calendar, reminders, camera, battery, and more.</p>
+        </article>
+        <article class="capability">
+          <p class="capability-number">07</p>
+          <h3>App switching</h3>
+          <p>Preview open windows and move between apps with less searching.</p>
+        </article>
+      </div>
+    </div>
+  </section>
 
   <section class="content-band" id="buy" aria-labelledby="buy-heading">
     <div class="wrap">
       <div class="buy-head">
         <h2 id="buy-heading">Keep Gojo your way</h2>
-        <p class="buy-sub">Try every feature free for three days. Then stay flexible or own it for life.</p>
-      </div>
-
-      <div class="plans">
-        <div class="plan plan-monthly">
-          <div class="plan-name">Monthly</div>
-          <div class="plan-figure"><span class="plan-amount alt">$4.99</span><span class="plan-per">/ month</span></div>
-          <p class="plan-copy">Stay flexible. Cancel anytime and keep access through the end of your billing period.</p>
-          <a class="btn btn-monthly" href="https://buy.stripe.com/5kQcN5gUU7B245kgoueAg03">Choose monthly</a>
-        </div>
-
-        <div class="plan plan-lifetime">
-          <span class="plan-tag">Best value</span>
-          <div class="plan-name">Lifetime</div>
-          <div class="plan-figure"><span class="plan-amount">$19.99</span><span class="plan-per">one time</span></div>
-          <p class="plan-copy">Pay once. Keep every feature and future update on up to three Macs.</p>
-          <a class="btn btn-buy" href="https://buy.stripe.com/9B64gzfQQ7B245kgoueAg02">Get lifetime access</a>
+        <p class="buy-sub">Start with one Mac, or cover up to three. Every plan includes the full app and every future update.</p>
+        <div class="pricing-tabs" role="tablist" aria-label="Choose a device plan">
+          <button class="pricing-tab" id="pricing-tab-personal" type="button" role="tab" aria-selected="true" aria-controls="pricing-panel-personal">
+            <span class="pricing-tab-name">Personal</span>
+            <span class="pricing-tab-separator" aria-hidden="true">&middot;</span>
+            <span class="pricing-tab-device">1 Mac</span>
+          </button>
+          <button class="pricing-tab" id="pricing-tab-multi" type="button" role="tab" aria-selected="false" aria-controls="pricing-panel-multi" tabindex="-1">
+            <span class="pricing-tab-name">Multi-Mac</span>
+            <span class="pricing-tab-separator" aria-hidden="true">&middot;</span>
+            <span class="pricing-tab-device">3 Macs</span>
+          </button>
         </div>
       </div>
 
-      <p class="buy-trust">Signed &amp; notarized &middot; Full 3-day trial &middot; Secure Stripe checkout &middot; Up to 3 Macs</p>
+      <div class="pricing-panels">
+        <div class="pricing-panel" id="pricing-panel-personal" role="tabpanel" aria-labelledby="pricing-tab-personal">
+          <div class="plan plan-monthly">
+            <div class="plan-name">Subscription</div>
+            <div class="plan-figure"><span class="plan-amount alt">$2.99</span><span class="plan-per">/ month</span></div>
+            <p class="plan-copy">Stay flexible with full access on one Mac. Cancel anytime.</p>
+            <a class="btn btn-monthly" href="https://buy.stripe.com/5kQfZhgUU2gI59o4FMeAg05">Choose subscription</a>
+          </div>
+
+          <div class="plan plan-lifetime">
+            <span class="plan-tag">Save 33%</span>
+            <div class="plan-name">Lifetime</div>
+            <div class="plan-figure" aria-label="Originally $14.99, now $9.99 one time"><span class="plan-original" aria-hidden="true">$14.99</span><span class="plan-amount" aria-hidden="true">$9.99</span><span class="plan-per" aria-hidden="true">one time</span></div>
+            <p class="plan-copy">Pay once and keep Gojo on one Mac, including future updates.</p>
+            <a class="btn btn-buy" href="https://buy.stripe.com/fZu5kD3446wY31gb4aeAg04">Get lifetime access</a>
+          </div>
+        </div>
+
+        <div class="pricing-panel" id="pricing-panel-multi" role="tabpanel" aria-labelledby="pricing-tab-multi" hidden>
+          <div class="plan plan-monthly">
+            <div class="plan-name">Subscription</div>
+            <div class="plan-figure"><span class="plan-amount alt">$4.99</span><span class="plan-per">/ month</span></div>
+            <p class="plan-copy">Stay flexible across up to three Macs. Cancel anytime.</p>
+            <a class="btn btn-monthly" href="https://buy.stripe.com/5kQcN5gUU7B245kgoueAg03">Choose subscription</a>
+          </div>
+
+          <div class="plan plan-lifetime">
+            <span class="plan-tag">Save 20%</span>
+            <div class="plan-name">Lifetime</div>
+            <div class="plan-figure" aria-label="Originally $24.99, now $19.99 one time"><span class="plan-original" aria-hidden="true">$24.99</span><span class="plan-amount" aria-hidden="true">$19.99</span><span class="plan-per" aria-hidden="true">one time</span></div>
+            <p class="plan-copy">Pay once. Keep every feature and future update on up to three Macs.</p>
+            <a class="btn btn-buy" href="https://buy.stripe.com/9B64gzfQQ7B26ds1tAeAg02">Get lifetime access</a>
+          </div>
+        </div>
+      </div>
+
+      <p class="buy-trust">Signed &amp; notarized &middot; Full 3-day trial &middot; Secure Stripe checkout &middot; 1- and 3-Mac plans</p>
     </div>
   </section>
 
@@ -135,6 +248,43 @@
         v.addEventListener('canplay', function () { v.pause(); });
       }
     }
+
+    (function () {
+      var tabs = Array.prototype.slice.call(document.querySelectorAll('.pricing-tab'));
+      var panels = Array.prototype.slice.call(document.querySelectorAll('.pricing-panel'));
+
+      function activatePricingTab(nextTab, moveFocus) {
+        tabs.forEach(function (tab) {
+          var selected = tab === nextTab;
+          tab.setAttribute('aria-selected', String(selected));
+          tab.tabIndex = selected ? 0 : -1;
+        });
+
+        panels.forEach(function (panel) {
+          panel.hidden = panel.id !== nextTab.getAttribute('aria-controls');
+        });
+
+        if (moveFocus) nextTab.focus();
+      }
+
+      tabs.forEach(function (tab, index) {
+        tab.addEventListener('click', function () {
+          activatePricingTab(tab, false);
+        });
+
+        tab.addEventListener('keydown', function (event) {
+          var nextIndex = index;
+          if (event.key === 'ArrowRight') nextIndex = (index + 1) % tabs.length;
+          else if (event.key === 'ArrowLeft') nextIndex = (index - 1 + tabs.length) % tabs.length;
+          else if (event.key === 'Home') nextIndex = 0;
+          else if (event.key === 'End') nextIndex = tabs.length - 1;
+          else return;
+
+          event.preventDefault();
+          activatePricingTab(tabs[nextIndex], true);
+        });
+      });
+    })();
   </script>
 </body>
 </html>

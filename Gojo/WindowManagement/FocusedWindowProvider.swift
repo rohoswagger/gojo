@@ -135,6 +135,26 @@ final class FocusedWindowProvider {
         )
     }
 
+    /// The display containing the focused app's topmost window. Unlike pointer
+    /// location, this follows the keyboard focus that opened the switcher.
+    func activeScreen() -> NSScreen? {
+        let displays = NSScreen.screens.compactMap { screen -> (screen: NSScreen, bounds: CGRect)? in
+            guard let displayID = screen.directDisplayID else { return nil }
+            return (screen, CGDisplayBounds(displayID))
+        }
+        guard !displays.isEmpty,
+              let app = targetApplication(),
+              let index = WindowTargetResolver.displayIndex(
+                forTopWindowOwnedBy: app.processIdentifier,
+                topWindows: topWindowSnapshots(),
+                displayBounds: displays.map(\.bounds),
+                ownPID: pid_t(ProcessInfo.processInfo.processIdentifier)
+              ) else {
+            return nil
+        }
+        return displays[index].screen
+    }
+
     /// Returns user-facing windows on `screen` in current-Space z-order. Filters to regular activation policy
     /// apps with usable window sizes — excludes floating panels, menu bar helpers, and accessory utilities.
     func enumerateWindows(on screen: NSScreen) -> [WindowSummary] {

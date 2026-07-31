@@ -90,6 +90,15 @@ enum AltTabSpaceEnumerator {
               let all = CGWindowListCopyWindowInfo([], kCGNullWindowID) as? [[String: Any]]
         else { return [] }
 
+        let displays = NSScreen.screens.compactMap { candidate -> (screen: NSScreen, bounds: CGRect)? in
+            guard let displayID = candidate.directDisplayID else { return nil }
+            return (candidate, CGDisplayBounds(displayID))
+        }
+        guard let targetDisplayID = screen.directDisplayID,
+              let targetIndex = displays.firstIndex(where: { $0.screen.directDisplayID == targetDisplayID })
+        else { return [] }
+        let displayBounds = displays.map(\.bounds)
+
         var infoByNumber: [CGWindowID: [String: Any]] = [:]
         for info in all {
             if let number = (info[kCGWindowNumber as String] as? NSNumber)?.uint32Value {
@@ -106,6 +115,10 @@ enum AltTabSpaceEnumerator {
                   let snapshot = WindowTargetWindowSnapshot(cgWindowInfo: info),
                   let windowID = snapshot.windowID,
                   WindowTargetResolver.isTopLevelWindow(snapshot, ownPID: ownPID),
+                  WindowTargetResolver.displayIndex(
+                    containing: snapshot.bounds,
+                    displayBounds: displayBounds
+                  ) == targetIndex,
                   snapshot.bounds.width >= 200, snapshot.bounds.height >= 120,
                   let app = NSRunningApplication(processIdentifier: snapshot.pid),
                   app.activationPolicy == .regular,

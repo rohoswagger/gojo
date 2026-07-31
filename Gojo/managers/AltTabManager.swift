@@ -71,7 +71,10 @@ final class AltTabManager: ObservableObject {
     }
 
     private func open(reverse: Bool) {
-        guard let activeScreen = NSScreen.screenWithMouse ?? NSScreen.main ?? NSScreen.screens.first else {
+        guard let activeScreen = windowProvider.activeScreen()
+            ?? NSScreen.screenWithMouse
+            ?? NSScreen.main
+            ?? NSScreen.screens.first else {
             return
         }
 

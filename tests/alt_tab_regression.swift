@@ -75,6 +75,82 @@ struct AltTabRegressionRunner {
             "empty input clears history"
         )
 
+        let ownPID: pid_t = 999
+        let browserPID: pid_t = 100
+        let finderPID: pid_t = 300
+        let displayBounds = [
+            CGRect(x: 0, y: 0, width: 1728, height: 1117),
+            CGRect(x: 1728, y: -147, width: 1920, height: 1080),
+            CGRect(x: 3648, y: -147, width: 1920, height: 1080)
+        ]
+        let browserWindows = [
+            WindowTargetWindowSnapshot(
+                pid: browserPID,
+                ownerName: "Safari",
+                layer: 0,
+                bounds: CGRect(x: 3800, y: 20, width: 1200, height: 900)
+            ),
+            WindowTargetWindowSnapshot(
+                pid: finderPID,
+                ownerName: "Finder",
+                layer: 0,
+                bounds: CGRect(x: 1900, y: 0, width: 1200, height: 900)
+            ),
+            WindowTargetWindowSnapshot(
+                pid: browserPID,
+                ownerName: "Safari",
+                layer: 0,
+                bounds: CGRect(x: 100, y: 80, width: 1200, height: 900)
+            )
+        ]
+        assertEqual(
+            WindowTargetResolver.displayIndex(
+                forTopWindowOwnedBy: browserPID,
+                topWindows: browserWindows,
+                displayBounds: displayBounds,
+                ownPID: ownPID
+            ),
+            2,
+            "the focused app's topmost window chooses the active display"
+        )
+        assertEqual(
+            WindowTargetResolver.displayIndex(
+                forTopWindowOwnedBy: finderPID,
+                topWindows: browserWindows,
+                displayBounds: displayBounds,
+                ownPID: ownPID
+            ),
+            1,
+            "another app's topmost window resolves its own display"
+        )
+        assertEqual(
+            WindowTargetResolver.displayIndex(
+                forTopWindowOwnedBy: ownPID,
+                topWindows: browserWindows,
+                displayBounds: displayBounds,
+                ownPID: ownPID
+            ),
+            nil,
+            "the switcher's own windows cannot select an active display"
+        )
+
+        let spanningWindow = WindowTargetWindowSnapshot(
+            pid: browserPID,
+            ownerName: "Safari",
+            layer: 0,
+            bounds: CGRect(x: 1500, y: 100, width: 900, height: 700)
+        )
+        assertEqual(
+            WindowTargetResolver.displayIndex(
+                forTopWindowOwnedBy: browserPID,
+                topWindows: [spanningWindow],
+                displayBounds: displayBounds,
+                ownPID: ownPID
+            ),
+            1,
+            "a spanning window belongs to the display containing most of it"
+        )
+
         print("alt-tab-regression-pass")
     }
 }

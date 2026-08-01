@@ -223,15 +223,20 @@ if [ "$ADHOC" != "1" ]; then
     "$APP_PATH/Contents/Resources/MediaRemoteAdapterTestClient"; do
     [ -e "$item" ] && { "${RESIGN[@]}" "$item" || die "re-sign failed: $item"; }
   done
-  # Re-seal the outer app (nested hashes changed); keep its own entitlements.
+  # Re-seal the outer app (nested hashes changed) while preserving the
+  # entitlements Xcode expanded for this target. Passing Gojo.entitlements
+  # directly here would write $(PRODUCT_BUNDLE_IDENTIFIER) literally.
   codesign --force --timestamp --options runtime \
-    --entitlements Gojo/Gojo.entitlements \
+    --preserve-metadata=entitlements \
     --sign "$MACOS_SIGNING_IDENTITY" "$APP_PATH" || die "re-seal failed: $APP_PATH"
   ok "Vendored components re-signed"
 fi
 
 codesign --verify --deep --strict --verbose=2 "$APP_PATH" 2>/dev/null \
   || die "Codesign verification failed on $APP_PATH"
+
+scripts/verify-sparkle-entitlements.sh "$APP_PATH" \
+  || die "Sparkle sandbox entitlements are not valid on $APP_PATH"
 
 ok "Signature verified"
 

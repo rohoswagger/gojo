@@ -6,6 +6,25 @@
     <description>Most recent changes to Gojo, with download links.</description>
     <language>en</language>
     <item>
+      <title>Version 1.1.1</title>
+      <pubDate>Sat, 01 Aug 2026 20:33:51 +0000</pubDate>
+      <sparkle:version>1785616332</sparkle:version>
+      <sparkle:shortVersionString>1.1.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+<p>A repair release. Gojo itself is unchanged from 1.1.0 — this is the same app, signed correctly.</p>
+<h4>Fixed</h4>
+<ul><li>**Automatic updates now work.** Every release up to and including 1.1.0 was signed with a malformed sandbox entitlement, which left Gojo unable to reach the helper services that install updates. Gojo could check for a new version but never finish installing one.</li></ul>
+<p>> **If you are already running 1.1.0 or earlier, please download Gojo once from [downloads.rohoswagger.com](https://downloads.rohoswagger.com/Gojo.dmg) and replace your copy.** The broken updater is the very thing this release fixes, so it cannot update itself. This is a one-time step — updates from 1.1.1 onward install on their own.</p>
+      ]]></description>
+      <enclosure
+        url="https://downloads.rohoswagger.com/Gojo-1.1.1.dmg"
+        sparkle:edSignature="tfGe1+bYvE+a5EPTX9zzV4zG403FFw1hIcD9bfrxid8tO7tSeelu2qunpG2bV/S4D+Wn8JBrCss3gzDgWRS0Cg=="
+        length="11200137"
+        type="application/octet-stream" />
+    </item>
+
+    <item>
       <title>Version 1.1.0</title>
       <pubDate>Fri, 31 Jul 2026 20:00:26 +0000</pubDate>
       <sparkle:version>1785527934</sparkle:version>

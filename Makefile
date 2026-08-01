@@ -1,4 +1,4 @@
-.PHONY: help build run stop restart smoke reset-onboarding run-onboarding test-window test-window-ui test-window-focus test-flux test-alt-tab test-dictation test-dictation-live test-dictation-codex-capture-live test-dictation-secure-live test-dictation-multidisplay-live test-dictation-model-live test-dictation-installed-models-live test-dictation-shortcut-live test-dictation-opaque-paste-live test-dictation-unicode-typing-live test-dictation-real-microphone-live release release-dry clean
+.PHONY: help build run stop restart smoke reset-onboarding run-onboarding test-release-signing test-window test-window-ui test-window-focus test-flux test-alt-tab test-dictation test-dictation-live test-dictation-codex-capture-live test-dictation-secure-live test-dictation-multidisplay-live test-dictation-model-live test-dictation-installed-models-live test-dictation-shortcut-live test-dictation-opaque-paste-live test-dictation-unicode-typing-live test-dictation-real-microphone-live release release-dry clean
 
 PROJECT := Gojo.xcodeproj
 SCHEME := Gojo
@@ -15,6 +15,7 @@ help:
 	@echo "  make smoke       Build, launch, verify process, then stop"
 	@echo "  make reset-onboarding  Wipe config + permissions so onboarding runs again"
 	@echo "  make run-onboarding    Reset, then build + launch into onboarding"
+	@echo "  make test-release-signing Verify Sparkle sandbox entitlements in release artifacts"
 	@echo "  make test-window Run window management regression checks"
 	@echo "  make test-window-ui Run Windows tab UI regression checks"
 	@echo "  make test-window-focus Run focused-window provider regression checks"
@@ -84,6 +85,9 @@ reset-onboarding:
 	@./scripts/reset-onboarding.sh $(ARGS)
 
 run-onboarding: reset-onboarding run
+
+test-release-signing:
+	./tests/release_signing_regression.sh
 
 smoke:
 	./tests/gojo_smoke.sh

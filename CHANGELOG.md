@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] — 2026-08-01
+
+A repair release. Gojo itself is unchanged from 1.1.0 — this is the same app, signed correctly.
+
+### Fixed
+
+- **Automatic updates now work.** Every release up to and including 1.1.0 was signed with a malformed sandbox entitlement, which left Gojo unable to reach the helper services that install updates. Gojo could check for a new version but never finish installing one.
+
+> **If you are already running 1.1.0 or earlier, please download Gojo once from [downloads.rohoswagger.com](https://downloads.rohoswagger.com/Gojo.dmg) and replace your copy.** The broken updater is the very thing this release fixes, so it cannot update itself. This is a one-time step — updates from 1.1.1 onward install on their own.
+
 ## [1.1.0] — 2026-07-31
 
 Gojo can now type for you from the notch. Choose a local voice model, press Control–Option, speak, and Gojo inserts the final transcript into the field you selected.
@@ -66,7 +76,8 @@ Meet Gojo — it turns the dead space around your MacBook's notch into a control
 - **Guided setup** — a polished first launch that gets you going in seconds.
 - **Automatic updates** — new versions install themselves; no re-downloading.
 
-[Unreleased]: https://github.com/rohoswagger/gojo/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/rohoswagger/gojo/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/rohoswagger/gojo/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/rohoswagger/gojo/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/rohoswagger/gojo/releases/tag/v1.0.2
 [1.0.1]: https://github.com/rohoswagger/gojo/releases/tag/v1.0.1

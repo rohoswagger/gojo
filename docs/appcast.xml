@@ -6,6 +6,25 @@
     <description>Most recent changes to Gojo, with download links.</description>
     <language>en</language>
     <item>
+      <title>Version 1.1.2</title>
+      <pubDate>Sun, 02 Aug 2026 22:20:08 +0000</pubDate>
+      <sparkle:version>1785709061</sparkle:version>
+      <sparkle:shortVersionString>1.1.2</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+<p>Dictation fixes. If holding Control–Option seemed to do nothing, or your words never made it into the field, this release is for you.</p>
+<h4>Fixed</h4>
+<ul><li>**Gojo now asks for Accessibility instead of going quiet.** Dictation listens for Control–Option through an event tap, which macOS only allows with Accessibility permission. Without it Gojo gave up silently — the shortcut simply did nothing, with no prompt and no explanation. It now asks for permission at launch.</li><li>**Your first dictation no longer arrives too late to use.** The speech model was only loaded once you stopped speaking, so the very first transcript could take around 20 seconds to appear — long enough that if you had clicked anywhere else, Gojo discarded the text and told you that you had moved to another field. The model now loads while you speak.</li></ul>
+<p>Gojo still refuses to insert text if you move to a different field mid-dictation. That check is deliberate, and it keeps dictated text out of the wrong place.</p>
+      ]]></description>
+      <enclosure
+        url="https://downloads.rohoswagger.com/Gojo-1.1.2.dmg"
+        sparkle:edSignature="rwQW4hktstu8Ueb25VmqN1jea30o75RqtuW728XzdLTsbgJ7CLVW93o/fASGuJOY8QTNi4xJ4caKS+6VMlKyBQ=="
+        length="11200542"
+        type="application/octet-stream" />
+    </item>
+
+    <item>
       <title>Version 1.1.1</title>
       <pubDate>Sat, 01 Aug 2026 20:33:51 +0000</pubDate>
       <sparkle:version>1785616332</sparkle:version>

@@ -10,6 +10,12 @@ on:
       - 'mediaremote-adapter/**'
       - '**/Package.resolved'
       - '.github/workflows/build.yml'
+      # Release tooling: a regression here ships a broken artifact, so it
+      # needs the same gate as source. Omitting these meant scripts/release.sh
+      # could be rewritten with no CI at all.
+      - 'scripts/**'
+      - 'tests/**'
+      - 'Makefile'
   pull_request:
     branches: [main]
     paths: *source-paths
@@ -20,6 +26,18 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  release-signing:
+    name: Release signing checks
+    runs-on: macos-15
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Release script regression
+        run: make test-release-signing
+
   build:
     name: Build (${{ matrix.configuration }})
     runs-on: macos-15
@@ -49,17 +67,34 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-spm-
 
-      - name: Build (${{ matrix.configuration }}, unsigned)
+      # Release builds ad-hoc rather than unsigned: an unsigned bundle carries
+      # no entitlements, so there would be nothing for the entitlement check
+      # below to inspect. Ad-hoc needs no certificate and still embeds the
+      # entitlements Xcode expanded, which is exactly what we want to assert.
+      # Hardened runtime stays off, matching `release.sh --adhoc`.
+      - name: Build (${{ matrix.configuration }})
         run: |
+          if [ "${{ matrix.configuration }}" = "Release" ]; then
+            SIGN_ARGS=(
+              CODE_SIGN_IDENTITY="-"
+              CODE_SIGNING_REQUIRED=YES
+              CODE_SIGNING_ALLOWED=YES
+              ENABLE_HARDENED_RUNTIME=NO
+            )
+          else
+            SIGN_ARGS=(
+              CODE_SIGN_IDENTITY=""
+              CODE_SIGNING_REQUIRED=NO
+              CODE_SIGNING_ALLOWED=NO
+            )
+          fi
           xcodebuild \
             -project Gojo.xcodeproj \
             -scheme Gojo \
             -configuration ${{ matrix.configuration }} \
             -destination 'platform=macOS' \
             -derivedDataPath .build/ci \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
+            "${SIGN_ARGS[@]}" \
             build \
             | xcpretty && exit ${PIPESTATUS[0]}
 
@@ -72,3 +107,37 @@ jobs:
           test -d "$APP/Contents/XPCServices/GojoXPCHelper.xpc" || (echo "missing XPC helper"; exit 1)
           test -d "$APP/Contents/Frameworks/Sparkle.framework" || (echo "missing Sparkle"; exit 1)
           echo "✓ app bundle structure looks correct"
+
+      # Guards the defect that shipped in v1.0.0-v1.1.0: release.sh re-sealed
+      # the app with the raw Gojo.entitlements template, writing a literal
+      # $(PRODUCT_BUNDLE_IDENTIFIER) into Sparkle's mach-lookup exceptions.
+      # The signature stayed valid, so `codesign --verify` never noticed, but
+      # the sandboxed app could not reach its updater XPC services and
+      # auto-update silently never worked.
+      - name: Verify Sparkle entitlements survive re-sealing
+        if: matrix.configuration == 'Release'
+        run: |
+          set -euo pipefail
+          APP=".build/ci/Build/Products/Release/Gojo.app"
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+
+          echo "1/3 Xcode's own signing expands the placeholder"
+          ./scripts/verify-sparkle-entitlements.sh "$APP"
+
+          echo "2/3 the re-seal release.sh performs preserves them"
+          cp -R "$APP" "$work/resealed.app"
+          codesign --force --preserve-metadata=entitlements --sign - "$work/resealed.app"
+          ./scripts/verify-sparkle-entitlements.sh "$work/resealed.app"
+
+          # Without this the job could pass because the verifier stopped
+          # discriminating rather than because the entitlements are correct.
+          echo "3/3 negative control: the known-bad re-seal must still fail"
+          cp -R "$APP" "$work/broken.app"
+          codesign --force --entitlements Gojo/Gojo.entitlements --sign - "$work/broken.app"
+          if ./scripts/verify-sparkle-entitlements.sh "$work/broken.app" 2>/dev/null; then
+            echo "verifier accepted the unexpanded template - this check has rotted" >&2
+            exit 1
+          fi
+
+          echo "✓ entitlements correct, and the verifier still catches a bad re-seal"

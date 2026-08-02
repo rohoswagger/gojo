@@ -131,6 +131,10 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
         return try await task.value
     }
 
+    func prepare() async {
+        _ = try? await loadSelectedModel()
+    }
+
     func cancelTranscription() async {
         transcriptionGeneration &+= 1
         let cancelledGeneration = activeTranscriptionGeneration

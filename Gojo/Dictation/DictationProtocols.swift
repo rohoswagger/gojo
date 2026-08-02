@@ -16,10 +16,14 @@ protocol DictationAudioCapturing: Sendable {
 protocol LocalDictationTranscribing: Sendable {
     func transcribe(_ audio: DictationAudio) async throws -> String
     func cancelTranscription() async
+    /// Loads whatever `transcribe` would otherwise load on first use. Called
+    /// when a session starts so the cost overlaps with the user speaking.
+    func prepare() async
 }
 
 extension LocalDictationTranscribing {
     func cancelTranscription() async {}
+    func prepare() async {}
 }
 
 protocol DictationTextInserting: Sendable {

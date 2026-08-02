@@ -76,6 +76,10 @@ actor ParakeetUnifiedDictationTranscriber: LocalDictationTranscribing {
         return try await task.value
     }
 
+    func prepare() async {
+        _ = try? await loadManager()
+    }
+
     func cancelTranscription() async {
         transcriptionGeneration &+= 1
         loadGeneration &+= 1

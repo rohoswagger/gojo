@@ -131,6 +131,12 @@ where TargetProvider: DictationTargetCapturing,
             guard isCurrent(expectedSession, state: .requestingPermission) else { return }
             target = capturedTarget
 
+            // Warm the model now so its first-use load overlaps with the user
+            // speaking. Loading it lazily in finishCapture pushed insertion
+            // tens of seconds past the utterance, by which point the focus
+            // check in the helper rejected the text outright.
+            Task { [transcriber] in await transcriber.prepare() }
+
             // Do not publish a state that presents Gojo's HUD until the
             // destination has been captured. Even a nonactivating panel can
             // momentarily become the system-wide focused AX element in some

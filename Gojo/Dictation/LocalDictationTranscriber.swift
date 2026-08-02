@@ -78,6 +78,17 @@ actor LocalDictationTranscriber: LocalDictationTranscribing {
         }
     }
 
+    func prepare() async {
+        switch selectedModel {
+        case .whisperSmallEnglish, .whisperLargeV3:
+            await whisper.prepare()
+        case .parakeetUnifiedEnglish:
+            await parakeet.prepare()
+        case .parakeetV3Multilingual:
+            await parakeetV3.prepare()
+        }
+    }
+
     func cancelTranscription() async {
         switch selectedModel {
         case .whisperSmallEnglish, .whisperLargeV3:

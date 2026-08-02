@@ -87,6 +87,10 @@ actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
         return transcript
     }
 
+    func prepare() async {
+        _ = try? await loadManager()
+    }
+
     func cancelTranscription() async {
         transcriptionGeneration &+= 1
         loadGeneration &+= 1

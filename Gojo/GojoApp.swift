@@ -642,7 +642,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         XPCHelperClient.shared.startMonitoringAccessibilityAuthorization()
-        Task { await DictationModifierHotKeyMonitor.shared.start() }
+        // Prompt here rather than failing quietly: without Accessibility the
+        // event tap is never created, so the dictation chord does nothing and
+        // the user gets no indication why.
+        Task { await DictationModifierHotKeyMonitor.shared.start(promptIfNeeded: true) }
 
         dictationEscapeGlobalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
             if event.keyCode == 53 {

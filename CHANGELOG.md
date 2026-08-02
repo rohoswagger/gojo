@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.2] — 2026-08-02
+
+Dictation fixes. If holding Control–Option seemed to do nothing, or your words never made it into the field, this release is for you.
+
+### Fixed
+
+- **Gojo now asks for Accessibility instead of going quiet.** Dictation listens for Control–Option through an event tap, which macOS only allows with Accessibility permission. Without it Gojo gave up silently — the shortcut simply did nothing, with no prompt and no explanation. It now asks for permission at launch.
+- **Your first dictation no longer arrives too late to use.** The speech model was only loaded once you stopped speaking, so the very first transcript could take around 20 seconds to appear — long enough that if you had clicked anywhere else, Gojo discarded the text and told you that you had moved to another field. The model now loads while you speak.
+
+Gojo still refuses to insert text if you move to a different field mid-dictation. That check is deliberate, and it keeps dictated text out of the wrong place.
+
 ## [1.1.1] — 2026-08-01
 
 A repair release. Gojo itself is unchanged from 1.1.0 — this is the same app, signed correctly.
@@ -76,7 +87,8 @@ Meet Gojo — it turns the dead space around your MacBook's notch into a control
 - **Guided setup** — a polished first launch that gets you going in seconds.
 - **Automatic updates** — new versions install themselves; no re-downloading.
 
-[Unreleased]: https://github.com/rohoswagger/gojo/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/rohoswagger/gojo/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/rohoswagger/gojo/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/rohoswagger/gojo/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/rohoswagger/gojo/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/rohoswagger/gojo/releases/tag/v1.0.2

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] — 2026-08-03
+
+Search comes to Gojo. Press ⌘ Space and Gojo answers instead of Spotlight.
+
+### Added
+
+- **Search** — a Spotlight-style panel for your whole Mac. Press ⌘ Space (or ⌥ Space) to open it from anywhere: launch any installed app, find files by name, or type a calculation like `2*19` and copy the answer with a single keystroke. Results rank by how often and how recently you use them, so your everyday apps float to the top.
+- **Replace Spotlight, reversibly.** Gojo takes over ⌘ Space without touching your system keyboard settings — turn it off in Settings → Search and Spotlight is instantly back. Requires the same Accessibility permission Gojo already uses for window management.
+- **Built to grow.** Search is built on a provider system, so future result types (clipboard, actions, and more) plug into the same panel.
+
 ## [1.1.2] — 2026-08-02
 
 Dictation fixes. If holding Control–Option seemed to do nothing, or your words never made it into the field, this release is for you.
@@ -87,7 +97,8 @@ Meet Gojo — it turns the dead space around your MacBook's notch into a control
 - **Guided setup** — a polished first launch that gets you going in seconds.
 - **Automatic updates** — new versions install themselves; no re-downloading.
 
-[Unreleased]: https://github.com/rohoswagger/gojo/compare/v1.1.2...HEAD
+[Unreleased]: https://github.com/rohoswagger/gojo/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/rohoswagger/gojo/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/rohoswagger/gojo/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/rohoswagger/gojo/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/rohoswagger/gojo/compare/v1.0.2...v1.1.0

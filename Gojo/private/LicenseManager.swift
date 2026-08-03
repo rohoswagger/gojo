@@ -207,8 +207,14 @@ final class LicenseManager: ObservableObject {
         let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         guard !trimmed.isEmpty else { throw LicenseError(message: "Enter a license key.") }
         let token = try await request(path: "/v1/activate", licenseKey: trimmed)
-        Keychain.setString(trimmed, for: .licenseKey)
-        Keychain.setString(token, for: .licenseToken)
+        guard Keychain.setStrings([.licenseKey: trimmed, .licenseToken: token]) else {
+            // The license is valid and active for this session (the cache
+            // holds it), but it won't survive a relaunch — tell the user
+            // instead of silently reverting next launch.
+            evaluate()
+            throw LicenseError(
+                message: "Your license was activated but couldn't be saved to the Keychain. It may need to be re-entered after restarting Gojo.")
+        }
         evaluate()
     }
 
@@ -237,8 +243,7 @@ final class LicenseManager: ObservableObject {
             throw LicenseError(message: decoded?.error ?? "Couldn't deactivate this Mac.")
         }
 
-        Keychain.delete(.licenseKey)
-        Keychain.delete(.licenseToken)
+        Keychain.delete(.licenseKey, .licenseToken)
         evaluate()
     }
 
@@ -393,8 +398,36 @@ final class LicenseManager: ObservableObject {
 
 /// License data lives in the Keychain (not Defaults) so the trial clock and
 /// activation survive app reinstalls.
+///
+/// All five values are consolidated into a single generic-password item
+/// (account "gojo.license", JSON-encoded `[String: String]`) instead of five
+/// separate items, so that on the legacy file-based keychain — which prompts
+/// the user once per item the first time each is accessed — steady state is
+/// at most ONE permission prompt per launch, and "Always Allow" on that one
+/// prompt ends them for good. The exceptions are the launches that still
+/// touch the old per-key items: the one-time five-item migration below, and
+/// `mergeLeftovers` retrying an item that couldn't be read then.
+///
+/// Reads and writes prefer the data-protection keychain
+/// (`kSecUseDataProtectionKeychain`), which is gated by entitlement rather
+/// than the legacy keychain's per-binary ACL, so it never prompts at all.
+/// That tier requires the app to be signed with a provisioning profile that
+/// validates its entitlements (see TN3137); this app doesn't ship one yet,
+/// so `dataProtectionAvailable` probes for that once with a throwaway write
+/// and falls back to the legacy keychain, unchanged from the old behavior,
+/// for the rest of the process's lifetime. Unsigned and profile-less builds
+/// always fall back to legacy; once a profile is added, prompts disappear
+/// entirely with no further code changes.
+///
+/// The blob is read once per process and cached in memory; every public
+/// function operates on that cache and persists through `store(_:)`. Three
+/// migration mechanisms run when the cache is first populated: a
+/// legacy-keychain blob is moved into the DP keychain once DP becomes
+/// available; if no blob exists at all, the old five-item per-key layout is
+/// read and combined into the new blob; and `mergeLeftovers` folds in any
+/// per-key item that earlier migration attempts couldn't read.
 private enum Keychain {
-    enum Key: String {
+    enum Key: String, CaseIterable {
         case trialStart = "gojo.trialStart"
         case trialToken = "gojo.trialToken"
         case licenseKey = "gojo.licenseKey"
@@ -403,39 +436,195 @@ private enum Keychain {
     }
 
     private static let service = "GojoLicense"
+    /// The single consolidated item that replaces the old five per-key items.
+    private static let blobAccount = "gojo.license"
 
-    static func getString(_ key: Key) -> String? {
-        let query: [String: Any] = [
+    /// Populated exactly once per process by `load()`. Every call site in
+    /// this file runs on the main actor, so no locking is needed here.
+    private static var cache: [String: String]?
+
+    /// Probe the DP keychain with a throwaway write: reads can't detect a
+    /// missing entitlement (they report errSecItemNotFound), only writes
+    /// fail with errSecMissingEntitlement. Anything but a successful add
+    /// falls back to the legacy keychain.
+    private static let dataProtectionAvailable: Bool = {
+        var attributes = baseQuery(for: "gojo.dpProbe", dataProtection: true)
+        attributes[kSecValueData as String] = Data("probe".utf8)
+        let status = SecItemAdd(attributes as CFDictionary, nil)
+        guard status == errSecSuccess || status == errSecDuplicateItem else { return false }
+        SecItemDelete(baseQuery(for: "gojo.dpProbe", dataProtection: true) as CFDictionary)
+        return true
+    }()
+
+    private static func baseQuery(for account: String, dataProtection: Bool) -> [String: Any] {
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: key.rawValue,
-            kSecReturnData as String: true,
+            kSecAttrAccount as String: account,
         ]
+        if dataProtection {
+            query[kSecUseDataProtectionKeychain as String] = true
+        }
+        return query
+    }
+
+    private static func readData(_ account: String, dataProtection: Bool) -> Data? {
+        var query = baseQuery(for: account, dataProtection: dataProtection)
+        query[kSecReturnData as String] = true
         var result: AnyObject?
         guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
               let data = result as? Data
         else { return nil }
-        return String(data: data, encoding: .utf8)
+        return data
+    }
+
+    private static func readString(_ account: String, dataProtection: Bool) -> String? {
+        readData(account, dataProtection: dataProtection).flatMap { String(data: $0, encoding: .utf8) }
+    }
+
+    /// Add-or-update rather than delete-then-add: an in-place update can't
+    /// destroy the item when the second step fails, and it preserves the
+    /// item's identity, so a legacy-keychain "Always Allow" grant keeps
+    /// applying across rewrites.
+    @discardableResult
+    private static func writeData(_ data: Data, account: String, dataProtection: Bool) -> Bool {
+        var attributes = baseQuery(for: account, dataProtection: dataProtection)
+        attributes[kSecValueData as String] = data
+        if dataProtection {
+            // The app launches at login and revalidates in the background,
+            // so the item must be readable before the first unlock-triggered
+            // user session, not just while the device is unlocked.
+            attributes[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        }
+        let status = SecItemAdd(attributes as CFDictionary, nil)
+        guard status == errSecDuplicateItem else { return status == errSecSuccess }
+        let update = [kSecValueData as String: data]
+        return SecItemUpdate(
+            baseQuery(for: account, dataProtection: dataProtection) as CFDictionary,
+            update as CFDictionary
+        ) == errSecSuccess
+    }
+
+    private static func deleteItem(_ account: String, dataProtection: Bool) {
+        let query = baseQuery(for: account, dataProtection: dataProtection)
+        SecItemDelete(query as CFDictionary)
+    }
+
+    /// Populates and returns `cache`, doing at most the work needed to find
+    /// (or migrate) the consolidated blob. Order: DP blob, then legacy blob
+    /// (migrated into DP when available), then — only if neither blob
+    /// exists — the old five-item per-key layout, combined into a new blob.
+    @discardableResult
+    private static func load() -> [String: String] {
+        if let cache { return cache }
+
+        if dataProtectionAvailable,
+           let data = readData(blobAccount, dataProtection: true),
+           let dict = try? JSONDecoder().decode([String: String].self, from: data) {
+            cache = mergeLeftovers(into: dict)
+            return cache!
+        }
+
+        if let legacyData = readData(blobAccount, dataProtection: false),
+           let dict = try? JSONDecoder().decode([String: String].self, from: legacyData) {
+            // The legacy copy is only deleted once the DP write is
+            // confirmed, so a failed write can't lose the blob entirely.
+            if dataProtectionAvailable, writeData(legacyData, account: blobAccount, dataProtection: true) {
+                deleteItem(blobAccount, dataProtection: false)
+            }
+            cache = mergeLeftovers(into: dict)
+            return cache!
+        }
+
+        // Neither blob exists: migrate the old five-item per-key layout.
+        // DP is tried per key too (preferring it) in case an interim build
+        // already wrote per-key DP items.
+        var dict: [String: String] = [:]
+        var migratedKeys: [Key] = []
+        for key in Key.allCases {
+            let dpValue = dataProtectionAvailable ? readString(key.rawValue, dataProtection: true) : nil
+            guard let value = dpValue ?? readString(key.rawValue, dataProtection: false) else { continue }
+            dict[key.rawValue] = value
+            migratedKeys.append(key)
+        }
+        // Only remove the old per-key items once the new blob write is
+        // confirmed, so a failed write can't lose any value entirely.
+        if !dict.isEmpty, store(dict) {
+            for key in migratedKeys {
+                deleteItem(key.rawValue, dataProtection: false)
+                if dataProtectionAvailable {
+                    deleteItem(key.rawValue, dataProtection: true)
+                }
+            }
+        }
+        cache = dict
+        return dict
+    }
+
+    /// Picks up old per-key items the five-item migration couldn't read at
+    /// the time (e.g. an ACL denial from a differently-signed build): any
+    /// key missing from the blob that still exists as a per-key item gets
+    /// one read attempt per launch and is folded in on success. Existence
+    /// is checked attributes-only, which the keychain never prompts for, so
+    /// this is free once no leftovers remain.
+    private static func mergeLeftovers(into dict: [String: String]) -> [String: String] {
+        var dict = dict
+        var merged = false
+        for key in Key.allCases where dict[key.rawValue] == nil {
+            var probe = baseQuery(for: key.rawValue, dataProtection: false)
+            probe[kSecReturnAttributes as String] = true
+            var attrs: AnyObject?
+            guard SecItemCopyMatching(probe as CFDictionary, &attrs) == errSecSuccess,
+                  let value = readString(key.rawValue, dataProtection: false)
+            else { continue }
+            dict[key.rawValue] = value
+            merged = true
+        }
+        if merged, store(dict) {
+            for key in Key.allCases where dict[key.rawValue] != nil {
+                deleteItem(key.rawValue, dataProtection: false)
+            }
+        }
+        return dict
+    }
+
+    /// Updates the cache first, so even if the keychain write below fails,
+    /// the rest of this process's lifetime still sees the new value.
+    @discardableResult
+    private static func store(_ dict: [String: String]) -> Bool {
+        cache = dict
+        guard let data = try? JSONEncoder().encode(dict) else { return false }
+        return writeData(data, account: blobAccount, dataProtection: dataProtectionAvailable)
+    }
+
+    static func getString(_ key: Key) -> String? {
+        load()[key.rawValue]
     }
 
     static func setString(_ value: String, for key: Key) {
-        delete(key)
-        let attributes: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: key.rawValue,
-            kSecValueData as String: Data(value.utf8),
-        ]
-        SecItemAdd(attributes as CFDictionary, nil)
+        setStrings([key: value])
     }
 
-    static func delete(_ key: Key) {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: key.rawValue,
-        ]
-        SecItemDelete(query as CFDictionary)
+    /// Batch variant so multi-key updates (activation writes the key and the
+    /// token together) land in one atomic blob write — a crash can't leave
+    /// half of a logical change behind. Returns whether the write persisted;
+    /// the cache holds the new values either way, so a failure only means
+    /// the change won't survive this process.
+    @discardableResult
+    static func setStrings(_ values: [Key: String]) -> Bool {
+        var dict = load()
+        for (key, value) in values { dict[key.rawValue] = value }
+        return store(dict)
+    }
+
+    @discardableResult
+    static func delete(_ keys: Key...) -> Bool {
+        var dict = load()
+        // Storing the (possibly now-empty) dict back, rather than deleting
+        // the blob item itself, keeps this from re-triggering the five-item
+        // migration above on the next launch and resurrecting stale values.
+        for key in keys { dict.removeValue(forKey: key.rawValue) }
+        return store(dict)
     }
 }
 

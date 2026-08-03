@@ -561,6 +561,35 @@ final class XPCHelperClient: NSObject, @unchecked Sendable {
         }
     }
 
+    // MARK: - Search Hotkey Interception
+
+    /// Starts the helper-side ⌘Space event tap (see `SearchHotkeyTapService`
+    /// in GojoXPCHelper). Must run in the helper, not the main app: the main
+    /// Gojo.app is sandboxed and cannot create a global keyboard event tap.
+    /// `token` is echoed back in the toggle notification so the caller can
+    /// authenticate it. Returns whether the tap is active after the call.
+    nonisolated func startSearchHotkeyInterception(token: String) async -> Bool {
+        do {
+            let service = await MainActor.run { ensureRemoteService() }
+            return try await service.withContinuation { service, continuation in
+                service.startSearchHotkeyInterception(token) { active in
+                    continuation.resume(returning: active)
+                }
+            }
+        } catch {
+            return false
+        }
+    }
+
+    nonisolated func stopSearchHotkeyInterception() {
+        Task {
+            let service = await MainActor.run { ensureRemoteService() }
+            try? await service.withService { service in
+                service.stopSearchHotkeyInterception()
+            }
+        }
+    }
+
     nonisolated func captureFocusedTextTarget(promptIfNeeded: Bool = false) async -> NSDictionary {
         do {
             let (service, preferredTargetHint) = await MainActor.run {

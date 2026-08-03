@@ -143,6 +143,18 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
         }
     }
 
+    @objc func startSearchHotkeyInterception(_ token: String, with reply: @escaping (Bool) -> Void) {
+        DispatchQueue.main.async {
+            reply(SearchHotkeyTapService.shared.start(token: token))
+        }
+    }
+
+    @objc func stopSearchHotkeyInterception() {
+        DispatchQueue.main.async {
+            SearchHotkeyTapService.shared.stop()
+        }
+    }
+
     @objc func captureFocusedTextTarget(
         _ promptIfNeeded: Bool,
         preferredTarget: NSDictionary?,

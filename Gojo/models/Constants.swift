@@ -68,6 +68,13 @@ enum OptionKeyAction: String, CaseIterable, Identifiable, Defaults.Serializable 
     var id: String { self.rawValue }
 }
 
+// Per-app launch frecency stats, keyed by application path, used to rank
+// Spotlight-style search results.
+struct SearchAppLaunchStat: Codable, Hashable, Defaults.Serializable {
+    var launchCount: Int = 0
+    var lastLaunchedAt: Date = .distantPast
+}
+
 // Modifier key that triggers the per-display window switcher (alt-tab)
 enum AltTabModifierKey: String, CaseIterable, Identifiable, Defaults.Serializable {
     case command = "Command"
@@ -242,4 +249,12 @@ extension Defaults.Keys {
     }
 
     static let didClearLegacyURLCacheV1 = Key<Bool>("didClearLegacyURLCache_v1", default: false)
+
+    // MARK: Search
+    static let searchEnabled = Key<Bool>("searchEnabled", default: true)
+    static let searchOverrideCommandSpace = Key<Bool>("searchOverrideCommandSpace", default: true)
+    static let searchAppLaunchStats = Key<[String: SearchAppLaunchStat]>(
+        "searchAppLaunchStats",
+        default: [:]
+    )
 }

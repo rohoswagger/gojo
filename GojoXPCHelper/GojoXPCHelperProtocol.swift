@@ -12,6 +12,17 @@ import Foundation
     func isAccessibilityAuthorized(with reply: @escaping (Bool) -> Void)
     func requestAccessibilityAuthorization()
     func ensureAccessibilityAuthorization(_ promptIfNeeded: Bool, with reply: @escaping (Bool) -> Void)
+    /// Starts (or, if already running, is a no-op for) the ⌘Space CGEvent tap
+    /// that intercepts Spotlight's hotkey. Must run in this helper because the
+    /// main Gojo.app is sandboxed and cannot create a global keyboard event tap
+    /// even when Accessibility-trusted — only this unsandboxed helper can.
+    /// `token` is a per-start random string the caller generates; it is echoed
+    /// back in the toggle notification's userInfo so the app-side observer can
+    /// authenticate the notification and ignore ones from other processes.
+    /// Replies with whether the tap is active after the call.
+    func startSearchHotkeyInterception(_ token: String, with reply: @escaping (Bool) -> Void)
+    /// Stops the ⌘Space event tap started by `startSearchHotkeyInterception`.
+    func stopSearchHotkeyInterception()
     /// Captures the currently focused editable text element and returns an opaque,
     /// one-shot token. Replies with `authorized`, `success`, and either `token` or
     /// a stable `error` string.

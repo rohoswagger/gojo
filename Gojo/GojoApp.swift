@@ -78,6 +78,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var dictationEscapeGlobalMonitor: Any?
     private var dictationEscapeLocalMonitor: Any?
     private var dictationAccessibilityObserver: Any?
+    private var cancellables = Set<AnyCancellable>()
 #if DEBUG
     private var dictationCaptureE2EProbeObserver: Any?
     private var dictationE2EProbeObserver: Any?
@@ -729,6 +730,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        KeyboardShortcuts.onKeyDown(for: .toggleSearchPanel) {
+            Task { @MainActor in
+                guard Defaults[.searchEnabled] else { return }
+                SearchPanelController.shared.toggle()
+            }
+        }
+
         WindowShortcutController.shared.register()
 
         if !Defaults[.showOnAllDisplays] {
@@ -745,6 +753,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         ClipboardStateViewModel.shared.start()
         FluxManager.shared.start()
         AltTabManager.shared.start()
+
+        Defaults.publisher(keys: .searchEnabled, .searchOverrideCommandSpace, options: [])
+            .sink { _ in
+                Task { @MainActor in
+                    await SearchHotkeyInterceptor.shared.start()
+                }
+            }
+            .store(in: &cancellables)
+        Task { @MainActor in
+            await SearchHotkeyInterceptor.shared.start()
+        }
 
         if coordinator.firstLaunch {
             DispatchQueue.main.async {

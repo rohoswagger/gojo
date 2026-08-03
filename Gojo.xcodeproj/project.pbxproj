@@ -116,6 +116,7 @@
 		8063E54407AB0A8E2CB4C028 /* AltTabPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 012F58500EF5E5AFFDE2F363 /* AltTabPanel.swift */; };
 		81A738151F70C52B1A034608 /* AltTabSwitcherView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CCF1847F206D014FA76F588 /* AltTabSwitcherView.swift */; };
 		9325EDD6FAF6DFA264F74692 /* AltTabHotKeyMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1182315B650DDE2B3E9E5884 /* AltTabHotKeyMonitor.swift */; };
+		2D23838552D334F4BAD92983 /* SearchHotkeyInterceptor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CF341EA945184F4E23504E8 /* SearchHotkeyInterceptor.swift */; };
 		9A0887322C7A693000C160EA /* TabButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0887312C7A693000C160EA /* TabButton.swift */; };
 		9A0887352C7AFF8E00C160EA /* TabSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0887342C7AFF8E00C160EA /* TabSelectionView.swift */; };
 		9A987A0D2C73CA66005CA465 /* ShelfView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A987A032C73CA66005CA465 /* ShelfView.swift */; };
@@ -281,6 +282,7 @@
 		1163988E2DF5CC870052E6AF /* CalendarModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarModel.swift; sourceTree = "<group>"; };
 		116398952DF5D6C00052E6AF /* CalendarServiceProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarServiceProviding.swift; sourceTree = "<group>"; };
 		1182315B650DDE2B3E9E5884 /* AltTabHotKeyMonitor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AltTabHotKeyMonitor.swift; sourceTree = "<group>"; };
+		6CF341EA945184F4E23504E8 /* SearchHotkeyInterceptor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SearchHotkeyInterceptor.swift; sourceTree = "<group>"; };
 		118D1FD02E98FF5F00A2FF63 /* SharingStateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharingStateManager.swift; sourceTree = "<group>"; };
 		118EBE242E92DCCB00D54B5A /* AssociatedObject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssociatedObject.swift; sourceTree = "<group>"; };
 		118EBE262E92DE7400D54B5A /* NSMenu+AssociatedObject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSMenu+AssociatedObject.swift"; sourceTree = "<group>"; };
@@ -428,6 +430,17 @@
 			explicitFolders = (
 			);
 			path = private;
+			sourceTree = "<group>";
+		};
+		3DC6698A43F9ED81FA66EB43 /* Search */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = Search;
 			sourceTree = "<group>";
 		};
 		11F748502EC9AABA00F841DB /* GojoXPCHelper */ = {
@@ -613,6 +626,7 @@
 				B1A78C812C8BA08100BD51B0 /* FullscreenMediaDetection.swift */,
 				5917FD102E57891600E87F1C /* MediaKeyInterceptor.swift */,
 				1182315B650DDE2B3E9E5884 /* AltTabHotKeyMonitor.swift */,
+				6CF341EA945184F4E23504E8 /* SearchHotkeyInterceptor.swift */,
 			);
 			path = observers;
 			sourceTree = "<group>";
@@ -649,6 +663,7 @@
 				507266DA2C908E2E00A2D00D /* HoverButton.swift */,
 				B1F747F82EC7E94000F841DB /* LottieView.swift */,
 				5770F1BE5F42BA85DB9C45AF /* AltTab */,
+				3DC6698A43F9ED81FA66EB43 /* Search */,
 			);
 			path = components;
 			sourceTree = "<group>";
@@ -1045,6 +1060,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				112FB72F2CCF12CC0015238C /* private */,
+				3DC6698A43F9ED81FA66EB43 /* Search */,
 			);
 			name = Gojo;
 			packageProductDependencies = (
@@ -1314,6 +1330,7 @@
 				7A9B840350DEB6EA92042576 /* AltTabModels.swift in Sources */,
 				CAAF178F2040EC33466D6DBD /* AltTabManager.swift in Sources */,
 				9325EDD6FAF6DFA264F74692 /* AltTabHotKeyMonitor.swift in Sources */,
+				2D23838552D334F4BAD92983 /* SearchHotkeyInterceptor.swift in Sources */,
 				8063E54407AB0A8E2CB4C028 /* AltTabPanel.swift in Sources */,
 				81A738151F70C52B1A034608 /* AltTabSwitcherView.swift in Sources */,
 				4F4E75C382966FD78EEFFCDE /* AltTabSettings.swift in Sources */,

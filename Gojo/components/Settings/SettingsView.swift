@@ -59,6 +59,9 @@ struct SettingsView: View {
                 NavigationLink(value: "Clipboard") {
                     Label("Clipboard", systemImage: "doc.on.clipboard")
                 }
+                NavigationLink(value: "Search") {
+                    Label("Search", systemImage: "magnifyingglass")
+                }
                 NavigationLink(value: "Dictation") {
                     Label("Dictation", systemImage: "waveform.and.mic")
                 }
@@ -103,6 +106,8 @@ struct SettingsView: View {
                     Shelf()
                 case "Clipboard":
                     ClipboardSettingsScreen()
+                case "Search":
+                    SearchSettings()
                 case "Dictation":
                     DictationSettings()
                 case "Window Switcher":
@@ -824,6 +829,66 @@ struct About: View {
             CheckForUpdatesView(updater: updaterController.updater)
         }
         .navigationTitle("About")
+    }
+}
+
+struct SearchSettings: View {
+    @Default(.searchEnabled) private var searchEnabled
+    @Default(.searchOverrideCommandSpace) private var searchOverrideCommandSpace
+    @State private var hotkeyActive = true
+
+    var body: some View {
+        Form {
+            Section {
+                Defaults.Toggle(key: .searchEnabled) {
+                    Text("Enable search")
+                }
+            } header: {
+                Text("General")
+            } footer: {
+                Text("Opens a floating search panel, centered on screen, independent of the notch.")
+            }
+
+            Section {
+                Toggle(isOn: Binding(
+                    get: { Defaults[.searchOverrideCommandSpace] },
+                    set: {
+                        Defaults[.searchOverrideCommandSpace] = $0
+                        if $0 {
+                            Task {
+                                await SearchHotkeyInterceptor.shared.start(promptIfNeeded: true)
+                                await refreshHotkeyActive()
+                            }
+                        }
+                    }
+                )) {
+                    Text("Replace Spotlight (⌘Space)")
+                }
+                Text("Opens Gojo search when you press ⌘ Space, instead of Spotlight. Requires Accessibility access.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                if searchOverrideCommandSpace && !hotkeyActive {
+                    Label("Accessibility access is required for ⌘Space to open search.", systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+
+                KeyboardShortcuts.Recorder("Additional shortcut:", name: .toggleSearchPanel)
+            } header: {
+                Text("Shortcuts")
+            }
+            .disabled(!searchEnabled)
+        }
+        .navigationTitle("Search")
+        .task {
+            await refreshHotkeyActive()
+        }
+    }
+
+    @MainActor
+    private func refreshHotkeyActive() async {
+        hotkeyActive = SearchHotkeyInterceptor.shared.isActive
     }
 }
 

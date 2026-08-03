@@ -6,6 +6,24 @@
     <description>Most recent changes to Gojo, with download links.</description>
     <language>en</language>
     <item>
+      <title>Version 1.2.0</title>
+      <pubDate>Mon, 03 Aug 2026 17:38:08 +0000</pubDate>
+      <sparkle:version>1785778558</sparkle:version>
+      <sparkle:shortVersionString>1.2.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+<p>Search comes to Gojo. Press ⌘ Space and Gojo answers instead of Spotlight.</p>
+<h4>Added</h4>
+<ul><li>**Search** — a Spotlight-style panel for your whole Mac. Press ⌘ Space (or ⌥ Space) to open it from anywhere: launch any installed app, find files by name, or type a calculation like `2*19` and copy the answer with a single keystroke. Results rank by how often and how recently you use them, so your everyday apps float to the top.</li><li>**Replace Spotlight, reversibly.** Gojo takes over ⌘ Space without touching your system keyboard settings — turn it off in Settings → Search and Spotlight is instantly back. Requires the same Accessibility permission Gojo already uses for window management.</li><li>**Built to grow.** Search is built on a provider system, so future result types (clipboard, actions, and more) plug into the same panel.</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://downloads.rohoswagger.com/Gojo-1.2.0.dmg"
+        sparkle:edSignature="RgpHYd5J2uQtert44gntyO6W0cnvRbRbicku/i/zOAq3qqZ5OA5pGgMyqxPEjIq1P1YVMKO27lPC3USEAioRAw=="
+        length="11338069"
+        type="application/octet-stream" />
+    </item>
+
+    <item>
       <title>Version 1.1.2</title>
       <pubDate>Sun, 02 Aug 2026 22:20:08 +0000</pubDate>
       <sparkle:version>1785709061</sparkle:version>

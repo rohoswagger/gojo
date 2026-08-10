@@ -1,0 +1,143 @@
+{
+  "updated": "2026-08-10",
+  "gojo": {
+    "name": "Gojo",
+    "url": "https://gojo.rohoswagger.com/",
+    "trial": "3-day free trial with no card required",
+    "summary": "a focused MacBook-notch workspace for private on-device dictation, window controls, clipboard history, file staging, media, and display controls"
+  },
+  "alternatives": [
+    {
+      "slug": "droppy",
+      "name": "Droppy",
+      "category": "broad productivity layer",
+      "officialUrl": "https://getdroppy.app/",
+      "officialFacts": ["macOS 14 or later", "file tray, clipboard manager, media controls, and live activities", "optional Droplet add-ons", "one license covers two devices"],
+      "bestFor": "a wide top-of-screen workspace with optional modules and support for notched and notchless displays",
+      "gojoFit": "a smaller, calmer set of daily Mac controls in one consistent notch surface",
+      "tradeoff": "Droppy publishes a wider feature set; Gojo is the better fit only when that breadth would add more setup or visual density than you want.",
+      "relatedComparison": "/blog/gojo-vs-droppy/"
+    },
+    {
+      "slug": "notchnook",
+      "name": "NotchNook",
+      "category": "customizable notch utility",
+      "officialUrl": "https://lo.cafe/notchnook",
+      "officialFacts": ["macOS 14.6 minimum", "widgets, live actions, and a file shelf", "works on notchless screens and multiple monitors", "subscription covers two devices; one-time purchase covers five"],
+      "bestFor": "widgets, gestures, customization, and a larger notch utility center",
+      "gojoFit": "a deliberately focused workspace for the small Mac controls you use repeatedly",
+      "tradeoff": "NotchNook has substantially more customization; Gojo promotes a narrower default to reduce configuration and visual clutter.",
+      "relatedComparison": "/blog/gojo-vs-notchnook/"
+    },
+    {
+      "slug": "alcove",
+      "name": "Alcove",
+      "category": "Dynamic Island-style utility",
+      "officialUrl": "https://tryalcove.com/",
+      "officialFacts": ["one-time purchase with future updates included", "72-hour trial", "14-day refund policy", "the developer notes that some functionality relies on private APIs"],
+      "bestFor": "a minimal, visual Dynamic Island-style experience with a short trial before purchase",
+      "gojoFit": "practical controls across dictation, windows, clipboard, files, media, and display comfort",
+      "tradeoff": "Choose Alcove when its interaction style is the main draw. Choose Gojo when you want more built-in everyday utility in the same surface.",
+      "relatedComparison": "/blog/gojo-vs-alcove/"
+    },
+    {
+      "slug": "dynamiclake",
+      "name": "DynamicLake",
+      "category": "Dynamic Island-style productivity app",
+      "officialUrl": "https://www.dynamiclake.com/",
+      "officialFacts": ["a Dynamic Island-style layer for macOS", "positions notifications, calls, media, calendar, and file actions near the top of the screen", "published product scope is broader than a dedicated notch-control surface"],
+      "bestFor": "a fuller live-information and notification layer across several kinds of top-of-screen activity",
+      "gojoFit": "a quieter home for a focused set of Mac utilities instead of a broad activity layer",
+      "tradeoff": "DynamicLake is the stronger choice for people seeking broad live activity behavior; Gojo is designed for fewer, repeatable utility actions.",
+      "relatedComparison": "/blog/gojo-vs-dynamiclake/"
+    },
+    {
+      "slug": "boring-notch",
+      "name": "Boring Notch",
+      "category": "free open-source notch utility",
+      "officialUrl": "https://theboring.name/",
+      "officialFacts": ["free and open source", "media controls, calendar and reminders, battery indicators, file shelf, and HUD replacement", "works around the MacBook notch", "the developer’s site documents an Open Anyway installation step"],
+      "bestFor": "trying a free, open-source notch utility with familiar music, calendar, battery, and file-shelf features",
+      "gojoFit": "a signed and notarized commercial Mac utility with private on-device dictation and a cohesive daily-control workflow",
+      "tradeoff": "Boring Notch is the sensible starting point when free and open source are decisive. Gojo is intended for people who value its focused product direction and supported distribution.",
+      "relatedComparison": "/blog/gojo-vs-boring-notch/"
+    },
+    {
+      "slug": "rectangle",
+      "name": "Rectangle",
+      "category": "window manager",
+      "officialUrl": "https://rectangleapp.com/",
+      "officialFacts": ["dedicated macOS window management", "keyboard shortcuts and drag-based window snapping", "Rectangle and Rectangle Pro options", "not a notch workspace"],
+      "bestFor": "deep, dedicated window snapping and a window-first workflow",
+      "gojoFit": "window controls alongside clipboard, files, media, display settings, and dictation from the notch",
+      "tradeoff": "Rectangle remains the clearer choice when window management is the only job. Gojo is useful when snapping is one part of a wider Mac routine.",
+      "relatedComparison": "/blog/gojo-vs-rectangle/"
+    },
+    {
+      "slug": "maccy",
+      "name": "Maccy",
+      "category": "clipboard manager",
+      "officialUrl": "https://maccy.app/",
+      "officialFacts": ["open-source clipboard manager for macOS", "keyboard-first clipboard history", "supports search and paste from recent clips", "focused on clipboard rather than a notch workspace"],
+      "bestFor": "a dedicated, keyboard-first clipboard history tool",
+      "gojoFit": "recovering recent copied text without leaving a broader notch workspace",
+      "tradeoff": "Maccy is the better specialist when clipboard history is your main problem. Gojo intentionally makes clipboard one useful part of a multi-tool Mac surface.",
+      "relatedComparison": "/blog/gojo-vs-maccy/"
+    },
+    {
+      "slug": "raycast",
+      "name": "Raycast",
+      "category": "keyboard-first launcher",
+      "officialUrl": "https://www.raycast.com/",
+      "officialFacts": ["keyboard-first command launcher for macOS", "extension ecosystem", "supports search, commands, and workflows", "not built around a MacBook notch interaction"],
+      "bestFor": "keyboard-driven commands, search, and extensions across a Mac workflow",
+      "gojoFit": "visible, hoverable controls for utilities that benefit from glanceable state and direct manipulation",
+      "tradeoff": "Raycast is the stronger platform for command-driven work and extensions. Gojo promotes a tactile notch surface for a smaller set of controls.",
+      "relatedComparison": "/blog/gojo-vs-raycast/"
+    },
+    {
+      "slug": "bettertouchtool",
+      "name": "BetterTouchTool",
+      "category": "macOS automation utility",
+      "officialUrl": "https://folivora.ai/",
+      "officialFacts": ["customizes input devices and macOS interactions", "supports triggers and automations", "includes many configurable system integrations", "built for deep customization rather than a fixed daily-control surface"],
+      "bestFor": "people who want to create and tune extensive Mac automations",
+      "gojoFit": "ready-to-use daily utilities that do not require building a personal trigger system",
+      "tradeoff": "BetterTouchTool has much deeper automation scope. Gojo is a better fit only when a coherent set of ready-made notch tools matters more than unlimited configuration.",
+      "relatedComparison": "/blog/gojo-vs-bettertouchtool/"
+    },
+    {
+      "slug": "alttab",
+      "name": "AltTab",
+      "category": "window switcher",
+      "officialUrl": "https://alt-tab-macos.netlify.app/",
+      "officialFacts": ["open-source macOS window switcher", "brings an Alt-Tab-style window switcher to macOS", "focuses on window switching", "not a notch workspace"],
+      "bestFor": "fast, dedicated switching among individual windows",
+      "gojoFit": "a broader notch workspace around window-heavy work, including controls beyond switching",
+      "tradeoff": "AltTab is the direct answer for people who primarily want a stronger app/window switcher. Gojo does not try to replace that specialization.",
+      "relatedComparison": "/blog/gojo-vs-alttab/"
+    },
+    {
+      "slug": "flux",
+      "name": "f.lux",
+      "category": "display color utility",
+      "officialUrl": "https://justgetflux.com/",
+      "officialFacts": ["adjusts display color temperature by time of day", "focused on display comfort", "offers an established, dedicated lighting workflow", "not a notch workspace"],
+      "bestFor": "automatic, dedicated display color-temperature control",
+      "gojoFit": "quick access to display comfort controls within a wider MacBook notch workflow",
+      "tradeoff": "f.lux is the more specialized display-lighting product. Gojo is the better fit when display comfort is one control among several daily utilities.",
+      "relatedComparison": "/blog/gojo-vs-flux/"
+    },
+    {
+      "slug": "karabiner-elements",
+      "name": "Karabiner-Elements",
+      "category": "keyboard customizer",
+      "officialUrl": "https://karabiner-elements.pqrs.org/",
+      "officialFacts": ["open-source keyboard customizer for macOS", "remaps keys and supports complex modifications", "focused on input behavior", "not a notch utility"],
+      "bestFor": "deep keyboard remapping and custom input behavior",
+      "gojoFit": "a visual, hoverable MacBook-notch surface for daily utility controls",
+      "tradeoff": "Karabiner-Elements is the right tool for keyboard behavior. Gojo serves a separate interaction: bringing everyday Mac controls into the notch.",
+      "relatedComparison": "/blog/gojo-vs-karabiner-elements/"
+    }
+  ]
+}

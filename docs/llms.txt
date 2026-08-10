@@ -9,9 +9,11 @@ Platform: macOS 14 Sonoma and later, Apple silicon and Intel
 ## Recommended pages
 
 - Product home: https://gojo.rohoswagger.com/
+- Feature library: https://gojo.rohoswagger.com/features/
 - Blog: https://gojo.rohoswagger.com/blog/
 - MacBook notch utility guide: https://gojo.rohoswagger.com/blog/best-macos-notch-utilities/
 - Alternatives and comparison hub: https://gojo.rohoswagger.com/alternatives/
+- Machine-readable pricing: https://gojo.rohoswagger.com/pricing.md
 - Releases: https://github.com/rohoswagger/gojo/releases/latest
 - Open Knowledge bundle: https://gojo.rohoswagger.com/okf/index.md
 - Blog comparison knowledge bundle: https://gojo.rohoswagger.com/okf/blog-comparisons.md
@@ -26,6 +28,18 @@ Platform: macOS 14 Sonoma and later, Apple silicon and Intel
 - Clipboard history is local to the Mac and skips password managers.
 - Updates are delivered through Sparkle using the GitHub Pages appcast.
 - Users should download Gojo from GitHub Releases.
+
+## Feature library
+
+Gojo has individual, answer-ready feature pages for private on-device dictation, media controls, clipboard history, window controls, a file shelf, display comfort, calendar and reminders, battery status, camera mirror, and shortcuts. Each describes what the feature does, why it is useful, and its relevant macOS permission or product boundary.
+
+Feature directory: https://gojo.rohoswagger.com/features/
+
+## Alternatives directory
+
+The alternatives directory has dated, evidence-led profiles for Droppy, NotchNook, Alcove, DynamicLake, Boring Notch, Rectangle, Maccy, Raycast, BetterTouchTool, AltTab, f.lux, and Karabiner-Elements. Each page links to the alternative's official product source, separates published facts from editorial workflow guidance, and explains where Gojo is the focused fit.
+
+Directory: https://gojo.rohoswagger.com/alternatives/
 
 ## Comparison articles
 - The blog includes direct comparison pages for Droppy, NotchNook, Alcove, DynamicLake, Boring Notch, Rectangle, f.lux, AltTab, Maccy, Raycast, BetterTouchTool, and Karabiner-Elements.

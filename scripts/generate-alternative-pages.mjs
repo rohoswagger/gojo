@@ -44,7 +44,7 @@ function pageChrome({ title, description, canonical, schema, body }) {
   <meta property="og:image" content="${siteUrl}/assets/og.jpg">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../../site.css?v=20260810-landing">
+  <link rel="stylesheet" href="../../site.css?v=20260811-landing">
   <script type="application/ld+json">${JSON.stringify(schema)}</script>
 </head>
 <body class="article-shell">

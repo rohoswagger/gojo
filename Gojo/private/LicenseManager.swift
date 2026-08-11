@@ -51,6 +51,45 @@ enum LicenseConfig {
     // If the server is unreachable, a previously-valid license keeps working
     // this long past its token expiry before the app locks.
     static let offlineGraceDays = 14
+
+    /// Debug-only license state override, read from the `GOJO_LICENSE`
+    /// environment variable:
+    ///
+    ///   GOJO_LICENSE=lifetime|monthly     licensed, that plan
+    ///   GOJO_LICENSE=trial                trial with the full `trialDays` left
+    ///   GOJO_LICENSE=trial:5              trial with 5 days left
+    ///   GOJO_LICENSE=locked               locked, as if the trial had ended
+    ///
+    /// When set, the app never touches the license Keychain at all — no reads,
+    /// no writes, and no blob migration. That last part is the point: a dev
+    /// build whose Keychain layout differs from the installed release would
+    /// otherwise migrate the shared item and strand the release app's license.
+    /// Release builds always ignore this, so it can't be used as a bypass.
+    static var stateOverride: LicenseState? {
+        #if DEBUG
+        guard let raw = ProcessInfo.processInfo.environment["GOJO_LICENSE"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased(),
+            !raw.isEmpty
+        else { return nil }
+
+        switch raw {
+        case "lifetime": return .licensed(plan: .lifetime)
+        case "monthly", "subscription": return .licensed(plan: .monthly)
+        case "locked": return .locked(reason: "GOJO_LICENSE=locked (debug override).")
+        case "trial": return .trial(daysRemaining: trialDays)
+        default:
+            // trial:<days>
+            let parts = raw.split(separator: ":", maxSplits: 1)
+            guard parts.count == 2, parts[0] == "trial", let days = Int(parts[1]), days > 0 else {
+                return nil
+            }
+            return .trial(daysRemaining: days)
+        }
+        #else
+        return nil
+        #endif
+    }
 }
 
 struct LicenseToken: Codable {
@@ -85,7 +124,10 @@ final class LicenseManager: ObservableObject {
     @Published private(set) var licenseKeyMasked: String?
     /// The full, unmasked license key from the Keychain — for copy-to-clipboard
     /// only. The UI keeps the key masked and never displays this.
-    var fullLicenseKey: String? { Keychain.getString(.licenseKey) }
+    var fullLicenseKey: String? {
+        guard stateOverride == nil else { return nil }
+        return Keychain.getString(.licenseKey)
+    }
     /// For subscriptions: the end of the paid period (token exp minus the
     /// offline grace window). Nil for trial and lifetime licenses.
     @Published private(set) var paidThrough: Date?
@@ -99,8 +141,17 @@ final class LicenseManager: ObservableObject {
         return false
     }
 
+    /// Non-nil only in debug builds launched with `GOJO_LICENSE` set. Captured
+    /// once so a mid-session environment change can't desync the state.
+    private let stateOverride: LicenseState?
+
     private init() {
-        evaluate()
+        stateOverride = LicenseConfig.stateOverride
+        if let stateOverride {
+            applyOverride(stateOverride)
+        } else {
+            evaluate()
+        }
         #if DEBUG
         let args = ProcessInfo.processInfo.arguments
         if args.contains("--print-license-state") {
@@ -115,15 +166,39 @@ final class LicenseManager: ObservableObject {
             return
         }
         #endif
+        // An override has nothing to revalidate, and the trial fetch would
+        // write to the Keychain the override exists to leave alone.
+        guard stateOverride == nil else { return }
         Task {
             await ensureTrialToken()
             await revalidationLoop()
         }
     }
 
+    /// Forces `state` without consulting the Keychain or the server.
+    private func applyOverride(_ override: LicenseState) {
+        state = override
+        switch override {
+        case .licensed(let plan):
+            licenseKeyMasked = "GOJO-••••-••••-••••-DEBUG"
+            paidThrough = plan == .monthly
+                ? Date(timeIntervalSince1970: Date().timeIntervalSince1970 + 30 * 86_400)
+                : nil
+        case .trial, .locked:
+            licenseKeyMasked = nil
+            paidThrough = nil
+        }
+    }
+
     // MARK: - State evaluation
 
     func evaluate() {
+        // The override is authoritative for the whole process lifetime, and
+        // evaluate() is what would otherwise read (and migrate) the Keychain.
+        if let stateOverride {
+            applyOverride(stateOverride)
+            return
+        }
         // Trial and grace math run on the latest wall clock this app has ever
         // seen, so winding the Mac's clock back can't extend either.
         let now = max(
@@ -204,6 +279,10 @@ final class LicenseManager: ObservableObject {
     // MARK: - Server calls
 
     func activate(key: String) async throws {
+        if stateOverride != nil {
+            throw LicenseError(
+                message: "GOJO_LICENSE is overriding the license state — unset it to activate a real key.")
+        }
         let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         guard !trimmed.isEmpty else { throw LicenseError(message: "Enter a license key.") }
         let token = try await request(path: "/v1/activate", licenseKey: trimmed)
@@ -219,6 +298,10 @@ final class LicenseManager: ObservableObject {
     }
 
     func deactivate() async throws {
+        guard stateOverride == nil else {
+            throw LicenseError(
+                message: "GOJO_LICENSE is overriding the license state — nothing to deactivate.")
+        }
         guard let key = Keychain.getString(.licenseKey) else { return }
 
         var req = URLRequest(url: LicenseConfig.serverBaseURL.appending(path: "/v1/deactivate"))
@@ -250,6 +333,10 @@ final class LicenseManager: ObservableObject {
     /// Fetch a Stripe customer-portal URL so subscribers can manage billing
     /// (update card, invoices, cancel — where the retention offer appears).
     func managePortalURL() async throws -> URL {
+        if stateOverride != nil {
+            throw LicenseError(
+                message: "GOJO_LICENSE is overriding the license state — there's no real subscription to manage.")
+        }
         guard let key = Keychain.getString(.licenseKey) else {
             throw LicenseError(message: "No license is active on this Mac.")
         }
@@ -275,6 +362,7 @@ final class LicenseManager: ObservableObject {
     /// (revoked, canceled, unknown key) locks the app; network failures keep
     /// the current state and rely on the offline grace window.
     func refresh() async {
+        guard stateOverride == nil else { return }
         guard let key = Keychain.getString(.licenseKey) else { return }
         do {
             let token = try await request(path: "/v1/validate", licenseKey: key)

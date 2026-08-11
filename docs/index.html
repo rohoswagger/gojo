@@ -19,7 +19,7 @@
 <meta name="twitter:description" content="Private local dictation and the Mac tools you reach for, together in your MacBook notch.">
 <meta name="twitter:image" content="https://gojo.rohoswagger.com/assets/og.jpg">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="site.css?v=20260810-footer">
+<link rel="stylesheet" href="site.css?v=20260811-landing">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -113,145 +113,142 @@
     </main>
   </div>
 
-  <section class="feature-playground" id="features" aria-labelledby="features-heading">
+  <section class="feature-acts" id="features" aria-labelledby="features-heading">
     <div class="wrap">
-      <header class="story-heading">
-        <div>
-          <p class="section-kicker">Your MacBook notch, upgraded</p>
-          <h2 id="features-heading">Everything you reach for, in one place.</h2>
-        </div>
-        <p>Gojo turns the space around your notch into a native media player and a customizable home for the small tools you use all day.</p>
+      <header class="acts-intro">
+        <h2 id="features-heading">Six tools. One surface. No new windows.</h2>
+        <p>Everything below is the real app, running in the space around the notch. Scroll once and you have seen the whole product.</p>
       </header>
+    </div>
 
-      <div class="module-picker" role="tablist" aria-label="Explore Gojo features">
-        <button class="module-tab" id="module-tab-media" type="button" role="tab" aria-selected="true" aria-controls="module-panel-media" data-module="media">Media</button>
-        <button class="module-tab" id="module-tab-clipboard" type="button" role="tab" aria-selected="false" aria-controls="module-panel-clipboard" data-module="clipboard" tabindex="-1">Clipboard</button>
-        <button class="module-tab" id="module-tab-windows" type="button" role="tab" aria-selected="false" aria-controls="module-panel-windows" data-module="windows" tabindex="-1">Windows</button>
-        <button class="module-tab" id="module-tab-files" type="button" role="tab" aria-selected="false" aria-controls="module-panel-files" data-module="files" tabindex="-1">Files</button>
-        <button class="module-tab" id="module-tab-display" type="button" role="tab" aria-selected="false" aria-controls="module-panel-display" data-module="display" tabindex="-1">Display</button>
+    <article class="act act-flagship" aria-labelledby="act-dictation">
+      <div class="wrap act-inner">
+        <div class="act-copy">
+          <p class="act-index" aria-hidden="true">Dictation</p>
+          <h3 id="act-dictation">Talk. Gojo types. Nothing leaves your Mac.</h3>
+          <p>Hold one shortcut and speak into whatever text field you are already in — Mail, Slack, a commit message, a search box. The words appear where your cursor is.</p>
+          <p class="act-note">Recognition runs on a model you download once and keep. No API key, no account, no audio leaving the machine, and it still works on a plane.</p>
+          <ul class="act-proof">
+            <li>Hold <kbd>⌃</kbd><kbd>⌥</kbd> to talk, release to insert</li>
+            <li>Choose your model, or swap it later</li>
+            <li>Runs offline, on-device, every time</li>
+          </ul>
+        </div>
+        <figure class="act-shot shot-inset">
+          <img src="screenshots/dictation-models.png" width="460" height="171"
+               alt="Gojo's voice model list: Parakeet Unified from FluidAudio, 614 MB, in use on this Mac, with Parakeet v3 available below it.">
+          <figcaption>Models live on your Mac. You can see exactly which one is doing the work.</figcaption>
+        </figure>
       </div>
+    </article>
 
-      <div class="module-showcase">
-        <div class="module-panel" id="module-panel-media" role="tabpanel" aria-labelledby="module-tab-media">
-          <div class="module-copy">
-            <p class="eyebrow">Now playing</p>
-            <h3>Your music, always within reach.</h3>
-            <p>See the track, scrub, shuffle, and change playback without covering the work in front of you.</p>
-            <ul class="proof-list">
-              <li>Works with your current media source</li>
-              <li>Customizable playback controls</li>
+    <div class="acts-paper">
+      <article class="act" aria-labelledby="act-media">
+        <div class="wrap act-inner">
+          <div class="act-copy">
+            <p class="act-index" aria-hidden="true">Media</p>
+            <h3 id="act-media">Your music, without covering your work.</h3>
+            <p>Artwork, title, and a scrubber sit in the notch. Skip, shuffle, and seek from whatever app is playing, without raising a single window.</p>
+            <ul class="act-proof">
+              <li>Follows your current media source</li>
+              <li>Reorder the controls you actually use</li>
             </ul>
           </div>
-          <div class="notch-demo app-screenshot-demo">
-            <img src="screenshots/app-media.png" width="640" height="210" alt="Gojo's media controls open beneath the MacBook notch">
-          </div>
+          <figure class="act-shot">
+            <img src="screenshots/media.png" width="654" height="196" loading="lazy"
+                 alt="The notch open on the media tab: album art, the track Sunset Linen by LoFi Serenity, a scrubber, and playback controls, with a Spotify badge on the artwork.">
+          </figure>
         </div>
+      </article>
 
-        <div class="module-panel" id="module-panel-clipboard" role="tabpanel" aria-labelledby="module-tab-clipboard" hidden>
-          <div class="module-copy">
-            <p class="eyebrow">Clipboard history</p>
-            <h3>Find the thing you copied five minutes ago.</h3>
-            <p>Search recent text without opening another window. Content marked private by supported password managers is skipped.</p>
+      <article class="act act-flip" aria-labelledby="act-clipboard">
+        <div class="wrap act-inner">
+          <div class="act-copy">
+            <p class="act-index" aria-hidden="true">Clipboard</p>
+            <h3 id="act-clipboard">The thing you copied five minutes ago.</h3>
+            <p>Every copy is kept and searchable from the notch, so you stop re-copying the same link. Anything a supported password manager marks private is skipped outright.</p>
+            <ul class="act-proof">
+              <li>Search without opening another app</li>
+              <li>Passwords and secrets stay out of history</li>
+            </ul>
           </div>
-          <div class="notch-demo app-screenshot-demo">
-            <img src="screenshots/app-clipboard.png" width="640" height="210" loading="lazy" alt="Gojo's searchable clipboard history open beneath the MacBook notch">
-          </div>
+          <figure class="act-shot">
+            <img src="screenshots/clipboard.png" width="694" height="197" loading="lazy"
+                 alt="The notch open on the clipboard tab: a search field above a list of recently copied text entries.">
+          </figure>
         </div>
+      </article>
 
-        <div class="module-panel" id="module-panel-windows" role="tabpanel" aria-labelledby="module-tab-windows" hidden>
-          <div class="module-copy">
-            <p class="eyebrow">Window switcher</p>
-            <h3>See your open windows before you switch.</h3>
-            <p>Preview, focus, and organize windows from the notch, with quick snapping when your workspace needs a reset.</p>
+      <article class="act" aria-labelledby="act-windows">
+        <div class="wrap act-inner">
+          <div class="act-copy">
+            <p class="act-index" aria-hidden="true">Windows</p>
+            <h3 id="act-windows">See the window before you switch to it.</h3>
+            <p>A switcher that previews what you are about to land on, plus a snap grid with the shortcut printed under every layout — so you learn them by using them.</p>
+            <ul class="act-proof">
+              <li>Replaces <kbd>⌘</kbd><kbd>⇥</kbd> with per-window previews</li>
+              <li>Halves, thirds, maximize, and zoom</li>
+            </ul>
           </div>
-          <div class="notch-demo app-screenshot-demo app-screenshot-settings">
-            <img src="screenshots/app-windows.png" width="700" height="600" loading="lazy" alt="Gojo Window Switcher settings with trigger and behavior controls">
-          </div>
+          <figure class="act-shot">
+            <img src="screenshots/windows.png" width="661" height="209" loading="lazy"
+                 alt="The notch open on the windows tab: a list of open apps, a live preview pane for Ghostty, and a grid of six snap layouts each labelled with its keyboard shortcut.">
+          </figure>
         </div>
+      </article>
 
-        <div class="module-panel" id="module-panel-files" role="tabpanel" aria-labelledby="module-tab-files" hidden>
-          <div class="module-copy">
-            <p class="eyebrow">File shelf</p>
-            <h3>Put files down without losing them.</h3>
-            <p>Stage files in the notch while you move between folders, desktops, and apps—then drag them exactly where they belong.</p>
+      <article class="act act-flip" aria-labelledby="act-shelf">
+        <div class="wrap act-inner">
+          <div class="act-copy">
+            <p class="act-index" aria-hidden="true">Shelf</p>
+            <h3 id="act-shelf">Put a file down without losing it.</h3>
+            <p>Drag files up to the notch and they wait there while you change folders, desktops, or apps. Drag them back out when you have arrived — or hand them straight to AirDrop.</p>
+            <ul class="act-proof">
+              <li>Survives folder, Space, and app switches</li>
+              <li>AirDrop target built into the shelf</li>
+            </ul>
           </div>
-          <div class="notch-demo app-screenshot-demo">
-            <img src="screenshots/app-files.png" width="640" height="210" loading="lazy" alt="Gojo's AirDrop and temporary file shelf open beneath the MacBook notch">
-          </div>
+          <figure class="act-shot">
+            <img src="screenshots/shelf.png" width="649" height="196" loading="lazy"
+                 alt="The notch open on the shelf tab: an AirDrop drop target beside two staged files waiting to be dragged out.">
+          </figure>
         </div>
+      </article>
 
-        <div class="module-panel" id="module-panel-display" role="tabpanel" aria-labelledby="module-tab-display" hidden>
-          <div class="module-copy">
-            <p class="eyebrow">Display comfort</p>
-            <h3>Warm the screen when the day winds down.</h3>
-            <p>Reach Night Shift and display controls from the same compact workspace, without another menu bar utility.</p>
+      <article class="act act-settings" aria-labelledby="act-display">
+        <div class="wrap act-inner">
+          <div class="act-copy">
+            <p class="act-index" aria-hidden="true">Night Shift</p>
+            <h3 id="act-display">Warm the screen when the day winds down.</h3>
+            <p>Night Shift on your own schedule, with a toggle in the notch instead of a trip through System Settings. Sunset times are worked out on your Mac from a location you set once.</p>
+            <ul class="act-proof">
+              <li>Starts with your Mac, if you want it to</li>
+              <li>Location is used locally and never sent anywhere</li>
+            </ul>
           </div>
-          <div class="notch-demo app-screenshot-demo app-screenshot-settings">
-            <img src="screenshots/app-display.png" width="700" height="600" loading="lazy" alt="Gojo Night Shift settings with schedule and warmth controls">
-          </div>
+          <figure class="act-shot shot-window">
+            <img src="screenshots/settings-nightshift.png" width="681" height="589" loading="lazy"
+                 alt="Gojo's Night Shift settings: enable toggle, a 6500K day status, a notch toggle, start-at-login, and sunrise and sunset times for San Francisco.">
+          </figure>
         </div>
-      </div>
-
-      <div class="choice-strip">
-        <p><strong>Choose the tools you want.</strong> Keep the rest out of the way.</p>
-        <ul class="choice-pills">
-          <li>Calendar</li><li>Battery</li><li>Camera mirror</li><li>Local dictation</li><li>Shortcuts</li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <section class="tool-mosaic" aria-labelledby="mosaic-heading">
-    <div class="wrap">
-      <header class="mosaic-heading">
-        <h2 id="mosaic-heading">One notch. Your whole Mac utility stack.</h2>
-        <p class="mosaic-intro">Gojo turns the space around your notch into a home for the tools you reach for all day—dictation, windows, clipboard, files, media, display controls, shortcuts, and more.</p>
-      </header>
-
-      <div class="mosaic-grid">
-        <article class="mosaic-card mosaic-media">
-          <img class="mosaic-feature-shot" src="screenshots/app-media.png" width="640" height="210" loading="lazy" alt="Gojo media controls open beneath the MacBook notch">
-          <div class="mosaic-copy"><h3>Media</h3><p>Control playback without leaving what you’re doing.</p></div>
-        </article>
-
-        <article class="mosaic-card mosaic-clipboard">
-          <img class="mosaic-feature-shot" src="screenshots/app-clipboard.png" width="640" height="210" loading="lazy" alt="Gojo clipboard history with searchable copied text">
-          <div class="mosaic-copy"><h3>Clipboard</h3><p>Find anything you copied, right when you need it.</p></div>
-        </article>
-
-        <article class="mosaic-card mosaic-windows">
-          <img class="mosaic-feature-shot mosaic-feature-settings" src="screenshots/app-windows.png" width="700" height="600" loading="lazy" alt="Gojo Window Switcher settings">
-          <div class="mosaic-copy"><h3>Windows</h3><p>Switch, focus, and snap without hunting.</p></div>
-        </article>
-
-        <article class="mosaic-card mosaic-files">
-          <img class="mosaic-feature-shot" src="screenshots/app-files.png" width="640" height="210" loading="lazy" alt="Gojo file shelf with AirDrop and a temporary drop zone">
-          <div class="mosaic-copy"><h3>Files</h3><p>Hold files between folders, desktops, and apps.</p></div>
-        </article>
-
-        <article class="mosaic-card mosaic-display">
-          <img class="mosaic-feature-shot mosaic-feature-settings" src="screenshots/app-display.png" width="700" height="600" loading="lazy" alt="Gojo Night Shift settings">
-          <div class="mosaic-copy"><h3>Display</h3><p>Warm the screen when the day winds down.</p></div>
-        </article>
-      </div>
+      </article>
     </div>
   </section>
 
   <section class="utility-convergence" aria-labelledby="convergence-heading">
     <div class="wrap convergence-layout">
       <div class="convergence-copy">
-        <p class="section-kicker">Clear your menu bar</p>
         <h2 id="convergence-heading">Replace the apps between you and your work.</h2>
         <p>Gojo gathers the utilities scattered across macOS into one customizable workspace, then keeps the ones you use one hover away.</p>
       </div>
 
       <div class="convergence-visual" role="group" aria-label="Gojo combines tools commonly handled by several separate Mac utilities">
         <div class="utility-apps">
-          <a class="utility-app" href="https://theboring.name/" target="_blank" rel="noopener"><img src="https://framerusercontent.com/images/RFK4vs0kn8pRMuOO58JeyoemXA.png" alt=""><span>Boring Notch</span></a>
-          <a class="utility-app" href="https://apps.apple.com/us/app/maccy/id1527619437?mt=12" target="_blank" rel="noopener"><img src="https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/5d/ae/80/5dae80db-2fad-e2d0-d41e-1c4f2e13fd3c/AppIcon-0-0-85-220-0-0-5-0-2x.png/512x512bb.png" alt=""><span>Maccy</span></a>
-          <a class="utility-app" href="https://justgetflux.com/" target="_blank" rel="noopener"><img src="https://justgetflux.com/press/flux-icon-transparent.png" alt=""><span>f.lux</span></a>
-          <a class="utility-app" href="https://rectangleapp.com/" target="_blank" rel="noopener"><img src="https://rectangleapp.com/assets/images/mac512pts1x.png" alt=""><span>Rectangle</span></a>
-          <a class="utility-app" href="https://dropoverapp.com/" target="_blank" rel="noopener"><img src="https://dropoverapp.com/assets/images/footer_app_icon.png" alt=""><span>Dropover</span></a>
+          <a class="utility-app" href="https://theboring.name/" target="_blank" rel="noopener"><img src="assets/utilities/boringnotch.png" width="64" height="64" loading="lazy" alt=""><span>Boring Notch</span></a>
+          <a class="utility-app" href="https://apps.apple.com/us/app/maccy/id1527619437?mt=12" target="_blank" rel="noopener"><img src="assets/utilities/maccy.png" width="64" height="64" loading="lazy" alt=""><span>Maccy</span></a>
+          <a class="utility-app" href="https://justgetflux.com/" target="_blank" rel="noopener"><img src="assets/utilities/flux.png" width="64" height="64" loading="lazy" alt=""><span>f.lux</span></a>
+          <a class="utility-app" href="https://rectangleapp.com/" target="_blank" rel="noopener"><img src="assets/utilities/rectangle.png" width="64" height="64" loading="lazy" alt=""><span>Rectangle</span></a>
+          <a class="utility-app" href="https://dropoverapp.com/" target="_blank" rel="noopener"><img src="assets/utilities/dropover.png" width="64" height="64" loading="lazy" alt=""><span>Dropover</span></a>
         </div>
         <div class="convergence-lines" aria-hidden="true"><i></i><i></i><i></i></div>
         <div class="gojo-core">
@@ -267,31 +264,20 @@
   <section class="customize-story" aria-labelledby="customize-heading">
     <div class="wrap customize-layout">
       <div class="customize-copy">
-        <p class="section-kicker">Built around your workflow</p>
-        <h2 id="customize-heading">Make the notch yours.</h2>
-        <p>Keep your essential tabs visible, reorder media controls, tune the look, and hide what you do not use. Gojo adapts instead of asking you to.</p>
-        <ul class="customize-list">
-          <li><span>01</span> Pick the features that appear</li>
-          <li><span>02</span> Drag media controls into your order</li>
-          <li><span>03</span> Tune sizing, behavior, color, and effects</li>
-        </ul>
+        <h2 id="customize-heading">Then hide the half you don’t use.</h2>
+        <p>Six tools is the ceiling, not the requirement. Turn off what you will never open, reorder what you keep, and the notch stops showing it — including the tabs themselves.</p>
       </div>
 
-      <div class="settings-demo" role="img" aria-label="Preview of Gojo customization settings">
-        <div class="settings-sidebar" aria-hidden="true">
-          <span>General</span><span>Appearance</span><span class="selected">Media</span><span>Calendar</span><span>Battery</span><span>Shelf</span><span>Clipboard</span><span>Windows</span>
-        </div>
-        <div class="settings-content">
-          <p>Media controls</p>
-          <div class="control-preview" aria-hidden="true">
-            <span>⌘</span><span>◀</span><span class="play">▶</span><span>▶</span><span>↻</span>
-          </div>
-          <small>Drag items in the preview to reorder</small>
-          <div class="control-palette" aria-hidden="true"><span>♡</span><span>◀ 15</span><span>🔊</span><span>15 ▶</span></div>
-          <div class="setting-row"><span>Player tinting</span><i class="toggle on"></i></div>
-          <div class="setting-row"><span>Colored spectrogram</span><i class="toggle on"></i></div>
-          <div class="accent-row"><span>Accent</span><i></i><i></i><i class="active"></i><i></i></div>
-        </div>
+      <div class="customize-extras">
+        <p class="extras-lede">Also in the notch, if you switch them on:</p>
+        <ul class="extras-list">
+          <li>Spotlight-replacement search on <kbd>⌥</kbd><kbd>Space</kbd></li>
+          <li>Calendar and next-event glance</li>
+          <li>Battery and charge state</li>
+          <li>Camera mirror for checking your framing</li>
+          <li>Shortcuts you already built</li>
+          <li>Brightness and volume HUDs</li>
+        </ul>
       </div>
     </div>
   </section>
@@ -374,43 +360,6 @@
         if (playback && typeof playback.catch === 'function') {
           playback.catch(function () {});
         }
-      });
-    })();
-
-    (function () {
-      var tabs = Array.prototype.slice.call(document.querySelectorAll('.module-tab'));
-      var panels = Array.prototype.slice.call(document.querySelectorAll('.module-panel'));
-
-      function activateModule(nextTab, moveFocus) {
-        tabs.forEach(function (tab) {
-          var selected = tab === nextTab;
-          tab.setAttribute('aria-selected', String(selected));
-          tab.tabIndex = selected ? 0 : -1;
-        });
-
-        panels.forEach(function (panel) {
-          panel.hidden = panel.id !== nextTab.getAttribute('aria-controls');
-        });
-
-        if (moveFocus) nextTab.focus();
-      }
-
-      tabs.forEach(function (tab, index) {
-        tab.addEventListener('click', function () {
-          activateModule(tab, false);
-        });
-
-        tab.addEventListener('keydown', function (event) {
-          var nextIndex = index;
-          if (event.key === 'ArrowRight') nextIndex = (index + 1) % tabs.length;
-          else if (event.key === 'ArrowLeft') nextIndex = (index - 1 + tabs.length) % tabs.length;
-          else if (event.key === 'Home') nextIndex = 0;
-          else if (event.key === 'End') nextIndex = tabs.length - 1;
-          else return;
-
-          event.preventDefault();
-          activateModule(tabs[nextIndex], true);
-        });
       });
     })();
 

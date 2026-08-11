@@ -37,6 +37,20 @@ Two targets communicating over XPC:
 | `GojoXPCHelper/` | XPC helper source |
 | `design/logo/` | Source SVGs and master PNG for the logo |
 
+### Licensing in local builds
+
+Debug builds honour a `GOJO_LICENSE` environment override:
+
+```bash
+GOJO_LICENSE=lifetime make run   # also: monthly | trial | trial:<days> | locked
+```
+
+When set, `LicenseManager` forces that state and **never touches the license
+Keychain** — no reads, no writes, no migration. Use it for any local run: the
+license lives in one shared Keychain item, so a dev build with a different
+storage layout will otherwise migrate it and strand the installed app's
+license. Release builds ignore the variable.
+
 ### Settings storage
 
 User preferences use the `Defaults` library (`@Default` property wrapper). Keys are defined across model files. `@AppStorage` is used for a few legacy keys like `firstLaunch`.

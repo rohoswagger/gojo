@@ -59,7 +59,14 @@ build:
 
 run: build
 	$(MAKE) stop
-	open "$(APP_PATH)"
+	@# GOJO_LICENSE forces the license state and keeps this build away from the
+	@# license Keychain entirely, so it can't strand the installed app's license.
+	@# Values: lifetime | monthly | trial | trial:<days> | locked
+	@if [ -n "$(GOJO_LICENSE)" ]; then \
+		open --env "GOJO_LICENSE=$(GOJO_LICENSE)" "$(APP_PATH)"; \
+	else \
+		open "$(APP_PATH)"; \
+	fi
 
 stop:
 	@for pattern in \

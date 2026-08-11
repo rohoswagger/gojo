@@ -2785,3 +2785,71 @@ h1 {
     grid-column: span 3;
   }
 }
+
+/* Sitemap footer: every feature and alternative page reachable from any page. */
+.footer-sitemap{
+  display: block;
+  padding-block: 40px 28px;
+}
+
+.footer-cols{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 28px 32px;
+}
+
+.footer-heading{
+  margin: 0 0 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8b92a2;
+}
+
+.footer-heading a{
+  color: inherit;
+  text-decoration: none;
+}
+
+.footer-heading a:hover{
+  color: var(--paper-ink);
+}
+
+.footer-links{
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.footer-links a{
+  color: #4b5162;
+  font-size: 14px;
+  line-height: 1.35;
+  text-decoration: none;
+}
+
+.footer-links a:hover{
+  color: var(--paper-ink);
+  text-decoration: underline;
+}
+
+.footer-bottom{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+@media (max-width: 480px) {
+  .footer-cols{
+    grid-template-columns: 1fr;
+  }
+}

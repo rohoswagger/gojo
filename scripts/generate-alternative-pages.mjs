@@ -3,6 +3,7 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { footerHtml } from "./lib/footer.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const contentPath = path.join(root, "content", "alternatives.json");
@@ -43,7 +44,7 @@ function pageChrome({ title, description, canonical, schema, body }) {
   <meta property="og:image" content="${siteUrl}/assets/og.jpg">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="../../site.css?v=20260810-alternatives">
+  <link rel="stylesheet" href="../../site.css?v=20260810-footer">
   <script type="application/ld+json">${JSON.stringify(schema)}</script>
 </head>
 <body class="article-shell">
@@ -56,9 +57,8 @@ function navigation() {
   return `<header class="site-header"><a class="brand" href="../../" aria-label="Gojo home">Gojo</a><nav class="nav" aria-label="Primary"><a href="../../blog/">Blog</a><a href="../">Alternatives</a><a href="https://downloads.rohoswagger.com/Gojo.dmg">Download</a></nav></header>`;
 }
 
-function footer() {
-  return `<footer class="footer"><a class="brand" href="../../">Gojo</a><nav class="nav" aria-label="Footer"><a href="../../blog/">Blog</a><a href="../">Alternatives</a><a href="https://downloads.rohoswagger.com/Gojo.dmg">Download</a></nav><span class="foot-copy">&copy; 2026 Gojo</span></footer>`;
-}
+const articleFooter = await footerHtml("../../");
+const hubFooter = await footerHtml("../");
 
 function articlePage(alternative, data) {
   const title = `${alternative.name} alternative: is Gojo a good fit for Mac?`;
@@ -106,7 +106,7 @@ function articlePage(alternative, data) {
   <h2 id="faq">FAQ</h2><section class="faq-list"><h3>Is Gojo an alternative to ${escapeHtml(alternative.name)}?</h3><p>Yes, when you want ${escapeHtml(alternative.gojoFit)}. ${escapeHtml(alternative.tradeoff)}</p><h3>Who should choose ${escapeHtml(alternative.name)}?</h3><p>${escapeHtml(alternative.name)} is best for ${escapeHtml(alternative.bestFor)}.</p></section>
   <section class="article-cta" aria-labelledby="try-gojo-title"><p class="answer-label">Want the focused option?</p><h2 id="try-gojo-title">Put daily Mac controls one hover away.</h2><p>Try every Gojo feature free for three days. No account or card required.</p><div class="article-cta-actions"><a class="btn btn-primary" href="https://downloads.rohoswagger.com/Gojo.dmg">Start your free trial</a><a class="article-cta-link" href="../../#buy">Compare monthly and lifetime</a></div><p class="article-cta-trust">Signed &amp; notarized &middot; macOS 14+ &middot; private on-device dictation</p></section>
   <section class="article-next"><p class="answer-label">Go deeper</p><h2>Compare the products directly</h2><p><a href="${alternative.relatedComparison}">Read Gojo vs ${escapeHtml(alternative.name)}</a> for a fuller workflow comparison, or return to the <a href="../">Gojo alternatives hub</a>.</p></section>
-</article></main>${footer()}`;
+</article></main>${articleFooter}`;
   return pageChrome({ title, description, canonical, schema, body });
 }
 
@@ -115,7 +115,7 @@ function hubPage(data) {
   const canonical = `${siteUrl}/alternatives/`;
   const schema = { "@context": "https://schema.org", "@graph": [{ "@type": "CollectionPage", name: "Gojo alternatives for Mac", url: canonical, dateModified: data.updated, mainEntity: { "@type": "ItemList", numberOfItems: data.alternatives.length, itemListElement: data.alternatives.map((alternative, index) => ({ "@type": "ListItem", position: index + 1, name: `${alternative.name} alternative guide`, url: `${canonical}${alternative.slug}/` })) } }] };
   const body = `<div class="article-top">${navigation()}<main><section class="article-hero"><div class="wrap"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../">Home</a><span>/</span><span>Alternatives</span></nav><p class="article-label">Mac utility alternatives</p><h1>Gojo alternatives for Mac: find the workflow that fits</h1><p class="article-summary">Compare focused notch utilities, broader productivity layers, and specialist Mac apps using published product facts—not a generic winner.</p><div class="article-meta"><span>Updated ${data.updated}</span><span>${data.alternatives.length} evidence-led guides</span></div></div></section></main></div>
-<main class="article-main"><article class="article-body article-reader comparison-article"><div class="answer-box"><p class="answer-label">Short answer</p><p class="answer-copy">Gojo is the focused choice for private on-device dictation, windows, clipboard, files, media, and display controls in one MacBook-notch workspace. An alternative may fit better when you need deep automation, a dedicated specialist tool, extensive widgets, or a free open-source app.</p></div><h2>Browse Gojo alternatives by product fit</h2><p>Each guide links to the alternative’s official product page, separates published facts from editorial guidance, and explains where Gojo is the more cohesive option.</p><ol class="alternative-grid">${cards}</ol><h2>How to choose fairly</h2><ol><li><strong>Start with the repeated job.</strong> A dedicated window, clipboard, keyboard, or display tool can be better when it solves the one problem you have.</li><li><strong>Check the interaction model.</strong> Gojo favors a visible, hoverable notch surface. Some alternatives are keyboard-first, automation-first, or more widget-heavy.</li><li><strong>Verify current details before purchase.</strong> Features, system requirements, device limits, and pricing change. Every guide dates its primary-source check.</li></ol><section class="article-cta" aria-labelledby="hub-cta-title"><p class="answer-label">Prefer one cohesive utility?</p><h2 id="hub-cta-title">Try Gojo’s focused MacBook workspace.</h2><p>${escapeHtml(data.gojo.summary)}.</p><div class="article-cta-actions"><a class="btn btn-primary" href="https://downloads.rohoswagger.com/Gojo.dmg">Start your free trial</a><a class="article-cta-link" href="../#buy">Compare monthly and lifetime</a></div><p class="article-cta-trust">${escapeHtml(data.gojo.trial)} &middot; Signed &amp; notarized</p></section></article></main>${footer()}`;
+<main class="article-main"><article class="article-body article-reader comparison-article"><div class="answer-box"><p class="answer-label">Short answer</p><p class="answer-copy">Gojo is the focused choice for private on-device dictation, windows, clipboard, files, media, and display controls in one MacBook-notch workspace. An alternative may fit better when you need deep automation, a dedicated specialist tool, extensive widgets, or a free open-source app.</p></div><h2>Browse Gojo alternatives by product fit</h2><p>Each guide links to the alternative’s official product page, separates published facts from editorial guidance, and explains where Gojo is the more cohesive option.</p><ol class="alternative-grid">${cards}</ol><h2>How to choose fairly</h2><ol><li><strong>Start with the repeated job.</strong> A dedicated window, clipboard, keyboard, or display tool can be better when it solves the one problem you have.</li><li><strong>Check the interaction model.</strong> Gojo favors a visible, hoverable notch surface. Some alternatives are keyboard-first, automation-first, or more widget-heavy.</li><li><strong>Verify current details before purchase.</strong> Features, system requirements, device limits, and pricing change. Every guide dates its primary-source check.</li></ol><section class="article-cta" aria-labelledby="hub-cta-title"><p class="answer-label">Prefer one cohesive utility?</p><h2 id="hub-cta-title">Try Gojo’s focused MacBook workspace.</h2><p>${escapeHtml(data.gojo.summary)}.</p><div class="article-cta-actions"><a class="btn btn-primary" href="https://downloads.rohoswagger.com/Gojo.dmg">Start your free trial</a><a class="article-cta-link" href="../#buy">Compare monthly and lifetime</a></div><p class="article-cta-trust">${escapeHtml(data.gojo.trial)} &middot; Signed &amp; notarized</p></section></article></main>${hubFooter}`;
   return pageChrome({ title: "Best Gojo alternatives for Mac in 2026", description: "Compare Gojo alternatives for Mac by workflow, with official sources, dated facts, and clear guidance on where Gojo fits.", canonical, schema, body });
 }
 

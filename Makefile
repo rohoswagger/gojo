@@ -35,17 +35,18 @@ help:
 	@echo "  make test-dictation-real-microphone-live Verify real microphone capture, transcription, and insertion"
 	@echo ""
 	@echo "Release:"
-	@echo "  make release VERSION=x.y.z      Cut a signed/notarized release (see RELEASING.md)"
+	@echo "  make release VERSION=x.y.z      Cut a private signed/notarized release (see RELEASING.md)"
+	@echo "  make release VERSION=x.y.z ARGS=--public  Also publish to R2 + appcast"
 	@echo "  make release-dry VERSION=x.y.z  Build + sign + notarize without publishing"
 	@echo ""
 	@echo "  make clean       Remove local build artifacts"
 
 release:
-	@test -n "$(VERSION)" || (echo "Usage: make release VERSION=x.y.z [ARGS=--adhoc]"; exit 2)
+	@test -n "$(VERSION)" || (echo "Usage: make release VERSION=x.y.z [ARGS=--public|--adhoc]"; exit 2)
 	@./scripts/release.sh $(VERSION) $(ARGS)
 
 release-dry:
-	@test -n "$(VERSION)" || (echo "Usage: make release-dry VERSION=x.y.z [ARGS=--adhoc]"; exit 2)
+	@test -n "$(VERSION)" || (echo "Usage: make release-dry VERSION=x.y.z [ARGS=--public|--adhoc]"; exit 2)
 	@DRY_RUN=1 ./scripts/release.sh $(VERSION) $(ARGS)
 
 build:

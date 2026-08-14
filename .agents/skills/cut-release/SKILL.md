@@ -15,17 +15,30 @@ Each release uploads two R2 objects: the immutable versioned `Gojo-X.Y.Z.dmg`
 (what appcast entries point at) and an always-latest `Gojo.dmg` (what the
 marketing site's download button points at).
 
-## Three signing modes
+## Signing modes
 
-- **Developer ID + notarized** (no flag) — **the default: use this unless told
-  otherwise.** Fully configured in `.env.local` (`MACOS_SIGNING_IDENTITY` =
-  "Developer ID Application: Roshan Desai (L6U44C67P5)" + App Store Connect API
-  key vars) and verified working as of v1.0.1. Opens cleanly, no quarantine step.
-- **Ad-hoc** (`ARGS=--adhoc`) — no Apple Developer account needed. Ad-hoc signed,
-  hardened runtime OFF, not notarized. Only `SPARKLE_PRIVATE_ED_KEY` required.
-  Downloaders must clear quarantine once: `xattr -dr com.apple.quarantine /Applications/Gojo.app`.
-- **Private** (`ARGS=--private`) — signed + notarized DMG only: no R2 upload, no
-  appcast entry (tag only). For paid/paywalled distribution — upload the DMG yourself.
+Developer ID + notarization is always on unless `--adhoc` is passed. `.env.local`
+is fully configured (`MACOS_SIGNING_IDENTITY` = "Developer ID Application: Roshan
+Desai (L6U44C67P5)" + App Store Connect API key vars), verified working since
+v1.0.1. Ad-hoc (`ARGS=--adhoc`) needs no Apple account but leaves the build
+un-notarized, so downloaders must clear quarantine once:
+`xattr -dr com.apple.quarantine /Applications/Gojo.app`.
+
+## Publishing: private is the DEFAULT
+
+Gojo is sold through Stripe, so a bare `make release VERSION=X.Y.Z` publishes
+**nothing**: signed + notarized DMG plus tag, no R2 upload, no appcast entry.
+Hand the DMG to the paid channel yourself.
+
+Pass `ARGS=--public` to publish — uploads the DMG to
+`downloads.rohoswagger.com` and commits an appcast entry, which is what existing
+installs Sparkle-update from. Ask before using it unless the user said to publish.
+
+**Never create a GitHub Release.** The script does not, and the repo has none by
+design; an attached DMG is a permanent front-page download link. A v1.1.0
+release was created by hand on 2026-07-31 and deleted on 2026-08-14 (tag kept).
+If asked to "delete the release", check `gh release list` — but for normal
+rollback the artifacts are the R2 objects, the tag, and the appcast entry.
 
 ## Pre-release checklist (do this first, every time)
 
@@ -48,7 +61,8 @@ marketing site's download button points at).
 
 ```bash
 make release-dry VERSION=X.Y.Z   # optional: full build, stops before publish
-make release     VERSION=X.Y.Z   # publish (add ARGS=--adhoc or ARGS=--private if needed)
+make release     VERSION=X.Y.Z   # private: DMG + tag only, nothing published
+make release     VERSION=X.Y.Z ARGS=--public   # also upload to R2 + update appcast
 ```
 
 ## Override / re-cut an EXISTING version
@@ -71,8 +85,9 @@ git tag -d vX.Y.Z 2>/dev/null || true
 git revert --no-edit <appcast-commit-sha>
 git push origin main
 
-# 4. Re-cut (overwrites the R2 objects)
-make release VERSION=X.Y.Z
+# 4. Re-cut. --public is required to overwrite the R2 objects and re-add the
+#    appcast entry; without it the re-cut publishes nothing (private default).
+make release VERSION=X.Y.Z ARGS=--public
 ```
 
 Verify after step 3: `grep -c '<title>Version X.Y.Z' docs/appcast.xml` → `0`.

@@ -5,11 +5,17 @@ Gojo cuts releases from your local machine via [`scripts/release.sh`](./scripts/
 CI (`.github/workflows/build.yml`) verifies every PR/push compiles, but does **not** publish releases.
 
 ```
-make release VERSION=1.0.0       # upload DMG to R2 + update public appcast
-make release-dry VERSION=1.0.0   # build, sign, notarize, appcast — but don't publish
+make release VERSION=1.0.0       # DEFAULT (private): notarized DMG only, nothing published
+make release-dry VERSION=1.0.0   # build, sign, notarize — but don't publish or tag
+make release VERSION=1.0.0 ARGS=--public          # + upload DMG to R2 and update the appcast
 make release VERSION=1.0.0 ARGS=--adhoc           # ad-hoc signed, no Apple account
-make release VERSION=1.0.0 ARGS=--private         # notarized DMG only; no public upload
 ```
+
+> **Gojo is sold through Stripe, so private is the default.** A release only
+> publishes when you pass `--public`, and the script never creates a GitHub
+> Release in either mode. Do not create one by hand: an attached DMG becomes a
+> permanent, discoverable download link on the repo front page. (This happened
+> once for v1.1.0 — the release was deleted on 2026-08-14; the tag remains.)
 
 > `--adhoc` cuts a release with **no Apple Developer account**: the app is
 > ad-hoc signed and not notarized, so only `SPARKLE_PRIVATE_ED_KEY` is needed in
@@ -18,12 +24,19 @@ make release VERSION=1.0.0 ARGS=--private         # notarized DMG only; no publi
 > distribution; use the default (Developer ID + notarized) path for a polished
 > public launch.
 
-> `--private` is the **manual-distribution** mode: it builds the signed +
-> notarized DMG and Sparkle-signs it, but publishes nothing — no GitHub
-> Release, no appcast entry. It tags `vX.Y.Z` (source correspondence for GPL)
-> and prints the DMG path, SHA-256, size, build number, and Sparkle signature;
-> upload the DMG to the destination yourself. Use the default release path for
-> the public download and Sparkle update channel used by existing installs.
+> **Private (the default)** is the manual-distribution mode: it builds the
+> signed + notarized DMG and Sparkle-signs it, but publishes nothing — no R2
+> upload, no appcast entry. It tags `vX.Y.Z` (source correspondence for GPL) and
+> prints the DMG path, SHA-256, size, build number, and Sparkle signature;
+> upload the DMG to your Stripe-gated destination yourself. `--private` is still
+> accepted as an explicit no-op if you prefer to spell it out.
+
+> `--public` opts in to publishing: it uploads the DMG to
+> `downloads.rohoswagger.com` (versioned plus `Gojo.dmg`), adds an entry to
+> `docs/appcast.xml`, and commits that back to `main`. This is what existing
+> installs Sparkle-update from, so a version that should reach current users
+> needs this flag — the paywall is in-app licensing (`LicenseManager`), not the
+> download URL.
 
 ---
 

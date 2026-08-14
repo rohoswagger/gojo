@@ -3,12 +3,20 @@
 # scripts/release.sh — build, sign, notarize, package, and publish a Gojo release.
 #
 # Usage:
-#   scripts/release.sh <version>            # Developer ID signed + notarized release
+#   scripts/release.sh <version>            # DEFAULT: private. Developer ID signed +
+#                                           # notarized DMG only — no R2 upload, no
+#                                           # appcast entry. Gojo is sold through
+#                                           # Stripe; distribute the DMG yourself.
 #   scripts/release.sh <version> --adhoc    # ad-hoc signed, no notarization (no paid account)
-#   scripts/release.sh <version> --private  # signed + notarized DMG only: no GitHub
-#                                           # Release, no appcast. For paid/paywalled
-#                                           # distribution — upload the DMG yourself.
+#   scripts/release.sh <version> --public   # opt in to publishing: uploads the DMG to
+#                                           # Cloudflare R2 and adds a public appcast
+#                                           # entry, so existing installs can Sparkle-
+#                                           # update. Never creates a GitHub Release.
 #   DRY_RUN=1 scripts/release.sh <version>  # build the artifacts but don't publish
+#
+# Private is the default on purpose: a release that publishes must say so out
+# loud. Do NOT create a GitHub Release for any version — the repo has none, and
+# an attached DMG is a permanent front-page download link.
 #
 # --adhoc cuts a release with NO Apple Developer account: the app is ad-hoc
 # signed (CODE_SIGN_IDENTITY="-"), not notarized. The DMG opens only after the
@@ -59,23 +67,31 @@ require_env() {
 
 VERSION=""
 ADHOC=0
-PRIVATE=0
+PRIVATE=1
 for arg in "$@"; do
   case "$arg" in
     --adhoc) ADHOC=1 ;;
     --private) PRIVATE=1 ;;
+    --public) PRIVATE=0 ;;
     -*) die "Unknown option: $arg" ;;
     *) VERSION="$arg" ;;
   esac
 done
 
-[ -z "$VERSION" ] && die "Usage: scripts/release.sh <version> [--adhoc] [--private]"
+[ -z "$VERSION" ] && die "Usage: scripts/release.sh <version> [--adhoc] [--public|--private]"
 
 if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   die "Version must be semver (X.Y.Z), got: $VERSION"
 fi
 
 DRY_RUN="${DRY_RUN:-0}"
+
+if [ "$PRIVATE" = "1" ]; then
+  info "Private release (default): DMG only — no R2 upload, no appcast entry."
+else
+  warn "--public: this WILL publish the DMG to downloads.rohoswagger.com and add"
+  warn "a public appcast entry that every existing install can update from."
+fi
 
 if [ "$ADHOC" = "1" ]; then
   warn "--adhoc: ad-hoc-signed build (no Developer ID cert, no notarization)."

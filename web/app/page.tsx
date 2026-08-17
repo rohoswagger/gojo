@@ -147,14 +147,14 @@ export default function Home() {
 
         <main className="hero">
           <h1>
-            <span className="line">The space around your notch</span>
+            <span className="line">Everything you reach for,</span>
             <span className="line">
-              is doing <span className="glow">nothing</span>.
+              right in the <span className="glow">notch</span>.
             </span>
           </h1>
           <p className="sub">
-            Hover it and six tools appear. Dictation, windows, clipboard, files, music and screen
-            warmth, all without a window opening or another icon in your menu bar.
+            Dictation, window snapping, clipboard history, a file shelf, music and screen warmth.
+            One surface, always a hover away.
           </p>
 
           <div className="stage">
@@ -188,11 +188,13 @@ export default function Home() {
       <section className="utility-convergence" aria-labelledby="convergence-heading">
         <div className="wrap convergence-layout">
           <div className="convergence-copy">
-            <h2 id="convergence-heading">One app instead of four.</h2>
+            <h2 id="convergence-heading">One app in place of four.</h2>
             <p>
-              Most people end up running a window manager, a clipboard tool, a launcher and a
-                screen tinter, each with its own menu bar icon and its own shortcuts. Gojo does
-                those jobs in one place you already have.
+              
+                A window manager, a clipboard tool, a file shelf, a screen tinter. Four apps, four menu
+                bar icons, four sets of shortcuts. Gojo does all of it from one surface you already
+                have.
+              
             </p>
           </div>
 
@@ -249,10 +251,9 @@ export default function Home() {
       <section className="feature-acts" id="features" aria-labelledby="features-heading">
         <div className="wrap">
           <header className="acts-intro">
-            <h2 id="features-heading">Here is all of it.</h2>
+            <h2 id="features-heading">Six tools, one surface.</h2>
             <p>
-              No mockups below. This is the app running in the space around the notch, and it is
-              the whole product. One scroll and you have seen everything.
+              Everything below is the real app. One scroll and you have seen the whole product.
             </p>
           </header>
         </div>
@@ -263,14 +264,14 @@ export default function Home() {
               <p className="act-index" aria-hidden="true">
                 <Mic className="act-icon" strokeWidth={1.75} aria-hidden="true" />Dictation
               </p>
-              <h3 id="act-dictation">Talk. Gojo types. Nothing leaves your Mac.</h3>
+              <h3 id="act-dictation">Dictation that never leaves your Mac.</h3>
               <p>
-                Hold one shortcut and talk into whatever field you are already in. Mail, Slack, a
-                commit message, a search box. The words land where your cursor is.
+                Hold one shortcut and speak. The words appear wherever your cursor already is, in
+                Mail, Slack, a commit message or a search box.
               </p>
               <p className="act-note">
-                Recognition runs on a model you download once and keep. No API key, no account, no
-                audio leaving the machine, and it still works on a plane.
+                Speech recognition runs on a model you download once. No API key, no account, and no
+                audio ever leaves your Mac. It works on a plane.
               </p>
               <ul className="act-proof">
                 <li>
@@ -302,10 +303,12 @@ export default function Home() {
                 <p className="act-index" aria-hidden="true">
                   <Music className="act-icon" strokeWidth={1.75} aria-hidden="true" />Media
                 </p>
-                <h3 id="act-media">Your music, without covering your work.</h3>
+                <h3 id="act-media">Your music, out of the way.</h3>
                 <p>
-                  Artwork, title, and a scrubber sit in the notch. Skip, shuffle, and seek from
-                  whatever app is playing, without raising a single window.
+                  
+                Artwork, title and a scrubber sit in the notch. Skip, shuffle and seek whatever is
+                playing without raising a window.
+              
                 </p>
                 <ul className="act-proof">
                   <li>Follows your current media source</li>
@@ -330,10 +333,12 @@ export default function Home() {
                 <p className="act-index" aria-hidden="true">
                   <ClipboardList className="act-icon" strokeWidth={1.75} aria-hidden="true" />Clipboard
                 </p>
-                <h3 id="act-clipboard">The thing you copied five minutes ago.</h3>
+                <h3 id="act-clipboard">Everything you have copied, kept.</h3>
                 <p>
-                  Every copy is kept and searchable from the notch, so you stop re-copying the same
-                  link. Anything a supported password manager marks private is skipped outright.
+                  
+                Everything you copy is saved and searchable from the notch. Anything a supported
+                password manager marks as private is skipped.
+              
                 </p>
                 <ul className="act-proof">
                   <li>Search without opening another app</li>
@@ -358,10 +363,12 @@ export default function Home() {
                 <p className="act-index" aria-hidden="true">
                   <LayoutGrid className="act-icon" strokeWidth={1.75} aria-hidden="true" />Windows
                 </p>
-                <h3 id="act-windows">See the window before you switch to it.</h3>
+                <h3 id="act-windows">See a window before you switch to it.</h3>
                 <p>
-                  A switcher that previews what you are about to land on, plus a snap grid with the
-                  shortcut printed under every layout, so you pick them up without trying.
+                  
+                A switcher that shows you the window before you land on it, and a snap grid with the
+                shortcut printed under every layout.
+              
                 </p>
                 <ul className="act-proof">
                   <li>
@@ -389,11 +396,12 @@ export default function Home() {
                 <p className="act-index" aria-hidden="true">
                   <FolderOpen className="act-icon" strokeWidth={1.75} aria-hidden="true" />Shelf
                 </p>
-                <h3 id="act-shelf">Put a file down without losing it.</h3>
+                <h3 id="act-shelf">A place to set files down.</h3>
                 <p>
-                  Drag files up to the notch and they wait there while you change folders, desktops,
-                  or apps. Drag them back out when you get there, or hand them straight to
-                  AirDrop.
+                  
+                Drag files to the notch and they wait while you move between folders, desktops and apps.
+                Drag them back out when you get there, or send them straight to AirDrop.
+              
                 </p>
                 <ul className="act-proof">
                   <li>Survives folder, Space, and app switches</li>
@@ -418,11 +426,12 @@ export default function Home() {
                 <p className="act-index" aria-hidden="true">
                   <Sunset className="act-icon" strokeWidth={1.75} aria-hidden="true" />Night Shift
                 </p>
-                <h3 id="act-display">Warm the screen when the day winds down.</h3>
+                <h3 id="act-display">Warmer screen after dark.</h3>
                 <p>
-                  Night Shift on your own schedule, with a toggle in the notch instead of a trip
-                  through System Settings. Sunset times are worked out on your Mac from a location
-                  you set once.
+                  
+                Night Shift on your own schedule, from the notch instead of System Settings. Sunset
+                times are worked out on your Mac from a location you set once.
+              
                 </p>
                 <ul className="act-proof">
                   <li>Starts with your Mac, if you want it to</li>
@@ -447,11 +456,12 @@ export default function Home() {
       <section className="customize-story" aria-labelledby="customize-heading">
         <div className="wrap customize-layout">
           <div className="customize-copy">
-            <h2 id="customize-heading">Turn off whatever you will not use.</h2>
+            <h2 id="customize-heading">Make it yours.</h2>
             <p>
-              Six tools is the ceiling, not the requirement. Turn off what you will never open,
-              reorder what you keep, and the notch stops showing it, including the tabs
-              themselves.
+              
+                Use all six or use one. Turn off what you do not need and reorder the rest, and the
+                notch stops showing it, tabs included.
+              
             </p>
           </div>
 
@@ -476,10 +486,11 @@ export default function Home() {
         <div className="wrap">
           <PricingTabsProvider tabs={pricingTabs}>
             <div className="buy-head">
-              <h2 id="buy-heading">Keep it if you like it.</h2>
+              <h2 id="buy-heading">Pricing</h2>
               <p className="buy-sub">
-                Start with one Mac, or cover up to three. Every plan includes the full app and every
-                future update.
+                
+                One Mac or up to three. Every plan includes the full app and all future updates.
+              
               </p>
               <PricingTabList ariaLabel="Choose a device plan" />
             </div>

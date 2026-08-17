@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-08-16
+
+Gojo has a new home: **trygojo.com**.
+
+> **Update to 1.3.0 to keep your license working.** Licensing moved to the new
+> domain and the old address has been retired, so earlier versions can no longer
+> reach the licence server. Your licence key itself is unchanged and stays
+> valid — but an un-updated copy will eventually ask you to revalidate and lock.
+> If your copy has already locked, download Gojo once from
+> [trygojo.com](https://downloads.trygojo.com/Gojo.dmg) and replace it; your
+> existing key will activate as normal.
+
+### Changed
+
+- **New home on the web.** The Gojo site, downloads, and this changelog now live
+  under `trygojo.com` instead of the old `rohoswagger.com` address.
+- **Licensing and updates follow the move.** Licence checks and the automatic
+  update feed point at the new domain. Nothing changes in how you use them.
+- **Licence emails now come from `hi@trygojo.com`.** Add it to your contacts if
+  your provider is strict about filtering.
+
 ## [1.2.0] — 2026-08-03
 
 Search comes to Gojo. Press ⌘ Space and Gojo answers instead of Spotlight.
@@ -97,7 +118,8 @@ Meet Gojo — it turns the dead space around your MacBook's notch into a control
 - **Guided setup** — a polished first launch that gets you going in seconds.
 - **Automatic updates** — new versions install themselves; no re-downloading.
 
-[Unreleased]: https://github.com/rohoswagger/gojo/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/rohoswagger/gojo/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/rohoswagger/gojo/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/rohoswagger/gojo/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/rohoswagger/gojo/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/rohoswagger/gojo/compare/v1.1.0...v1.1.1

@@ -105,24 +105,76 @@ export function alternativeArticleSchema(alternative: Alternative) {
   }
 }
 
-export function alternativeArticleBody(alternative: Alternative) {
-  const facts = alternative.officialFacts.map((fact) => `<li>${escapeHtml(fact)}</li>`).join("\n")
-  return `<div class="article-top">${navigation()}<main><section class="article-hero"><div class="wrap"><nav class="breadcrumb" aria-label="Breadcrumb"><a href="../../">Home</a><span>/</span><a href="../">Alternatives</a></nav><p class="article-label">Alternative guide</p><h1>${escapeHtml(alternative.name)} alternative: is Gojo a good fit for Mac?</h1><p class="article-summary">${escapeHtml(alternative.name)} is for ${escapeHtml(alternative.bestFor)}. Gojo is for ${escapeHtml(alternative.gojoFit)}.</p><div class="article-meta"><span>Updated ${data.updated}</span><span>Primary source checked</span></div></div></section></main></div>
-<main class="article-main"><article class="article-body article-reader comparison-article">
-  <div class="answer-box"><p class="answer-label">Short answer</p><p class="answer-copy">Choose ${escapeHtml(alternative.name)} when you want ${escapeHtml(alternative.bestFor)}. Choose Gojo when you want ${escapeHtml(alternative.gojoFit)}.</p><p>${escapeHtml(alternative.tradeoff)}</p></div>
-  <nav class="article-jump-nav" aria-label="On this page"><span>On this page</span><a href="#facts">Published facts</a><a href="#fit">Best fit</a><a href="#faq">FAQ</a></nav>
-  <h2 id="facts">Published facts about ${escapeHtml(alternative.name)}</h2>
-  <p>These are product facts from <a href="${escapeHtml(alternative.officialUrl)}" rel="external noopener">${escapeHtml(alternative.name)}’s official site</a>, checked ${data.updated}. They describe the product rather than score it.</p>
-  <ul class="source-facts">${facts}</ul>
-  <h2 id="fit">Which Mac workflow fits better?</h2>
-  <div class="table-scroll"><table class="comparison-table"><thead><tr><th>Question</th><th>${escapeHtml(alternative.name)}</th><th>Gojo</th></tr></thead><tbody><tr><td>Primary fit</td><td>${escapeHtml(alternative.bestFor)}</td><td>${escapeHtml(alternative.gojoFit)}</td></tr><tr><td>Product shape</td><td>${escapeHtml(alternative.category)}</td><td>Focused MacBook-notch productivity workspace</td></tr><tr><td>Try first</td><td>Check the developer’s current product page</td><td>${escapeHtml(data.gojo.trial)}</td></tr></tbody></table></div>
-  <h3>Choose ${escapeHtml(alternative.name)} when its specialty is the point</h3><p>${escapeHtml(alternative.name)} is the more direct choice if your priority is ${escapeHtml(alternative.bestFor)}. A specialist can be the better tool when that workflow is where you spend most of your time.</p>
-  <h3>Choose Gojo for an integrated daily loop</h3><p>Gojo combines private on-device dictation, windows, clipboard history, file staging, media, and display controls. It is designed for MacBook owners who would rather reach one quiet notch surface than assemble several narrow utilities.</p>
-  <h2>Sources and editorial method</h2><p>Primary source checked ${data.updated}: <a href="${escapeHtml(alternative.officialUrl)}" rel="external noopener">${escapeHtml(alternative.name)} official site</a>. Gojo product claims are based on the <a href="../../">official Gojo site</a>. Product features, availability, and pricing can change; verify the developer’s current information before buying.</p>
-  <h2 id="faq">FAQ</h2><section class="faq-list"><h3>Is Gojo an alternative to ${escapeHtml(alternative.name)}?</h3><p>Yes, when you want ${escapeHtml(alternative.gojoFit)}. ${escapeHtml(alternative.tradeoff)}</p><h3>Who should choose ${escapeHtml(alternative.name)}?</h3><p>${escapeHtml(alternative.name)} is best for ${escapeHtml(alternative.bestFor)}.</p></section>
-  <section class="article-cta" aria-labelledby="try-gojo-title"><p class="answer-label">Want the focused option?</p><h2 id="try-gojo-title">Put daily Mac controls one hover away.</h2><p>Try every Gojo feature free for three days. No account or card required.</p><div class="article-cta-actions"><a class="btn btn-primary" href="https://downloads.trygojo.com/Gojo.dmg">Start your free trial</a><a class="article-cta-link" href="../../#buy">Compare monthly and lifetime</a></div><p class="article-cta-trust">Signed &amp; notarized &middot; macOS 14+ &middot; private on-device dictation</p></section>
-  <section class="article-next"><p class="answer-label">Go deeper</p><h2>Compare the products directly</h2><p><a href="${alternative.relatedComparison}">Read Gojo vs ${escapeHtml(alternative.name)}</a> for a fuller workflow comparison, or return to the <a href="../">Gojo alternatives hub</a>.</p></section>
-</article></main>`
+export function alternativeArticleBody(alternative: Alternative) {  const facts = alternative.officialFacts
+    .map(
+      (f, i) =>
+        `<li><span class="spec-n">${String(i + 1).padStart(2, "0")}</span><span>${escapeHtml(f)}</span></li>`,
+    )
+    .join("")
+
+  return `<div class="alt-shell">${navigation()}
+<main class="alt-main">
+  <div class="alt-wrap">
+    <nav class="alt-crumb" aria-label="Breadcrumb"><a href="../../">Home</a><span aria-hidden="true">/</span><a href="../">Alternatives</a></nav>
+    <h1 class="alt-h1">${escapeHtml(alternative.name)} <span class="alt-vs">vs</span> Gojo</h1>
+    <p class="alt-lede">${escapeHtml(alternative.tradeoff)}</p>
+    <p class="alt-stamp">Updated ${data.updated} <span aria-hidden="true">&middot;</span> Checked against the official ${escapeHtml(alternative.name)} site</p>
+
+    <section class="alt-split" aria-label="Which one fits">
+      <div class="alt-side">
+        <p class="alt-side-name">${escapeHtml(alternative.name)}</p>
+        <p class="alt-side-kind">${escapeHtml(alternative.category)}</p>
+        <p class="alt-side-copy">Choose it for ${escapeHtml(alternative.bestFor)}.</p>
+        <a class="alt-side-link" href="${escapeHtml(alternative.officialUrl)}" rel="external noopener">Official site</a>
+      </div>
+      <div class="alt-side alt-side-gojo">
+        <p class="alt-side-name">Gojo</p>
+        <p class="alt-side-kind">MacBook notch workspace</p>
+        <p class="alt-side-copy">Choose it for ${escapeHtml(alternative.gojoFit)}.</p>
+        <a class="alt-side-link" href="../../">See what it does</a>
+      </div>
+    </section>
+
+    <section class="alt-block" aria-labelledby="facts">
+      <h2 id="facts">What ${escapeHtml(alternative.name)} publishes</h2>
+      <p class="alt-note">Taken from the developer's own product page on ${data.updated}. These describe the product, they do not score it.</p>
+      <ol class="alt-specs">${facts}</ol>
+    </section>
+
+    <section class="alt-block" aria-labelledby="fit">
+      <h2 id="fit">Side by side</h2>
+      <dl class="alt-rows">
+        <div><dt>Built for</dt><dd>${escapeHtml(alternative.bestFor)}</dd><dd class="alt-rows-gojo">${escapeHtml(alternative.gojoFit)}</dd></div>
+        <div><dt>Shape</dt><dd>${escapeHtml(alternative.category)}</dd><dd class="alt-rows-gojo">Focused notch workspace</dd></div>
+        <div><dt>Try it</dt><dd>Check the developer's current page</dd><dd class="alt-rows-gojo">${escapeHtml(data.gojo.trial)}</dd></div>
+      </dl>
+      <p class="alt-note">A specialist wins when its one job is where your day goes. Gojo wins when you would rather reach one surface than assemble several utilities.</p>
+    </section>
+
+    <section class="alt-block" aria-labelledby="faq">
+      <h2 id="faq">Questions</h2>
+      <div class="alt-faq">
+        <h3>Is Gojo an alternative to ${escapeHtml(alternative.name)}?</h3>
+        <p>Yes, when you want ${escapeHtml(alternative.gojoFit)}. ${escapeHtml(alternative.tradeoff)}</p>
+        <h3>Who should choose ${escapeHtml(alternative.name)}?</h3>
+        <p>${escapeHtml(alternative.name)} is best for ${escapeHtml(alternative.bestFor)}.</p>
+      </div>
+    </section>
+
+    <section class="alt-cta" aria-labelledby="try-gojo-title">
+      <h2 id="try-gojo-title">Try Gojo for three days.</h2>
+      <p>Every feature unlocked. No account, no card.</p>
+      <p class="alt-cta-actions">
+        <a class="btn btn-primary" href="https://downloads.trygojo.com/Gojo.dmg">Download for macOS</a>
+        <a class="alt-cta-link" href="../../#buy">See pricing</a>
+      </p>
+      <p class="alt-fine">Signed and notarized <span aria-hidden="true">&middot;</span> macOS 14 or later <span aria-hidden="true">&middot;</span> Dictation runs on device</p>
+    </section>
+
+    <p class="alt-src">Primary source checked ${data.updated}: <a href="${escapeHtml(alternative.officialUrl)}" rel="external noopener">${escapeHtml(alternative.name)} official site</a>. Features, requirements and pricing change, so verify before buying. Read the longer <a href="${escapeHtml(alternative.relatedComparison)}">${escapeHtml(alternative.name)} comparison</a>.</p>
+  </div>
+</main>
+</div>`
 }
 
 export function alternativeHubSchema() {

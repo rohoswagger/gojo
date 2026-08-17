@@ -6,6 +6,36 @@
     <description>Most recent changes to Gojo, with download links.</description>
     <language>en</language>
     <item>
+      <title>Version 1.3.0</title>
+      <pubDate>Mon, 17 Aug 2026 06:53:22 +0000</pubDate>
+      <sparkle:version>1786949448</sparkle:version>
+      <sparkle:shortVersionString>1.3.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+<p>Gojo has a new home: **trygojo.com**.</p>
+<p>> **Update to 1.3.0 to keep your license working.** Licensing moved to the new</p>
+<p>> domain and the old address has been retired, so earlier versions can no longer</p>
+<p>> reach the licence server. Your licence key itself is unchanged and stays</p>
+<p>> valid — but an un-updated copy will eventually ask you to revalidate and lock.</p>
+<p>> If your copy has already locked, download Gojo once from</p>
+<p>> [trygojo.com](https://downloads.trygojo.com/Gojo.dmg) and replace it; your</p>
+<p>> existing key will activate as normal.</p>
+<h4>Changed</h4>
+<ul><li>**New home on the web.** The Gojo site, downloads, and this changelog now live</li></ul>
+<p>  under `trygojo.com` instead of the old `rohoswagger.com` address.</p>
+<ul><li>**Licensing and updates follow the move.** Licence checks and the automatic</li></ul>
+<p>  update feed point at the new domain. Nothing changes in how you use them.</p>
+<ul><li>**Licence emails now come from `hi@trygojo.com`.** Add it to your contacts if</li></ul>
+<p>  your provider is strict about filtering.</p>
+      ]]></description>
+      <enclosure
+        url="https://downloads.trygojo.com/Gojo-1.3.0.dmg"
+        sparkle:edSignature="OhE5U+C/JWA+ogp2yrESQ8/TgIv7uRRwyoo5VupAAsjIZkz3ZXxxv+VehvT2lmdi7qkuDhA+X+DV1rdEKSLbCw=="
+        length="11338655"
+        type="application/octet-stream" />
+    </item>
+
+    <item>
       <title>Version 1.2.0</title>
       <pubDate>Mon, 03 Aug 2026 17:38:08 +0000</pubDate>
       <sparkle:version>1785778558</sparkle:version>

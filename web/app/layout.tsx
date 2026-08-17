@@ -1,21 +1,15 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// No webfonts on purpose. site.css sets --body/--display/--mono to system
+// stacks (ui-sans-serif, SF Pro, ui-rounded), so loading Geist here would
+// ship font files nothing references.
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://trygojo.com"),
-  title: "Gojo",
-  description: "A macOS notch utility app.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
@@ -25,11 +19,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
-      </body>
+      <head>
+        <link rel="stylesheet" href="/site.css" />
+      </head>
+      <body>{children}</body>
     </html>
   );
 }

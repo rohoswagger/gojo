@@ -1,0 +1,2 @@
+# Sparkle auto-update fallback for installed apps <=1.3.0 (appcast URL hardcoded to trygojo.com)
+/appcast.xml  https://updates.trygojo.com/appcast.xml  301

@@ -7,7 +7,12 @@
   "assets": {
     "directory": "./out",
     "not_found_handling": "404-page"
-  }
-  // No `routes` / custom_domain block yet: the trygojo.com custom domain is
-  // added here at cutover time, once GitHub Pages is ready to be retired.
+  },
+  // Cloudflare manages the DNS records for these. `public/_redirects` keeps
+  // serving /appcast.xml -> updates.trygojo.com, which installs <=1.3.0 still
+  // request and cannot be repointed.
+  "routes": [
+    { "pattern": "trygojo.com", "custom_domain": true },
+    { "pattern": "www.trygojo.com", "custom_domain": true }
+  ]
 }

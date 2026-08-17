@@ -40,7 +40,7 @@ export function getFeaturesUpdated(): string {
 }
 
 const nav = () =>
-  `<header class="site-header"><a class="brand" href="../../" aria-label="Gojo home">Gojo</a><nav class="nav" aria-label="Primary"><a href="../">Features</a><a href="../../blog/">Blog</a><a href="../../alternatives/">Alternatives</a><a href="https://downloads.trygojo.com/Gojo.dmg">Download</a></nav></header>`
+  `<header class="site-header"><a class="brand" href="../../" aria-label="Gojo home">Gojo</a><nav class="nav" aria-label="Primary"><a href="../">Features</a><a href="../../blog/">Blog</a><a href="../../alternatives/">Alternatives</a><a href="/downloads/">Download</a></nav></header>`
 
 export function featureTitle(feature: Feature) {
   return `${feature.name} for MacBook notch | Gojo`

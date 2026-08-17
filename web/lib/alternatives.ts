@@ -50,7 +50,7 @@ export function getAlternativesUpdated(): string {
 }
 
 function navigation() {
-  return `<header class="site-header"><a class="brand" href="../../" aria-label="Gojo home">Gojo</a><nav class="nav" aria-label="Primary"><a href="../../blog/">Blog</a><a href="../">Alternatives</a><a href="https://downloads.trygojo.com/Gojo.dmg">Download</a></nav></header>`
+  return `<header class="site-header"><a class="brand" href="../../" aria-label="Gojo home">Gojo</a><nav class="nav" aria-label="Primary"><a href="../../blog/">Blog</a><a href="../">Alternatives</a><a href="/downloads/">Download</a></nav></header>`
 }
 
 export function alternativeTitle(alternative: Alternative) {

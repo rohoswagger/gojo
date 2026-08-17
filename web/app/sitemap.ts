@@ -27,6 +27,7 @@ export const dynamic = "force-static";
 export default function sitemap(): MetadataRoute.Sitemap {
   const paths = [
     "/",
+    "/downloads/",
     "/blog/",
     ...BLOG_SLUGS.map((s) => `/blog/${s}/`),
     "/alternatives/",

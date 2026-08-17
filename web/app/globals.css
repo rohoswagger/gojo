@@ -728,3 +728,18 @@ body:has(> .article-shell) {
   .download-body { padding: 56px 20px 72px; }
   .download-trust { gap: 8px 18px; }
 }
+
+/* Section markers on the landing page. One library, one stroke weight, sized
+   to the label's cap height so the pair reads as a single unit. */
+.act-index {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.act-icon {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  opacity: 0.9;
+}

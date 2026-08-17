@@ -18,7 +18,7 @@
 	<key>SUEnableInstallerLauncherService</key>
 	<true/>
 	<key>SUFeedURL</key>
-	<string>https://trygojo.com/appcast.xml</string>
+	<string>https://updates.trygojo.com/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>PuyK9IihaKFngA2Ykbvg5TjenAv+FWIp911pypnynls=</string>
 	<key>UTImportedTypeDeclarations</key>

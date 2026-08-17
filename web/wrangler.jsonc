@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "gojo-web",
+  "compatibility_date": "2026-08-14",
+  // Pure static assets — the exported Next.js site, no Worker script and no
+  // server runtime to pay for.
+  "assets": {
+    "directory": "./out",
+    "not_found_handling": "404-page"
+  }
+  // No `routes` / custom_domain block yet: the trygojo.com custom domain is
+  // added here at cutover time, once GitHub Pages is ready to be retired.
+}

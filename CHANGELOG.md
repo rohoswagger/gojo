@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] — 2026-08-17
+
+Automatic updates now come from their own address, so they no longer depend on
+the website being up.
+
+### Changed
+
+- **A dedicated home for updates.** Gojo checks `updates.trygojo.com` for new
+  versions instead of the main site. The feed is served straight from storage, so
+  a problem with the website can never stop updates from arriving.
+
+### Note for 1.3.0 and earlier
+
+Older versions look for updates at the previous address, which keeps working —
+but they cannot be pointed at the new one after the fact. If you are on 1.3.0 or
+earlier and updates are not appearing, download Gojo once from
+[trygojo.com](https://downloads.trygojo.com/Gojo.dmg) and replace your copy. Your
+licence key is unaffected and will activate as normal. This is a one-time step.
+
 ## [1.3.0] — 2026-08-16
 
 Gojo has a new home: **trygojo.com**.
@@ -118,7 +137,8 @@ Meet Gojo — it turns the dead space around your MacBook's notch into a control
 - **Guided setup** — a polished first launch that gets you going in seconds.
 - **Automatic updates** — new versions install themselves; no re-downloading.
 
-[Unreleased]: https://github.com/rohoswagger/gojo/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/rohoswagger/gojo/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/rohoswagger/gojo/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/rohoswagger/gojo/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/rohoswagger/gojo/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/rohoswagger/gojo/compare/v1.1.1...v1.1.2

@@ -439,10 +439,28 @@ git push origin main
 
 ok "appcast.xml committed and pushed"
 
+# -------- 10b. Publish the appcast to R2 --------
+#
+# updates.trygojo.com is the feed URL baked into 1.4.0+ (SUFeedURL). It is served
+# straight from R2, so publishing an update never depends on the marketing site
+# building or deploying successfully.
+#
+# The git commit above still stands: trygojo.com/appcast.xml keeps serving 1.3.0
+# and earlier installs, which have that URL compiled in and cannot be repointed.
+
+log "Publishing appcast to R2 (updates.trygojo.com)"
+
+npx --yes wrangler@4 r2 object put "gojo-downloads/appcast.xml" --remote \
+  --content-type "application/xml" --file docs/appcast.xml \
+  || die "R2 upload failed for appcast.xml — 1.4.0+ installs would not see this release"
+
+ok "appcast published to https://updates.trygojo.com/appcast.xml"
+
 # -------- Done --------
 
 log "Released Gojo v$VERSION"
 info "  Download (versioned): https://downloads.trygojo.com/$DMG_NAME"
 info "  Download (latest):    https://downloads.trygojo.com/Gojo.dmg"
-info "  Appcast: https://trygojo.com/appcast.xml"
+info "  Appcast (1.4.0+):   https://updates.trygojo.com/appcast.xml"
+info "  Appcast (≤1.3.0):   https://trygojo.com/appcast.xml"
 info "  DMG SHA-256: $(shasum -a 256 "$DMG_PATH" | awk '{print $1}')"

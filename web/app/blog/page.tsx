@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
+import { GojoFooter } from "@/components/gojo-footer";
+import { GojoHeader } from "@/components/gojo-header";
 import { loadHub } from "./lib";
 
 const hub = loadHub();
@@ -34,15 +37,57 @@ export const metadata: Metadata = {
 
 export default function BlogIndexPage() {
   return (
-    <>
+    <div className="blog-shell">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(hub.jsonLd) }}
       />
-      <div
-        className={hub.bodyClass ?? undefined}
-        dangerouslySetInnerHTML={{ __html: hub.bodyHtml }}
-      />
-    </>
+
+      <GojoHeader />
+
+      <main className="blog-main">
+        <section className="blog-hero">
+          <div className="wrap">
+            {hub.hero.label ? <p className="blog-label">{hub.hero.label}</p> : null}
+            <h1>{hub.hero.title}</h1>
+            {hub.hero.summary ? <p>{hub.hero.summary}</p> : null}
+          </div>
+        </section>
+
+        <section className="blog-archive" aria-labelledby="blog-archive-heading">
+          <div className="wrap">
+            <div className="archive-head">
+              <div>
+                {hub.archive.kicker ? (
+                  <p className="archive-kicker">{hub.archive.kicker}</p>
+                ) : null}
+                <h2 id="blog-archive-heading">{hub.archive.title}</h2>
+              </div>
+              <span>{hub.posts.length} posts</span>
+            </div>
+
+            <ol className="blog-posts">
+              {hub.posts.map((post) => (
+                <li key={post.slug}>
+                  <Link className="blog-post-card" href={`/blog/${post.slug}/`}>
+                    <span className="blog-card-topline">
+                      <span>{post.kicker}</span>
+                      <span>{post.date}</span>
+                    </span>
+                    <h3>{post.title}</h3>
+                    <span className="blog-card-summary">{post.summary}</span>
+                    <span className="blog-post-action" aria-hidden="true">
+                      Read the post &rarr;
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+      </main>
+
+      <GojoFooter />
+    </div>
   );
 }

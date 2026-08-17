@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { ArticleBlocks } from "@/components/blog/blocks";
+import { GojoFooter } from "@/components/gojo-footer";
+import { GojoHeader } from "@/components/gojo-header";
 import { POST_SLUGS, loadPost } from "../lib";
 
 export function generateStaticParams() {
@@ -65,17 +69,50 @@ export default async function BlogPostPage({ params }: Params) {
     notFound();
   }
   const post = loadPost(slug);
+  const { hero } = post;
 
   return (
-    <>
+    <div className="article-shell">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(post.jsonLd) }}
       />
-      <div
-        className={post.bodyClass ?? undefined}
-        dangerouslySetInnerHTML={{ __html: post.bodyHtml }}
-      />
-    </>
+
+      <div className="article-top">
+        <GojoHeader />
+
+        <section className="article-hero">
+          <div className="wrap">
+            <nav className="breadcrumb" aria-label="Breadcrumb">
+              {hero.breadcrumb.map((crumb, i) => (
+                <span key={crumb.href} className="contents">
+                  {i > 0 ? <span aria-hidden="true">/</span> : null}
+                  <Link href={crumb.href}>{crumb.label}</Link>
+                </span>
+              ))}
+            </nav>
+
+            {hero.label ? <p className="article-label">{hero.label}</p> : null}
+            <h1>{hero.title}</h1>
+            {hero.summary ? <p className="article-summary">{hero.summary}</p> : null}
+
+            <div className="article-meta">
+              {hero.meta.map((item) => (
+                <span key={item}>{item}</span>
+              ))}
+              <Link href="/blog/">All posts</Link>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <main className="article-main">
+        <article className="article-body article-reader">
+          <ArticleBlocks blocks={post.blocks} />
+        </article>
+      </main>
+
+      <GojoFooter />
+    </div>
   );
 }

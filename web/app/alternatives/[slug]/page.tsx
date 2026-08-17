@@ -2,13 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FaqAccordion } from "@/components/faq-accordion";
 import { CtaBand } from "@/components/cta-band";
 import { Section } from "@/components/section";
-import { SiteFooterLegacy } from "@/components/site-footer-legacy";
+import { GojoFooter } from "@/components/gojo-footer";
+import { GojoHeader } from "@/components/gojo-header";
+import { Versus } from "@/components/versus";
+import { Check } from "lucide-react";
+import { ComparisonTable } from "@/components/comparison-table";
+import { comparisonFootnote, comparisonRows } from "@/lib/comparison";
 import {
   getAlternative,
   getAlternatives,
@@ -69,23 +71,11 @@ export default async function AlternativePage({ params }: Params) {
 
       {/* Dark hero, then a light body. Same rhythm as every other article
           page on the site, so these stop reading as a separate world. */}
-      <div className="article-shell">
+      <div className="article-shell" data-compare="true">
         <div className="article-top">
-          <div className="shell">
-            <header className="site-header">
-              <Link className="brand" href="/" aria-label="Gojo home">
-                Gojo
-              </Link>
-              <nav className="nav" aria-label="Primary">
-                <Link href="/blog/">Blog</Link>
-                <Link href="/alternatives/">Alternatives</Link>
-                <Link className="ghost-link" href="/downloads/">
-                  Download
-                </Link>
-              </nav>
-            </header>
+          <GojoHeader />
 
-            <main>
+          <main>
               <section className="article-hero">
                 <div className="wrap">
                   <nav className="breadcrumb" aria-label="Breadcrumb">
@@ -97,47 +87,58 @@ export default async function AlternativePage({ params }: Params) {
                     {alternative.name} vs Gojo: which fits your Mac?
                   </h1>
                   <p className="article-summary">{alternative.tradeoff}</p>
+                  <Versus
+                    slug={alternative.slug}
+                    name={alternative.name}
+                    category={alternative.category}
+                  />
                   <div className="article-meta">
                     <span>Updated {updated}</span>
                     <span>Checked against the official {alternative.name} site</span>
                   </div>
                 </div>
               </section>
-            </main>
-          </div>
+          </main>
         </div>
 
         <main className="article-main">
-          {/* The decision, as two cards rather than paragraphs. */}
-          <Section width="default" className="alt-choice">
-            <div className="alt-choice-grid">
-              <Card>
-                <CardHeader>
-                  <Badge variant="secondary">{alternative.category}</Badge>
-                  <CardTitle>{alternative.name}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p>Choose it for {alternative.bestFor}.</p>
-                  <Button asChild variant="outline" size="sm">
-                    <a href={alternative.officialUrl} rel="external noopener">
-                      Official site
-                    </a>
-                  </Button>
-                </CardContent>
-              </Card>
+          <Section className="cmp-section">
+            <ComparisonTable
+              slug={alternative.slug}
+              name={alternative.name}
+              category={alternative.category}
+              rows={comparisonRows(alternative)}
+              footnote={comparisonFootnote(alternative, updated)}
+            />
 
-              <Card className="alt-choice-gojo">
-                <CardHeader>
-                  <Badge>MacBook notch workspace</Badge>
-                  <CardTitle>Gojo</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p>Choose it for {alternative.gojoFit}.</p>
-                  <Button asChild size="sm">
-                    <Link href="/">See what it does</Link>
-                  </Button>
-                </CardContent>
-              </Card>
+            <div className="why">
+              <h2 className="why-title">Why choose Gojo?</h2>
+              <ul className="why-list">
+                <li>
+                  <Check className="why-tick" aria-hidden="true" />
+                  <span>
+                    <strong>Dictation stays on your Mac</strong> — no API key, no account, no audio leaving the device
+                  </span>
+                </li>
+                <li>
+                  <Check className="why-tick" aria-hidden="true" />
+                  <span>
+                    <strong>Six tools in one surface</strong> — media, windows, clipboard, files, calendar, display
+                  </span>
+                </li>
+                <li>
+                  <Check className="why-tick" aria-hidden="true" />
+                  <span>
+                    <strong>Three days free</strong> — every feature unlocked, no account and no card
+                  </span>
+                </li>
+                <li>
+                  <Check className="why-tick" aria-hidden="true" />
+                  <span>
+                    <strong>Signed &amp; notarized</strong> — open source under GPLv3, updates install themselves
+                  </span>
+                </li>
+              </ul>
             </div>
           </Section>
 
@@ -153,26 +154,6 @@ export default async function AlternativePage({ params }: Params) {
               ))}
             </ul>
 
-            <h2>Side by side</h2>
-            <dl className="alt-rows">
-              <div>
-                <dt>Built for</dt>
-                <dd>{alternative.bestFor}</dd>
-                <dd className="alt-rows-gojo">{alternative.gojoFit}</dd>
-              </div>
-              <div>
-                <dt>Shape</dt>
-                <dd>{alternative.category}</dd>
-                <dd className="alt-rows-gojo">Focused notch workspace</dd>
-              </div>
-              <div>
-                <dt>Try it</dt>
-                <dd>Check the developer&rsquo;s current page</dd>
-                <dd className="alt-rows-gojo">
-                  3-day free trial with no card required
-                </dd>
-              </div>
-            </dl>
             <p>
               A specialist wins when its one job is where your day goes. Gojo wins
               when you would rather reach one surface than assemble several
@@ -221,7 +202,7 @@ export default async function AlternativePage({ params }: Params) {
         </main>
       </div>
 
-      <SiteFooterLegacy />
+      <GojoFooter />
     </>
   );
 }

@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 
-import { SiteFooterLegacy } from "@/components/site-footer-legacy"
+import { GojoFooter } from "@/components/gojo-footer"
 import {
   featureArticleBody,
   featureArticleSchema,
@@ -64,7 +64,7 @@ export default async function FeaturePage({
   return (
     <div className="article-shell">
       <div dangerouslySetInnerHTML={{ __html: body }} />
-      <SiteFooterLegacy />
+      <GojoFooter />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}

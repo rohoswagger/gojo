@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-// No webfonts on purpose. site.css sets --body/--display/--mono to system
+// No webfonts on purpose. app/skin.css sets --body/--display/--mono to system
 // stacks (ui-sans-serif, SF Pro, ui-rounded), so loading Geist here would
 // ship font files nothing references.
 
@@ -19,9 +19,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <link rel="stylesheet" href="/site.css" />
-      </head>
       <body>{children}</body>
     </html>
   );

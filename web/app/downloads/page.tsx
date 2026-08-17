@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SiteFooterLegacy } from "@/components/site-footer-legacy";
+import { GojoFooter } from "@/components/gojo-footer";
+import { GojoHeader } from "@/components/gojo-header";
 
 const DMG = "https://downloads.trygojo.com/Gojo.dmg";
 const VERSION = "1.4.0";
@@ -74,18 +75,9 @@ export default function DownloadsPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div className="shell download-shell">
-        <header className="site-header">
-          <Link className="brand" href="/" aria-label="Gojo home">
-            Gojo
-          </Link>
-          <nav className="nav" aria-label="Primary">
-            <Link href="/features/">Features</Link>
-            <Link href="/blog/">Blog</Link>
-            <Link href="/alternatives/">Alternatives</Link>
-          </nav>
-        </header>
+      <GojoHeader />
 
+      <div className="shell download-shell">
         <main>
           <section className="download-hero">
             <h1>Download Gojo</h1>
@@ -159,7 +151,7 @@ export default function DownloadsPage() {
         </div>
       </main>
 
-      <SiteFooterLegacy />
+      <GojoFooter />
     </>
   );
 }

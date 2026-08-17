@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 
-import { SiteFooterLegacy } from "@/components/site-footer-legacy"
+import { GojoFooter } from "@/components/gojo-footer"
 import { hubBody, hubCanonical, hubDescription, hubSchema, hubTitle } from "@/lib/features"
 
 export function generateMetadata(): Metadata {
@@ -35,7 +35,7 @@ export default function FeaturesHubPage() {
   return (
     <div className="article-shell">
       <div dangerouslySetInnerHTML={{ __html: body }} />
-      <SiteFooterLegacy />
+      <GojoFooter />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}

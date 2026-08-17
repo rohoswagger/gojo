@@ -9,7 +9,7 @@ Gojo releases are cut locally with `scripts/release.sh` (wrapped as `make releas
 The script: build → code-sign → notarize app → styled DMG → notarize DMG →
 Sparkle-sign → update `docs/appcast.xml` → upload DMG to Cloudflare R2 → push tag
 → commit+push appcast. There is **no GitHub Release** — the DMG lives in the
-`gojo-downloads` R2 bucket, served at `https://downloads.rohoswagger.com/`.
+`gojo-downloads` R2 bucket, served at `https://downloads.trygojo.com/`.
 
 Each release uploads two R2 objects: the immutable versioned `Gojo-X.Y.Z.dmg`
 (what appcast entries point at) and an always-latest `Gojo.dmg` (what the
@@ -31,7 +31,7 @@ Gojo is sold through Stripe, so a bare `make release VERSION=X.Y.Z` publishes
 Hand the DMG to the paid channel yourself.
 
 Pass `ARGS=--public` to publish — uploads the DMG to
-`downloads.rohoswagger.com` and commits an appcast entry, which is what existing
+`downloads.trygojo.com` and commits an appcast entry, which is what existing
 installs Sparkle-update from. Ask before using it unless the user said to publish.
 
 **Never create a GitHub Release.** The script does not, and the repo has none by
@@ -121,7 +121,7 @@ validation killed it loading a vendored framework). After any release:
 
 ```bash
 cd /tmp && rm -rf rv && mkdir rv && cd rv
-curl -fsSLO https://downloads.rohoswagger.com/Gojo-X.Y.Z.dmg
+curl -fsSLO https://downloads.trygojo.com/Gojo-X.Y.Z.dmg
 shasum -a 256 Gojo-X.Y.Z.dmg          # compare against the script's printed SHA-256
 MP=$(hdiutil attach Gojo-X.Y.Z.dmg -nobrowse -readonly | grep -o '/Volumes/.*')
 codesign -dv --verbose=2 "$MP/Gojo.app" 2>&1 | grep -i flags
@@ -161,17 +161,17 @@ cd - >/dev/null && rm -rf /tmp/rv
   `http://`, App Transport Security blocks it, and **every install silently stops
   auto-updating**. Check: `gh api repos/rohoswagger/gojo/pages --jq '.https_enforced'`
   → must be `true`. Fix: `gh api -X PUT repos/rohoswagger/gojo/pages -F https_enforced=true`.
-  Verify: `curl -fsSI https://rohoswagger.github.io/gojo/appcast.xml | grep -i location`
+  Verify: `curl -fsSI https://trygojo.com/appcast.xml | grep -i location`
   → must be `https://`.
 
 ## After publishing
 
 - GitHub Pages rebuilds the appcast feed automatically (~1 min):
   `gh api repos/rohoswagger/gojo/pages/builds/latest --jq '.status'`.
-- The Pages site uses a custom domain: `rohoswagger.github.io/gojo/appcast.xml`
-  **301-redirects** to `gojo.rohoswagger.com/appcast.xml`. Check the live feed
+- The Pages site uses a custom domain: `trygojo.com/appcast.xml`
+  **301-redirects** to `trygojo.com/appcast.xml`. Check the live feed
   with `curl -fsSL` (follow redirects) or the canonical URL directly:
   ```bash
-  curl -fsSL https://gojo.rohoswagger.com/appcast.xml | grep "Version X.Y.Z"
+  curl -fsSL https://trygojo.com/appcast.xml | grep "Version X.Y.Z"
   ```
 - Existing installs auto-update via Sparkle within ~24h (or on manual check).

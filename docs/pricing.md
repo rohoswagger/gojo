@@ -22,4 +22,4 @@ Gojo is a native macOS utility for private on-device dictation, window controls,
 - Platform: macOS 14 or later
 - Distribution: signed and notarized
 
-Buy or verify the latest pricing: https://gojo.rohoswagger.com/#buy
+Buy or verify the latest pricing: https://trygojo.com/#buy

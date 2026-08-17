@@ -89,7 +89,7 @@ DRY_RUN="${DRY_RUN:-0}"
 if [ "$PRIVATE" = "1" ]; then
   info "Private release (default): DMG only — no R2 upload, no appcast entry."
 else
-  warn "--public: this WILL publish the DMG to downloads.rohoswagger.com and add"
+  warn "--public: this WILL publish the DMG to downloads.trygojo.com and add"
   warn "a public appcast entry that every existing install can update from."
 fi
 
@@ -362,7 +362,7 @@ else
     --appcast docs/appcast.xml \
     --version "$VERSION" \
     --build "$BUILD_NUMBER" \
-    --dmg-url "https://downloads.rohoswagger.com/$DMG_NAME" \
+    --dmg-url "https://downloads.trygojo.com/$DMG_NAME" \
     --dmg-size "$DMG_SIZE" \
     --ed-signature-line "$SIGNATURE_LINE" \
     --release-notes-out ".build/release-notes-$VERSION.md"
@@ -415,7 +415,7 @@ R2_PUT=( npx --yes wrangler@4 r2 object put --remote --content-type application/
 "${R2_PUT[@]}" "gojo-downloads/Gojo.dmg" \
   || die "R2 upload failed for Gojo.dmg"
 
-ok "DMG uploaded to https://downloads.rohoswagger.com/$DMG_NAME (and /Gojo.dmg)"
+ok "DMG uploaded to https://downloads.trygojo.com/$DMG_NAME (and /Gojo.dmg)"
 
 # -------- 9b. Tag the release --------
 
@@ -442,7 +442,7 @@ ok "appcast.xml committed and pushed"
 # -------- Done --------
 
 log "Released Gojo v$VERSION"
-info "  Download (versioned): https://downloads.rohoswagger.com/$DMG_NAME"
-info "  Download (latest):    https://downloads.rohoswagger.com/Gojo.dmg"
-info "  Appcast: https://rohoswagger.github.io/gojo/appcast.xml"
+info "  Download (versioned): https://downloads.trygojo.com/$DMG_NAME"
+info "  Download (latest):    https://downloads.trygojo.com/Gojo.dmg"
+info "  Appcast: https://trygojo.com/appcast.xml"
 info "  DMG SHA-256: $(shasum -a 256 "$DMG_PATH" | awk '{print $1}')"

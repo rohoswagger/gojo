@@ -1,6 +1,6 @@
 # Releasing Gojo
 
-Gojo cuts releases from your local machine via [`scripts/release.sh`](./scripts/release.sh), wrapped as a Makefile target. The script handles build → sign → notarize → DMG → Sparkle-sign → appcast → upload to Cloudflare R2 (downloads.rohoswagger.com) in one command.
+Gojo cuts releases from your local machine via [`scripts/release.sh`](./scripts/release.sh), wrapped as a Makefile target. The script handles build → sign → notarize → DMG → Sparkle-sign → appcast → upload to Cloudflare R2 (downloads.trygojo.com) in one command.
 
 CI (`.github/workflows/build.yml`) verifies every PR/push compiles, but does **not** publish releases.
 
@@ -32,7 +32,7 @@ make release VERSION=1.0.0 ARGS=--adhoc           # ad-hoc signed, no Apple acco
 > accepted as an explicit no-op if you prefer to spell it out.
 
 > `--public` opts in to publishing: it uploads the DMG to
-> `downloads.rohoswagger.com` (versioned plus `Gojo.dmg`), adds an entry to
+> `downloads.trygojo.com` (versioned plus `Gojo.dmg`), adds an entry to
 > `docs/appcast.xml`, and commits that back to `main`. This is what existing
 > installs Sparkle-update from, so a version that should reach current users
 > needs this flag — the paywall is in-app licensing (`LicenseManager`), not the
@@ -97,7 +97,7 @@ Set the file path in `.env.local` as `SPARKLE_PRIVATE_ED_KEY`.
 
 ### 5. GitHub Pages
 
-The `SUFeedURL` in `Info.plist` points at `https://rohoswagger.github.io/gojo/appcast.xml`. Pages is already enabled to serve this — **Source: Deploy from a branch, Branch: `main`, Folder: `/docs`**. Because `/docs` is the published site root, `docs/appcast.xml` serves at `…/gojo/appcast.xml`, and the same folder hosts the marketing site (`docs/index.html`).
+The `SUFeedURL` in `Info.plist` points at `https://trygojo.com/appcast.xml`. Pages is already enabled to serve this — **Source: Deploy from a branch, Branch: `main`, Folder: `/docs`**. Because `/docs` is the published site root, `docs/appcast.xml` serves at `…/gojo/appcast.xml`, and the same folder hosts the marketing site (`docs/index.html`).
 
 The release script commits the updated `docs/appcast.xml` to `main` at the end of each release; Pages serves it from there.
 

@@ -43,7 +43,7 @@ export async function footerHtml(prefix) {
       { href: `${prefix}#features`, label: "How it works" },
       { href: `${prefix}#buy`, label: "Pricing" },
       { href: `${prefix}blog/`, label: "Blog" },
-      { href: "https://downloads.rohoswagger.com/Gojo.dmg", label: "Download for macOS" },
+      { href: "https://downloads.trygojo.com/Gojo.dmg", label: "Download for macOS" },
       { href: "https://github.com/rohoswagger/gojo", label: "GitHub" },
     ]),
   ].join("");

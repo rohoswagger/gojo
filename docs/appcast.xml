@@ -2,7 +2,7 @@
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
   <channel>
     <title>Gojo</title>
-    <link>https://rohoswagger.github.io/gojo/appcast.xml</link>
+    <link>https://trygojo.com/appcast.xml</link>
     <description>Most recent changes to Gojo, with download links.</description>
     <language>en</language>
     <item>
@@ -17,7 +17,7 @@
 <ul><li>**Search** — a Spotlight-style panel for your whole Mac. Press ⌘ Space (or ⌥ Space) to open it from anywhere: launch any installed app, find files by name, or type a calculation like `2*19` and copy the answer with a single keystroke. Results rank by how often and how recently you use them, so your everyday apps float to the top.</li><li>**Replace Spotlight, reversibly.** Gojo takes over ⌘ Space without touching your system keyboard settings — turn it off in Settings → Search and Spotlight is instantly back. Requires the same Accessibility permission Gojo already uses for window management.</li><li>**Built to grow.** Search is built on a provider system, so future result types (clipboard, actions, and more) plug into the same panel.</li></ul>
       ]]></description>
       <enclosure
-        url="https://downloads.rohoswagger.com/Gojo-1.2.0.dmg"
+        url="https://downloads.trygojo.com/Gojo-1.2.0.dmg"
         sparkle:edSignature="RgpHYd5J2uQtert44gntyO6W0cnvRbRbicku/i/zOAq3qqZ5OA5pGgMyqxPEjIq1P1YVMKO27lPC3USEAioRAw=="
         length="11338069"
         type="application/octet-stream" />
@@ -36,7 +36,7 @@
 <p>Gojo still refuses to insert text if you move to a different field mid-dictation. That check is deliberate, and it keeps dictated text out of the wrong place.</p>
       ]]></description>
       <enclosure
-        url="https://downloads.rohoswagger.com/Gojo-1.1.2.dmg"
+        url="https://downloads.trygojo.com/Gojo-1.1.2.dmg"
         sparkle:edSignature="rwQW4hktstu8Ueb25VmqN1jea30o75RqtuW728XzdLTsbgJ7CLVW93o/fASGuJOY8QTNi4xJ4caKS+6VMlKyBQ=="
         length="11200542"
         type="application/octet-stream" />
@@ -52,10 +52,10 @@
 <p>A repair release. Gojo itself is unchanged from 1.1.0 — this is the same app, signed correctly.</p>
 <h4>Fixed</h4>
 <ul><li>**Automatic updates now work.** Every release up to and including 1.1.0 was signed with a malformed sandbox entitlement, which left Gojo unable to reach the helper services that install updates. Gojo could check for a new version but never finish installing one.</li></ul>
-<p>> **If you are already running 1.1.0 or earlier, please download Gojo once from [downloads.rohoswagger.com](https://downloads.rohoswagger.com/Gojo.dmg) and replace your copy.** The broken updater is the very thing this release fixes, so it cannot update itself. This is a one-time step — updates from 1.1.1 onward install on their own.</p>
+<p>> **If you are already running 1.1.0 or earlier, please download Gojo once from [downloads.trygojo.com](https://downloads.trygojo.com/Gojo.dmg) and replace your copy.** The broken updater is the very thing this release fixes, so it cannot update itself. This is a one-time step — updates from 1.1.1 onward install on their own.</p>
       ]]></description>
       <enclosure
-        url="https://downloads.rohoswagger.com/Gojo-1.1.1.dmg"
+        url="https://downloads.trygojo.com/Gojo-1.1.1.dmg"
         sparkle:edSignature="tfGe1+bYvE+a5EPTX9zzV4zG403FFw1hIcD9bfrxid8tO7tSeelu2qunpG2bV/S4D+Wn8JBrCss3gzDgWRS0Cg=="
         length="11200137"
         type="application/octet-stream" />
@@ -77,7 +77,7 @@
 <ul><li>**Window switching** — per-window recency is preserved across app activation, so quick switching keeps the expected window order.</li><li>**Multiple displays** — the switcher now appears on the focused app's display and only includes eligible windows from that physical display, even when displays share a Space.</li><li>**macOS 14 compatibility** — the bundled media adapter is now built for Gojo's advertised minimum system version.</li></ul>
       ]]></description>
       <enclosure
-        url="https://downloads.rohoswagger.com/Gojo-1.1.0.dmg"
+        url="https://downloads.trygojo.com/Gojo-1.1.0.dmg"
         sparkle:edSignature="4m8vTx82Cim40lMJO2p5Z9OKV7IxruI80wM7rDUmUEWa3hOOHj8UNQZoer5ry4H8JZDm+fdNWqrlTuT0DW5yBw=="
         length="11200362"
         type="application/octet-stream" />
@@ -96,7 +96,7 @@
 <ul><li>**Night shift** — the notch toggle now works even without a location set, assuming a 7 AM sunrise / 7 PM sunset. The first time you turn it on without a location, settings opens once so you can set one.</li><li>**Window snapping** — the window strip now scrolls smoothly when you have many windows open, instead of hiding anything past the sixth. Edge fades and a peeking card show when there's more to scroll, and the focused window scrolls into view automatically.</li></ul>
       ]]></description>
       <enclosure
-        url="https://downloads.rohoswagger.com/Gojo-1.0.2.dmg"
+        url="https://downloads.trygojo.com/Gojo-1.0.2.dmg"
         sparkle:edSignature="FtCu7AuITFSF+rai82jsgnuipJpJADOsickkJA8Qx+BKatTIaKA1cVM1Cy+VEEiQgIJX9WV8d1W+Qcl01o8VCw=="
         length="8033334"
         type="application/octet-stream" />
@@ -113,7 +113,7 @@
 <ul><li>**Onboarding** — the accessibility permission step is now a Codex-style drag-to-grant flow: drag the app icon straight into System Settings instead of hunting through panes.</li><li>**Onboarding** — the setup flow now renders correctly in light mode, with a consistent look across every step.</li><li>**Installer** — the DMG install window is redesigned to match the marketing site, and window chrome/layout issues on open are fixed.</li></ul>
       ]]></description>
       <enclosure
-        url="https://downloads.rohoswagger.com/Gojo-1.0.1.dmg"
+        url="https://downloads.trygojo.com/Gojo-1.0.1.dmg"
         sparkle:edSignature="clMn5SBl5IbAVYy/Jxr0zFRfSPF3W8gyTMRGJnQnE1ltv6FYcl0ZfVqJLG5Vnl7ZuR0gbJpUcwlzphtFh0uJCQ=="
         length="8024107"
         type="application/octet-stream" />
@@ -131,7 +131,7 @@
 <ul><li>**Music** — see and control whatever's playing (Apple Music, Spotify, browser audio) right in the notch: album art, scrubbing, and playback controls.</li><li>**Window snapping** — a live strip of your open windows with one-click snapping (halves, fill, zoom) and keyboard shortcuts, across any app.</li><li>**Clipboard history** — browse, search, pin, and paste your recent copies. Password managers are skipped automatically.</li><li>**File shelf** — drag files into the notch from anywhere and pick them back up in any other app.</li><li>**Night shift** — warm your screen on a schedule with location-aware sunset, down to a cozy 750K.</li><li>**Calendar & reminders** — your next events and to-dos, glanceable the moment the notch opens.</li><li>**Webcam mirror** — a quick mirror to check your framing before a call.</li><li>**Battery** — charge level and power status, always in reach.</li><li>**Guided setup** — a polished first launch that gets you going in seconds.</li><li>**Automatic updates** — new versions install themselves; no re-downloading.</li></ul>
       ]]></description>
       <enclosure
-        url="https://downloads.rohoswagger.com/Gojo-1.0.0.dmg"
+        url="https://downloads.trygojo.com/Gojo-1.0.0.dmg"
         sparkle:edSignature="f08NkFmRMof/RVgliuVaGuNKGpXMDqrlsTCnMaHs05b8zZm7HjQ+Qf+VNcrRmX+fRPVaRsGLy/1F/ezirFZNBA=="
         length="7181935"
         type="application/octet-stream" />

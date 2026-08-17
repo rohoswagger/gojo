@@ -165,7 +165,7 @@ Gojo is two targets that talk over XPC:
 - **`Gojo.app`** — the SwiftUI host app. Owns the notch window, the views, music/clipboard/shelf/webcam managers, and most of the UI logic.
 - **`GojoXPCHelper.xpc`** — bundled XPC service. Holds the Accessibility authorization and performs AX-trusted operations (window enumeration, raise, frame set, zoom). Isolating AX in a separate process makes the trust model cleaner and lets the main app run without elevated permissions.
 
-Auto-update is provided by Sparkle via the appcast at `https://rohoswagger.github.io/gojo/appcast.xml` (EdDSA-signed updates).
+Auto-update is provided by Sparkle via the appcast at `https://trygojo.com/appcast.xml` (EdDSA-signed updates).
 
 ## Troubleshooting
 

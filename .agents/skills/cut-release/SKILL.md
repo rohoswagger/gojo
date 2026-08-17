@@ -7,7 +7,7 @@ description: Cut, re-cut/override, or roll back a Gojo macOS release (DMG on Clo
 
 Gojo releases are cut locally with `scripts/release.sh` (wrapped as `make release`).
 The script: build → code-sign → notarize app → styled DMG → notarize DMG →
-Sparkle-sign → update `docs/appcast.xml` → upload DMG to Cloudflare R2 → push tag
+Sparkle-sign → update `appcast.xml` → upload DMG to Cloudflare R2 → push tag
 → commit+push appcast. There is **no GitHub Release** — the DMG lives in the
 `gojo-downloads` R2 bucket, served at `https://downloads.trygojo.com/`.
 
@@ -81,7 +81,7 @@ git tag -d vX.Y.Z 2>/dev/null || true
 
 # 3. Remove the old appcast entry — update_appcast.py PREPENDS with no dedup, so
 #    re-running would create a SECOND vX.Y.Z <item>. Revert the appcast commit
-#    (find it: git log --oneline -- docs/appcast.xml), then push.
+#    (find it: git log --oneline -- appcast.xml), then push.
 git revert --no-edit <appcast-commit-sha>
 git push origin main
 
@@ -90,7 +90,7 @@ git push origin main
 make release VERSION=X.Y.Z ARGS=--public
 ```
 
-Verify after step 3: `grep -c '<title>Version X.Y.Z' docs/appcast.xml` → `0`.
+Verify after step 3: `grep -c '<title>Version X.Y.Z' appcast.xml` → `0`.
 
 ## Roll back / delete a release (no re-cut)
 
@@ -149,12 +149,12 @@ cd - >/dev/null && rm -rf /tmp/rv
   never prompts for an account.
 - **Ad-hoc + hardened runtime**: `--adhoc` forces `ENABLE_HARDENED_RUNTIME=NO`.
   Never ad-hoc-sign with hardened runtime — library validation crashes it at launch.
-- **Appcast path**: it lives at `docs/appcast.xml` (GitHub Pages serves `/docs`),
+- **Appcast path**: it lives at `appcast.xml` (GitHub Pages serves the Cloudflare Worker in `web/`),
   not the repo root.
 - **Sparkle key**: `SPARKLE_PRIVATE_ED_KEY` in `.env.local` may be a file path OR
   the raw key value (both supported). It is the one irreplaceable secret — losing
   it breaks auto-updates for all installs.
-- **GitHub Pages** must stay enabled (Settings → Pages → `main` / `/docs`) or the
+- **GitHub Pages** must stay enabled (Settings → Pages → `main` / the Cloudflare Worker in `web/`) or the
   appcast (auto-update feed) 404s.
 - **Pages HTTPS enforcement must stay ON** (found broken 2026-07-08): with
   `https_enforced: false`, the feed URL baked into shipped apps redirects to

@@ -359,7 +359,7 @@ else
   log "Updating appcast.xml"
 
   python3 .github/scripts/update_appcast.py \
-    --appcast docs/appcast.xml \
+    --appcast appcast.xml \
     --version "$VERSION" \
     --build "$BUILD_NUMBER" \
     --dmg-url "https://downloads.trygojo.com/$DMG_NAME" \
@@ -427,11 +427,11 @@ git push origin "v$VERSION"
 
 log "Committing appcast.xml"
 
-git add docs/appcast.xml
+git add appcast.xml
 git commit \
   -m "Keep existing installs on the v$VERSION update path" \
   -m "Publish the signed release metadata after the notarized artifact is available." \
-  -m "Constraint: The public Sparkle feed is served from docs/appcast.xml" \
+  -m "Constraint: The signed Sparkle feed is published to R2 from appcast.xml" \
   -m "Confidence: high" \
   -m "Scope-risk: narrow" \
   -m "Tested: Release build, signing, notarization, DMG packaging, and Sparkle signature"
@@ -451,7 +451,7 @@ ok "appcast.xml committed and pushed"
 log "Publishing appcast to R2 (updates.trygojo.com)"
 
 npx --yes wrangler@4 r2 object put "gojo-downloads/appcast.xml" --remote \
-  --content-type "application/xml" --file docs/appcast.xml \
+  --content-type "application/xml" --file appcast.xml \
   || die "R2 upload failed for appcast.xml — 1.4.0+ installs would not see this release"
 
 ok "appcast published to https://updates.trygojo.com/appcast.xml"

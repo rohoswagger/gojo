@@ -8,15 +8,15 @@
 #
 # Each shot is captured interactively (drag a selection), then validated and
 # normalised: true 8-bit PNG, metadata stripped, retina density enforced.
-# See docs/screenshots/CAPTURE.md for the exact app state each shot needs.
+# See web/public/screenshots/CAPTURE.md for the exact app state each shot needs.
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-OUT="$ROOT/docs/screenshots"
+OUT="$ROOT/web/public/screenshots"
 
 # Open-notch strips run about 3.2:1; the settings window is about 1.17:1.
-# Minimums are set from the known-good 2x captures already in docs/screenshots.
+# Minimums are set from the known-good 2x captures already in web/public/screenshots.
 #
 # name|min capture width|target aspect (w/h)|what to stage
 SHOTS=(
@@ -115,9 +115,9 @@ if [[ $# -gt 0 ]]; then
     [[ -n "$found" ]] || die "unknown shot '$want' (try --list)"
   done
 else
-  printf '%sCapturing %d shots.%s Details per shot: docs/screenshots/CAPTURE.md\n' \
+  printf '%sCapturing %d shots.%s Details per shot: web/public/screenshots/CAPTURE.md\n' \
     "$BLD" "${#SHOTS[@]}" "$RST"
   for s in "${SHOTS[@]}"; do capture_one "$s"; done
 fi
 
-printf '\n%sDone.%s Files land in docs/screenshots/ at 2x and are sized down in CSS.\n' "$GRN" "$RST"
+printf '\n%sDone.%s Files land in web/public/screenshots/ at 2x and are sized down in CSS.\n' "$GRN" "$RST"

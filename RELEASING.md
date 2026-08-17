@@ -33,7 +33,7 @@ make release VERSION=1.0.0 ARGS=--adhoc           # ad-hoc signed, no Apple acco
 
 > `--public` opts in to publishing: it uploads the DMG to
 > `downloads.trygojo.com` (versioned plus `Gojo.dmg`), adds an entry to
-> `docs/appcast.xml`, and commits that back to `main`. This is what existing
+> `appcast.xml`, and commits that back to `main`. This is what existing
 > installs Sparkle-update from, so a version that should reach current users
 > needs this flag — the paywall is in-app licensing (`LicenseManager`), not the
 > download URL.
@@ -97,9 +97,9 @@ Set the file path in `.env.local` as `SPARKLE_PRIVATE_ED_KEY`.
 
 ### 5. GitHub Pages
 
-The `SUFeedURL` in `Info.plist` points at `https://trygojo.com/appcast.xml`. Pages is already enabled to serve this — **Source: Deploy from a branch, Branch: `main`, Folder: `/docs`**. Because `/docs` is the published site root, `docs/appcast.xml` serves at `…/gojo/appcast.xml`, and the same folder hosts the marketing site (`docs/index.html`).
+The `SUFeedURL` in `Info.plist` points at `https://trygojo.com/appcast.xml`. Pages is already enabled to serve this — **Source: Deploy from a branch, Branch: `main`, Folder: the Cloudflare Worker in `web/`**. Because the Cloudflare Worker in `web/` is the published site root, `appcast.xml` serves at `…/gojo/appcast.xml`, and the same folder hosts the marketing site (`docs/index.html`).
 
-The release script commits the updated `docs/appcast.xml` to `main` at the end of each release; Pages serves it from there.
+The release script commits the updated `appcast.xml` to `main` at the end of each release; Pages serves it from there.
 
 ### 6. `.env.local`
 

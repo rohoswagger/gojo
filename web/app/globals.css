@@ -1,10 +1,15 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+/* The site skin (replaces public/site.css). Layered as `components` so
+   Tailwind utilities still win where a component reaches for one. */
+@import "./skin.css" layer(components);
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(0.991 0 0);
+  /* White, not off-white: the skin's tinted surfaces (--surface-2/-3) are what
+     separate cards, table heads and answer boxes from the page ground. */
+  --background: #ffffff;
   --foreground: oklch(0.18 0 0);
   --font-display: var(--font-body);
   --font-body: ui-sans-serif, system-ui, sans-serif;
@@ -85,25 +90,9 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-}
-
-/* The old site put `article-shell` on <body> itself, so its dark background
-   painted the whole viewport. Next owns <body> via the shared layout, so the
-   ported pages carry that class on a wrapper <div> instead — which leaves the
-   body white and flashes it on overscroll. Mirror the class's own background
-   (site.css:572) up onto the body so the two render identically. */
-body:has(> .article-shell) {
-  background: #090b12;
 }
 
 .dark {
@@ -509,292 +498,77 @@ body:has(> .article-shell) {
       0 8px 50px 6px color-mix(in oklch, var(--brand) 5%, transparent);
   }
 }
-/* ── /downloads ────────────────────────────────────────────────────────────
-   Extends site.css rather than restating it: every value below is derived
-   from the tokens it already defines (--ink, --paper, --display, --accent).
+
+/* ── swagui Sections inside an article ─────────────────────────────────────
+   /alternatives/<slug> composes swagui's Section, FaqAccordion and CtaBand
+   inside the article body. Those ship marketing-page defaults — 75rem wide,
+   8rem of vertical padding, centred headings — which read as holes next to
+   the article's reading column. Unlayered so it outranks their utilities.
    ------------------------------------------------------------------------ */
-
-.download-shell {
-  background: var(--ink);
-  color: var(--text);
-  padding-bottom: 84px;
+.article-main :is([data-slot="section"], [data-slot="faq-accordion"], [data-slot="cta-band"]) {
+  padding-block: 2.5rem;
+  padding-inline: var(--gutter);
 }
 
-.download-hero {
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 72px 24px 0;
-  text-align: center;
+.article-main :is([data-slot="section"], [data-slot="faq-accordion"], [data-slot="cta-band"]) > div {
+  max-width: var(--measure);
 }
 
-.download-hero h1 {
-  font-family: var(--display);
-  font-size: clamp(2.6rem, 6vw, 4.2rem);
-  line-height: 1.02;
+/* The comparison table carries three columns; the reading measure would
+   crush it into wrapped fragments. */
+.article-main [data-slot="section"].cmp-section > div {
+  max-width: 58rem;
+}
+
+/* .article-main already pads the top of the body; the first section adding its
+   own padding on top of that was opening a ~104px hole under the hero. */
+.article-main > :is([data-slot="section"], [data-slot="faq-accordion"], [data-slot="cta-band"]):first-child {
+  padding-top: 0;
+}
+
+.article-main :is([data-slot="section"], [data-slot="faq-accordion"], [data-slot="cta-band"]) + [data-slot="section"] {
+  border-top: 1px solid var(--rule-soft);
+}
+
+.article-main [data-slot="section-header"] {
+  align-items: flex-start;
+  text-align: left;
+}
+
+.article-main [data-slot="section-title"] {
+  font-size: 1.625rem;
+  line-height: 1.2;
   letter-spacing: -0.03em;
-  margin: 0 0 20px;
-  text-wrap: balance;
 }
 
-.download-sub {
-  color: rgba(244, 245, 250, 0.72);
-  font-size: 1.0625rem;
-  line-height: 1.6;
-  max-width: 46ch;
-  margin: 0 auto 36px;
-  text-wrap: pretty;
+.article-main [data-slot="section-content"] {
+  margin-top: 1.5rem;
 }
 
-.download-btn {
-  font-size: 1.0625rem;
-  padding: 15px 30px;
-}
-
-.download-spec {
-  font-family: var(--mono);
-  font-size: 0.8125rem;
-  letter-spacing: 0.01em;
-  color: rgba(244, 245, 250, 0.62);
-  margin: 20px 0 0;
-}
-
-.download-trust {
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px 28px;
-  margin: 40px 0 0;
-  padding: 26px 0 0;
-  border-top: 1px solid var(--line);
-  font-size: 0.9375rem;
-  color: rgba(244, 245, 250, 0.78);
-}
-
-/* Light reading surface below the dark shell. */
-.download-main {
-  background: var(--paper);
-  color: var(--paper-ink);
-}
-
-.download-body {
-  max-width: 68ch;
-  margin: 0 auto;
-  padding: 76px 24px 96px;
-}
-
-.download-body section + section {
-  margin-top: 60px;
-}
-
-.download-body h2 {
+.article-main :is([data-slot="section"], [data-slot="faq-accordion"], [data-slot="cta-band"]) h2 {
+  margin: 2rem 0 0.75rem;
   font-family: var(--display);
-  font-size: 1.75rem;
-  letter-spacing: -0.02em;
-  margin: 0 0 18px;
-}
-
-.download-body p {
-  line-height: 1.65;
-  margin: 0 0 16px;
-  text-wrap: pretty;
-}
-
-.download-steps {
-  list-style: none;
-  counter-reset: step;
-  margin: 0;
-  padding: 0;
-}
-
-.download-steps li {
-  counter-increment: step;
-  position: relative;
-  padding-left: 46px;
-  margin: 0 0 26px;
-}
-
-.download-steps li::before {
-  content: counter(step);
-  position: absolute;
-  left: 0;
-  top: 1px;
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--accent-ink);
-  color: #fff;
-  font-family: var(--mono);
-  font-size: 0.8125rem;
-}
-
-.download-steps h3 {
-  font-size: 1rem;
-  font-weight: 650;
-  margin: 3px 0 5px;
-}
-
-.download-steps p {
-  color: var(--paper-muted);
-  margin: 0;
-}
-
-.download-code {
-  background: var(--ink);
-  color: var(--text);
-  border-radius: 12px;
-  padding: 15px 18px;
-  overflow-x: auto;
-  margin: 0 0 18px;
-}
-
-.download-code code {
-  font-family: var(--mono);
-  font-size: 0.875rem;
-}
-
-.download-hash-label {
-  font-size: 0.8125rem;
-  color: var(--paper-muted);
-  margin: 0 0 6px;
-}
-
-.download-hash {
-  font-family: var(--mono);
-  font-size: 0.8125rem;
-  line-height: 1.5;
-  word-break: break-all;
-  color: var(--paper-ink);
-  background: rgba(12, 15, 24, 0.045);
-  border-radius: 10px;
-  padding: 12px 14px;
-  margin: 0;
-}
-
-.download-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px 22px;
-  margin-top: 26px;
-}
-
-.download-link {
-  color: var(--accent-ink);
+  font-size: 1.625rem;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
   font-weight: 550;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-thickness: 1px;
+  color: var(--ink-1);
 }
 
-/* Browser surfaces ship unstyled by default; give them the palette too. */
-.download-shell ::selection {
-  background: var(--accent);
-  color: var(--ink);
+.article-main :is([data-slot="section"], [data-slot="faq-accordion"], [data-slot="cta-band"]) > div > h2:first-child {
+  margin-top: 0;
 }
 
-.download-main ::selection {
-  background: rgba(139, 140, 255, 0.28);
-  color: var(--paper-ink);
+.article-main :is([data-slot="section"], [data-slot="faq-accordion"], [data-slot="cta-band"]) p {
+  margin: 0 0 1rem;
+  line-height: 1.7;
+  color: var(--ink-2);
 }
 
-.download-shell :focus-visible,
-.download-main :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
-  border-radius: 6px;
-}
-
-/* One authored entrance, not an effect on every block. */
-@media (prefers-reduced-motion: no-preference) {
-  .download-hero > * {
-    animation: download-rise 620ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
-  }
-  .download-hero > *:nth-child(2) { animation-delay: 60ms; }
-  .download-hero > *:nth-child(3) { animation-delay: 120ms; }
-  .download-hero > *:nth-child(4) { animation-delay: 170ms; }
-  .download-hero > *:nth-child(5) { animation-delay: 220ms; }
-}
-
-@keyframes download-rise {
-  from { opacity: 0; transform: translate3d(0, 12px, 0); filter: blur(6px); }
-  to   { opacity: 1; transform: none; filter: none; }
-}
-
-@media (max-width: 640px) {
-  .download-hero { padding-top: 48px; }
-  .download-body { padding: 56px 20px 72px; }
-  .download-trust { gap: 8px 18px; }
-}
-
-/* Section markers on the landing page. One library, one stroke weight, sized
-   to the label's cap height so the pair reads as a single unit. */
-.act-index {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.act-icon {
-  width: 15px;
-  height: 15px;
-  flex: none;
-  opacity: 0.9;
-}
-
-
-/* ── /alternatives/* ───────────────────────────────────────────────────────
-   These sit on the light article body like every other article page. swagui
-   Card/Badge/Button/FaqAccordion/CtaBand carry the chrome; this only handles
-   the two comparison layouts swagui has no primitive for.
-   ------------------------------------------------------------------------ */
-
-.alt-choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.alt-choice-grid p { margin: 0 0 18px; line-height: 1.58; }
-.alt-choice-gojo { border-color: color-mix(in oklch, var(--brand) 42%, transparent); }
-
-.alt-facts { margin: 0 0 34px; padding: 0; list-style: none; border-top: 1px solid var(--paper-line); }
-.alt-facts li {
-  padding: 13px 2px 13px 26px; border-bottom: 1px solid var(--paper-line);
-  line-height: 1.55; position: relative;
-}
-.alt-facts li::before {
-  content: ""; position: absolute; left: 4px; top: 21px;
-  width: 6px; height: 6px; border-radius: 50%; background: var(--brand-content);
-}
-
-.alt-rows { margin: 0 0 26px; border-top: 1px solid var(--paper-line); }
-.alt-rows > div {
-  display: grid; grid-template-columns: 118px 1fr 1fr; gap: 18px;
-  padding: 16px 2px; border-bottom: 1px solid var(--paper-line); align-items: start;
-}
-.alt-rows dt {
-  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;
-  color: var(--paper-muted); font-weight: 600;
-}
-.alt-rows dd { margin: 0; line-height: 1.55; color: var(--paper-muted); }
-.alt-rows-gojo { color: var(--paper-ink); font-weight: 500; }
-
-.alt-src { font-size: 0.875rem; color: var(--paper-muted); line-height: 1.62; }
-.alt-src a { color: var(--brand-content); text-decoration: underline; text-underline-offset: 3px; }
-
-@media (max-width: 720px) {
-  .alt-choice-grid { grid-template-columns: 1fr; }
-  .alt-rows > div { grid-template-columns: 1fr; gap: 5px; }
-  .alt-rows-gojo::before { content: "Gojo: "; color: var(--brand-content); font-weight: 600; }
-}
-
-/* The article body is always light, but swagui's tokens follow the OS colour
-   scheme, so on a dark-mode machine its Card/Badge/Button rendered near-white
-   text on a white card. Re-assert the light values for anything inside it. */
-.article-main {
-  --background: oklch(0.991 0 0);
-  --foreground: oklch(0.18 0 0);
-  --card: oklch(0.999 0 0);
-  --muted-foreground: oklch(0.498 0 0);
-  --brand: oklch(0.58 0.16 250);
-  --brand-content: oklch(0.5 0.16 250);
-  color: var(--paper-ink);
+/* Flat surfaces inside articles: the skin uses hairline rules, not shadows. */
+.article-main [data-slot="card"],
+.article-main [data-slot="cta-band"] > div > div {
+  box-shadow: none;
+  background-image: none;
+  border-color: var(--rule);
 }

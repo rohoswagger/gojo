@@ -3,6 +3,8 @@ import Link from "next/link"
 
 import { ClipboardList, FolderOpen, LayoutGrid, Mic, Music, Sunset } from "lucide-react";
 import { AutoplayVideo } from "@/components/autoplay-video"
+import { GojoFooter } from "@/components/gojo-footer"
+import { GojoLogo } from "@/components/gojo-logo"
 import {
   PricingTabsProvider,
   PricingTabList,
@@ -101,18 +103,6 @@ const jsonLd = {
   ],
 }
 
-/** The Gojo mark. Reused in the header, the footer, and the utility-convergence diagram. */
-function GojoLogo() {
-  return (
-    <svg viewBox="0 0 256 172.29" fill="currentColor" aria-hidden="true">
-      <path
-        fillRule="evenodd"
-        d="M 130.53 162.06 C 165.62 159.7 195.71 134.68 195.71 134.68 C 246 84.7 246 84.64 245.03 83.6 C 244 82.5 218.71 57.19 217.83 57.52 C 217 57.8 168.66 106.43 166.92 107.91 C 152 120 134.68 122.36 134.68 122.36 C 110 124 88.69 110.52 88.69 110.52 C 82 105 81.57 104.46 81.57 104.46 C 78 101 72.78 101.1 72.78 101.1 C 68 101.5 45.4 123.25 45.4 123.25 C 45.4 123.58 67 144 67.47 143.49 C 90 162 130.53 162.06 130.53 162.06 Z M 37.83 114.87 C 38 115 86.54 66.41 86.54 66.41 C 102 51 132.1 49.61 132.1 49.61 C 165 51.5 169.68 64.16 169.68 64.16 C 182 75 185.76 71.15 185.76 71.15 C 192 69 209.8 49.54 209.8 49.54 C 210 49 208.27 46.9 208.27 46.9 C 204 43 168.13 17.81 168.13 17.81 C 130 -2 86.5 16.02 86.5 16.02 C 50 33 10.17 87.44 10.17 87.44 C 10 88 37.83 114.87 37.83 114.87 Z"
-      />
-    </svg>
-  )
-}
-
 const pricingTabs = [
   { id: "pricing-tab-personal", controls: "pricing-panel-personal", name: "Personal", device: "1 Mac" },
   { id: "pricing-tab-multi", controls: "pricing-panel-multi", name: "Multi-Mac", device: "3 Macs" },
@@ -126,8 +116,10 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <div className="shell">
-        <header className="site-header">
+      <div className="shell hero-shell">
+        {/* The header sits inside the hero panel and over the photograph
+            rather than on a bar above it. */}
+        <header className="site-header site-header-overlay">
           <Link className="brand" href="/" aria-label="Gojo home">
             <GojoLogo />
             Gojo
@@ -139,10 +131,13 @@ export default function Home() {
             <a className="ghost-link" href="#buy">
               Pricing
             </a>
-            <Link className="ghost-link" href="/downloads/">
-              Download
+            <Link className="ghost-link" href="/blog/">
+              Blog
             </Link>
           </nav>
+          <Link className="btn btn-primary nav-cta" href="/downloads/">
+            Download
+          </Link>
         </header>
 
         <main className="hero">
@@ -592,128 +587,10 @@ export default function Home() {
               </PricingPanel>
             </PricingPanels>
           </PricingTabsProvider>
-
-          <p className="buy-trust">
-            Signed &amp; notarized &middot; Full 3-day trial &middot; Secure Stripe checkout &middot;
-            1- and 3-Mac plans
-          </p>
         </div>
       </section>
 
-      <footer className="footer footer-sitemap">
-        <nav className="footer-cols" aria-label="Footer">
-          <div className="footer-col">
-            <h2 className="footer-heading">
-              <Link href="/features/">Features</Link>
-            </h2>
-            <ul className="footer-links">
-              <li>
-                <Link href="/features/local-dictation/">Private on-device dictation</Link>
-              </li>
-              <li>
-                <Link href="/features/media-controls/">Media controls</Link>
-              </li>
-              <li>
-                <Link href="/features/clipboard-history/">Clipboard history</Link>
-              </li>
-              <li>
-                <Link href="/features/window-controls/">Window controls</Link>
-              </li>
-              <li>
-                <Link href="/features/file-shelf/">File shelf</Link>
-              </li>
-              <li>
-                <Link href="/features/display-comfort/">Display comfort controls</Link>
-              </li>
-              <li>
-                <Link href="/features/calendar/">Calendar and reminders</Link>
-              </li>
-              <li>
-                <Link href="/features/battery-status/">Battery status</Link>
-              </li>
-              <li>
-                <Link href="/features/camera-mirror/">Camera mirror</Link>
-              </li>
-              <li>
-                <Link href="/features/shortcuts/">Shortcuts</Link>
-              </li>
-            </ul>
-          </div>
-          <div className="footer-col">
-            <h2 className="footer-heading">
-              <Link href="/alternatives/">Alternatives</Link>
-            </h2>
-            <ul className="footer-links">
-              <li>
-                <Link href="/alternatives/droppy/">Droppy alternative</Link>
-              </li>
-              <li>
-                <Link href="/alternatives/notchnook/">NotchNook alternative</Link>
-              </li>
-              <li>
-                <Link href="/alternatives/alcove/">Alcove alternative</Link>
-              </li>
-              <li>
-                <Link href="/alternatives/dynamiclake/">DynamicLake alternative</Link>
-              </li>
-              <li>
-                <Link href="/alternatives/boring-notch/">Boring Notch alternative</Link>
-              </li>
-              <li>
-                <Link href="/alternatives/rectangle/">Rectangle alternative</Link>
-              </li>
-              <li>
-                <Link href="/alternatives/maccy/">Maccy alternative</Link>
-              </li>
-              <li>
-                <Link href="/alternatives/raycast/">Raycast alternative</Link>
-              </li>
-              <li>
-                <Link href="/alternatives/bettertouchtool/">BetterTouchTool alternative</Link>
-              </li>
-              <li>
-                <Link href="/alternatives/alttab/">AltTab alternative</Link>
-              </li>
-              <li>
-                <Link href="/alternatives/flux/">f.lux alternative</Link>
-              </li>
-              <li>
-                <Link href="/alternatives/karabiner-elements/">Karabiner-Elements alternative</Link>
-              </li>
-            </ul>
-          </div>
-          <div className="footer-col">
-            <h2 className="footer-heading">Gojo</h2>
-            <ul className="footer-links">
-              <li>
-                <Link href="/">Home</Link>
-              </li>
-              <li>
-                <a href="#features">How it works</a>
-              </li>
-              <li>
-                <a href="#buy">Pricing</a>
-              </li>
-              <li>
-                <Link href="/blog/">Blog</Link>
-              </li>
-              <li>
-                <a href="https://downloads.trygojo.com/Gojo.dmg">Download for macOS</a>
-              </li>
-              <li>
-                <a href="https://github.com/rohoswagger/gojo">GitHub</a>
-              </li>
-            </ul>
-          </div>
-        </nav>
-        <div className="footer-bottom">
-          <Link className="brand" href="/" aria-label="Gojo home">
-            <GojoLogo />
-            Gojo
-          </Link>
-          <span className="foot-copy">&copy; 2026 Gojo</span>
-        </div>
-      </footer>
+      <GojoFooter />
     </>
   )
 }

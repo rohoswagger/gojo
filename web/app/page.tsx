@@ -188,12 +188,14 @@ export default function Home() {
       <section className="utility-convergence" aria-labelledby="convergence-heading">
         <div className="wrap convergence-layout">
           <div className="convergence-copy">
-            <h2 id="convergence-heading">One app in place of four.</h2>
+            <h2 id="convergence-heading">The apps this replaces.</h2>
             <p>
               
-                A window manager, a clipboard tool, a file shelf, a screen tinter. Four apps, four menu
-                bar icons, four sets of shortcuts. Gojo does all of it from one surface you already
-                have.
+                
+                These jobs usually mean a separate utility each, and a separate menu bar icon,
+                settings pane and set of shortcuts to go with it. Gojo does all of them from one
+                surface you already have.
+              
               
             </p>
           </div>
@@ -251,9 +253,12 @@ export default function Home() {
       <section className="feature-acts" id="features" aria-labelledby="features-heading">
         <div className="wrap">
           <header className="acts-intro">
-            <h2 id="features-heading">Six tools, one surface.</h2>
+            <h2 id="features-heading">The six tools.</h2>
             <p>
-              Everything below is the real app. One scroll and you have seen the whole product.
+              
+                Everything below is the real app running in the notch. One scroll and you have seen
+                all of it.
+              
             </p>
           </header>
         </div>
@@ -459,8 +464,10 @@ export default function Home() {
             <h2 id="customize-heading">Make it yours.</h2>
             <p>
               
+                
                 Use all six or use one. Turn off what you do not need and reorder the rest, and the
                 notch stops showing it, tabs included.
+              
               
             </p>
           </div>

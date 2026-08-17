@@ -744,119 +744,57 @@ body:has(> .article-shell) {
   opacity: 0.9;
 }
 
+
 /* ── /alternatives/* ───────────────────────────────────────────────────────
-   These were newsprint: light column, prose blocks, a 3-row table. The data
-   is a comparison, so the comparison is the layout. Dark surface, mono for
-   anything machine-checked, and one accent that only ever means "Gojo".
+   These sit on the light article body like every other article page. swagui
+   Card/Badge/Button/FaqAccordion/CtaBand carry the chrome; this only handles
+   the two comparison layouts swagui has no primitive for.
    ------------------------------------------------------------------------ */
 
-.alt-shell { background: var(--ink); color: var(--text); min-height: 100vh; }
-.alt-main { padding: 0 24px 110px; }
-.alt-wrap { max-width: 860px; margin: 0 auto; }
+.alt-choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.alt-choice-grid p { margin: 0 0 18px; line-height: 1.58; }
+.alt-choice-gojo { border-color: color-mix(in oklch, var(--brand) 42%, transparent); }
 
-.alt-crumb {
-  display: flex; gap: 10px; align-items: center;
-  font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.04em;
-  text-transform: uppercase; color: rgba(244,245,250,0.5); padding: 30px 0 46px;
+.alt-facts { margin: 0 0 34px; padding: 0; list-style: none; border-top: 1px solid var(--paper-line); }
+.alt-facts li {
+  padding: 13px 2px 13px 26px; border-bottom: 1px solid var(--paper-line);
+  line-height: 1.55; position: relative;
 }
-.alt-crumb a { color: inherit; }
-.alt-crumb a:hover { color: var(--accent); }
-
-.alt-h1 {
-  font-family: var(--display);
-  font-size: clamp(2.4rem, 5.6vw, 3.9rem);
-  line-height: 1.04; letter-spacing: -0.03em; margin: 0 0 20px; text-wrap: balance;
-}
-.alt-vs { color: var(--accent); font-style: normal; }
-
-.alt-lede {
-  font-size: 1.0625rem; line-height: 1.62; color: rgba(244,245,250,0.74);
-  max-width: 62ch; margin: 0 0 18px; text-wrap: pretty;
-}
-.alt-stamp {
-  font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.02em;
-  color: rgba(244,245,250,0.58); margin: 0 0 54px;
+.alt-facts li::before {
+  content: ""; position: absolute; left: 4px; top: 21px;
+  width: 6px; height: 6px; border-radius: 50%; background: var(--brand-content);
 }
 
-/* The decision, as two panels rather than a paragraph. */
-.alt-split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 0 0 72px; }
-.alt-side {
-  border: 1px solid var(--line); border-radius: 16px; padding: 26px 24px 22px;
-  background: rgba(255,255,255,0.022); display: flex; flex-direction: column;
-}
-.alt-side-gojo {
-  border-color: rgba(139,140,255,0.42);
-  background:
-    radial-gradient(120% 100% at 50% 0%, rgba(139,140,255,0.14), transparent 62%),
-    rgba(255,255,255,0.022);
-}
-.alt-side-name { font-family: var(--display); font-size: 1.3rem; letter-spacing: -0.02em; margin: 0 0 4px; }
-.alt-side-gojo .alt-side-name { color: var(--accent); }
-.alt-side-kind {
-  font-family: var(--mono); font-size: 0.7rem; text-transform: uppercase;
-  letter-spacing: 0.06em; color: rgba(244,245,250,0.58); margin: 0 0 16px;
-}
-.alt-side-copy { font-size: 0.9375rem; line-height: 1.58; color: rgba(244,245,250,0.82); margin: 0 0 20px; flex: 1; }
-.alt-side-link {
-  font-family: var(--mono); font-size: 0.78rem; color: var(--accent);
-  border-bottom: 1px solid rgba(139,140,255,0.4); align-self: flex-start; padding-bottom: 1px;
-}
-.alt-side-link:hover { border-bottom-color: var(--accent); }
-
-.alt-block { margin: 0 0 68px; }
-.alt-block h2 {
-  font-family: var(--display); font-size: 1.5rem; letter-spacing: -0.02em; margin: 0 0 14px;
-}
-.alt-note { font-size: 0.9375rem; line-height: 1.6; color: rgba(244,245,250,0.6); max-width: 62ch; margin: 0 0 22px; }
-
-/* Published facts read as a spec sheet, not a bullet list. */
-.alt-specs { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
-.alt-specs li {
-  display: grid; grid-template-columns: 42px 1fr; gap: 14px; align-items: baseline;
-  padding: 15px 2px; border-bottom: 1px solid var(--line);
-  font-size: 0.9375rem; line-height: 1.55; color: rgba(244,245,250,0.86);
-}
-.spec-n { font-family: var(--mono); font-size: 0.72rem; color: rgba(244,245,250,0.5); }
-
-/* The old <table> becomes aligned rows that stack cleanly on mobile. */
-.alt-rows { margin: 0 0 22px; border-top: 1px solid var(--line); }
+.alt-rows { margin: 0 0 26px; border-top: 1px solid var(--paper-line); }
 .alt-rows > div {
-  display: grid; grid-template-columns: 120px 1fr 1fr; gap: 18px;
-  padding: 17px 2px; border-bottom: 1px solid var(--line); align-items: start;
+  display: grid; grid-template-columns: 118px 1fr 1fr; gap: 18px;
+  padding: 16px 2px; border-bottom: 1px solid var(--paper-line); align-items: start;
 }
 .alt-rows dt {
-  font-family: var(--mono); font-size: 0.7rem; text-transform: uppercase;
-  letter-spacing: 0.06em; color: rgba(244,245,250,0.58);
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--paper-muted); font-weight: 600;
 }
-.alt-rows dd { margin: 0; font-size: 0.9375rem; line-height: 1.55; color: rgba(244,245,250,0.76); }
-.alt-rows-gojo { color: rgba(244,245,250,0.95); }
+.alt-rows dd { margin: 0; line-height: 1.55; color: var(--paper-muted); }
+.alt-rows-gojo { color: var(--paper-ink); font-weight: 500; }
 
-.alt-faq h3 { font-size: 1rem; font-weight: 650; margin: 22px 0 7px; }
-.alt-faq h3:first-child { margin-top: 0; }
-.alt-faq p { font-size: 0.9375rem; line-height: 1.6; color: rgba(244,245,250,0.72); margin: 0; max-width: 62ch; }
-
-.alt-cta {
-  border: 1px solid rgba(139,140,255,0.34); border-radius: 18px;
-  padding: 40px 34px; text-align: center; margin: 0 0 40px;
-  background: radial-gradient(120% 130% at 50% 0%, rgba(139,140,255,0.15), transparent 68%);
-}
-.alt-cta h2 { font-family: var(--display); font-size: 1.7rem; letter-spacing: -0.02em; margin: 0 0 8px; }
-.alt-cta > p { color: rgba(244,245,250,0.72); margin: 0 0 22px; }
-.alt-cta-actions { display: flex; flex-wrap: wrap; gap: 14px 22px; justify-content: center; align-items: center; margin: 0 0 18px; }
-.alt-cta-link { font-size: 0.9375rem; color: var(--accent); border-bottom: 1px solid rgba(139,140,255,0.4); padding-bottom: 1px; }
-.alt-fine { font-family: var(--mono); font-size: 0.72rem; color: rgba(244,245,250,0.58); margin: 0; }
-
-.alt-src { font-size: 0.8125rem; line-height: 1.62; color: rgba(244,245,250,0.58); max-width: 66ch; }
-.alt-src a { color: rgba(244,245,250,0.72); border-bottom: 1px solid var(--line); }
-.alt-src a:hover { color: var(--accent); }
-
-.alt-shell ::selection { background: var(--accent); color: var(--ink); }
-.alt-shell :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+.alt-src { font-size: 0.875rem; color: var(--paper-muted); line-height: 1.62; }
+.alt-src a { color: var(--brand-content); text-decoration: underline; text-underline-offset: 3px; }
 
 @media (max-width: 720px) {
-  .alt-split { grid-template-columns: 1fr; }
-  .alt-rows > div { grid-template-columns: 1fr; gap: 6px; }
-  .alt-rows dt { margin-bottom: 2px; }
-  .alt-rows-gojo::before { content: "Gojo: "; color: var(--accent); font-family: var(--mono); font-size: 0.72rem; }
-  .alt-cta { padding: 32px 22px; }
+  .alt-choice-grid { grid-template-columns: 1fr; }
+  .alt-rows > div { grid-template-columns: 1fr; gap: 5px; }
+  .alt-rows-gojo::before { content: "Gojo: "; color: var(--brand-content); font-weight: 600; }
+}
+
+/* The article body is always light, but swagui's tokens follow the OS colour
+   scheme, so on a dark-mode machine its Card/Badge/Button rendered near-white
+   text on a white card. Re-assert the light values for anything inside it. */
+.article-main {
+  --background: oklch(0.991 0 0);
+  --foreground: oklch(0.18 0 0);
+  --card: oklch(0.999 0 0);
+  --muted-foreground: oklch(0.498 0 0);
+  --brand: oklch(0.58 0.16 250);
+  --brand-content: oklch(0.5 0.16 250);
+  color: var(--paper-ink);
 }

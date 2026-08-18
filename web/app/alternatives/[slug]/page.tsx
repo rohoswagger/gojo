@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { FaqAccordion } from "@/components/faq-accordion";
-import { CtaBand } from "@/components/cta-band";
 import { Section } from "@/components/section";
 import { GojoFooter } from "@/components/gojo-footer";
 import { GojoHeader } from "@/components/gojo-header";
@@ -71,7 +69,7 @@ export default async function AlternativePage({ params }: Params) {
 
       {/* Dark hero, then a light body. Same rhythm as every other article
           page on the site, so these stop reading as a separate world. */}
-      <div className="article-shell" data-compare="true">
+      <div className="article-shell" data-compare="true" data-gojo-editorial="warm">
         <div className="article-top">
           <GojoHeader />
 
@@ -161,29 +159,36 @@ export default async function AlternativePage({ params }: Params) {
             </p>
           </Section>
 
-          <FaqAccordion
-            title="Questions"
-            items={[
-              {
-                question: `Is Gojo an alternative to ${alternative.name}?`,
-                answer: `Yes, when you want ${alternative.gojoFit}. ${alternative.tradeoff}`,
-              },
-              {
-                question: `Who should choose ${alternative.name}?`,
-                answer: `${alternative.name} is best for ${alternative.bestFor}.`,
-              },
-            ]}
-          />
+          <Section width="narrow" className="alt-faq">
+            <h2>Questions, answered</h2>
+            <div className="alt-faq-grid">
+              <article>
+                <h3>Is Gojo an alternative to {alternative.name}?</h3>
+                <p>
+                  Yes, when you want {alternative.gojoFit}. {alternative.tradeoff}
+                </p>
+              </article>
+              <article>
+                <h3>Who should choose {alternative.name}?</h3>
+                <p>{alternative.name} is best for {alternative.bestFor}.</p>
+              </article>
+            </div>
+          </Section>
 
-          <CtaBand
-            title="Try Gojo for three days."
-            description="Every feature unlocked. No account, no card."
-            primaryAction={{
-              label: "Download for macOS",
-              href: "https://downloads.trygojo.com/Gojo.dmg",
-            }}
-            secondaryAction={{ label: "See pricing", href: "/#buy" }}
-          />
+          <Section width="narrow" className="alt-detail-cta">
+            <div>
+              <h2>Try Gojo for three days.</h2>
+              <p>Every feature unlocked. No account, no card.</p>
+            </div>
+            <div className="alt-detail-cta-actions">
+              <a className="btn btn-primary" href="https://downloads.trygojo.com/Gojo.dmg">
+                Download for macOS
+              </a>
+              <Link className="btn btn-ghost" href="/#buy">
+                See pricing
+              </Link>
+            </div>
+          </Section>
 
           <Section width="narrow">
             <p className="alt-src">

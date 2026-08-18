@@ -1,0 +1,332 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-17T18:15:01-07:00",
+  "title": "Design System: Gojo",
+  "extensions": {
+    "colorMeta": {
+      "ember-red": {
+        "role": "primary",
+        "displayName": "Ember Red",
+        "canonical": "#bd4328",
+        "tonalRamp": [
+          "oklch(15% 0.09 32)",
+          "oklch(26% 0.11 32)",
+          "oklch(38% 0.13 32)",
+          "oklch(49% 0.15 32)",
+          "oklch(59% 0.15 32)",
+          "oklch(70% 0.11 32)",
+          "oklch(84% 0.07 32)",
+          "oklch(95% 0.03 32)"
+        ]
+      },
+      "coral-orange": {
+        "role": "secondary",
+        "displayName": "Coral Orange",
+        "canonical": "#ee6a38",
+        "tonalRamp": [
+          "oklch(15% 0.09 42)",
+          "oklch(27% 0.12 42)",
+          "oklch(40% 0.15 42)",
+          "oklch(53% 0.17 42)",
+          "oklch(65% 0.17 42)",
+          "oklch(76% 0.12 42)",
+          "oklch(87% 0.07 42)",
+          "oklch(95% 0.03 42)"
+        ]
+      },
+      "sunset-peach": {
+        "role": "secondary",
+        "displayName": "Sunset Peach",
+        "canonical": "#ffb08a",
+        "tonalRamp": [
+          "oklch(16% 0.05 48)",
+          "oklch(30% 0.07 48)",
+          "oklch(45% 0.09 48)",
+          "oklch(60% 0.1 48)",
+          "oklch(73% 0.1 48)",
+          "oklch(82% 0.08 48)",
+          "oklch(90% 0.05 48)",
+          "oklch(96% 0.025 48)"
+        ]
+      },
+      "warm-cream": {
+        "role": "neutral",
+        "displayName": "Warm Cream",
+        "canonical": "#fff5ec",
+        "tonalRamp": [
+          "oklch(16% 0.02 56)",
+          "oklch(28% 0.025 56)",
+          "oklch(42% 0.03 56)",
+          "oklch(58% 0.035 56)",
+          "oklch(72% 0.04 56)",
+          "oklch(84% 0.035 56)",
+          "oklch(92% 0.025 56)",
+          "oklch(97% 0.015 56)"
+        ]
+      },
+      "editorial-dark": {
+        "role": "neutral",
+        "displayName": "Editorial Dark",
+        "canonical": "#160c09",
+        "tonalRamp": [
+          "#160c09",
+          "#21110d",
+          "#301811",
+          "#4a2217",
+          "#6d2f1f",
+          "#9a4a31",
+          "#d48466",
+          "#fff5ec"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Rounded Display",
+        "purpose": "Hero headlines, section heads, cards, product names, and comparison titles."
+      },
+      "body": {
+        "displayName": "System Body",
+        "purpose": "Direct marketing copy, article prose, fact lists, and comparison notes."
+      },
+      "label": {
+        "displayName": "Mono Label",
+        "purpose": "Metadata, breadcrumbs, table labels, and compact trust facts."
+      }
+    },
+    "shadows": [
+      {
+        "name": "hero-demo",
+        "value": "0 30px 80px -24px rgba(0, 0, 0, 0.92)",
+        "purpose": "Homepage notch demo over sunset photography."
+      },
+      {
+        "name": "editorial-screenshot",
+        "value": "0 28px 75px rgba(33, 9, 2, 0.56)",
+        "purpose": "Features hero capture and feature detail screenshots in the warm editorial world."
+      },
+      {
+        "name": "orbit-mark",
+        "value": "0 14px 35px rgba(0, 0, 0, 0.32)",
+        "purpose": "Floating competitor marks in the Alternatives orbit."
+      },
+      {
+        "name": "warm-comparison",
+        "value": "0 28px 70px rgba(33, 9, 2, 0.46)",
+        "purpose": "Alternative detail Versus panel."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-standard",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Default hover and media motion."
+      },
+      {
+        "name": "ease-arrive",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Screenshot arrival and notch-drop animations when reduced motion allows."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "desktop-collapse",
+        "value": "980px"
+      },
+      {
+        "name": "editorial-mobile",
+        "value": "700px"
+      },
+      {
+        "name": "comparison-mobile",
+        "value": "760px"
+      },
+      {
+        "name": "nav-mobile",
+        "value": "640px"
+      }
+    ],
+    "capturePolicy": {
+      "featuresHero": {
+        "source": "/screenshots/windows.png",
+        "width": 1322,
+        "height": 418,
+        "treatment": "Single genuine high-resolution notch capture in a subtle MacBook bezel after a two-column headline/context row.",
+        "reject": [
+          "layered tilted screenshot crops",
+          "sticky-note decoration",
+          "low-resolution captures",
+          "upscaled captures",
+          "AI-reconstructed product evidence"
+        ]
+      },
+      "workflowCards": {
+        "aspectRatio": "about 3.25:1",
+        "objectFit": "contain",
+        "reason": "Preserve original wide notch captures instead of cropping them into fixed-height wells."
+      },
+      "dictationSpotlight": {
+        "currentSource": "/screenshots/dictation-models.png",
+        "currentWidth": 920,
+        "currentHeight": 342,
+        "rule": "Use the genuine model settings capture until a valid retina live-dictation capture exists."
+      },
+      "computerUseStaging": {
+        "result": "Useful for staging only.",
+        "rejectedCapture": "640x210 JPEG",
+        "reason": "Below the retina floor for product evidence."
+      },
+      "shippingAuthority": "Current PNG capture set, with most workflow captures spanning 1298-1388px wide."
+    },
+    "finishReview": {
+      "disposition": "ship",
+      "blockers": [],
+      "build": "48 routes",
+      "detector": []
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Default action button on light marketing pages.",
+      "html": "<button class=\"ds-btn-primary\">Start your free trial</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.6875rem 1.25rem; border: 1px solid transparent; border-radius: 8px; background: rgba(0, 0, 0, 0.9); color: #fff; font-family: ui-sans-serif, system-ui, -apple-system, \"SF Pro Text\", sans-serif; font-size: 0.9375rem; font-weight: 500; line-height: 1; white-space: nowrap; transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1), color 180ms cubic-bezier(0.22, 1, 0.36, 1); } .ds-btn-primary:hover { background: #000; } .ds-btn-primary:focus-visible { outline: 2px solid #ee6a38; outline-offset: 3px; }"
+    },
+    {
+      "name": "Editorial Hero Button",
+      "kind": "button",
+      "refersTo": "editorial-hero-button",
+      "description": "White action button for dark sunset heroes and warm CTA panels.",
+      "html": "<button class=\"ds-btn-editorial\">Download for macOS</button>",
+      "css": ".ds-btn-editorial { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.8125rem 1.5rem; border: 1px solid transparent; border-radius: 8px; background: #fff; color: #0a0b12; font-family: ui-sans-serif, system-ui, -apple-system, \"SF Pro Text\", sans-serif; font-size: 1rem; font-weight: 500; line-height: 1; white-space: nowrap; box-shadow: 0 10px 40px -12px rgba(0, 0, 0, 0.6); transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1); } .ds-btn-editorial:hover { background: #fff0e7; } .ds-btn-editorial:focus-visible { outline: 2px solid #ee6a38; outline-offset: 3px; }"
+    },
+    {
+      "name": "Warm Navigation",
+      "kind": "nav",
+      "refersTo": "editorial-dark-panel",
+      "description": "Sticky navigation as it appears over warm editorial heroes.",
+      "html": "<nav class=\"ds-nav\"><strong>Gojo</strong><a href=\"#\">Features</a><a href=\"#\">Alternatives</a><a href=\"#\">Download</a></nav>",
+      "css": ".ds-nav { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; min-height: 4rem; padding: 0 1.25rem; border-bottom: 1px solid rgba(255, 255, 255, 0.11); background: color-mix(in srgb, #160c09 84%, transparent); font-family: ui-sans-serif, system-ui, -apple-system, \"SF Pro Text\", sans-serif; } .ds-nav strong { font-family: ui-rounded, \"SF Pro Rounded\", system-ui, -apple-system, sans-serif; color: #fff; font-size: 1.0625rem; font-weight: 600; } .ds-nav a { color: rgba(255, 255, 255, 0.72); font-size: 0.9375rem; text-decoration: none; transition: color 180ms cubic-bezier(0.22, 1, 0.36, 1); } .ds-nav a:hover { color: #fff; } .ds-nav a:focus-visible { outline: 2px solid #ee6a38; outline-offset: 3px; border-radius: 6px; }"
+    },
+    {
+      "name": "Features Hero Capture",
+      "kind": "custom",
+      "refersTo": "editorial-dark-panel",
+      "description": "Two-column Features headline/context row followed by the genuine 1322x418 /screenshots/windows.png notch capture in a subtle MacBook bezel.",
+      "html": "<figure class=\"ds-feature-live\"><div class=\"ds-feature-bezel\"><span></span></div><img src=\"/screenshots/windows.png\" alt=\"Gojo open at the MacBook notch with window previews and snap controls\" width=\"1322\" height=\"418\"><figcaption><strong>The actual Gojo notch.</strong><span>Use this high-resolution product capture instead of layered tilted crops or sticky-note decoration.</span></figcaption></figure>",
+      "css": ".ds-feature-live { position: relative; overflow: hidden; margin: 0; padding-top: 1.25rem; border-radius: 18px; background: #090807; box-shadow: 0 34px 80px rgba(31, 8, 2, 0.52); font-family: ui-sans-serif, system-ui, -apple-system, \"SF Pro Text\", sans-serif; } .ds-feature-bezel { position: absolute; inset: 0 0 auto; height: 1.5rem; background: #080706; } .ds-feature-bezel span { position: absolute; top: 0; left: 50%; width: 7rem; height: 1.4rem; border-radius: 0 0 12px 12px; background: #000; transform: translateX(-50%); } .ds-feature-live img { display: block; width: 100%; height: auto; } .ds-feature-live figcaption { display: flex; justify-content: space-between; gap: 1.5rem; padding: 1rem 1.25rem 1.125rem; color: #fff; } .ds-feature-live figcaption span { max-width: 46rem; color: rgba(255, 255, 255, 0.68); font-size: 0.8125rem; line-height: 1.5; text-align: right; }"
+    },
+    {
+      "name": "Feature Card",
+      "kind": "card",
+      "refersTo": "feature-card",
+      "description": "Cream editorial feature card used inside job-based feature chapters; workflow captures preserve the original wide notch aspect instead of cropping.",
+      "html": "<article class=\"ds-feature-card\"><div class=\"ds-feature-copy\"><h3>Clipboard history</h3><p>Recent text and images return in one glanceable strip.</p><strong>Explore the workflow</strong></div><div class=\"ds-feature-media\"><img src=\"/screenshots/clipboard.png\" alt=\"Gojo clipboard history in the MacBook notch\"></div></article>",
+      "css": ".ds-feature-card { display: grid; grid-template-rows: auto auto; min-height: 0; overflow: hidden; border: 1px solid #e6e6e6; border-radius: 16px; background: #fffaf6; color: rgba(0, 0, 0, 0.9); font-family: ui-sans-serif, system-ui, -apple-system, \"SF Pro Text\", sans-serif; transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), border-color 220ms; } .ds-feature-card:hover { transform: translateY(-3px); border-color: color-mix(in srgb, #bd4328 35%, #e6e6e6); } .ds-feature-card:focus-within { outline: 2px solid #ee6a38; outline-offset: 3px; } .ds-feature-copy { display: grid; gap: 0.35rem; padding: 1.35rem 1.5rem 1.5rem; } .ds-feature-copy h3 { margin: 0; font-family: ui-rounded, \"SF Pro Rounded\", system-ui, -apple-system, sans-serif; font-size: 1.25rem; letter-spacing: -0.025em; line-height: 1.2; } .ds-feature-copy p { margin: 0; color: rgba(0, 0, 0, 0.55); font-size: 0.875rem; line-height: 1.55; } .ds-feature-copy strong { margin-top: 0.55rem; color: #bd4328; font-size: 0.8125rem; } .ds-feature-media { aspect-ratio: 3.25; overflow: hidden; margin: 0 1rem 1rem; border-radius: 11px; background: #0b0908; } .ds-feature-media img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center; transition: transform 500ms cubic-bezier(0.22, 1, 0.36, 1); }"
+    },
+    {
+      "name": "Feature Spotlight",
+      "kind": "custom",
+      "refersTo": "editorial-dark-panel",
+      "description": "Dark flagship dictation block that leads the Features library before the job chapters.",
+      "html": "<a class=\"ds-feature-spotlight\" href=\"#\"><div><h3>Speak where the cursor already is.</h3><p>Local dictation types into the app you are already using.</p><strong>Explore private dictation</strong></div><div class=\"ds-feature-spotlight-media\"></div></a>",
+      "css": ".ds-feature-spotlight { display: grid; grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr); align-items: center; gap: clamp(2rem, 5vw, 5rem); padding: clamp(2rem, 5vw, 4rem); overflow: hidden; border-radius: 18px; background: #21110d; color: #fff; text-decoration: none; font-family: ui-sans-serif, system-ui, -apple-system, \"SF Pro Text\", sans-serif; } .ds-feature-spotlight h3 { margin: 0; max-width: 11ch; font-family: ui-rounded, \"SF Pro Rounded\", system-ui, -apple-system, sans-serif; font-size: clamp(2rem, 4vw, 3.75rem); line-height: 1.02; letter-spacing: -0.04em; font-weight: 550; color: #fff; } .ds-feature-spotlight p { margin: 1.25rem 0 0; max-width: 35rem; line-height: 1.7; color: rgba(255, 255, 255, 0.66); } .ds-feature-spotlight strong { display: inline-block; margin-top: 1.5rem; color: #ffb08a; font-size: 0.875rem; font-weight: 550; } .ds-feature-spotlight-media { min-height: 13rem; overflow: hidden; border-radius: 14px; background: linear-gradient(145deg, #0d0908, #bd4328 62%, #fff1df); box-shadow: 0 28px 65px rgba(33, 9, 2, 0.5); transform: rotate(1deg); } .ds-feature-spotlight:focus-visible { outline: 2px solid #ee6a38; outline-offset: 3px; } @media (max-width: 700px) { .ds-feature-spotlight { grid-template-columns: 1fr; padding: 1.5rem; } .ds-feature-spotlight h3 { max-width: 13ch; } }"
+    },
+    {
+      "name": "Compact Feature Check",
+      "kind": "card",
+      "refersTo": "feature-card",
+      "description": "Small-check feature row with a wide copy column and fixed 5.5rem mobile signal.",
+      "html": "<article class=\"ds-feature-compact\"><div><h3>Battery status</h3><p>Power becomes a glanceable part of the same surface.</p><strong>Explore the workflow</strong></div><div class=\"ds-feature-signal\"><i></i><i></i><i></i></div></article>",
+      "css": ".ds-feature-compact { display: grid; grid-template-columns: minmax(0, 1fr) 8rem; align-items: stretch; min-height: 9.5rem; overflow: hidden; border: 1px solid #e6e6e6; border-radius: 16px; background: #fff; color: rgba(0, 0, 0, 0.9); font-family: ui-sans-serif, system-ui, -apple-system, \"SF Pro Text\", sans-serif; } .ds-feature-compact > div:first-child { display: grid; align-content: center; gap: 0.35rem; padding: 1.35rem 1.5rem 1.5rem; } .ds-feature-compact h3 { margin: 0; font-family: ui-rounded, \"SF Pro Rounded\", system-ui, -apple-system, sans-serif; font-size: 1.25rem; line-height: 1.2; letter-spacing: -0.025em; } .ds-feature-compact p { margin: 0; color: rgba(0, 0, 0, 0.55); font-size: 0.875rem; line-height: 1.55; } .ds-feature-compact strong { color: #bd4328; font-size: 0.8125rem; } .ds-feature-signal { display: grid; gap: 0.45rem; margin: 0.75rem; padding: 1.25rem; border-radius: 12px; background: #fff0e7; } .ds-feature-signal i { min-height: 1.25rem; border-radius: 999px; background: linear-gradient(90deg, #bd4328, #ee6a38); } .ds-feature-signal i:nth-child(2) { opacity: 0.62; } .ds-feature-signal i:nth-child(3) { opacity: 0.34; } @media (max-width: 700px) { .ds-feature-compact { grid-template-columns: minmax(0, 1fr) 5.5rem; min-height: 9rem; } .ds-feature-signal { padding: 0.875rem; } }"
+    },
+    {
+      "name": "Screenshot Well",
+      "kind": "custom",
+      "refersTo": "editorial-dark-panel",
+      "description": "Feature detail evidence frame for real Gojo interface screenshots.",
+      "html": "<figure class=\"ds-screenshot\"><div class=\"ds-screen\"></div><figcaption>Models live on your Mac. You can see exactly which one is doing the work.</figcaption></figure>",
+      "css": ".ds-screenshot { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, \"SF Pro Text\", sans-serif; } .ds-screen { aspect-ratio: 1.55; overflow: hidden; border: 1px solid rgba(255, 157, 112, 0.22); border-radius: 16px; background: linear-gradient(145deg, #1d0f0b, #3b160d 52%, #bd4328); box-shadow: 0 28px 75px rgba(33, 9, 2, 0.56); transform: rotate(1.5deg); } .ds-screenshot figcaption { max-width: 42ch; margin: 0.875rem 0 0 auto; color: rgba(255, 255, 255, 0.78); font-size: 0.75rem; line-height: 1.5; text-align: right; }"
+    },
+    {
+      "name": "Alternatives Decision Lane",
+      "kind": "custom",
+      "refersTo": "feature-card",
+      "description": "Lane-based Alternatives hub group for Notch & Island Utilities, Focused Specialists, or Power Layers.",
+      "html": "<section class=\"ds-alt-lane\"><header><h3>Focused specialists</h3><p>For one repeated job that deserves dedicated depth.</p></header><a href=\"#\"><span class=\"ds-alt-mark\">R</span><span><strong>Rectangle</strong><em>Window manager</em></span><p>Best for keyboard-driven window layouts.</p></a></section>",
+      "css": ".ds-alt-lane { overflow: hidden; border-radius: 16px; background: #fffaf6; font-family: ui-sans-serif, system-ui, -apple-system, \"SF Pro Text\", sans-serif; color: rgba(0, 0, 0, 0.9); } .ds-alt-lane header { min-height: 11rem; padding: 1.5rem; background: #fff1df; } .ds-alt-lane h3 { margin: 0; max-width: 14ch; font-family: ui-rounded, \"SF Pro Rounded\", system-ui, -apple-system, sans-serif; font-size: clamp(1.35rem, 2vw, 1.8rem); line-height: 1.1; letter-spacing: -0.025em; } .ds-alt-lane header p { margin: 0.75rem 0 0; max-width: 28ch; color: rgba(0, 0, 0, 0.55); line-height: 1.55; } .ds-alt-lane a { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 0.9rem; padding: 1.55rem 1.5rem; color: inherit; text-decoration: none; } .ds-alt-mark { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 9px; background: #fff0e7; font-family: ui-rounded, \"SF Pro Rounded\", system-ui, -apple-system, sans-serif; font-weight: 600; } .ds-alt-lane strong { display: block; font-family: ui-rounded, \"SF Pro Rounded\", system-ui, -apple-system, sans-serif; } .ds-alt-lane em { display: block; margin-top: 0.15rem; color: rgba(0, 0, 0, 0.55); font-size: 0.75rem; font-style: normal; } .ds-alt-lane a > p { grid-column: 2; margin: 0; color: rgba(0, 0, 0, 0.55); font-size: 0.8375rem; line-height: 1.65; } .ds-alt-lane a:focus-visible { outline: 2px solid #ee6a38; outline-offset: -4px; }"
+    },
+    {
+      "name": "Power Layers Lane",
+      "kind": "custom",
+      "refersTo": "editorial-dark-panel",
+      "description": "Sunset-photo material lane for automation and command-layer alternatives.",
+      "html": "<section class=\"ds-power-lane\"><header><h3>Power layers</h3><p>For commands, extensions, and custom automation.</p></header><a href=\"#\"><strong>Raycast</strong><span>Best for keyboard-first commands and extensions.</span><em>Open guide</em></a></section>",
+      "css": ".ds-power-lane { overflow: hidden; border-radius: 16px; background: linear-gradient(180deg, rgba(33, 17, 13, 0.97) 0%, rgba(55, 19, 10, 0.86) 58%, rgba(119, 40, 17, 0.64) 100%), linear-gradient(145deg, #160c09, #bd4328 65%, #ffb08a); font-family: ui-sans-serif, system-ui, -apple-system, \"SF Pro Text\", sans-serif; color: #fff; } .ds-power-lane header { min-height: 11rem; padding: 1.5rem; background: linear-gradient(145deg, #bd4328, #e86234); } .ds-power-lane h3 { margin: 0; max-width: 14ch; font-family: ui-rounded, \"SF Pro Rounded\", system-ui, -apple-system, sans-serif; font-size: clamp(1.35rem, 2vw, 1.8rem); line-height: 1.1; letter-spacing: -0.025em; } .ds-power-lane header p { margin: 0.75rem 0 0; max-width: 28ch; color: rgba(255, 255, 255, 0.7); line-height: 1.55; } .ds-power-lane a { display: grid; gap: 0.75rem; padding: 1.35rem 1.5rem; color: #fff; text-decoration: none; } .ds-power-lane strong { font-family: ui-rounded, \"SF Pro Rounded\", system-ui, -apple-system, sans-serif; } .ds-power-lane span { color: rgba(255, 255, 255, 0.62); font-size: 0.8125rem; line-height: 1.55; } .ds-power-lane em { color: #ffb08a; font-size: 0.75rem; font-style: normal; font-weight: 550; } .ds-power-lane a:focus-visible { outline: 2px solid #ee6a38; outline-offset: -4px; }"
+    },
+    {
+      "name": "Versus Panel",
+      "kind": "custom",
+      "refersTo": "editorial-dark-panel",
+      "description": "Alternative detail first-viewport comparison device.",
+      "html": "<div class=\"ds-versus\"><div class=\"ds-notch\">vs</div><section><strong>Specialist</strong><span>One deep job</span></section><section class=\"ds-gojo\"><strong>Gojo</strong><span>MacBook notch workspace</span></section></div>",
+      "css": ".ds-versus { position: relative; display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.13); border-radius: 14px; background: #21110d; box-shadow: 0 28px 70px rgba(33, 9, 2, 0.46); color: #fff; font-family: ui-sans-serif, system-ui, -apple-system, \"SF Pro Text\", sans-serif; } .ds-versus section { display: grid; justify-items: center; align-content: start; gap: 0.5rem; min-height: 8rem; padding: 3rem 1.25rem 1.5rem; text-align: center; } .ds-versus section + section { border-left: 1px solid rgba(255, 255, 255, 0.12); } .ds-gojo { background: linear-gradient(145deg, #b93d25, #ed6937); } .ds-notch { position: absolute; top: 0; left: 50%; z-index: 2; min-width: 5.25rem; height: 1.6875rem; padding: 0 0.875rem; border-radius: 0 0 11px 11px; background: #0a0b12; transform: translateX(-50%); color: #fff; font-family: ui-monospace, \"SF Mono\", \"JetBrains Mono\", monospace; font-size: 0.6875rem; letter-spacing: 0.18em; text-transform: uppercase; display: grid; place-items: center; } .ds-versus strong { font-family: ui-rounded, \"SF Pro Rounded\", system-ui, -apple-system, sans-serif; font-size: 1.125rem; } .ds-versus span { max-width: 22ch; color: rgba(255, 255, 255, 0.72); font-size: 0.8125rem; line-height: 1.45; } .ds-versus:focus-within { outline: 2px solid #ee6a38; outline-offset: 3px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Sunset Notch Desk",
+    "overview": "Gojo's marketing world makes the MacBook notch feel like a warm, useful desk surface at the top edge of the screen. The homepage is the visual authority: sunset photography, a dark scrim, a real notch demo, and restrained native controls define the brand. Every marketing page should persuade by making the product visible quickly, then proving breadth with real interface evidence.\n\nThe base site skin still supplies the structural system: 76rem page width, 44rem reading measure, 8px cards and buttons, sticky navigation, hairline rules, tight rounded display type, and no decorative clutter. Features and Alternatives use the warm editorial variant on top of that base: sunset-photo heroes, a single high-resolution Features hero capture, a flagship dark dictation spotlight, job-based feature chapters, three comparison decision lanes, product screenshots, and recognizable competitor marks.",
+    "keyCharacteristics": [
+      "Real product evidence appears in the first viewport: the 1322x418 Features notch capture, comparison marks on Alternatives, and the notch demo on the homepage.",
+      "Warm brand accents are ember red, coral orange, peach, cream, white, and near-black.",
+      "Editorial pages vary pace with dark heroes, a dark dictation spotlight, cream chapter grids, compact signal checks, three-lane comparison libraries, dark proof bands, and centered comparison devices.",
+      "The tone is persuasive, tactile, and Mac-native, not generic SaaS."
+    ],
+    "rules": [
+      {
+        "name": "The No Blue Brand Rule",
+        "body": "Gojo brand accents are never blue or purple. If an inherited base token is blue, override it in the warm editorial world before using it as Gojo identity.",
+        "section": "colors"
+      },
+      {
+        "name": "The Evidence First Rule",
+        "body": "A first viewport must show the real notch interface, real screenshots, or recognizable comparison marks before abstract claims. Do not substitute low-resolution, upscaled, or AI-reconstructed product evidence.",
+        "section": "colors"
+      },
+      {
+        "name": "The Rounded Native Rule",
+        "body": "Display type should feel like it belongs in macOS utility UI: rounded, tight, and useful, not magazine-serif or corporate grotesque.",
+        "section": "typography"
+      },
+      {
+        "name": "The Product Lift Rule",
+        "body": "Shadows belong to product evidence and comparison devices, not ordinary article prose.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use ember red, coral orange, peach, cream, white, and near-black as the Gojo brand world.",
+      "Do show real Gojo interface screenshots or comparison marks in the first viewport.",
+      "Do use the 1322x418 /screenshots/windows.png capture as the Features hero authority until a better genuine high-resolution notch capture ships.",
+      "Do keep editorial pacing varied with a dark dictation spotlight, job-based feature chapters, compact signal checks, three-lane comparison libraries, warm dark chapter breaks, screenshot wells, and comparison devices.",
+      "Do preserve workflow card screenshot aspect ratios with object-fit: contain rather than cropping.",
+      "Do keep the genuine dictation model settings capture until a valid retina live-dictation capture exists.",
+      "Do preserve the Alternatives lane taxonomy: Notch & Island Utilities, Focused Specialists, and Power Layers.",
+      "Do keep dark screenshot captions and fact metadata readable against warm panels.",
+      "Do keep AA contrast, visible focus states, reduced-motion behavior, and 390px no-overflow behavior.",
+      "Do pair comparison colors with icons and words."
+    ],
+    "donts": [
+      "Don't use blue or purple as Gojo brand accents.",
+      "Don't return Features or Alternatives to white article monotony.",
+      "Don't flatten the Alternatives hub into one undifferentiated card grid.",
+      "Don't turn the Features hub back into one continuous mosaic.",
+      "Don't rebuild the Features hero with layered tilted screenshot crops, sticky-note decoration, low-resolution captures, upscaled images, or AI-reconstructed product evidence.",
+      "Don't leave screenshot wells empty on feature pages.",
+      "Don't use decorative numbering where the content already has headings, marks, or facts.",
+      "Don't add CTA eyebrows when the CTA headline and actions are already visible."
+    ]
+  }
+}

@@ -33,7 +33,7 @@ export default function FeaturesHubPage() {
   const body = hubBody()
 
   return (
-    <div className="article-shell">
+    <div className="article-shell" data-gojo-editorial="warm">
       <div dangerouslySetInnerHTML={{ __html: body }} />
       <GojoFooter />
       <script

@@ -72,6 +72,7 @@ AuthKey_*.p8
 .worktrees/
 .playwright-mcp/
 /*.png
+.impeccable/review/
 
 # Wrangler cache
 .wrangler/

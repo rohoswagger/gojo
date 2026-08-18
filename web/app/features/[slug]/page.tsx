@@ -62,7 +62,7 @@ export default async function FeaturePage({
   const body = featureArticleBody(feature)
 
   return (
-    <div className="article-shell">
+    <div className="article-shell" data-gojo-editorial="warm">
       <div dangerouslySetInnerHTML={{ __html: body }} />
       <GojoFooter />
       <script

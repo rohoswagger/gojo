@@ -30,6 +30,94 @@ enum DictationActivationMode: String, CaseIterable, Identifiable {
     }
 }
 
+/// Keeps event-tap retries deterministic and independently testable. A failed
+/// tap is usually transient (login, wake, permission propagation, or macOS
+/// temporarily disabling taps), so back off without giving up permanently.
+struct DictationEventTapRecoveryPolicy {
+    private static let retryDelaysMilliseconds = [250, 500, 1_000, 2_000, 5_000]
+
+    private(set) var consecutiveFailures = 0
+    private(set) var startGeneration: UInt = 0
+
+    mutating func beginStartAttempt() -> UInt {
+        startGeneration &+= 1
+        return startGeneration
+    }
+
+    mutating func invalidateStartAttempts() {
+        startGeneration &+= 1
+    }
+
+    func ownsStartAttempt(_ generation: UInt) -> Bool {
+        startGeneration == generation
+    }
+
+    mutating func nextRetryDelayMilliseconds() -> Int {
+        let index = min(consecutiveFailures, Self.retryDelaysMilliseconds.count - 1)
+        if consecutiveFailures < Self.retryDelaysMilliseconds.count {
+            consecutiveFailures += 1
+        }
+        return Self.retryDelaysMilliseconds[index]
+    }
+
+    mutating func recordSuccess() {
+        consecutiveFailures = 0
+    }
+}
+
+/// Coalesces reentrant event-tap start requests while an authorization check is
+/// suspended. Prompting intent is sticky so a lifecycle recovery cannot turn a
+/// user-visible permission request into a silent background attempt.
+struct DictationEventTapStartRequestPolicy {
+    private(set) var isRunning = false
+    private var hasPendingRequest = false
+    private var pendingPromptIfNeeded = false
+
+    mutating func enqueue(promptIfNeeded: Bool) -> Bool {
+        hasPendingRequest = true
+        pendingPromptIfNeeded = pendingPromptIfNeeded || promptIfNeeded
+        guard !isRunning else { return false }
+        isRunning = true
+        return true
+    }
+
+    mutating func nextRequest() -> Bool? {
+        guard hasPendingRequest else {
+            isRunning = false
+            return nil
+        }
+        hasPendingRequest = false
+        let promptIfNeeded = pendingPromptIfNeeded
+        pendingPromptIfNeeded = false
+        return promptIfNeeded
+    }
+
+    mutating func cancelPendingRequests() {
+        hasPendingRequest = false
+        pendingPromptIfNeeded = false
+    }
+}
+
+/// Prevents a release from stopping a session unless this shortcut pipeline
+/// successfully admitted its matching press.
+struct DictationShortcutSessionGate {
+    private(set) var hasAcceptedKeyDown = false
+
+    mutating func acceptKeyDown() {
+        hasAcceptedKeyDown = true
+    }
+
+    mutating func consumeKeyUp() -> Bool {
+        guard hasAcceptedKeyDown else { return false }
+        hasAcceptedKeyDown = false
+        return true
+    }
+
+    mutating func reset() {
+        hasAcceptedKeyDown = false
+    }
+}
+
 struct DictationModifierShortcutStateMachine {
     enum State: Equatable {
         case idle
@@ -97,6 +185,13 @@ struct DictationModifierShortcutStateMachine {
         case .idle, .arming, .blocked:
             return .none
         }
+    }
+
+    /// Returns the gesture recognizer to idle when the downstream dictation
+    /// service rejects a begin request before a session exists. This deliberately
+    /// emits no cancellation action because there is nothing to cancel.
+    mutating func rejectDictationStart() {
+        state = .idle
     }
 
     private mutating func handleHoldToTalk(_ event: Event) -> Action {

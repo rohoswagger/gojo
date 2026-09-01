@@ -26,6 +26,14 @@ extension LocalDictationTranscribing {
     func prepare() async {}
 }
 
+/// Optionally refines an already-transcribed utterance before it is inserted.
+/// Implementations must support prompt cancellation so a replacement dictation
+/// session never races an earlier polish request.
+protocol DictationTextPolishing: Sendable {
+    func polish(_ transcript: String) async throws -> String
+    func cancelPolishing() async
+}
+
 protocol DictationTextInserting: Sendable {
     associatedtype Target: Sendable
 

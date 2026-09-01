@@ -53,24 +53,6 @@ struct DictationApplicationPasteTarget: Equatable, Sendable {
 }
 
 enum WindowTargetResolver {
-    static let guardedApplicationPasteBundleIDs: Set<String> = []
-
-#if DEBUG
-    static let guardedUnicodeTypingBundleIDs: Set<String> = [
-        "com.openai.codex",
-        "com.zarifpour.superconductor",
-        "rohoswagger.gojo.UnicodeTypingE2EFixture",
-    ]
-#else
-    static let guardedUnicodeTypingBundleIDs: Set<String> = [
-        "com.openai.codex",
-        "com.zarifpour.superconductor",
-    ]
-#endif
-
-    static let axOpaqueDictationBundleIDs: Set<String> =
-        guardedApplicationPasteBundleIDs.union(guardedUnicodeTypingBundleIDs)
-
     private static let excludedOwners: Set<String> = [
         "Dock",
         "WindowServer",
@@ -163,7 +145,7 @@ enum WindowTargetResolver {
         applicationsByPID: [pid_t: WindowTargetApplicationSnapshot],
         ownPID: pid_t,
         excludedBundleIDs: Set<String>,
-        allowedBundleIDs: Set<String>
+        allowedBundleIDs: Set<String>?
     ) -> DictationApplicationPasteTarget? {
         for window in topWindows {
             guard isTopLevelWindow(window, ownPID: ownPID),
@@ -179,9 +161,11 @@ enum WindowTargetResolver {
                   ) else {
                 continue
             }
-            guard let bundleIdentifier = application.bundleIdentifier,
-                  allowedBundleIDs.contains(bundleIdentifier) else {
-                return nil
+            if let allowedBundleIDs {
+                guard let bundleIdentifier = application.bundleIdentifier,
+                      allowedBundleIDs.contains(bundleIdentifier) else {
+                    return nil
+                }
             }
             return DictationApplicationPasteTarget(
                 pid: window.pid,

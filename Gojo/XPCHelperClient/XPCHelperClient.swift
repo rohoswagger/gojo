@@ -75,6 +75,8 @@ private final class DictationApplicationInsertionService {
     private static let transientPasteboardType = NSPasteboard.PasteboardType(
         "org.nspasteboard.TransientType"
     )
+    private static let protectedContentAttribute = "AXContainsProtectedContent"
+    private static let isFocusedAttribute = "AXFocused"
 
     private init() {}
 
@@ -239,6 +241,16 @@ private final class DictationApplicationInsertionService {
                     partialInsertion: failure.isPartialInsertion
                 )
             }
+            guard !hasSecureFocusedAncestry(target.pid) else {
+                let failure = DictationUnicodeTextInjector.failure(
+                    afterPostedChunks: postedChunkCount,
+                    fallbackCode: "secureTextTarget"
+                )
+                return unicodeFailure(
+                    failure.code,
+                    partialInsertion: failure.isPartialInsertion
+                )
+            }
             guard DictationUnicodeTextInjector.post(chunk) else {
                 let failure = DictationUnicodeTextInjector.failure(
                     afterPostedChunks: postedChunkCount,
@@ -386,6 +398,93 @@ private final class DictationApplicationInsertionService {
         }
         guard let value, CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
         return (value as! AXUIElement)
+    }
+
+    private func hasSecureFocusedAncestry(_ expectedPID: pid_t) -> Bool {
+        let application = AXUIElementCreateApplication(expectedPID)
+        guard let coarseElement = copyElement(
+            application,
+            attribute: kAXFocusedUIElementAttribute as String
+        ) else {
+            return false
+        }
+        var candidate: AXUIElement? = focusedDescendant(from: coarseElement)
+            ?? coarseElement
+        for _ in 0..<8 {
+            guard let element = candidate else { return false }
+            if copyBool(element, attribute: Self.protectedContentAttribute) == true {
+                return true
+            }
+            let role = copyString(element, attribute: kAXRoleAttribute as String) ?? ""
+            let subrole = copyString(element, attribute: kAXSubroleAttribute as String) ?? ""
+            if subrole == kAXSecureTextFieldSubrole as String
+                || role.localizedCaseInsensitiveContains("secure")
+                || subrole.localizedCaseInsensitiveContains("secure") {
+                return true
+            }
+            candidate = copyElement(element, attribute: kAXParentAttribute as String)
+        }
+        return false
+    }
+
+    private func focusedDescendant(from coarseElement: AXUIElement) -> AXUIElement? {
+        if let nestedFocusedElement = copyElement(
+            coarseElement,
+            attribute: kAXFocusedUIElementAttribute as String
+        ), !CFEqual(nestedFocusedElement, coarseElement) {
+            return nestedFocusedElement
+        }
+
+        var stack: [(element: AXUIElement, depth: Int)] = [(coarseElement, 0)]
+        var visited: [AXUIElement] = []
+        var bestMatch: (element: AXUIElement, depth: Int)?
+        while let candidate = stack.popLast(), visited.count < 256 {
+            guard candidate.depth <= 12,
+                  !visited.contains(where: { CFEqual($0, candidate.element) }) else {
+                continue
+            }
+            visited.append(candidate.element)
+            if candidate.depth > 0,
+               copyBool(
+                   candidate.element,
+                   attribute: Self.isFocusedAttribute
+               ) == true,
+               candidate.depth > (bestMatch?.depth ?? -1) {
+                bestMatch = candidate
+            }
+            for child in (copyElements(
+                candidate.element,
+                attribute: kAXChildrenAttribute as String
+            ) ?? []).reversed() {
+                stack.append((child, candidate.depth + 1))
+            }
+        }
+        return bestMatch?.element
+    }
+
+    private func copyElements(_ element: AXUIElement, attribute: String) -> [AXUIElement]? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else {
+            return nil
+        }
+        return value as? [AXUIElement]
+    }
+
+    private func copyBool(_ element: AXUIElement, attribute: String) -> Bool? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success,
+              let number = value as? NSNumber else {
+            return nil
+        }
+        return number.boolValue
+    }
+
+    private func copyString(_ element: AXUIElement, attribute: String) -> String? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success else {
+            return nil
+        }
+        return value as? String
     }
 
     private func windowID(of element: AXUIElement) -> CGWindowID? {
@@ -659,7 +758,7 @@ final class XPCHelperClient: NSObject, @unchecked Sendable {
             }.reduce(into: Set<String>()) {
                 $0.insert($1)
             },
-            allowedBundleIDs: WindowTargetResolver.axOpaqueDictationBundleIDs
+            allowedBundleIDs: nil
         ) else {
             return nil
         }

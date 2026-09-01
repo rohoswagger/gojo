@@ -33,7 +33,8 @@ assert "let preferredApplicationTarget = preferredTarget.flatMap(" in helper
 assert "self.applicationPasteTarget(from:)" in helper
 assert "preferredTarget == nil ? self.topmostApplicationPasteTarget() : nil" in helper
 assert "private func applicationPasteTarget(\n        from preferredTarget: NSDictionary\n    )" in helper
-assert "opaqueTextTargetKind(for: bundleIdentifier)" in helper
+assert "kind: .applicationUnicode" in helper
+assert "opaqueTextTargetKind" not in helper
 assert "windowID != 0" in helper
 assert "shouldUsePreferredApplicationPasteTarget(" in helper
 PY

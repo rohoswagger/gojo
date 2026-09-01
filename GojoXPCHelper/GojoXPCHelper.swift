@@ -390,6 +390,10 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
                     reply(self.textInsertionFailure(authorized: true, error: "focusChanged"))
                     return
                 }
+                guard !self.hasSecureFocusedAncestry(for: target.pid) else {
+                    reply(self.textInsertionFailure(authorized: true, error: "secureTextTarget"))
+                    return
+                }
                 reply([
                     "authorized": true,
                     "success": false,
@@ -893,8 +897,7 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
             return nil
         }
         let appElement = AXUIElementCreateApplication(application.processIdentifier)
-        let kind = application.bundleIdentifier.flatMap(opaqueTextTargetKind)
-            ?? .applicationPaste
+        let kind: CapturedTextTargetKind = .applicationUnicode
         let focusedFrame = frame(of: focusedElement)
         let capturedWindowID = windowID(of: focusedElement)
             ?? focusedFrame.flatMap {
@@ -944,12 +947,9 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
             applicationsByPID: applicationsByPID.compactMapValues(applicationSnapshot),
             ownPID: pid_t(ProcessInfo.processInfo.processIdentifier),
             excludedBundleIDs: excludedWindowTargetBundleIDs,
-            allowedBundleIDs: WindowTargetResolver.axOpaqueDictationBundleIDs
+            allowedBundleIDs: nil
         )
         guard let target,
-              let application = applicationsByPID[target.pid],
-              let bundleIdentifier = application.bundleIdentifier,
-              let kind = opaqueTextTargetKind(for: bundleIdentifier),
               let window = topWindows.first(where: {
                   $0.pid == target.pid && $0.windowID == target.windowID
               }) else {
@@ -961,7 +961,7 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
             windowID: target.windowID,
             displayID: displayID(containing: window.bounds),
             allowsPasteFallback: true,
-            kind: kind
+            kind: .applicationUnicode
         )
     }
 
@@ -977,8 +977,6 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
         guard pid != 0,
               windowID != 0,
               let application = NSRunningApplication(processIdentifier: pid),
-              let bundleIdentifier = application.bundleIdentifier,
-              let kind = opaqueTextTargetKind(for: bundleIdentifier),
               isTargetApplication(application) else {
             return nil
         }
@@ -991,24 +989,8 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
             windowID: windowID,
             displayID: displayID,
             allowsPasteFallback: true,
-            kind: kind
+            kind: .applicationUnicode
         )
-    }
-
-    private func opaqueTextTargetKind(
-        for bundleIdentifier: String
-    ) -> CapturedTextTargetKind? {
-        if WindowTargetResolver.guardedUnicodeTypingBundleIDs.contains(
-            bundleIdentifier
-        ) {
-            return .applicationUnicode
-        }
-        if WindowTargetResolver.guardedApplicationPasteBundleIDs.contains(
-            bundleIdentifier
-        ) {
-            return .applicationPaste
-        }
-        return nil
     }
 
     private func isSecureTextElement(_ element: AXUIElement) -> Bool {
@@ -1024,8 +1006,22 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
             || subrole.localizedCaseInsensitiveContains("secure")
     }
 
+    private func hasSecureFocusedAncestry(for expectedPID: pid_t) -> Bool {
+        guard let coarseElement = activeFocusedUIElement(for: expectedPID) else {
+            return false
+        }
+        var candidate: AXUIElement? = focusedDescendantTextTarget(from: coarseElement)
+            ?? coarseElement
+        for _ in 0..<8 {
+            guard let element = candidate else { return false }
+            if isSecureTextElement(element) { return true }
+            candidate = copyElement(element, attribute: kAXParentAttribute as String)
+        }
+        return false
+    }
+
     /// Returns nil for controls that cannot support verified direct insertion.
-    /// Reviewed opaque editors use a guarded app-level insertion path.
+    /// Opaque editors use a guarded app-level insertion path.
     private func editableTextCapabilities(for element: AXUIElement) -> Bool? {
         switch DictationTextTargetPolicy.decision(
             for: textTargetCapabilities(for: element)

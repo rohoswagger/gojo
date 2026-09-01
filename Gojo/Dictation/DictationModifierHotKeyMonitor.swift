@@ -16,11 +16,12 @@ final class DictationModifierHotKeyMonitor {
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var activationTask: Task<Void, Never>?
+    private var recoveryTask: Task<Void, Never>?
+    private var recoveryPolicy = DictationEventTapRecoveryPolicy()
+    private var startRequests = DictationEventTapStartRequestPolicy()
     private var machine = DictationModifierShortcutStateMachine(
         mode: DictationActivationMode.saved()
     )
-    private var isStarting = false
-    private var startGeneration: UInt = 0
 
     private init() {}
 
@@ -29,7 +30,8 @@ final class DictationModifierHotKeyMonitor {
     }
 
     var isMonitoring: Bool {
-        eventTap != nil
+        guard let eventTap else { return false }
+        return CGEvent.tapIsEnabled(tap: eventTap)
     }
 
     func setActivationMode(_ mode: DictationActivationMode) {
@@ -46,76 +48,176 @@ final class DictationModifierHotKeyMonitor {
         resetShortcutState()
     }
 
+    /// Re-arms tap-to-talk after the service declines a begin request during
+    /// preflight. Unlike cancellation, rejection must not emit another service
+    /// event because no dictation session was admitted.
+    func rejectCurrentDictationStart() {
+        activationTask?.cancel()
+        activationTask = nil
+        machine.rejectDictationStart()
+    }
+
+    /// A negative authorization notification can be emitted by the very check
+    /// that is about to show the first-use prompt. Do not let that notification
+    /// cancel the in-flight prompting request; a completed start attempt will
+    /// leave no tap behind if authorization remains unavailable.
+    func accessibilityAuthorizationWasRevoked() {
+        guard !startRequests.isRunning else { return }
+        stop()
+    }
+
+    #if DEBUG
+    /// Allows the live shortcut regression to verify recovery from the same
+    /// disabled-tap state macOS can leave behind after sleep or a timeout.
+    func recoverDisabledEventTapForTesting() -> Bool {
+        guard let eventTap else { return false }
+        CGEvent.tapEnable(tap: eventTap, enable: false)
+        guard !CGEvent.tapIsEnabled(tap: eventTap) else { return false }
+        recoverFromDisabledEventTap()
+        return isMonitoring
+    }
+    #endif
+
     func start(promptIfNeeded: Bool = false) async {
-        guard eventTap == nil, !isStarting else { return }
-        isStarting = true
-        startGeneration &+= 1
-        let generation = startGeneration
-        defer { isStarting = false }
+        if let eventTap, CGEvent.tapIsEnabled(tap: eventTap) {
+            recoveryTask?.cancel()
+            recoveryTask = nil
+            recoveryPolicy.recordSuccess()
+            return
+        }
+
+        guard startRequests.enqueue(promptIfNeeded: promptIfNeeded) else { return }
+        while let pendingPromptIfNeeded = startRequests.nextRequest() {
+            await performStart(promptIfNeeded: pendingPromptIfNeeded)
+        }
+    }
+
+    private func performStart(promptIfNeeded: Bool) async {
+        if let eventTap, CGEvent.tapIsEnabled(tap: eventTap) {
+            recoveryTask?.cancel()
+            recoveryTask = nil
+            recoveryPolicy.recordSuccess()
+            return
+        }
+        recoveryTask?.cancel()
+        recoveryTask = nil
+        if eventTap != nil {
+            logger.error("monitor found a disabled event tap; recreating")
+            resetShortcutState()
+            tearDownEventTap()
+        }
+
+        let generation = recoveryPolicy.beginStartAttempt()
 
         let authorized = await XPCHelperClient.shared.isAccessibilityAuthorized()
-        guard startGeneration == generation else { return }
+        guard recoveryPolicy.ownsStartAttempt(generation) else { return }
         if !authorized {
             guard promptIfNeeded else {
                 logger.error("monitor start failed: accessibility permission missing")
                 return
             }
             let granted = await XPCHelperClient.shared.ensureAccessibilityAuthorization(promptIfNeeded: true)
-            guard startGeneration == generation else { return }
+            guard recoveryPolicy.ownsStartAttempt(generation) else { return }
             guard granted else {
                 logger.error("monitor start failed: accessibility permission denied")
                 return
             }
         }
 
-        guard eventTap == nil, startGeneration == generation else { return }
-        createEventTap()
+        guard eventTap == nil, recoveryPolicy.ownsStartAttempt(generation) else { return }
+        guard createEventTap() else {
+            scheduleRecovery(reason: "event tap unavailable")
+            return
+        }
+        recoveryPolicy.recordSuccess()
+    }
+
+    /// Revalidates the tap after lifecycle transitions where macOS can silently
+    /// invalidate CGEvent taps (app activation, screen unlock, and system wake).
+    func recoverIfNeeded() async {
+        // A tap can remain enabled even if its final modifier-release event was
+        // lost during a lifecycle transition. Always clear the gesture state.
+        resetShortcutState()
+        if let eventTap {
+            if CGEvent.tapIsEnabled(tap: eventTap) {
+                recoveryTask?.cancel()
+                recoveryTask = nil
+                recoveryPolicy.recordSuccess()
+                return
+            }
+
+            CGEvent.tapEnable(tap: eventTap, enable: true)
+            if CGEvent.tapIsEnabled(tap: eventTap) {
+                recoveryTask?.cancel()
+                recoveryTask = nil
+                recoveryPolicy.recordSuccess()
+                logger.notice("monitor recovered by re-enabling event tap")
+                return
+            }
+
+            logger.error("monitor recovery could not re-enable event tap; recreating")
+            tearDownEventTap()
+        }
+
+        await start(promptIfNeeded: false)
     }
 
     func stop() {
-        startGeneration &+= 1
+        recoveryPolicy.invalidateStartAttempts()
+        startRequests.cancelPendingRequests()
+        recoveryTask?.cancel()
+        recoveryTask = nil
+        recoveryPolicy.recordSuccess()
         resetShortcutState()
-
-        if let eventTap {
-            CGEvent.tapEnable(tap: eventTap, enable: false)
-        }
-        if let runLoopSource {
-            CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
-        }
-        runLoopSource = nil
-        eventTap = nil
+        tearDownEventTap()
     }
 
-    private func createEventTap() {
+    @discardableResult
+    private func createEventTap() -> Bool {
         let mask = CGEventMask(
             (1 << CGEventType.flagsChanged.rawValue)
                 | (1 << CGEventType.keyDown.rawValue)
         )
-        eventTap = CGEvent.tapCreate(
+        guard let createdEventTap = CGEvent.tapCreate(
             tap: .cghidEventTap,
             place: .headInsertEventTap,
             options: .defaultTap,
             eventsOfInterest: mask,
             callback: { _, type, event, userInfo in
-                guard let userInfo else { return Unmanaged.passRetained(event) }
+                guard let userInfo else { return Unmanaged.passUnretained(event) }
                 let monitor = Unmanaged<DictationModifierHotKeyMonitor>
                     .fromOpaque(userInfo)
                     .takeUnretainedValue()
                 return monitor.handle(type: type, event: event)
             },
             userInfo: UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
-        )
-
-        guard let eventTap else {
+        ) else {
             logger.error("monitor start failed: event tap unavailable")
-            return
+            return false
         }
-        runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0)
-        if let runLoopSource {
-            CFRunLoopAddSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
+
+        guard let createdRunLoopSource = CFMachPortCreateRunLoopSource(
+            kCFAllocatorDefault,
+            createdEventTap,
+            0
+        ) else {
+            CGEvent.tapEnable(tap: createdEventTap, enable: false)
+            CFMachPortInvalidate(createdEventTap)
+            logger.error("monitor start failed: run loop source unavailable")
+            return false
         }
-        CGEvent.tapEnable(tap: eventTap, enable: true)
+
+        eventTap = createdEventTap
+        runLoopSource = createdRunLoopSource
+        CFRunLoopAddSource(CFRunLoopGetMain(), createdRunLoopSource, .commonModes)
+        CGEvent.tapEnable(tap: createdEventTap, enable: true)
+        guard CGEvent.tapIsEnabled(tap: createdEventTap) else {
+            tearDownEventTap()
+            logger.error("monitor start failed: event tap did not enable")
+            return false
+        }
         logger.notice("monitor started chord=control+option")
+        return true
     }
 
     nonisolated private func handle(
@@ -124,11 +226,8 @@ final class DictationModifierHotKeyMonitor {
     ) -> Unmanaged<CGEvent>? {
         MainActor.assumeIsolated {
             if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-                resetShortcutState()
-                if let eventTap {
-                    CGEvent.tapEnable(tap: eventTap, enable: true)
-                }
-                return Unmanaged.passRetained(event)
+                recoverFromDisabledEventTap()
+                return Unmanaged.passUnretained(event)
             }
 
             switch type {
@@ -154,7 +253,7 @@ final class DictationModifierHotKeyMonitor {
                 break
             }
 
-            return Unmanaged.passRetained(event)
+            return Unmanaged.passUnretained(event)
         }
     }
 
@@ -202,5 +301,58 @@ final class DictationModifierHotKeyMonitor {
         activationTask?.cancel()
         activationTask = nil
         apply(action)
+    }
+
+    private func recoverFromDisabledEventTap() {
+        resetShortcutState()
+        if let eventTap {
+            CGEvent.tapEnable(tap: eventTap, enable: true)
+            if CGEvent.tapIsEnabled(tap: eventTap) {
+                recoveryPolicy.recordSuccess()
+                logger.notice("monitor recovered from disabled event tap")
+            } else {
+                logger.error("monitor could not re-enable disabled event tap")
+                // Do not invalidate the Mach port while Core Graphics may still
+                // be executing its callback. Recreate it on the next actor turn.
+                Task { [weak self] in
+                    guard let self else { return }
+                    self.tearDownEventTap()
+                    self.scheduleRecovery(reason: "event tap remained disabled")
+                }
+            }
+        } else {
+            scheduleRecovery(reason: "event tap callback lost its tap")
+        }
+    }
+
+    private func scheduleRecovery(reason: String) {
+        guard recoveryTask == nil else { return }
+        let delayMilliseconds = recoveryPolicy.nextRetryDelayMilliseconds()
+        let generation = recoveryPolicy.startGeneration
+        logger.error(
+            "monitor retry scheduled reason=\(reason, privacy: .public) delayMs=\(delayMilliseconds, privacy: .public)"
+        )
+        recoveryTask = Task { [weak self] in
+            do {
+                try await Task.sleep(for: .milliseconds(Int64(delayMilliseconds)))
+            } catch {
+                return
+            }
+            guard let self, self.recoveryPolicy.ownsStartAttempt(generation) else { return }
+            self.recoveryTask = nil
+            await self.start(promptIfNeeded: false)
+        }
+    }
+
+    private func tearDownEventTap() {
+        if let runLoopSource {
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
+        }
+        if let eventTap {
+            CGEvent.tapEnable(tap: eventTap, enable: false)
+            CFMachPortInvalidate(eventTap)
+        }
+        runLoopSource = nil
+        eventTap = nil
     }
 }

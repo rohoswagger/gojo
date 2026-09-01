@@ -19,6 +19,7 @@ struct DynamicNotchApp: App {
     @Default(.menubarIcon) var showMenuBarIcon
     @Default(.fluxEnabled) var fluxEnabled
     @Environment(\.openWindow) var openWindow
+    @StateObject private var accessibilityFlow = MenuBarAccessibilityAuthorizationFlow()
 
     let updaterController: SPUStandardUpdaterController
 
@@ -38,6 +39,9 @@ struct DynamicNotchApp: App {
                 }
             }
             .keyboardShortcut(KeyEquivalent(","), modifiers: .command)
+            Button("Enable Accessibility…") {
+                accessibilityFlow.start()
+            }
             CheckForUpdatesView(updater: updaterController.updater)
             Divider()
             Toggle("Night Shift", isOn: $fluxEnabled)
@@ -75,6 +79,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var screenLockedObserver: Any?
     private var screenUnlockedObserver: Any?
     private var systemSleepObserver: Any?
+    private var systemWakeObserver: Any?
     private var dictationEscapeGlobalMonitor: Any?
     private var dictationEscapeLocalMonitor: Any?
     private var dictationAccessibilityObserver: Any?
@@ -100,6 +105,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return false
     }
 
+    func applicationDidBecomeActive(_ notification: Notification) {
+        Task { @MainActor in
+            await DictationModifierHotKeyMonitor.shared.recoverIfNeeded()
+        }
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         NotificationCenter.default.removeObserver(self)
         if let observer = screenLockedObserver {
@@ -113,6 +124,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if let observer = systemSleepObserver {
             NSWorkspace.shared.notificationCenter.removeObserver(observer)
             systemSleepObserver = nil
+        }
+        if let observer = systemWakeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+            systemWakeObserver = nil
         }
         if let monitor = dictationEscapeGlobalMonitor {
             NSEvent.removeMonitor(monitor)
@@ -201,6 +216,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor
     func onScreenUnlocked(_ notification: Notification) {
         isScreenLocked = false
+        Task {
+            await DictationModifierHotKeyMonitor.shared.recoverIfNeeded()
+        }
         if !Defaults[.showOnLockScreen] {
             adjustWindowPosition(changeAlpha: true)
         } else {
@@ -441,9 +459,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 ),
                 object: nil,
                 queue: .main
-            ) { [weak self] _ in
+            ) { [weak self] notification in
+                let runID = notification.userInfo?["runID"] as? String ?? "unknown"
                 Task { @MainActor in
-                    await self?.runDictationEventTapShortcutE2EProbe()
+                    await self?.runDictationEventTapShortcutE2EProbe(runID: runID)
                 }
             }
         dictationOpaquePasteE2EProbeObserver =
@@ -614,6 +633,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
+        systemWakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            Task { @MainActor in
+                await DictationModifierHotKeyMonitor.shared.recoverIfNeeded()
+            }
+        }
+
         KeyboardShortcuts.onKeyDown(for: .toggleSneakPeek) { [weak self] in
             guard let self = self, !LicenseManager.shared.isLocked else { return }
             if Defaults[.sneakPeekStyles] == .inline {
@@ -638,7 +667,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 if granted {
                     await DictationModifierHotKeyMonitor.shared.start()
                 } else {
-                    DictationModifierHotKeyMonitor.shared.stop()
+                    DictationModifierHotKeyMonitor.shared.accessibilityAuthorizationWasRevoked()
                 }
             }
         }
@@ -812,7 +841,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @MainActor
-    private func runDictationEventTapShortcutE2EProbe() async {
+    private func runDictationEventTapShortcutE2EProbe(runID: String) async {
         let logger = Logger(
             subsystem: "rohoswagger.gojo.dictation-e2e",
             category: "event-tap-shortcut"
@@ -822,9 +851,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             try? await Task.sleep(for: .milliseconds(25))
         }
         guard monitor.isMonitoring else {
-            logger.error("result success=false error=eventTapUnavailable")
+            logger.error(
+                "result success=false runID=\(runID, privacy: .public) error=eventTapUnavailable"
+            )
             return
         }
+
+        let recoverySucceeded = monitor.recoverDisabledEventTapForTesting()
 
         let originalMode = monitor.activationMode
         let hold = await exerciseDictationEventTap(mode: .holdToTalk)
@@ -833,8 +866,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         GojoDictationService.shared.cancel()
         monitor.setActivationMode(originalMode)
 
-        let success = hold.started && hold.stopped && tap.started && tap.stopped
+        let success = recoverySucceeded
+            && hold.started && hold.stopped
+            && tap.started && tap.stopped
         let message = "result success=\(success)"
+            + " runID=\(runID)"
+            + " recoverySucceeded=\(recoverySucceeded)"
             + " holdStarted=\(hold.started)"
             + " holdStopped=\(hold.stopped)"
             + " holdStartMs=\(hold.startMilliseconds)"

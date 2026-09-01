@@ -6,6 +6,7 @@ APP="$ROOT/.build/DerivedData/Build/Products/Debug/Gojo.app"
 source "$ROOT/tests/dictation_live_lock.sh"
 NOTIFICATION_NAME="rohoswagger.gojo.dictation-event-tap-shortcut-e2e-probe"
 LOG_CATEGORY="event-tap-shortcut"
+RUN_ID="$(uuidgen)"
 FIXTURE_DIR=""
 FIXTURE_PID=""
 
@@ -90,6 +91,7 @@ import Foundation
 DistributedNotificationCenter.default().postNotificationName(
     Notification.Name(\"$NOTIFICATION_NAME\"),
     object: nil,
+    userInfo: [\"runID\": \"$RUN_ID\"],
     deliverImmediately: true
 )
 "
@@ -102,11 +104,14 @@ for _ in $(seq 1 120); do
       --style compact \
       --start "$started_at" \
       --predicate "subsystem == \"rohoswagger.gojo.dictation-e2e\" AND category == \"$LOG_CATEGORY\"" \
-      | tail -1
+      | grep "runID=$RUN_ID" \
+      | tail -1 \
+      || true
   )"
   if grep -q 'result success=' <<<"$result"; then
     echo "$result"
     grep -q 'result success=true' <<<"$result"
+    grep -q 'recoverySucceeded=true' <<<"$result"
     grep -q 'holdStarted=true holdStopped=true' <<<"$result"
     grep -q 'tapStarted=true tapStopped=true' <<<"$result"
     exit 0

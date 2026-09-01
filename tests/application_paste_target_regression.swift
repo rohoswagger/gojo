@@ -22,6 +22,7 @@ struct ApplicationPasteTargetRegressionRunner {
         ]
         let codexPID: pid_t = 200
         let bravePID: pid_t = 201
+        let unknownEditorPID: pid_t = 202
         let applicationsByPID = [
             codexPID: WindowTargetApplicationSnapshot(
                 pid: codexPID,
@@ -35,7 +36,32 @@ struct ApplicationPasteTargetRegressionRunner {
                 activationPolicy: .regular,
                 isTerminated: false
             ),
+            unknownEditorPID: WindowTargetApplicationSnapshot(
+                pid: unknownEditorPID,
+                bundleIdentifier: "com.example.unknown-editor",
+                activationPolicy: .regular,
+                isTerminated: false
+            ),
         ]
+
+        require(
+            WindowTargetResolver.topmostApplicationPasteTarget(
+                topWindows: [
+                    WindowTargetWindowSnapshot(
+                        windowID: 9001,
+                        pid: unknownEditorPID,
+                        ownerName: "Unknown Editor",
+                        layer: 0,
+                        bounds: CGRect(x: 0, y: 30, width: 1200, height: 800)
+                    ),
+                ],
+                applicationsByPID: applicationsByPID,
+                ownPID: ownPID,
+                excludedBundleIDs: [],
+                allowedBundleIDs: nil
+            ) == DictationApplicationPasteTarget(pid: unknownEditorPID, windowID: 9001),
+            "an unrestricted policy should enable guarded capture for any foreground editor"
+        )
 
         require(
             WindowTargetResolver.topmostApplicationPasteTarget(

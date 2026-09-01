@@ -94,4 +94,50 @@ require_match \
   'func\s+transcribe\(_\s+audio:\s+DictationAudio\)\s+async\s+throws\s+->\s+String\s*\{(?!.*install\()' \
   "the router transcription path must not call install"
 
+require_match \
+  Gojo/Dictation/GojoDictationService.swift \
+  'DictationTranscriberRouter,\s*S1MiniDictationPolisher,\s*XPCTextInserter' \
+  "the production cleanup stage must use the local S1-mini adapter"
+
+require_match \
+  Gojo/Dictation/S1MiniDictationPolisher.swift \
+  'func\s+polish\(_\s+transcript:\s+String\).*?let\s+correctedRaw\s*=\s*S1MiniVocabularyPipeline\.prepare.*?guard\s+enabledProvider\(\),\s*await\s+store\.isInstalled\(\)\s+else\s*\{\s*return\s+correctedRaw\s*\}' \
+  "cleanup must fall back to deterministic local vocabulary when S1-mini is disabled or unavailable"
+
+require_order \
+  Gojo/Dictation/S1MiniDictationPolisher.swift \
+  'func\s+install\(\)\s+async\s+throws' \
+  'URLSession\.shared\.download' \
+  "S1-mini network access must be confined to the explicit install path"
+
+require_match \
+  Gojo/Dictation/DictationModels.swift \
+  'static\s+let\s+sha256\s*=\s*"3b41ebe2502cbd03e811d5d16b022f5ab551eda58d62597d152f89535003c634"' \
+  "S1-mini downloads must be pinned to the published Q4_K_M SHA-256"
+
+require_match \
+  Gojo/Dictation/S1MiniDictationPolisher.swift \
+  'var\s+reachedEndToken\s*=\s*false.*?llama_vocab_is_eog.*?reachedEndToken\s*=\s*true.*?guard\s+reachedEndToken\s+else\s*\{.*?throw\s+S1MiniPolisherError\.inferenceFailed' \
+  "S1-mini cleanup must reject output truncated by its generation budget"
+
+require_match \
+  Gojo/Dictation/GojoDictationService.swift \
+  'func\s+setCleanupEnabled\(_\s+enabled:\s*Bool\)\s*\{\s*guard\s+s1MiniOperation\s*==\s*nil,\s*!enabled\s*\|\|\s*s1MiniInstalled\s*else\s*\{\s*return\s*\}' \
+  "cleanup preference changes must be rejected while S1-mini is installing or removing"
+
+require_match \
+  Gojo/components/Settings/SettingsView.swift \
+  'Toggle\("Polish English dictated text".*?\.disabled\(\s*!dictation\.s1MiniInstalled\s*\|\|\s*dictation\.s1MiniOperation\s*!=\s*nil\s*\)' \
+  "the cleanup toggle must remain disabled for the full S1-mini operation"
+
+require_match \
+  Gojo/Dictation/GojoDictationService.swift \
+  'guard\s+hasVerifiedOpenRouterModel,\s*availableOpenRouterModels\.contains.*?supportsTranscription' \
+  "cloud dictation must require a live catalog-confirmed transcription model"
+
+require_match \
+  Gojo/Info.plist \
+  'Audio stays on your Mac with local models, or is sent to your selected cloud transcription provider when you enable cloud dictation\.' \
+  "microphone privacy copy must distinguish local and explicitly enabled cloud transcription"
+
 echo "dictation-offline-policy-pass"

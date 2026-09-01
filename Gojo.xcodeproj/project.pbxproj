@@ -148,6 +148,11 @@
 		D1C8000000000000000000B2 /* ParakeetUnifiedDictationTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C8000000000000000000A1 /* ParakeetUnifiedDictationTranscriber.swift */; };
 		D1C8000000000000000000B3 /* LocalDictationTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C8000000000000000000A2 /* LocalDictationTranscriber.swift */; };
 		D1C8000000000000000000B4 /* ParakeetV3DictationTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C8000000000000000000A3 /* ParakeetV3DictationTranscriber.swift */; };
+		D1CA00000000000000000001 /* OpenRouterDictationSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1CA00000000000000000002 /* OpenRouterDictationSupport.swift */; };
+		D1CB000000000000000000B1 /* S1MiniDictationPolisher.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1CB000000000000000000A1 /* S1MiniDictationPolisher.swift */; };
+		D1CB000000000000000000B2 /* llama in Frameworks */ = {isa = PBXBuildFile; productRef = D1CB000000000000000000D1 /* llama */; };
+		D1CB000000000000000000B3 /* llama in Embed Frameworks */ = {isa = PBXBuildFile; productRef = D1CB000000000000000000D1 /* llama */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		D1CC000000000000000000B1 /* THIRD_PARTY_LICENSES in Resources */ = {isa = PBXBuildFile; fileRef = D1CC000000000000000000A1 /* THIRD_PARTY_LICENSES */; };
 		D1C9000000000000000000B1 /* DictationUnicodeTextInjector.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C9000000000000000000A1 /* DictationUnicodeTextInjector.swift */; };
 		B19016242CC15B5000E3F12E /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = B19016232CC15B4D00E3F12E /* Constants.swift */; };
 		B19424092CD0FF01003E5DC2 /* LottieAnimationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B19424082CD0FEFE003E5DC2 /* LottieAnimationView.swift */; };
@@ -229,6 +234,17 @@
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D1CB000000000000000000E1 /* Embed llama.cpp */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				D1CB000000000000000000B3 /* llama in Embed Frameworks */,
+			);
+			name = "Embed llama.cpp";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -246,6 +262,9 @@
 		D1C8000000000000000000A1 /* ParakeetUnifiedDictationTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetUnifiedDictationTranscriber.swift; sourceTree = "<group>"; };
 		D1C8000000000000000000A2 /* LocalDictationTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalDictationTranscriber.swift; sourceTree = "<group>"; };
 		D1C8000000000000000000A3 /* ParakeetV3DictationTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetV3DictationTranscriber.swift; sourceTree = "<group>"; };
+		D1CA00000000000000000002 /* OpenRouterDictationSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenRouterDictationSupport.swift; sourceTree = "<group>"; };
+		D1CB000000000000000000A1 /* S1MiniDictationPolisher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = S1MiniDictationPolisher.swift; sourceTree = "<group>"; };
+		D1CC000000000000000000A1 /* THIRD_PARTY_LICENSES */ = {isa = PBXFileReference; lastKnownFileType = text; path = THIRD_PARTY_LICENSES; sourceTree = SOURCE_ROOT; };
 		012F58500EF5E5AFFDE2F363 /* AltTabPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AltTabPanel.swift; sourceTree = "<group>"; };
 		0CCF1847F206D014FA76F588 /* AltTabSwitcherView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AltTabSwitcherView.swift; sourceTree = "<group>"; };
 		1100290B2E847E2800035A57 /* NSItemProvider+LoadHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSItemProvider+LoadHelpers.swift"; sourceTree = "<group>"; };
@@ -482,6 +501,7 @@
 				B19016222CC15B3D00E3F12E /* Defaults in Frameworks */,
 				D1C7000000000000000000B1 /* WhisperKit in Frameworks */,
 				D1C8000000000000000000B1 /* FluidAudio in Frameworks */,
+				D1CB000000000000000000B2 /* llama in Frameworks */,
 				111BE95D2ECD71E10079DD4E /* AsyncXPCConnection in Frameworks */,
 				B1628B922CC260C0003D8DF3 /* SwiftUIIntrospect in Frameworks */,
 			);
@@ -502,6 +522,8 @@
 				D1C8000000000000000000A1 /* ParakeetUnifiedDictationTranscriber.swift */,
 				D1C8000000000000000000A3 /* ParakeetV3DictationTranscriber.swift */,
 				D1C8000000000000000000A2 /* LocalDictationTranscriber.swift */,
+				D1CA00000000000000000002 /* OpenRouterDictationSupport.swift */,
+				D1CB000000000000000000A1 /* S1MiniDictationPolisher.swift */,
 				D1C7000000000000000000A7 /* GojoDictationService.swift */,
 				D1C7000000000000000000A9 /* DictationModifierShortcutStateMachine.swift */,
 				D1C7000000000000000000AA /* DictationModifierHotKeyMonitor.swift */,
@@ -703,6 +725,7 @@
 		14CEF4092C5CAED200855D72 = {
 			isa = PBXGroup;
 			children = (
+				D1CC000000000000000000A1 /* THIRD_PARTY_LICENSES */,
 				112B0EB62E30DD0F00562D6C /* mediaremote-adapter */,
 				14CEF4142C5CAED300855D72 /* Gojo */,
 				11F748502EC9AABA00F841DB /* GojoXPCHelper */,
@@ -1051,6 +1074,7 @@
 				14CEF40F2C5CAED300855D72 /* Frameworks */,
 				14CEF4102C5CAED300855D72 /* Resources */,
 				B1ECFA062C6FE58A002ACD87 /* Embed Frameworks */,
+				D1CB000000000000000000E1 /* Embed llama.cpp */,
 				11F748412EC8051E00F841DB /* Embed XPC Services */,
 			);
 			buildRules = (
@@ -1078,6 +1102,7 @@
 				111BEA6E2ED166E20079DD4E /* MacroVisionKit */,
 				D1C7000000000000000000D1 /* WhisperKit */,
 				D1C8000000000000000000D1 /* FluidAudio */,
+				D1CB000000000000000000D1 /* llama */,
 			);
 			productName = dynamicNotch;
 			productReference = 14CEF4122C5CAED300855D72 /* Gojo.app */;
@@ -1125,6 +1150,7 @@
 				111BEA6D2ED166E20079DD4E /* XCRemoteSwiftPackageReference "MacroVisionKit" */,
 				D1C7000000000000000000C1 /* XCRemoteSwiftPackageReference "argmax-oss-swift" */,
 				D1C8000000000000000000C1 /* XCRemoteSwiftPackageReference "FluidAudio" */,
+				D1CB000000000000000000C1 /* XCLocalSwiftPackageReference "LlamaCpp" */,
 			);
 			productRefGroup = 14CEF4132C5CAED300855D72 /* Products */;
 			projectDirPath = "";
@@ -1148,6 +1174,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D1CC000000000000000000B1 /* THIRD_PARTY_LICENSES in Resources */,
 				14CEF41D2C5CAED400855D72 /* Preview Assets.xcassets in Resources */,
 				14CEF41A2C5CAED400855D72 /* Assets.xcassets in Resources */,
 				112B0EB82E30DD0F00562D6C /* MediaRemoteAdapterTestClient in Resources */,
@@ -1186,6 +1213,8 @@
 				D1C8000000000000000000B2 /* ParakeetUnifiedDictationTranscriber.swift in Sources */,
 				D1C8000000000000000000B4 /* ParakeetV3DictationTranscriber.swift in Sources */,
 				D1C8000000000000000000B3 /* LocalDictationTranscriber.swift in Sources */,
+				D1CA00000000000000000001 /* OpenRouterDictationSupport.swift in Sources */,
+				D1CB000000000000000000B1 /* S1MiniDictationPolisher.swift in Sources */,
 				115C12EC2ED3D003009754CA /* OpenNotchHUD.swift in Sources */,
 				C2B000000000000000201 /* WindowAction.swift in Sources */,
 				C2B000000000000000202 /* WindowLayoutPreview.swift in Sources */,
@@ -1666,6 +1695,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		D1CB000000000000000000C1 /* XCLocalSwiftPackageReference "LlamaCpp" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/LlamaCpp;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		111BE95B2ECD71E10079DD4E /* XCRemoteSwiftPackageReference "AsyncXPCConnection" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -1841,6 +1877,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = D1C8000000000000000000C1 /* XCRemoteSwiftPackageReference "FluidAudio" */;
 			productName = FluidAudio;
+		};
+		D1CB000000000000000000D1 /* llama */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D1CB000000000000000000C1 /* XCLocalSwiftPackageReference "LlamaCpp" */;
+			productName = llama;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

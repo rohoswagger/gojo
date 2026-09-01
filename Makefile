@@ -1,4 +1,4 @@
-.PHONY: help build run stop restart smoke reset-onboarding run-onboarding test-release-signing test-window test-window-ui test-window-focus test-flux test-alt-tab test-search test-dictation test-dictation-live test-dictation-codex-capture-live test-dictation-secure-live test-dictation-multidisplay-live test-dictation-model-live test-dictation-installed-models-live test-dictation-shortcut-live test-dictation-opaque-paste-live test-dictation-unicode-typing-live test-dictation-real-microphone-live release release-dry clean
+.PHONY: help build run stop restart smoke reset-onboarding run-onboarding test-release-signing test-window test-window-ui test-window-focus test-flux test-alt-tab test-search test-dictation test-dictation-cleanup-benchmark test-dictation-live test-dictation-codex-capture-live test-dictation-secure-live test-dictation-multidisplay-live test-dictation-model-live test-dictation-installed-models-live test-dictation-shortcut-live test-dictation-opaque-paste-live test-dictation-unicode-typing-live test-dictation-real-microphone-live release release-dry clean
 
 PROJECT := Gojo.xcodeproj
 SCHEME := Gojo
@@ -23,6 +23,7 @@ help:
 	@echo "  make test-alt-tab Run window switcher selection regression checks"
 	@echo "  make test-search Run search calculator/fuzzy-matcher regression checks"
 	@echo "  make test-dictation Run local dictation regressions and benchmark scorer checks"
+	@echo "  make test-dictation-cleanup-benchmark Compare fast OpenRouter cleanup models (paid)"
 	@echo "  make test-dictation-live Verify focused insertion in TextEdit and Safari (requires Accessibility)"
 	@echo "  make test-dictation-codex-capture-live Verify capture against a running Codex window"
 	@echo "  make test-dictation-secure-live Verify secure fields are rejected"
@@ -121,12 +122,17 @@ test-search:
 
 test-dictation: build
 	./tests/dictation_regression.sh
+	./tests/openrouter_dictation_regression.sh
 	./tests/dictation_offline_policy_regression.sh
 	bash ./tests/dictation_capture_probe_regression.sh
 	./tests/text_insertion_xpc_regression.sh
 	./tests/dictation_unicode_typing_regression.sh
 	bash ./tests/dictation_live_harness_regression.sh
 	./tests/dictation_benchmark_regression.sh
+	bash ./tests/dictation_cleanup_benchmark_regression.sh
+
+test-dictation-cleanup-benchmark:
+	python3 scripts/benchmarks/benchmark_cleanup.py
 
 test-dictation-live:
 	./tests/dictation_live_e2e.sh native

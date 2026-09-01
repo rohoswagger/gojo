@@ -86,6 +86,46 @@ actor FakeTranscriber: LocalDictationTranscribing {
     }
 }
 
+private enum FakePolisherError: Error {
+    case unavailable
+}
+
+actor FakePolisher: DictationTextPolishing {
+    enum Behavior {
+        case passthrough
+        case polish(String)
+        case fail
+    }
+
+    let log: EventLog
+    private var behavior: Behavior
+    private(set) var calls = 0
+    private(set) var cancellations = 0
+
+    init(log: EventLog, behavior: Behavior = .passthrough) {
+        self.log = log
+        self.behavior = behavior
+    }
+
+    func polish(_ transcript: String) async throws -> String {
+        calls += 1
+        await log.append("polish")
+        switch behavior {
+        case .passthrough:
+            return transcript
+        case .polish(let transcript):
+            return transcript
+        case .fail:
+            throw FakePolisherError.unavailable
+        }
+    }
+
+    func cancelPolishing() async {
+        cancellations += 1
+        await log.append("cancel-polish")
+    }
+}
+
 actor TeardownAwareTranscriber: LocalDictationTranscribing {
     private var calls = 0
     private var activeInferences = 0
@@ -121,6 +161,46 @@ actor TeardownAwareTranscriber: LocalDictationTranscribing {
 
     func activeCount() -> Int { activeInferences }
     func maximumConcurrentCount() -> Int { maximumConcurrentInferences }
+}
+
+actor TeardownAwarePolisher: DictationTextPolishing {
+    private var calls = 0
+    private var activePolishes = 0
+    private var maximumConcurrentPolishes = 0
+    private var cancellations = 0
+
+    func polish(_ transcript: String) async throws -> String {
+        calls += 1
+        let call = calls
+        activePolishes += 1
+        maximumConcurrentPolishes = max(maximumConcurrentPolishes, activePolishes)
+        defer { activePolishes -= 1 }
+
+        if call == 1 {
+            do {
+                try await Task.sleep(for: .seconds(10))
+            } catch {
+                // Match the local model teardown behavior: the cancellation
+                // method must not return until the previous request is gone.
+                await Task.detached {
+                    try? await Task.sleep(for: .milliseconds(60))
+                }.value
+                throw CancellationError()
+            }
+        }
+        return "replacement polished transcript"
+    }
+
+    func cancelPolishing() async {
+        cancellations += 1
+        while activePolishes > 0 {
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+    }
+
+    func activeCount() -> Int { activePolishes }
+    func maximumConcurrentCount() -> Int { maximumConcurrentPolishes }
+    func cancellationCount() -> Int { cancellations }
 }
 
 actor FakeInserter: DictationTextInserting {
@@ -190,13 +270,14 @@ final class StateRecorder: @unchecked Sendable {
     }
 }
 
-func waitForState<T, A, R, I>(
+func waitForState<T, A, R, P, I>(
     _ expected: DictationState,
-    controller: DictationController<T, A, R, I>,
+    controller: DictationController<T, A, R, P, I>,
     message: String
 ) async where T: DictationTargetCapturing,
               A: DictationAudioCapturing,
               R: LocalDictationTranscribing,
+              P: DictationTextPolishing,
               I: DictationTextInserting,
               T.Target == I.Target {
     for _ in 0..<200 {
@@ -213,17 +294,24 @@ struct DictationRegressionRunner {
     static func main() async {
         testReducerPolicy()
         testModelDownloadPolicy()
+        testVocabularyPolicy()
+        testS1MiniContract()
         testModelStorageRemoval()
         testWhisperModelCatalog()
         testModifierOnlyShortcutPolicy()
+        testEventTapRecoveryPolicy()
+        testEventTapStartRequestPolicy()
+        testShortcutSessionGate()
         testAudioNormalization()
         testAudioLevelMeter()
         await testShortcutEventOrdering()
         await testTargetCapturedBeforeHUDStatePublication()
         await testSuccessfulControllerFlow()
+        await testPolishingFallbacks()
         await testShortAudioAndCancellation()
         await testRapidCancelThenRestart()
         await testTranscriptionTeardownBeforeRestart()
+        await testPolishingTeardownBeforeRestart()
         await testWatchdogAndLocalizedErrors()
         print("dictation-regression-pass")
     }
@@ -236,6 +324,143 @@ struct DictationRegressionRunner {
         assertCondition(
             !DictationModelRequest.transcription.allowsDownload,
             "starting dictation must never download a speech model"
+        )
+    }
+
+    static func testVocabularyPolicy() {
+        let duplicateID = UUID()
+        let sanitized = DictationVocabularyPolicy.sanitized([
+            DictationVocabularyEntry(id: duplicateID, spoken: "  srushti  ", replacement: " Srushti "),
+            DictationVocabularyEntry(spoken: "SRUSHTI", replacement: "Wrong duplicate"),
+            DictationVocabularyEntry(spoken: "", replacement: "ignored"),
+        ])
+        assertEqual(sanitized.count, 1, "vocabulary should trim entries and reject blank or duplicate phrases")
+        assertEqual(sanitized.first?.id, duplicateID, "sanitizing should preserve stable entry identifiers")
+        assertEqual(sanitized.first?.spoken, "srushti", "vocabulary should trim spoken phrases")
+        assertEqual(sanitized.first?.replacement, "Srushti", "vocabulary should trim replacements")
+
+        let entries = [
+            DictationVocabularyEntry(
+                spoken: "g p t five point six sol",
+                replacement: "gpt-5.6-sol"
+            ),
+            DictationVocabularyEntry(spoken: "srushti", replacement: "Srushti"),
+            DictationVocabularyEntry(spoken: "go", replacement: "Go"),
+            DictationVocabularyEntry(spoken: "visual studio", replacement: "Visual Studio"),
+            DictationVocabularyEntry(spoken: "visual studio code", replacement: "VS Code"),
+        ]
+        assertEqual(
+            DictationVocabularyPolicy.apply(
+                entries,
+                to: "ask srushti about G P T FIVE POINT SIX SOL in golang, then go. open visual studio code"
+            ),
+            "ask Srushti about gpt-5.6-sol in golang, then Go. open VS Code",
+            "vocabulary should be case-insensitive, boundary-aware, and prefer the longest phrase"
+        )
+        assertEqual(
+            DictationVocabularyPolicy.apply([
+                DictationVocabularyEntry(spoken: "foo", replacement: "bar"),
+                DictationVocabularyEntry(spoken: "bar", replacement: "baz"),
+            ], to: "foo bar"),
+            "bar baz",
+            "vocabulary replacements should not cascade into one another"
+        )
+        assertEqual(
+            DictationVocabularyPolicy.apply([
+                DictationVocabularyEntry(spoken: "gpt-5.6-sol", replacement: "gpt-5.6-sol"),
+            ], to: "GPT-5.6-SOL"),
+            "gpt-5.6-sol",
+            "a canonical vocabulary pass should restore exact code-term casing"
+        )
+        let cascadingEntries = [
+            DictationVocabularyEntry(spoken: "foo", replacement: "bar"),
+            DictationVocabularyEntry(spoken: "bar", replacement: "baz"),
+        ]
+        let correctedRaw = S1MiniVocabularyPipeline.prepare(
+            transcript: "foo",
+            vocabulary: cascadingEntries
+        )
+        assertEqual(correctedRaw, "bar", "the pre-inference pass should apply one replacement")
+        assertEqual(
+            S1MiniVocabularyPipeline.finalize(
+                correctedRawTranscript: correctedRaw,
+                polishedTranscript: "bar",
+                vocabulary: cascadingEntries
+            ),
+            "bar",
+            "the post-inference pass must not cascade a canonical replacement"
+        )
+        assertEqual(
+            DictationVocabularyPolicy.sanitized([
+                DictationVocabularyEntry(spoken: "cafe", replacement: "Cafe"),
+                DictationVocabularyEntry(spoken: "café", replacement: "Café"),
+            ]).count,
+            2,
+            "diacritic-distinct spoken phrases should remain independently matchable"
+        )
+    }
+
+    static func testS1MiniContract() {
+        assertEqual(S1MiniModel.downloadSize, 484_219_808, "S1-mini should verify the pinned Q4_K_M byte size")
+        assertEqual(
+            S1MiniModel.sha256,
+            "3b41ebe2502cbd03e811d5d16b022f5ab551eda58d62597d152f89535003c634",
+            "S1-mini should verify the official GGUF SHA-256"
+        )
+        let prompt = S1MiniModel.prompt(transcript: "um hello there", style: .punctuated)
+        assertCondition(
+            prompt.hasPrefix("<|im_start|>system\n\(S1MiniModel.systemPrompt)<|im_end|>"),
+            "S1-mini should receive its exact required system prompt"
+        )
+        assertCondition(
+            prompt.contains("[Styling: semi-formal] [Structure: prose] [Context: general]\num hello there"),
+            "full punctuation should map to S1-mini's trained semi-formal control value"
+        )
+        assertCondition(
+            prompt.hasSuffix("<|im_start|>assistant\n<think>\n\n</think>\n\n"),
+            "S1-mini should receive the required empty non-thinking assistant prefix"
+        )
+        assertEqual(
+            DictationWritingStyle.casual.s1MiniStyle,
+            "semi-casual",
+            "casual style should use a trained S1-mini control value"
+        )
+        assertEqual(
+            DictationWritingStyle.formal.s1MiniStyle,
+            "formal",
+            "formal style should use a trained S1-mini control value"
+        )
+        assertCondition(
+            S1MiniOutputPolicy.isSafe(
+                rawTranscript: "ask Srushti about gpt-5.6-sol",
+                polishedTranscript: "Ask Srushti about gpt-5.6-sol.",
+                protectedTerms: ["Srushti", "gpt-5.6-sol"]
+            ),
+            "safe S1-mini output should preserve vocabulary-protected terms"
+        )
+        assertCondition(
+            !S1MiniOutputPolicy.isSafe(
+                rawTranscript: "ask Srushti about gpt-5.6-sol",
+                polishedTranscript: "Ask Shrishti about GPT 5.6.",
+                protectedTerms: ["Srushti", "gpt-5.6-sol"]
+            ),
+            "S1-mini output that damages a protected term should fall back"
+        )
+        assertCondition(
+            !S1MiniOutputPolicy.isSafe(
+                rawTranscript: "hello",
+                polishedTranscript: "<think>hello</think>",
+                protectedTerms: []
+            ),
+            "S1-mini control-token leakage should fall back"
+        )
+        assertCondition(
+            !S1MiniOutputPolicy.isSafe(
+                rawTranscript: "hello",
+                polishedTranscript: String(repeating: "invented ", count: 80),
+                protectedTerms: []
+            ),
+            "disproportionately long S1-mini output should fall back"
         )
     }
 
@@ -756,6 +981,21 @@ struct DictationRegressionRunner {
         )
         assertEqual(activeReset.state, .idle, "a reset active chord should return to idle")
 
+        var blockedReset = DictationModifierShortcutStateMachine(mode: .holdToTalk)
+        _ = blockedReset.handle(flags(exact: true, anyTriggerDown: true))
+        _ = blockedReset.handle(.keyDown)
+        assertEqual(blockedReset.state, .blocked, "a lost release can leave the shortcut blocked")
+        assertEqual(
+            blockedReset.reset(),
+            .none,
+            "lifecycle recovery should clear a blocked shortcut without emitting a session event"
+        )
+        assertEqual(
+            blockedReset.state,
+            .idle,
+            "lifecycle recovery should make the next shortcut usable after a lost release"
+        )
+
         var tap = DictationModifierShortcutStateMachine(mode: .tapToTalk)
         assertEqual(
             tap.handle(flags(exact: true, anyTriggerDown: true)),
@@ -851,16 +1091,151 @@ struct DictationRegressionRunner {
         // Activation mode regression coverage ends here.
     }
 
+    static func testEventTapRecoveryPolicy() {
+        var policy = DictationEventTapRecoveryPolicy()
+        let staleAttempt = policy.beginStartAttempt()
+        let latestAttempt = policy.beginStartAttempt()
+        assertCondition(
+            !policy.ownsStartAttempt(staleAttempt),
+            "a newer start should supersede an in-flight authorization check"
+        )
+        assertCondition(
+            policy.ownsStartAttempt(latestAttempt),
+            "the latest authorization check should be allowed to create the tap"
+        )
+        policy.invalidateStartAttempts()
+        assertCondition(
+            !policy.ownsStartAttempt(latestAttempt),
+            "stopping the monitor should invalidate an in-flight start"
+        )
+
+        let expectedBackoff = [250, 500, 1_000, 2_000, 5_000, 5_000]
+        let actualBackoff = expectedBackoff.map { _ in
+            policy.nextRetryDelayMilliseconds()
+        }
+        assertEqual(
+            actualBackoff,
+            expectedBackoff,
+            "event-tap recovery should retry quickly, back off, and never give up permanently"
+        )
+        assertEqual(
+            policy.consecutiveFailures,
+            5,
+            "the retry policy should cap its failure counter with its maximum delay"
+        )
+
+        policy.recordSuccess()
+        assertEqual(
+            policy.consecutiveFailures,
+            0,
+            "a healthy tap should clear accumulated failures"
+        )
+        assertEqual(
+            policy.nextRetryDelayMilliseconds(),
+            250,
+            "a later failure should retry promptly after recovery"
+        )
+    }
+
+    static func testEventTapStartRequestPolicy() {
+        var requests = DictationEventTapStartRequestPolicy()
+        assertCondition(
+            requests.enqueue(promptIfNeeded: false),
+            "the first event-tap start request should own the start loop"
+        )
+        assertEqual(
+            requests.nextRequest(),
+            false,
+            "a background recovery should initially remain nonprompting"
+        )
+        assertCondition(
+            !requests.enqueue(promptIfNeeded: true),
+            "an overlapping start should be coalesced into the active loop"
+        )
+        assertEqual(
+            requests.nextRequest(),
+            true,
+            "an overlapping permission prompt must not be downgraded by recovery"
+        )
+        assertEqual(
+            requests.nextRequest(),
+            nil,
+            "the coalescer should drain all pending start requests"
+        )
+        assertCondition(!requests.isRunning, "the start loop should become idle after draining")
+
+        assertCondition(
+            requests.enqueue(promptIfNeeded: true),
+            "a later start should be able to own a fresh loop"
+        )
+        requests.cancelPendingRequests()
+        assertEqual(
+            requests.nextRequest(),
+            nil,
+            "stopping the monitor should discard queued starts"
+        )
+    }
+
+    static func testShortcutSessionGate() {
+        var gate = DictationShortcutSessionGate()
+        assertCondition(
+            !gate.consumeKeyUp(),
+            "an unmatched release must not stop an unrelated dictation session"
+        )
+        gate.acceptKeyDown()
+        assertCondition(
+            gate.consumeKeyUp(),
+            "an admitted shortcut press should allow exactly one matching release"
+        )
+        assertCondition(
+            !gate.consumeKeyUp(),
+            "duplicate releases should be ignored"
+        )
+        gate.acceptKeyDown()
+        gate.reset()
+        assertCondition(
+            !gate.consumeKeyUp(),
+            "cancellation should invalidate the pending shortcut release"
+        )
+
+        func flags(
+            exact: Bool,
+            anyTriggerDown: Bool
+        ) -> DictationModifierShortcutStateMachine.Event {
+            .flagsChanged(
+                isExactChord: exact,
+                anyTriggerModifierDown: anyTriggerDown,
+                hasDisallowedModifiers: false
+            )
+        }
+        var rejectedTap = DictationModifierShortcutStateMachine(mode: .tapToTalk)
+        _ = rejectedTap.handle(flags(exact: true, anyTriggerDown: true))
+        assertEqual(
+            rejectedTap.handle(flags(exact: false, anyTriggerDown: false)),
+            .beginDictation,
+            "a completed tap should request a dictation session"
+        )
+        rejectedTap.rejectDictationStart()
+        _ = rejectedTap.handle(flags(exact: true, anyTriggerDown: true))
+        assertEqual(
+            rejectedTap.handle(flags(exact: false, anyTriggerDown: false)),
+            .beginDictation,
+            "a rejected tap should re-arm immediately instead of consuming the next tap"
+        )
+    }
+
     static func testSuccessfulControllerFlow() async {
         let log = EventLog()
         let target = FakeTargetProvider(log: log)
         let audio = FakeAudioCapture(log: log)
         let transcriber = FakeTranscriber(log: log)
+        let polisher = FakePolisher(log: log, behavior: .polish("  polished dictation  "))
         let inserter = FakeInserter(log: log)
         let controller = DictationController(
             targetProvider: target,
             audioCapture: audio,
             transcriber: transcriber,
+            polisher: polisher,
             inserter: inserter,
             audioPolicy: DictationAudioPolicy(minimumDuration: 0.10)
         )
@@ -881,12 +1256,49 @@ struct DictationRegressionRunner {
 
         await controller.hotKeyUp()
         await waitForState(
-            .succeeded("locally transcribed"),
+            .succeeded("polished dictation"),
             controller: controller,
-            message: "the full local pipeline should succeed"
+            message: "the full dictation pipeline should succeed"
         )
         assertEqual(await transcriber.calls, 1, "normal audio should be transcribed once")
+        assertEqual(await polisher.calls, 1, "normal audio should be polished once")
         assertEqual(await inserter.insertionCount(), 1, "the transcript should be inserted once")
+        assertEqual(
+            await log.snapshot(),
+            ["target", "permission", "start", "stop", "transcribe", "polish", "insert"],
+            "polishing must run after transcription and before insertion"
+        )
+    }
+
+    static func testPolishingFallbacks() async {
+        for (behavior, label) in [
+            (FakePolisher.Behavior.fail, "an unavailable polisher"),
+            (FakePolisher.Behavior.polish("   "), "an empty polisher result"),
+        ] {
+            let log = EventLog()
+            let inserter = FakeInserter(log: log)
+            let controller = DictationController(
+                targetProvider: FakeTargetProvider(log: log),
+                audioCapture: FakeAudioCapture(log: log),
+                transcriber: FakeTranscriber(log: log),
+                polisher: FakePolisher(log: log, behavior: behavior),
+                inserter: inserter
+            )
+
+            await controller.hotKeyDown()
+            await waitForState(.listening, controller: controller, message: "\(label) should begin listening")
+            await controller.hotKeyUp()
+            await waitForState(
+                .succeeded("locally transcribed"),
+                controller: controller,
+                message: "\(label) should preserve the normalized raw transcript"
+            )
+            assertEqual(
+                await inserter.insertionCount(),
+                1,
+                "\(label) should still insert text"
+            )
+        }
     }
 
     static func testShortcutEventOrdering() async {
@@ -917,6 +1329,7 @@ struct DictationRegressionRunner {
             targetProvider: target,
             audioCapture: FakeAudioCapture(log: log),
             transcriber: FakeTranscriber(log: log),
+            polisher: FakePolisher(log: log),
             inserter: FakeInserter(log: log),
             stateObserver: { recorder.record($0) }
         )
@@ -952,11 +1365,13 @@ struct DictationRegressionRunner {
         let target = FakeTargetProvider(log: log)
         let audio = FakeAudioCapture(log: log)
         let transcriber = FakeTranscriber(log: log)
+        let polisher = FakePolisher(log: log)
         let inserter = FakeInserter(log: log)
         let controller = DictationController(
             targetProvider: target,
             audioCapture: audio,
             transcriber: transcriber,
+            polisher: polisher,
             inserter: inserter,
             audioPolicy: DictationAudioPolicy(minimumDuration: 0.10)
         )
@@ -978,6 +1393,10 @@ struct DictationRegressionRunner {
         }
         let cancellationCount = await audio.cancellations
         assertCondition(cancellationCount > 0, "termination should cancel active audio")
+        assertCondition(
+            await polisher.cancellations > 0,
+            "termination should cancel the polisher alongside audio and transcription"
+        )
     }
 
     static func testRapidCancelThenRestart() async {
@@ -985,12 +1404,14 @@ struct DictationRegressionRunner {
         let target = FakeTargetProvider(log: log)
         let audio = FakeAudioCapture(log: log)
         let transcriber = FakeTranscriber(log: log)
+        let polisher = FakePolisher(log: log)
         let inserter = FakeInserter(log: log)
         await audio.setCancellationDelay(.milliseconds(60))
         let controller = DictationController(
             targetProvider: target,
             audioCapture: audio,
             transcriber: transcriber,
+            polisher: polisher,
             inserter: inserter
         )
 
@@ -1014,6 +1435,7 @@ struct DictationRegressionRunner {
             targetProvider: FakeTargetProvider(log: log),
             audioCapture: audio,
             transcriber: transcriber,
+            polisher: FakePolisher(log: log),
             inserter: FakeInserter(log: log)
         )
 
@@ -1043,15 +1465,59 @@ struct DictationRegressionRunner {
         )
     }
 
+    static func testPolishingTeardownBeforeRestart() async {
+        let log = EventLog()
+        let audio = FakeAudioCapture(log: log)
+        let polisher = TeardownAwarePolisher()
+        let controller = DictationController(
+            targetProvider: FakeTargetProvider(log: log),
+            audioCapture: audio,
+            transcriber: FakeTranscriber(log: log),
+            polisher: polisher,
+            inserter: FakeInserter(log: log)
+        )
+
+        await controller.hotKeyDown()
+        await waitForState(.listening, controller: controller, message: "first polishing session should listen")
+        await controller.hotKeyUp()
+        for _ in 0..<100 where await polisher.activeCount() == 0 {
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        assertEqual(await polisher.activeCount(), 1, "first polish should be active before cancellation")
+
+        await controller.cancel()
+        await controller.hotKeyDown()
+        try? await Task.sleep(for: .milliseconds(20))
+        assertEqual(await audio.starts, 1, "replacement capture must wait for polish teardown")
+        await waitForState(.listening, controller: controller, message: "replacement should wait for polishing cleanup")
+        assertCondition(
+            await polisher.cancellationCount() > 0,
+            "cancellation cleanup must cancel the active polisher"
+        )
+        await controller.hotKeyUp()
+        await waitForState(
+            .succeeded("replacement polished transcript"),
+            controller: controller,
+            message: "replacement should polish only after the previous request exits"
+        )
+        assertEqual(
+            await polisher.maximumConcurrentCount(),
+            1,
+            "cancel and immediate restart must never overlap polishing requests"
+        )
+    }
+
     static func testWatchdogAndLocalizedErrors() async {
         let log = EventLog()
         let audio = FakeAudioCapture(log: log)
         let transcriber = FakeTranscriber(log: log)
+        let polisher = FakePolisher(log: log)
         let inserter = FakeInserter(log: log)
         let watchdogController = DictationController(
             targetProvider: FakeTargetProvider(log: log),
             audioCapture: audio,
             transcriber: transcriber,
+            polisher: polisher,
             inserter: inserter,
             maximumCaptureDuration: .milliseconds(25)
         )
@@ -1068,6 +1534,7 @@ struct DictationRegressionRunner {
             targetProvider: FailingTargetProvider(),
             audioCapture: FakeAudioCapture(log: EventLog()),
             transcriber: FakeTranscriber(log: EventLog()),
+            polisher: FakePolisher(log: EventLog()),
             inserter: FakeInserter(log: EventLog())
         )
         await failingController.hotKeyDown()

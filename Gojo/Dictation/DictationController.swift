@@ -8,10 +8,11 @@ private let dictationControllerLatencyLogger = Logger(
 )
 #endif
 
-actor DictationController<TargetProvider, AudioCapture, Transcriber, Inserter>
+actor DictationController<TargetProvider, AudioCapture, Transcriber, Polisher, Inserter>
 where TargetProvider: DictationTargetCapturing,
       AudioCapture: DictationAudioCapturing,
       Transcriber: LocalDictationTranscribing,
+      Polisher: DictationTextPolishing,
       Inserter: DictationTextInserting,
       TargetProvider.Target == Inserter.Target {
 
@@ -26,6 +27,7 @@ where TargetProvider: DictationTargetCapturing,
     private let targetProvider: TargetProvider
     private let audioCapture: AudioCapture
     private let transcriber: Transcriber
+    private let polisher: Polisher
     private let inserter: Inserter
     private let audioPolicy: DictationAudioPolicy
     private let maximumCaptureDuration: Duration
@@ -42,6 +44,7 @@ where TargetProvider: DictationTargetCapturing,
         targetProvider: TargetProvider,
         audioCapture: AudioCapture,
         transcriber: Transcriber,
+        polisher: Polisher,
         inserter: Inserter,
         audioPolicy: DictationAudioPolicy = DictationAudioPolicy(),
         maximumCaptureDuration: Duration = .seconds(120),
@@ -50,6 +53,7 @@ where TargetProvider: DictationTargetCapturing,
         self.targetProvider = targetProvider
         self.audioCapture = audioCapture
         self.transcriber = transcriber
+        self.polisher = polisher
         self.inserter = inserter
         self.audioPolicy = audioPolicy
         self.maximumCaptureDuration = maximumCaptureDuration
@@ -60,8 +64,9 @@ where TargetProvider: DictationTargetCapturing,
         machine.state
     }
 
-    func hotKeyDown() {
-        guard machine.handle(.hotKeyDown) == .beginRequest else { return }
+    @discardableResult
+    func hotKeyDown() -> Bool {
+        guard machine.handle(.hotKeyDown) == .beginRequest else { return false }
 
         let currentSession = UUID()
         sessionID = currentSession
@@ -72,6 +77,7 @@ where TargetProvider: DictationTargetCapturing,
             guard !Task.isCancelled else { return }
             await self?.beginCapture(sessionID: currentSession)
         }
+        return true
     }
 
     func hotKeyUp() {
@@ -214,11 +220,31 @@ where TargetProvider: DictationTargetCapturing,
             try Task.checkCancellation()
             guard isCurrent(expectedSession, state: .transcribing) else { return }
 
-            let transcript = DictationTranscriptPolicy.normalize(rawTranscript)
-            guard !transcript.isEmpty else {
+            let normalizedRawTranscript = DictationTranscriptPolicy.normalize(rawTranscript)
+            guard !normalizedRawTranscript.isEmpty else {
                 transition(.failed(.emptyTranscript))
                 operation = nil
                 return
+            }
+
+            // Polishing is deliberately best-effort. Dictation must remain
+            // useful when the optional model is unavailable, returns no text,
+            // or rejects a particular utterance.
+            let transcript: String
+            do {
+                let polishedTranscript = try await polisher.polish(normalizedRawTranscript)
+                try Task.checkCancellation()
+                guard isCurrent(expectedSession, state: .transcribing) else { return }
+                let normalizedPolishedTranscript = DictationTranscriptPolicy.normalize(polishedTranscript)
+                transcript = normalizedPolishedTranscript.isEmpty
+                    ? normalizedRawTranscript
+                    : normalizedPolishedTranscript
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                try Task.checkCancellation()
+                guard isCurrent(expectedSession, state: .transcribing) else { return }
+                transcript = normalizedRawTranscript
             }
 
             let action = transition(.transcriptionCompleted(transcript))
@@ -274,10 +300,14 @@ where TargetProvider: DictationTargetCapturing,
         operation = nil
 
         let previousCleanup = cleanupTask
-        cleanupTask = Task { [audioCapture, transcriber] in
+        cleanupTask = Task { [audioCapture, transcriber, polisher] in
             await previousCleanup?.value
-            await audioCapture.cancelCapture()
-            await transcriber.cancelTranscription()
+            async let cancelAudio: Void = audioCapture.cancelCapture()
+            async let cancelTranscription: Void = transcriber.cancelTranscription()
+            async let cancelPolishing: Void = polisher.cancelPolishing()
+            await cancelAudio
+            await cancelTranscription
+            await cancelPolishing
         }
     }
 

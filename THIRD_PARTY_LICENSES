@@ -2,6 +2,8 @@
                         Apache License 2.0
         applies to:
         - FluidAudio, Copyright FluidInference contributors
+        - S1-mini by Superwhisper, Copyright 2026 Superwhisper
+        - Qwen3-0.6B, Copyright 2024 Alibaba Cloud
 -----------------------------------------------------------------------------
 
                                  Apache License
@@ -206,6 +208,20 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 
+S1-mini by Superwhisper — additional term and notice
+
+Any use, distribution, or integration of this model, whether unmodified or
+as part of a derivative work or product, must continue to identify it by its
+original name, "S1-mini" by "Superwhisper", using that exact capitalization,
+regardless of any other name under which the model or a product incorporating
+it is marketed or distributed.
+
+S1-mini-GGUF is Copyright 2026 Superwhisper. It is a GGUF conversion of
+S1-mini, which is itself a derivative of Qwen3-0.6B, Copyright 2024 Alibaba
+Cloud, licensed under the Apache License, Version 2.0. Gojo downloads the
+unaltered Q4_K_M file directly from Superwhisper's pinned Hugging Face
+repository and verifies its published SHA-256 before use.
+
 Parakeet model weights are not bundled with Gojo. When a user chooses to
 download one, Gojo fetches the Core ML conversion from one of these pinned
 repositories:
@@ -286,6 +302,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         - NotchDrop Copyright (c) 2024 Lakr Aream
         - Argmax Open-Source SDK / WhisperKit, Copyright (c) 2024 Argmax, Inc.
         - Whisper model and code, Copyright (c) 2022 OpenAI
+        - llama.cpp, Copyright (c) 2023-2026 The ggml authors
 -----------------------------------------------------------------------------
 
 Permission is hereby granted, free of charge, to any person obtaining a copy

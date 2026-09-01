@@ -12,7 +12,7 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Gojo uses your location to calculate local sunrise and sunset times for the night shift feature. It never leaves your Mac.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Gojo uses your microphone only while dictation is active. Audio is transcribed locally on your Mac and is not uploaded.</string>
+	<string>Gojo uses your microphone only while dictation is active. Audio stays on your Mac with local models, or is sent to your selected cloud transcription provider when you enable cloud dictation.</string>
 	<key>SUEnableDownloaderService</key>
 	<true/>
 	<key>SUEnableInstallerLauncherService</key>

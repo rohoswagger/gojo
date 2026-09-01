@@ -28,12 +28,13 @@ DEFAULT_MODELS = [
 
 STYLE_PROMPTS = {
     "casual": (
-        "Casual. Keep the wording conversational and natural. "
-        "Preserve contractions and use light punctuation."
+        "Casual. Use all lowercase. Keep the wording conversational and natural, "
+        "like a text message. Preserve contractions and use only the punctuation "
+        "needed for clarity."
     ),
     "punctuated": (
-        "Full punctuation. Use complete capitalization, punctuation, and natural "
-        "paragraph breaks without changing the wording or meaning."
+        "Conversational. Keep the wording conversational and natural, with standard "
+        "capitalization and light punctuation as needed for clarity."
     ),
     "formal": (
         "Formal. Use polished, professional wording and complete punctuation "
@@ -63,7 +64,7 @@ def messages(case: dict[str, Any], prompt_format: str) -> list[dict[str, str]]:
     if prompt_format == "s1-mini":
         styling = {
             "casual": "semi-casual",
-            "punctuated": "semi-formal",
+            "punctuated": "semi-casual",
             "formal": "formal",
         }[case["style"]]
         control = f"[Styling: {styling}] [Structure: prose] [Context: general]"
@@ -168,6 +169,8 @@ def validate(output: str, case: dict[str, Any]) -> tuple[bool, list[str], float]
         problems.append("added a preamble or wrapper")
     if "```" in output or "**" in output or "`" in output:
         problems.append("added Markdown formatting")
+    if case["style"] == "casual" and output != output.lower():
+        problems.append("casual output must be fully lowercase")
     similarity = difflib.SequenceMatcher(
         None,
         " ".join(case["expected"].casefold().split()),

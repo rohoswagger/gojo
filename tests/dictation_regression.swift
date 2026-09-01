@@ -413,8 +413,8 @@ struct DictationRegressionRunner {
             "S1-mini should receive its exact required system prompt"
         )
         assertCondition(
-            prompt.contains("[Styling: semi-formal] [Structure: prose] [Context: general]\num hello there"),
-            "full punctuation should map to S1-mini's trained semi-formal control value"
+            prompt.contains("[Styling: semi-casual] [Structure: prose] [Context: general]\num hello there"),
+            "conversational style should map to S1-mini's trained semi-casual control value"
         )
         assertCondition(
             prompt.hasSuffix("<|im_start|>assistant\n<think>\n\n</think>\n\n"),
@@ -424,6 +424,26 @@ struct DictationRegressionRunner {
             DictationWritingStyle.casual.s1MiniStyle,
             "semi-casual",
             "casual style should use a trained S1-mini control value"
+        )
+        assertEqual(
+            DictationWritingStyle.punctuated.label,
+            "Conversational",
+            "the standard spoken-English style should be presented as Conversational"
+        )
+        assertEqual(
+            DictationWritingStyle.punctuated.s1MiniStyle,
+            "semi-casual",
+            "conversational style should use S1-mini's conversational control value"
+        )
+        assertEqual(
+            DictationWritingStyle.casual.applyOutputConventions(to: "Hey Sarah, I'm Ready."),
+            "hey sarah, i'm ready.",
+            "casual cleanup should deterministically produce lowercase text"
+        )
+        assertEqual(
+            DictationWritingStyle.punctuated.applyOutputConventions(to: "Hey Sarah, I'm Ready."),
+            "Hey Sarah, I'm Ready.",
+            "conversational cleanup should preserve standard capitalization"
         )
         assertEqual(
             DictationWritingStyle.formal.s1MiniStyle,
@@ -1392,9 +1412,10 @@ struct DictationRegressionRunner {
             try? await Task.sleep(nanoseconds: 5_000_000)
         }
         let cancellationCount = await audio.cancellations
+        let polisherCancellationCount = await polisher.cancellations
         assertCondition(cancellationCount > 0, "termination should cancel active audio")
         assertCondition(
-            await polisher.cancellations > 0,
+            polisherCancellationCount > 0,
             "termination should cancel the polisher alongside audio and transcription"
         )
     }
@@ -1490,8 +1511,9 @@ struct DictationRegressionRunner {
         try? await Task.sleep(for: .milliseconds(20))
         assertEqual(await audio.starts, 1, "replacement capture must wait for polish teardown")
         await waitForState(.listening, controller: controller, message: "replacement should wait for polishing cleanup")
+        let polisherCancellationCount = await polisher.cancellationCount()
         assertCondition(
-            await polisher.cancellationCount() > 0,
+            polisherCancellationCount > 0,
             "cancellation cleanup must cancel the active polisher"
         )
         await controller.hotKeyUp()

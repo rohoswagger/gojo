@@ -151,8 +151,8 @@
 		D1CA00000000000000000001 /* OpenRouterDictationSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1CA00000000000000000002 /* OpenRouterDictationSupport.swift */; };
 		D1CB000000000000000000B1 /* S1MiniDictationPolisher.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1CB000000000000000000A1 /* S1MiniDictationPolisher.swift */; };
 		D1CB000000000000000000B2 /* llama in Frameworks */ = {isa = PBXBuildFile; productRef = D1CB000000000000000000D1 /* llama */; };
-		D1CB000000000000000000B3 /* llama in Embed Frameworks */ = {isa = PBXBuildFile; productRef = D1CB000000000000000000D1 /* llama */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D1CC000000000000000000B1 /* THIRD_PARTY_LICENSES in Resources */ = {isa = PBXBuildFile; fileRef = D1CC000000000000000000A1 /* THIRD_PARTY_LICENSES */; };
+		D1CD000000000000000000B1 /* AccessibilityAuthorizationFlowPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1CD000000000000000000A1 /* AccessibilityAuthorizationFlowPolicy.swift */; };
 		D1C9000000000000000000B1 /* DictationUnicodeTextInjector.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C9000000000000000000A1 /* DictationUnicodeTextInjector.swift */; };
 		B19016242CC15B5000E3F12E /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = B19016232CC15B4D00E3F12E /* Constants.swift */; };
 		B19424092CD0FF01003E5DC2 /* LottieAnimationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B19424082CD0FEFE003E5DC2 /* LottieAnimationView.swift */; };
@@ -234,17 +234,6 @@
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		D1CB000000000000000000E1 /* Embed llama.cpp */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 10;
-			files = (
-				D1CB000000000000000000B3 /* llama in Embed Frameworks */,
-			);
-			name = "Embed llama.cpp";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -265,6 +254,7 @@
 		D1CA00000000000000000002 /* OpenRouterDictationSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenRouterDictationSupport.swift; sourceTree = "<group>"; };
 		D1CB000000000000000000A1 /* S1MiniDictationPolisher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = S1MiniDictationPolisher.swift; sourceTree = "<group>"; };
 		D1CC000000000000000000A1 /* THIRD_PARTY_LICENSES */ = {isa = PBXFileReference; lastKnownFileType = text; path = THIRD_PARTY_LICENSES; sourceTree = SOURCE_ROOT; };
+		D1CD000000000000000000A1 /* AccessibilityAuthorizationFlowPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityAuthorizationFlowPolicy.swift; sourceTree = "<group>"; };
 		012F58500EF5E5AFFDE2F363 /* AltTabPanel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AltTabPanel.swift; sourceTree = "<group>"; };
 		0CCF1847F206D014FA76F588 /* AltTabSwitcherView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AltTabSwitcherView.swift; sourceTree = "<group>"; };
 		1100290B2E847E2800035A57 /* NSItemProvider+LoadHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSItemProvider+LoadHelpers.swift"; sourceTree = "<group>"; };
@@ -858,6 +848,7 @@
 		B141C23B2CA5F50900AC8CC8 /* Onboarding */ = {
 			isa = PBXGroup;
 			children = (
+				D1CD000000000000000000A1 /* AccessibilityAuthorizationFlowPolicy.swift */,
 				11CFC6642E09C7B300748C80 /* OnboardingFinishView.swift */,
 				11CFC6622E09917B00748C80 /* MusicControllerSelectionView.swift */,
 				11CFC6602E097F6800748C80 /* PermissionsRequestView.swift */,
@@ -1074,7 +1065,6 @@
 				14CEF40F2C5CAED300855D72 /* Frameworks */,
 				14CEF4102C5CAED300855D72 /* Resources */,
 				B1ECFA062C6FE58A002ACD87 /* Embed Frameworks */,
-				D1CB000000000000000000E1 /* Embed llama.cpp */,
 				11F748412EC8051E00F841DB /* Embed XPC Services */,
 			);
 			buildRules = (
@@ -1319,6 +1309,7 @@
 				1132E5142E777B920068732D /* YouTubeMusicNetworking.swift in Sources */,
 				1132E5122E777B6E0068732D /* YouTubeMusicModels.swift in Sources */,
 				11CFC65F2E097F2F00748C80 /* OnboardingView.swift in Sources */,
+				D1CD000000000000000000B1 /* AccessibilityAuthorizationFlowPolicy.swift in Sources */,
 				14CEF4162C5CAED300855D72 /* GojoApp.swift in Sources */,
 				B17266DF2C64DFA00031BA0D /* BundleInfos.swift in Sources */,
 				118EBE3B2E9720C500D54B5A /* ShelfStateViewModel.swift in Sources */,

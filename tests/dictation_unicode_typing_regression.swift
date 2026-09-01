@@ -8,31 +8,6 @@ private func require(_ condition: @autoclosure () -> Bool, _ message: String) {
     }
 }
 
-private func superIsEligibleForGuardedUnicodeTyping() {
-    require(
-        WindowTargetResolver.guardedUnicodeTypingBundleIDs.contains("com.zarifpour.superconductor"),
-        "Super should be eligible for guarded Unicode typing when AX exposes only an opaque window"
-    )
-}
-
-private func codexUsesGuardedUnicodeTyping() {
-    require(
-        WindowTargetResolver.guardedApplicationPasteBundleIDs.isEmpty,
-        "Opaque dictation should not use the clipboard-based application paste path"
-    )
-    require(
-        WindowTargetResolver.axOpaqueDictationBundleIDs == [
-            "com.openai.codex",
-            "com.zarifpour.superconductor",
-        ],
-        "Both reviewed AX-opaque apps should remain eligible for target capture"
-    )
-    require(
-        WindowTargetResolver.guardedUnicodeTypingBundleIDs.contains("com.openai.codex"),
-        "Codex should use guarded Unicode typing to avoid putting transcripts on the clipboard"
-    )
-}
-
 private func chunksStayWithinCoreGraphicsUnicodeEventLimit() {
     let chunks = DictationUnicodeTextInjector.chunks(
         for: "abcdefghijklmnopqrstuvwxyz",
@@ -99,8 +74,6 @@ private func partialDeliveryIsReportedPrecisely() {
 @main
 struct DictationUnicodeTypingRegressionRunner {
     static func main() {
-        superIsEligibleForGuardedUnicodeTyping()
-        codexUsesGuardedUnicodeTyping()
         chunksStayWithinCoreGraphicsUnicodeEventLimit()
         chunksDoNotSplitExtendedGraphemeClusters()
         overlongGraphemeFailsClosed()

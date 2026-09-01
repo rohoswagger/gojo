@@ -1,4 +1,4 @@
-.PHONY: help build run stop restart smoke reset-onboarding run-onboarding test-release-signing test-window test-window-ui test-window-focus test-flux test-alt-tab test-search test-dictation test-dictation-cleanup-benchmark test-dictation-live test-dictation-codex-capture-live test-dictation-secure-live test-dictation-multidisplay-live test-dictation-model-live test-dictation-installed-models-live test-dictation-shortcut-live test-dictation-opaque-paste-live test-dictation-unicode-typing-live test-dictation-real-microphone-live release release-dry clean
+.PHONY: help build run stop restart smoke reset-onboarding run-onboarding test-release-signing test-window test-window-ui test-window-focus test-flux test-alt-tab test-search test-accessibility-menu test-dictation test-dictation-cleanup-benchmark test-dictation-live test-dictation-codex-capture-live test-dictation-secure-live test-dictation-multidisplay-live test-dictation-model-live test-dictation-installed-models-live test-dictation-shortcut-live test-dictation-opaque-paste-live test-dictation-unicode-typing-live test-dictation-real-microphone-live release release-dry clean
 
 PROJECT := Gojo.xcodeproj
 SCHEME := Gojo
@@ -22,6 +22,7 @@ help:
 	@echo "  make test-flux   Run flux night shift regression checks"
 	@echo "  make test-alt-tab Run window switcher selection regression checks"
 	@echo "  make test-search Run search calculator/fuzzy-matcher regression checks"
+	@echo "  make test-accessibility-menu Run menu accessibility-flow regression checks"
 	@echo "  make test-dictation Run local dictation regressions and benchmark scorer checks"
 	@echo "  make test-dictation-cleanup-benchmark Compare fast OpenRouter cleanup models (paid)"
 	@echo "  make test-dictation-live Verify focused insertion in TextEdit and Safari (requires Accessibility)"
@@ -119,6 +120,9 @@ test-alt-tab:
 
 test-search:
 	./scripts/test_search_engine.sh
+
+test-accessibility-menu:
+	./tests/accessibility_authorization_flow_regression.sh
 
 test-dictation: build
 	./tests/dictation_regression.sh

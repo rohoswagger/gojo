@@ -43,7 +43,7 @@ enum DictationWritingStyle: String, CaseIterable, Identifiable, Sendable {
     var label: String {
         switch self {
         case .casual: return "Casual"
-        case .punctuated: return "Full punctuation"
+        case .punctuated: return "Conversational"
         case .formal: return "Formal"
         }
     }
@@ -51,9 +51,9 @@ enum DictationWritingStyle: String, CaseIterable, Identifiable, Sendable {
     var prompt: String {
         switch self {
         case .casual:
-            return "Keep the wording conversational and natural. Preserve contractions and use light punctuation."
+            return "Use all lowercase. Keep the wording conversational and natural, like a text message. Preserve contractions and use only the punctuation needed for clarity."
         case .punctuated:
-            return "Use complete capitalization, punctuation, and natural paragraph breaks without changing the wording or meaning."
+            return "Keep the wording conversational and natural, with standard capitalization and light punctuation as needed for clarity."
         case .formal:
             return "Use polished, professional wording and complete punctuation without changing the meaning or adding information."
         }
@@ -62,8 +62,17 @@ enum DictationWritingStyle: String, CaseIterable, Identifiable, Sendable {
     var s1MiniStyle: String {
         switch self {
         case .casual: return "semi-casual"
-        case .punctuated: return "semi-formal"
+        case .punctuated: return "semi-casual"
         case .formal: return "formal"
+        }
+    }
+
+    func applyOutputConventions(to transcript: String) -> String {
+        switch self {
+        case .casual:
+            return transcript.lowercased()
+        case .punctuated, .formal:
+            return transcript
         }
     }
 }

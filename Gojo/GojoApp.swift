@@ -19,6 +19,7 @@ struct DynamicNotchApp: App {
     @Default(.menubarIcon) var showMenuBarIcon
     @Default(.fluxEnabled) var fluxEnabled
     @Environment(\.openWindow) var openWindow
+    @StateObject private var accessibilityFlow = MenuBarAccessibilityAuthorizationFlow()
 
     let updaterController: SPUStandardUpdaterController
 
@@ -38,6 +39,9 @@ struct DynamicNotchApp: App {
                 }
             }
             .keyboardShortcut(KeyEquivalent(","), modifiers: .command)
+            Button("Enable Accessibility…") {
+                accessibilityFlow.start()
+            }
             CheckForUpdatesView(updater: updaterController.updater)
             Divider()
             Toggle("Night Shift", isOn: $fluxEnabled)

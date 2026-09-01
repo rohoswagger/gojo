@@ -658,7 +658,7 @@ actor OpenRouterDictationPolisher: DictationTextPolishing {
             guard !result.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 throw OpenRouterDictationError.emptyResponse
             }
-            return result
+            return style.applyOutputConventions(to: result)
         }
         polishingTask = task
         polishingID = requestID

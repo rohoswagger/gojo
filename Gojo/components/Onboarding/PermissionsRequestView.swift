@@ -252,6 +252,58 @@ struct AccessibilityRequestView: View {
     }
 }
 
+@MainActor
+final class MenuBarAccessibilityAuthorizationFlow: ObservableObject {
+    private static let settingsURL = URL(
+        string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
+
+    private let companion = AccessibilityDragPanel()
+    private var pollTask: Task<Void, Never>?
+    private var flowID: UUID?
+    private var acceptedDrag = false
+
+    func start() {
+        pollTask?.cancel()
+        let flowID = UUID()
+        self.flowID = flowID
+        acceptedDrag = false
+        companion.onSkip = { [weak self] in self?.stop() }
+        companion.onAcceptedDrop = { [weak self] in self?.acceptedDrag = true }
+        NSWorkspace.shared.open(Self.settingsURL)
+        companion.show()
+        pollTask = Task { [weak self] in
+            guard let self else { return }
+            let wasAuthorizedAtStart = await XPCHelperClient.shared.isAccessibilityAuthorized()
+            var observedUnauthorized = !wasAuthorizedAtStart
+            while !Task.isCancelled {
+                guard self.flowID == flowID else { return }
+                let isAuthorizedNow = await XPCHelperClient.shared.isAccessibilityAuthorized()
+                if !isAuthorizedNow { observedUnauthorized = true }
+                if AccessibilityAuthorizationFlowPolicy.shouldComplete(
+                    wasAuthorizedAtStart: wasAuthorizedAtStart,
+                    isAuthorizedNow: isAuthorizedNow,
+                    acceptedDrag: acceptedDrag,
+                    observedUnauthorized: observedUnauthorized
+                ) {
+                    companion.markGranted()
+                    try? await Task.sleep(for: .seconds(0.45))
+                    guard !Task.isCancelled, self.flowID == flowID else { return }
+                    stop()
+                    return
+                }
+                try? await Task.sleep(for: .seconds(1))
+            }
+        }
+    }
+
+    private func stop() {
+        flowID = nil
+        pollTask?.cancel()
+        pollTask = nil
+        companion.hide()
+    }
+}
+
 /// A compact, fixed-position floating bar pinned to the bottom-center of the
 /// main screen. It presents the draggable Gojo icon as a narrow horizontal row
 /// the user drags up into the Accessibility list. (macOS no longer exposes other
@@ -265,6 +317,7 @@ final class AccessibilityDragPanel: ObservableObject {
     @Published var showTip = false
 
     var onSkip: (() -> Void)?
+    var onAcceptedDrop: (() -> Void)?
     private(set) var isVisible = false
 
     private var panel: NSPanel?
@@ -301,10 +354,16 @@ final class AccessibilityDragPanel: ObservableObject {
         NSAnimationContext.runAnimationGroup({ ctx in
             ctx.duration = 0.26
             panel.animator().alphaValue = 0
-        }, completionHandler: { panel.orderOut(nil) })
+        }, completionHandler: { [weak self, weak panel] in
+            Task { @MainActor in
+                guard self?.isVisible == false else { return }
+                panel?.orderOut(nil)
+            }
+        })
     }
 
     func requestSkip() { onSkip?() }
+    func acceptedDrop() { onAcceptedDrop?() }
 
     private func build() {
         let hosting = NSHostingView(rootView: DragPanelView(panel: self))
@@ -387,7 +446,8 @@ private struct DragPanelView: View {
         // grab anywhere and the Gojo icon lifts to the cursor.
         .overlay(alignment: .leading) {
             if !granted {
-                DraggableAppIcon().frame(width: 284, height: 76)
+                DraggableAppIcon(onAcceptedDrop: { panel.acceptedDrop() })
+                    .frame(width: 284, height: 76)
             }
         }
     }
@@ -465,13 +525,23 @@ private struct DragPanelView: View {
 /// so the SwiftUI icon underneath renders crisply; SwiftUI's `.onDrag` doesn't
 /// fire from a borderless, non-key panel, so we start the session by hand.
 private struct DraggableAppIcon: NSViewRepresentable {
-    func makeNSView(context: Context) -> AppIconDragView { AppIconDragView() }
-    func updateNSView(_ nsView: AppIconDragView, context: Context) {}
+    let onAcceptedDrop: () -> Void
+
+    func makeNSView(context: Context) -> AppIconDragView {
+        AppIconDragView(onAcceptedDrop: onAcceptedDrop)
+    }
+
+    func updateNSView(_ nsView: AppIconDragView, context: Context) {
+        nsView.onAcceptedDrop = onAcceptedDrop
+    }
 }
 
 final class AppIconDragView: NSView, NSDraggingSource {
-    override init(frame frameRect: NSRect) {
-        super.init(frame: frameRect)
+    var onAcceptedDrop: () -> Void
+
+    init(onAcceptedDrop: @escaping () -> Void) {
+        self.onAcceptedDrop = onAcceptedDrop
+        super.init(frame: .zero)
         toolTip = "Drag me into the Accessibility list"
     }
 
@@ -498,6 +568,14 @@ final class AppIconDragView: NSView, NSDraggingSource {
     func draggingSession(_ session: NSDraggingSession,
                          sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
         .copy
+    }
+
+    func draggingSession(
+        _ session: NSDraggingSession,
+        endedAt screenPoint: NSPoint,
+        operation: NSDragOperation
+    ) {
+        if operation.contains(.copy) { onAcceptedDrop() }
     }
 }
 

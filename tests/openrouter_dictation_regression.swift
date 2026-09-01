@@ -53,7 +53,21 @@ private final class OpenRouterURLProtocol: URLProtocol {
         Self.lock.lock()
         let status = Self.responseStatus
         let data = Self.responseData
-        Self.requests.append(request)
+        var capturedRequest = request
+        if capturedRequest.httpBody == nil,
+           let stream = capturedRequest.httpBodyStream {
+            stream.open()
+            defer { stream.close() }
+            var body = Data()
+            var buffer = [UInt8](repeating: 0, count: 4_096)
+            while stream.hasBytesAvailable {
+                let count = stream.read(&buffer, maxLength: buffer.count)
+                guard count > 0 else { break }
+                body.append(buffer, count: count)
+            }
+            capturedRequest.httpBody = body
+        }
+        Self.requests.append(capturedRequest)
         Self.lock.unlock()
 
         guard let response = HTTPURLResponse(
@@ -80,11 +94,13 @@ private actor BlockingOpenRouterClient: OpenRouterDictationClient {
     }
 
     private let operation: Operation
+    private let chatResult: String
     private var transcriptionCalls = 0
     private var chatCalls = 0
 
-    init(operation: Operation) {
+    init(operation: Operation, chatResult: String = "polished") {
         self.operation = operation
+        self.chatResult = chatResult
     }
 
     func listTranscriptionModels(apiKey: String?) async throws -> [OpenRouterTranscriptionModel] { [] }
@@ -109,7 +125,7 @@ private actor BlockingOpenRouterClient: OpenRouterDictationClient {
         if operation == .chat {
             try await Task.sleep(for: .seconds(10))
         }
-        return "polished"
+        return chatResult
     }
 
     func counts() -> (Int, Int) { (transcriptionCalls, chatCalls) }
@@ -266,6 +282,19 @@ struct OpenRouterDictationRegressionRunner {
     }
 
     static func testStylePrompts() {
+        assertEqual(
+            DictationWritingStyle.punctuated.label,
+            "Conversational",
+            "the spoken-English default should be called Conversational"
+        )
+        assertCondition(
+            DictationWritingStyle.casual.prompt.contains("all lowercase"),
+            "casual style should explicitly request lowercase text"
+        )
+        assertCondition(
+            DictationWritingStyle.punctuated.prompt.contains("conversational"),
+            "conversational style should explicitly preserve conversational English"
+        )
         for style in DictationWritingStyle.allCases {
             let prompt = OpenRouterDictationPolisher.systemPrompt(
                 style: style,
@@ -495,6 +524,26 @@ struct OpenRouterDictationRegressionRunner {
         } catch {
             assertCondition(false, "disabled polishing should never require an API key: \(error)")
         }
-        assertEqual((await disabledClient.counts()).1, 0, "disabled polishing must not call OpenRouter")
+        let disabledCounts = await disabledClient.counts()
+        assertEqual(disabledCounts.1, 0, "disabled polishing must not call OpenRouter")
+
+        let casualClient = BlockingOpenRouterClient(
+            operation: .transcription,
+            chatResult: "Ready For Texting."
+        )
+        let casualPolisher = OpenRouterDictationPolisher(
+            client: casualClient,
+            apiKeyProvider: { "key" },
+            styleProvider: { .casual },
+            customInstructionsProvider: { nil },
+            modelProvider: { "model" },
+            enabledProvider: { true }
+        )
+        do {
+            let result = try await casualPolisher.polish("ready for texting")
+            assertEqual(result, "ready for texting.", "casual OpenRouter cleanup should always be lowercase")
+        } catch {
+            assertCondition(false, "casual OpenRouter cleanup should succeed: \(error)")
+        }
     }
 }

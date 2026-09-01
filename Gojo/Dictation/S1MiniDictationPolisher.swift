@@ -398,11 +398,12 @@ actor S1MiniDictationPolisher: DictationTextPolishing {
         defer { polishingTask = nil }
         do {
             let polished = try await task.value
-            return S1MiniVocabularyPipeline.finalize(
+            let finalized = S1MiniVocabularyPipeline.finalize(
                 correctedRawTranscript: correctedRaw,
                 polishedTranscript: polished,
                 vocabulary: vocabulary
             )
+            return style.applyOutputConventions(to: finalized)
         } catch is CancellationError {
             throw CancellationError()
         } catch {

@@ -64,14 +64,13 @@ assert "using main-app application paste target" in helper
 assert "WindowTargetResolver.shouldUsePreferredApplicationPasteTarget(" in helper
 assert "focusedElements.compactMap(self.elementPID)" in helper
 assert "shouldUsePreferredApplicationPasteTarget(" in resolver
-assert 'axOpaqueDictationBundleIDs: Set<String>' in resolver
-assert '"com.openai.codex"' in resolver
-assert '"com.zarifpour.superconductor"' in resolver
-assert "guardedApplicationPasteBundleIDs: Set<String> = []" in resolver
-assert "allowedBundleIDs: WindowTargetResolver.axOpaqueDictationBundleIDs" in helper
+assert "allowedBundleIDs: nil" in helper
+assert "allowedBundleIDs: nil" in client
+assert "axOpaqueDictationBundleIDs" not in resolver
+assert "guardedUnicodeTypingBundleIDs" not in resolver
 assert "windowID != 0" in helper
-assert "opaqueTextTargetKind(for: bundleIdentifier)" in helper
-assert "WindowTargetResolver.guardedUnicodeTypingBundleIDs.contains(" in helper
+assert "kind: .applicationUnicode" in helper
+assert "opaqueTextTargetKind" not in helper
 assert "isTargetApplication(application)" in helper
 assert "focusedTextTargetCandidates(" in helper
 assert "preferredApplication: topmostApplication" in helper
@@ -181,12 +180,32 @@ assert "CFEqual(currentElement, target.element)" in helper
 assert helper.count("guard isStillFocused(target) else") >= 2
 assert '"error": "applicationPasteRequired"' in helper
 assert '"error": "applicationUnicodeRequired"' in helper
+unicode_handoff = helper[
+    helper.index("if target.kind == .applicationUnicode"):
+    helper.index("guard self.isStillFocused(target) else")
+]
+assert "hasSecureFocusedAncestry(for: target.pid)" in unicode_handoff
+secure_helper = helper[
+    helper.index("private func hasSecureFocusedAncestry(for"):
+    helper.index("/// Returns nil for controls")
+]
+assert "focusedDescendantTextTarget(from:" in secure_helper
 assert '"pid": NSNumber(value: target.pid)' in helper
 assert '"windowID": NSNumber(value: windowID)' in helper
 assert 'let windowID = result["windowID"] as? NSNumber' in client
 assert "CGWindowID(truncating: windowID)" in client
 assert "guard await raiseWindow(pid: targetPID, windowID: targetWindowID)" not in client
 assert "return await DictationApplicationInsertionService.shared.insertUnicode(" in client
+unicode_insertion = client[
+    client.index("func insertUnicode("):
+    client.index("private func failure(")
+]
+assert "hasSecureFocusedAncestry(target.pid)" in unicode_insertion
+secure_client = client[
+    client.index("private func hasSecureFocusedAncestry("):
+    client.index("private func copyBool(")
+]
+assert "focusedDescendant(from:" in secure_client
 assert "DictationApplicationPasteTarget(" in client
 assert "target: DictationApplicationPasteTarget" in client
 assert "NSWorkspace.shared.frontmostApplication?.processIdentifier == targetPID" in client

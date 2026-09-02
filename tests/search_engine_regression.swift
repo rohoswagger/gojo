@@ -6,6 +6,7 @@
 //  Run via: make test-search (compiles against the sources directly)
 //
 
+import AppKit
 import CoreGraphics
 import Foundation
 
@@ -40,6 +41,7 @@ struct SearchEngineRegressionRunner {
         testCalculatorEngine()
         testFuzzyMatcher()
         testFrecencyMath()
+        testSearchPanelSpacePolicy()
         testSearchHotkeyMatch()
         await testSystemSettingsSearch()
         print("search-engine-regression-pass")
@@ -184,6 +186,43 @@ struct SearchEngineRegressionRunner {
             launchCount: 20, lastLaunchedAt: base, now: oneHalfLifeLater, halfLifeDays: halfLifeDays
         )
         assertClose(twentyCount, tenCount * 2, tolerance: 0.0001, "frecency scales linearly with launchCount")
+    }
+
+    // MARK: - SearchPanelSpacePolicy
+
+    static func testSearchPanelSpacePolicy() {
+        assertTrue(
+            SearchPanelSpacePolicy.collectionBehavior.contains(.moveToActiveSpace),
+            "search panel moves to the active Space when shown"
+        )
+        assertTrue(
+            !SearchPanelSpacePolicy.collectionBehavior.contains(.canJoinAllSpaces),
+            "search panel does not join all Spaces"
+        )
+        assertTrue(
+            SearchPanelSpacePolicy.shouldHideAfterResigningKey(isOnActiveSpace: true),
+            "search panel hides after same-Space focus loss"
+        )
+        assertTrue(
+            !SearchPanelSpacePolicy.shouldHideAfterResigningKey(isOnActiveSpace: false),
+            "search panel stays visible when its owning Space becomes inactive"
+        )
+        assertTrue(
+            SearchPanelSpacePolicy.shouldHideOnToggle(isVisible: true, isOnActiveSpace: true, isHiding: false),
+            "toggle hides a visible panel on the active Space"
+        )
+        assertTrue(
+            !SearchPanelSpacePolicy.shouldHideOnToggle(isVisible: true, isOnActiveSpace: false, isHiding: false),
+            "toggle shows a visible panel from an inactive Space"
+        )
+        assertTrue(
+            !SearchPanelSpacePolicy.shouldHideOnToggle(isVisible: false, isOnActiveSpace: false, isHiding: false),
+            "toggle shows a hidden panel"
+        )
+        assertTrue(
+            !SearchPanelSpacePolicy.shouldHideOnToggle(isVisible: true, isOnActiveSpace: true, isHiding: true),
+            "toggle reopens during an in-flight hide"
+        )
     }
 
     // MARK: - SearchHotkeyMatch

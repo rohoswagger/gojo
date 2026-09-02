@@ -25,7 +25,7 @@ private final class SearchPanel: NSPanel {
 
         isFloatingPanel = true
         level = .mainMenu + 3
-        collectionBehavior = [.fullScreenAuxiliary, .canJoinAllSpaces, .ignoresCycle]
+        collectionBehavior = SearchPanelSpacePolicy.collectionBehavior
         isReleasedWhenClosed = false
         hasShadow = true
         isOpaque = false
@@ -69,7 +69,11 @@ final class SearchPanelController: NSObject {
     }
 
     func toggle() {
-        if isVisible && !isHiding {
+        if SearchPanelSpacePolicy.shouldHideOnToggle(
+            isVisible: isVisible,
+            isOnActiveSpace: panel?.isOnActiveSpace ?? false,
+            isHiding: isHiding
+        ) {
             hide()
         } else {
             show()
@@ -165,7 +169,13 @@ final class SearchPanelController: NSObject {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in
-                self?.hide()
+                guard let self else { return }
+                guard SearchPanelSpacePolicy.shouldHideAfterResigningKey(
+                    isOnActiveSpace: panel.isOnActiveSpace
+                ) else {
+                    return
+                }
+                self.hide()
             }
         }
 

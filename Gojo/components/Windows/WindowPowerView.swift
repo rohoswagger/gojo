@@ -70,7 +70,8 @@ private struct WindowsTabPanel: View {
                     Task {
                         _ = await XPCHelperClient.shared.raiseWindow(
                             pid: summary.pid,
-                            windowID: summary.windowID
+                            windowID: summary.windowID,
+                            allowApplicationFallback: true
                         )
                         NSRunningApplication(processIdentifier: summary.pid)?.activate(options: [])
                     }

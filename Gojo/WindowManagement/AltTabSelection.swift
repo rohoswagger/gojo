@@ -58,4 +58,21 @@ enum AltTabSelection {
         let delta = reverse ? -1 : 1
         return ((index + delta) % count + count) % count
     }
+
+    static func pointerIndex(_ index: Int, count: Int) -> Int? {
+        (0..<count).contains(index) ? index : nil
+    }
+
+    /// Hover may only take over the selection once the pointer has actually
+    /// moved since the last keyboard action. The panel opens centered on the
+    /// active display and cards scroll while cycling, so a resting cursor would
+    /// otherwise hijack the keyboard's choice and commit the wrong window.
+    static func pointerHoverIsIntentional(
+        origin: CGPoint?,
+        current: CGPoint,
+        tolerance: CGFloat = 2
+    ) -> Bool {
+        guard let origin else { return true }
+        return abs(current.x - origin.x) > tolerance || abs(current.y - origin.y) > tolerance
+    }
 }

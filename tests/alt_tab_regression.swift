@@ -36,6 +36,96 @@ struct AltTabRegressionRunner {
         assertEqual(AltTabSelection.advance(from: 0, count: 1, reverse: false), 0, "single window wraps to itself forward")
         assertEqual(AltTabSelection.advance(from: 0, count: 1, reverse: true), 0, "single window wraps to itself reverse")
 
+        // Pointer selection only accepts cards that still exist in the active
+        // session. This prevents stale hover events from changing selection as
+        // the switcher closes or its contents change.
+        assertEqual(AltTabSelection.pointerIndex(2, count: 4), 2, "pointer selects an in-range card")
+        assertEqual(AltTabSelection.pointerIndex(-1, count: 4), nil, "pointer rejects a negative index")
+        assertEqual(AltTabSelection.pointerIndex(4, count: 4), nil, "pointer rejects an index past the end")
+        assertEqual(AltTabSelection.pointerIndex(0, count: 0), nil, "pointer rejects selection in an empty list")
+
+        // Hover must not steal the keyboard's initial selection just because the
+        // switcher opened underneath a resting cursor.
+        assertEqual(
+            AltTabSelection.pointerHoverIsIntentional(
+                origin: CGPoint(x: 400, y: 300),
+                current: CGPoint(x: 400, y: 300)
+            ),
+            false,
+            "a stationary cursor never takes over the selection"
+        )
+        assertEqual(
+            AltTabSelection.pointerHoverIsIntentional(
+                origin: CGPoint(x: 400, y: 300),
+                current: CGPoint(x: 401, y: 301)
+            ),
+            false,
+            "sub-tolerance jitter never takes over the selection"
+        )
+        assertEqual(
+            AltTabSelection.pointerHoverIsIntentional(
+                origin: CGPoint(x: 400, y: 300),
+                current: CGPoint(x: 440, y: 300)
+            ),
+            true,
+            "a horizontal pointer move arms hover selection"
+        )
+        assertEqual(
+            AltTabSelection.pointerHoverIsIntentional(
+                origin: CGPoint(x: 400, y: 300),
+                current: CGPoint(x: 400, y: 260)
+            ),
+            true,
+            "a vertical pointer move arms hover selection"
+        )
+        assertEqual(
+            AltTabSelection.pointerHoverIsIntentional(
+                origin: nil,
+                current: CGPoint(x: 400, y: 300)
+            ),
+            true,
+            "hover works when no pointer origin was recorded"
+        )
+
+        assertEqual(
+            WindowTargetResolver.windowActivationTarget(
+                requestedWindowID: 42,
+                exactMatch: "requested",
+                fallback: "sibling"
+            ),
+            "requested",
+            "an exact activation match selects the requested window"
+        )
+        assertEqual(
+            WindowTargetResolver.windowActivationTarget(
+                requestedWindowID: 42,
+                exactMatch: Optional<String>.none,
+                fallback: "sibling"
+            ),
+            nil,
+            "a missing exact activation match never substitutes a sibling window"
+        )
+        assertEqual(
+            WindowTargetResolver.windowActivationTarget(
+                requestedWindowID: nil,
+                exactMatch: Optional<String>.none,
+                fallback: "focused"
+            ),
+            "focused",
+            "activation without a window ID may use the app fallback"
+        )
+        var evaluatedSiblingFallback = false
+        let unresolvedExactTarget = WindowTargetResolver.windowActivationTarget(
+            requestedWindowID: 42,
+            exactMatch: Optional<String>.none,
+            fallback: {
+                evaluatedSiblingFallback = true
+                return "sibling"
+            }()
+        )
+        assertEqual(unresolvedExactTarget, nil, "an unresolved exact target stays unresolved")
+        assertEqual(evaluatedSiblingFallback, false, "an exact request never searches the sibling fallback")
+
         var recency = AltTabRecency()
         assertEqual(
             recency.order(freshIDs: ["brave-a", "mail", "brave-b"]),

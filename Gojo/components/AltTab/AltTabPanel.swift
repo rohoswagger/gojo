@@ -11,8 +11,16 @@
 import AppKit
 import SwiftUI
 
+/// The panel can never become key — it must not change the frontmost app while
+/// the user cycles — so every click into it is a "first mouse" click. AppKit
+/// consumes those to activate the window instead of forwarding them, which
+/// would leave the cards' tap gesture dead. Opting in restores click delivery.
+private final class AltTabHostingView: NSHostingView<AltTabSwitcherView> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+}
+
 final class AltTabPanel: NSPanel {
-    private let hostingView = NSHostingView(rootView: AltTabSwitcherView())
+    private let hostingView = AltTabHostingView(rootView: AltTabSwitcherView())
 
     init() {
         super.init(
@@ -29,7 +37,8 @@ final class AltTabPanel: NSPanel {
         isFloatingPanel = true
         hidesOnDeactivate = false
         animationBehavior = .none
-        ignoresMouseEvents = true
+        ignoresMouseEvents = false
+        acceptsMouseMovedEvents = true
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle, .stationary]
 
         let container = NSView(frame: NSRect(x: 0, y: 0, width: 480, height: 180))

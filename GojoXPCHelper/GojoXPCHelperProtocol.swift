@@ -39,7 +39,11 @@ import Foundation
     /// is the window's actual resulting frame read straight back from AX (no
     /// CGWindowList lag). Absent when the move failed.
     func setWindowFrame(_ normalFrame: NSDictionary, pid: NSNumber, windowID: NSNumber?, with reply: @escaping (NSDictionary) -> Void)
-    func raiseWindow(_ pid: NSNumber, windowID: NSNumber?, with reply: @escaping (Bool) -> Void)
+    /// Raises a specific window. With `allowApplicationFallback` the helper may
+    /// substitute the app's best window when the exact lookup misses; pass
+    /// `false` when activating the wrong window of a multi-window process (a
+    /// browser spanning displays) would be worse than doing nothing.
+    func raiseWindow(_ pid: NSNumber, windowID: NSNumber?, allowApplicationFallback: Bool, with reply: @escaping (Bool) -> Void)
     func enumerateWindows(forScreen screenUUID: NSString?, with reply: @escaping (NSArray) -> Void)
     /// Given an array of `{"pid": NSNumber, "windowID": NSNumber}` dictionaries,
     /// replies with a dictionary mapping the windowID (as a decimal String) to the

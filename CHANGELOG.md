@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] — 2026-09-01
+
+Dictation is more flexible, more reliable, and no longer limited to a short
+list of compatible apps.
+
+### Added
+
+- **Optional OpenRouter transcription.** Use a supported cloud speech model
+  with an API key stored in the macOS Keychain, or keep using the existing
+  private, on-device models.
+- **Private transcript cleanup.** Download S1-mini to remove filler, false
+  starts, and accidental repetition entirely on this Mac.
+- **Writing styles and vocabulary.** Choose Casual, Conversational, or Formal
+  output and teach Gojo names, terms, and phrases that speech models commonly
+  mishear.
+- **Accessibility recovery from the menu bar.** Reopen the same drag-to-grant
+  setup flow at any time from the Gojo menu.
+
+### Changed
+
+- **Dictation works across more apps.** Gojo now supports Accessibility-opaque
+  editors without maintaining a per-app allowlist. It keeps insertion locked
+  to the captured app and window, avoids the clipboard, and rechecks secure
+  focused controls while adding text.
+- **The Control–Option shortcut recovers more reliably.** Event-tap recovery,
+  cancellation, replacement sessions, and first-use permission handling are
+  more resilient across app activation, wake, and rapid retries.
+
+### Fixed
+
+- **Accessibility setup no longer completes before you can drag.** A previous
+  grant can no longer make the menu-triggered recovery flow flash “You're all
+  set” and immediately disappear.
+- **Debug and Release builds package the cleanup runtime correctly.** The
+  redundant llama framework embed phase that broke clean builds has been
+  removed.
+
 ## [1.4.0] — 2026-08-17
 
 Automatic updates now come from their own address, so they no longer depend on

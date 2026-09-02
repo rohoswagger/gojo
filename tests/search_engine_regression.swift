@@ -36,11 +36,12 @@ func assertClose(_ actual: Double?, _ expected: Double, tolerance: Double, _ mes
 
 @main
 struct SearchEngineRegressionRunner {
-    static func main() {
+    static func main() async {
         testCalculatorEngine()
         testFuzzyMatcher()
         testFrecencyMath()
         testSearchHotkeyMatch()
+        await testSystemSettingsSearch()
         print("search-engine-regression-pass")
     }
 
@@ -209,5 +210,230 @@ struct SearchEngineRegressionRunner {
         let noisyFlags: CGEventFlags = [.maskCommand, .maskAlphaShift, .maskSecondaryFn, .maskNumericPad]
         assertTrue(SearchHotkeyMatch.isCommandSpace(keyCode: spaceKeyCode, flags: noisyFlags),
                    "cmd+space with caps-lock/fn/numpad noise still matches")
+    }
+
+    // MARK: - SystemSettingsSearchProvider
+
+    static func testSystemSettingsSearch() async {
+        final class URLRecorder {
+            var lastOpenedURL: URL?
+        }
+
+        let recorder = URLRecorder()
+        let entries = [
+            SystemSettingsSearchProvider.Entry(
+                id: "com.apple.Sound-Settings.extension",
+                title: "Sound",
+                deepLinkIdentifier: "com.apple.preference.sound",
+                bundleURL: URL(fileURLWithPath: "/System/Library/ExtensionKit/Extensions/Sound.appex")
+            ),
+            SystemSettingsSearchProvider.Entry(
+                id: "com.apple.Displays-Settings.extension",
+                title: "Displays",
+                deepLinkIdentifier: "com.apple.preference.displays",
+                bundleURL: URL(fileURLWithPath: "/System/Library/ExtensionKit/Extensions/DisplaysExt.appex")
+            ),
+        ]
+        let provider = SystemSettingsSearchProvider(entries: entries) { url in
+            recorder.lastOpenedURL = url
+        }
+
+        let soundResults = await provider.search(query: "Sound Settings")
+        assertTrue(soundResults.first?.title == "Sound", "Sound Settings finds the Sound pane")
+        assertTrue(soundResults.first?.kind == .systemSetting, "settings results have their own result kind")
+        soundResults.first?.action()
+        assertTrue(
+            recorder.lastOpenedURL?.absoluteString == "x-apple.systempreferences:com.apple.preference.sound",
+            "opening Sound uses its System Settings deep link"
+        )
+
+        let typoResults = await provider.search(query: "Sound Setings")
+        assertTrue(typoResults.first?.title == "Sound", "a minor typo still finds the Sound pane")
+
+        let displayResults = await provider.search(query: "Displays")
+        assertTrue(displayResults.first?.title == "Displays", "Displays finds the Displays pane")
+
+        let unrelatedResults = await provider.search(query: "Terminal")
+        assertTrue(unrelatedResults.isEmpty, "unrelated queries do not return settings panes")
+
+        let modernOnlyInfo: [String: Any] = [
+            "CFBundleIdentifier": "com.apple.Lock-Screen-Settings.extension",
+            "EXAppExtensionAttributes": [
+                "EXExtensionPointIdentifier": "com.apple.Settings.extension.ui",
+                "SettingsExtensionAttributes": [
+                    "allowsXAppleSystemPreferencesURLScheme": true,
+                ],
+            ],
+        ]
+        let modernOnlyEntry = SystemSettingsSearchProvider.entry(
+            bundleURL: URL(fileURLWithPath: "/System/Library/ExtensionKit/Extensions/LockScreen.appex"),
+            info: modernOnlyInfo,
+            localizedTitle: "Lock Screen"
+        )
+        assertTrue(
+            modernOnlyEntry?.deepLinkURL?.absoluteString
+                == "x-apple.systempreferences:com.apple.Lock-Screen-Settings.extension",
+            "modern settings panes use their extension identifier when no legacy identifier exists"
+        )
+
+        let batteryInfo: [String: Any] = [
+            "CFBundleIdentifier": "com.apple.Battery-Settings.extension",
+            "EXAppExtensionAttributes": [
+                "EXExtensionPointIdentifier": "com.apple.Settings.extension.ui",
+                "SettingsExtensionAttributes": [
+                    "allowsXAppleSystemPreferencesURLScheme": true,
+                    "legacyBundleIdentifier": [
+                        "com.apple.preference.battery",
+                        "com.apple.preferences.EnergySaverPrefPane",
+                    ],
+                ],
+            ],
+        ]
+        let batteryEntry = SystemSettingsSearchProvider.entry(
+            bundleURL: URL(fileURLWithPath: "/System/Library/ExtensionKit/Extensions/PowerPreferences.appex"),
+            info: batteryInfo,
+            localizedTitle: "PowerPreferences",
+            localizedAliases: ["Energy Saver", "Battery"]
+        )
+        assertTrue(batteryEntry?.title == "Battery", "internal pane names are replaced with a user-facing title")
+        assertTrue(
+            batteryEntry?.deepLinkURL?.absoluteString
+                == "x-apple.systempreferences:com.apple.Battery-Settings.extension",
+            "array-valued legacy identifiers use the unambiguous modern extension deep link"
+        )
+        let batteryProvider = SystemSettingsSearchProvider(entries: [batteryEntry].compactMap { $0 }) { _ in }
+        let batteryResults = await batteryProvider.search(query: "Battery Settings")
+        assertTrue(batteryResults.first?.title == "Battery", "Battery Settings finds PowerPreferences.appex")
+
+        let controlCenterInfo: [String: Any] = [
+            "CFBundleIdentifier": "com.apple.ControlCenter-Settings.extension",
+            "EXAppExtensionAttributes": [
+                "EXExtensionPointIdentifier": "com.apple.Settings.extension.ui",
+                "SettingsExtensionAttributes": [
+                    "allowsXAppleSystemPreferencesURLScheme": true,
+                    "searchTermsFileName": "ControlCenter",
+                ],
+            ],
+        ]
+        let controlCenterEntry = SystemSettingsSearchProvider.entry(
+            bundleURL: URL(fileURLWithPath: "/System/Library/ExtensionKit/Extensions/ControlCenterSettings.appex"),
+            info: controlCenterInfo,
+            localizedTitle: "Menu Bar"
+        )
+        let controlCenterProvider = SystemSettingsSearchProvider(
+            entries: [controlCenterEntry].compactMap { $0 }
+        ) { _ in }
+        let controlCenterResults = await controlCenterProvider.search(query: "Control Center Settings")
+        assertTrue(
+            controlCenterResults.first?.title == "Menu Bar",
+            "Control Center finds the renamed Menu Bar settings pane"
+        )
+
+        let punctuationEntries = [
+            SystemSettingsSearchProvider.Entry(
+                id: "com.apple.wifi-settings-extension",
+                title: "Wi‑Fi",
+                deepLinkIdentifier: "com.apple.preference.network",
+                bundleURL: URL(fileURLWithPath: "/System/Library/ExtensionKit/Extensions/Wi-Fi.appex")
+            ),
+            SystemSettingsSearchProvider.Entry(
+                id: "com.apple.WalletSettingsExtension",
+                title: "Wallet & Apple\u{00a0}Pay",
+                deepLinkIdentifier: "com.apple.WalletSettingsExtension",
+                bundleURL: URL(fileURLWithPath: "/System/Library/ExtensionKit/Extensions/WalletSettingsExtension.appex")
+            ),
+        ]
+        let punctuationProvider = SystemSettingsSearchProvider(entries: punctuationEntries) { _ in }
+        let wifiResults = await punctuationProvider.search(query: "Wi-Fi Settings")
+        assertTrue(wifiResults.first?.title == "Wi‑Fi", "ASCII Wi-Fi finds a pane named with a Unicode hyphen")
+        let wifiSpaceResults = await punctuationProvider.search(query: "Wi Fi")
+        assertTrue(wifiSpaceResults.first?.title == "Wi‑Fi", "spaced Wi Fi finds the Wi-Fi pane")
+        let walletResults = await punctuationProvider.search(query: "Wallet & Apple Pay Settings")
+        assertTrue(
+            walletResults.first?.title == "Wallet & Apple\u{00a0}Pay",
+            "normal spaces find a pane named with a nonbreaking space"
+        )
+
+        let unrelatedExtensionInfo: [String: Any] = [
+            "CFBundleIdentifier": "com.example.thumbnail",
+            "EXAppExtensionAttributes": [
+                "EXExtensionPointIdentifier": "com.apple.quicklook.thumbnail",
+                "SettingsExtensionAttributes": [
+                    "allowsXAppleSystemPreferencesURLScheme": true,
+                ],
+            ],
+        ]
+        assertNil(
+            SystemSettingsSearchProvider.entry(
+                bundleURL: URL(fileURLWithPath: "/tmp/Thumbnail.appex"),
+                info: unrelatedExtensionInfo,
+                localizedTitle: "Thumbnail"
+            ),
+            "non-Settings extensions are not indexed"
+        )
+
+        let fixtureRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("gojo-settings-search-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: fixtureRoot) }
+        let fixtureBundle = fixtureRoot.appendingPathComponent("PowerPreferences.appex", isDirectory: true)
+        let fixtureContents = fixtureBundle.appendingPathComponent("Contents", isDirectory: true)
+        let fixtureLocalization = fixtureContents
+            .appendingPathComponent("Resources", isDirectory: true)
+            .appendingPathComponent("en.lproj", isDirectory: true)
+        let fixtureInfo: [String: Any] = [
+            "CFBundleDevelopmentRegion": "en",
+            "CFBundleIdentifier": "com.apple.Battery-Settings.extension",
+            "CFBundleDisplayName": "PowerPreferences",
+            "CFBundlePackageType": "XPC!",
+            "EXAppExtensionAttributes": [
+                "EXExtensionPointIdentifier": "com.apple.Settings.extension.ui",
+                "SettingsExtensionAttributes": [
+                    "allowsXAppleSystemPreferencesURLScheme": true,
+                    "legacyBundleIdentifier": [
+                        "com.apple.preference.battery",
+                        "com.apple.preferences.EnergySaverPrefPane",
+                    ],
+                    "representations": [
+                        ["sidebar-name": "ENERGY_SAVER_PREF_TITLE"],
+                        ["sidebar-name": "BATTERY_PREF_TITLE"],
+                    ],
+                ],
+            ],
+        ]
+        let fixtureLocalizedStrings = [
+            "ENERGY_SAVER_PREF_TITLE": "Energy Saver",
+            "BATTERY_PREF_TITLE": "Battery",
+        ]
+
+        do {
+            try FileManager.default.createDirectory(at: fixtureLocalization, withIntermediateDirectories: true)
+            let plistData = try PropertyListSerialization.data(
+                fromPropertyList: fixtureInfo,
+                format: .xml,
+                options: 0
+            )
+            try plistData.write(to: fixtureContents.appendingPathComponent("Info.plist"))
+            let localizedData = try PropertyListSerialization.data(
+                fromPropertyList: fixtureLocalizedStrings,
+                format: .xml,
+                options: 0
+            )
+            try localizedData.write(to: fixtureLocalization.appendingPathComponent("Localizable.strings"))
+        } catch {
+            fputs("Failed to create System Settings scanner fixture: \(error)\n", stderr)
+            exit(1)
+        }
+
+        let scannedEntries = SystemSettingsSearchProvider.scanEntries(in: [fixtureRoot])
+        assertTrue(scannedEntries.count == 1, "the scanner discovers a Settings .appex bundle")
+        assertTrue(scannedEntries.first?.title == "Battery", "the scanner localizes representation names")
+        assertTrue(
+            scannedEntries.first?.deepLinkURL?.absoluteString
+                == "x-apple.systempreferences:com.apple.Battery-Settings.extension",
+            "the scanner preserves the modern deep link for a pane with multiple legacy identifiers"
+        )
+        let scannedProvider = SystemSettingsSearchProvider(entries: scannedEntries) { _ in }
+        let scannedBatteryResults = await scannedProvider.search(query: "Battery Settings")
+        assertTrue(scannedBatteryResults.first?.title == "Battery", "scanned localized aliases are searchable")
     }
 }

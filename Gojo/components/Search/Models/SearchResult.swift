@@ -5,6 +5,7 @@ import AppKit
 enum SearchResultKind: String, Equatable {
     case application
     case file
+    case systemSetting
     case calculator
 }
 

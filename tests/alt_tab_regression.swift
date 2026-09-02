@@ -36,6 +36,14 @@ struct AltTabRegressionRunner {
         assertEqual(AltTabSelection.advance(from: 0, count: 1, reverse: false), 0, "single window wraps to itself forward")
         assertEqual(AltTabSelection.advance(from: 0, count: 1, reverse: true), 0, "single window wraps to itself reverse")
 
+        // Pointer selection only accepts cards that still exist in the active
+        // session. This prevents stale hover events from changing selection as
+        // the switcher closes or its contents change.
+        assertEqual(AltTabSelection.pointerIndex(2, count: 4), 2, "pointer selects an in-range card")
+        assertEqual(AltTabSelection.pointerIndex(-1, count: 4), nil, "pointer rejects a negative index")
+        assertEqual(AltTabSelection.pointerIndex(4, count: 4), nil, "pointer rejects an index past the end")
+        assertEqual(AltTabSelection.pointerIndex(0, count: 0), nil, "pointer rejects selection in an empty list")
+
         var recency = AltTabRecency()
         assertEqual(
             recency.order(freshIDs: ["brave-a", "mail", "brave-b"]),

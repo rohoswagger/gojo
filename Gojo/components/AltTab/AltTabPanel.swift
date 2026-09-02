@@ -29,7 +29,7 @@ final class AltTabPanel: NSPanel {
         isFloatingPanel = true
         hidesOnDeactivate = false
         animationBehavior = .none
-        ignoresMouseEvents = true
+        ignoresMouseEvents = false
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle, .stationary]
 
         let container = NSView(frame: NSRect(x: 0, y: 0, width: 480, height: 180))

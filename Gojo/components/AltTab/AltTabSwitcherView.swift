@@ -32,6 +32,16 @@ struct AltTabSwitcherView: View {
                     ForEach(Array(session.items.enumerated()), id: \.element.id) { index, item in
                         card(item, isSelected: index == session.selectedIndex)
                             .id(item.id)
+                            .contentShape(Rectangle())
+                            .onHover { hovering in
+                                if hovering {
+                                    manager.select(index: index)
+                                }
+                            }
+                            .onTapGesture {
+                                manager.select(index: index)
+                                manager.commit()
+                            }
                     }
                 }
                 .padding(16)
@@ -48,7 +58,10 @@ struct AltTabSwitcherView: View {
             .fixedSize()
             .animation(.easeOut(duration: 0.12), value: session.selectedIndex)
             .onChange(of: session.selectedIndex) { _, newValue in
-                guard session.items.indices.contains(newValue) else { return }
+                guard manager.lastSelectionWasKeyboard,
+                      session.items.indices.contains(newValue) else {
+                    return
+                }
                 withAnimation(.easeOut(duration: 0.12)) {
                     proxy.scrollTo(session.items[newValue].id, anchor: .center)
                 }

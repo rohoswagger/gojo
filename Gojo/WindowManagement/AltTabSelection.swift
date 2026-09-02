@@ -58,4 +58,8 @@ enum AltTabSelection {
         let delta = reverse ? -1 : 1
         return ((index + delta) % count + count) % count
     }
+
+    static func pointerIndex(_ index: Int, count: Int) -> Int? {
+        (0..<count).contains(index) ? index : nil
+    }
 }

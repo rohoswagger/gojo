@@ -17,6 +17,7 @@ final class AltTabManager: ObservableObject {
     static let shared = AltTabManager()
 
     @Published private(set) var session: AltTabSession?
+    private(set) var lastSelectionWasKeyboard = true
 
     private let windowProvider = FocusedWindowProvider()
     private lazy var panel = AltTabPanel()
@@ -93,6 +94,7 @@ final class AltTabManager: ObservableObject {
             ? AltTabSelection.advance(from: 0, count: count, reverse: true)
             : AltTabSelection.initialIndex(count: count)
 
+        lastSelectionWasKeyboard = true
         session = AltTabSession(items: items, selectedIndex: index, screenUUID: activeScreen.displayUUID)
         panel.present(on: activeScreen)
         enrichTitles()
@@ -137,7 +139,19 @@ final class AltTabManager: ObservableObject {
 
     func advance(reverse: Bool) {
         guard var s = session else { return }
+        lastSelectionWasKeyboard = true
         s.selectedIndex = AltTabSelection.advance(from: s.selectedIndex, count: s.items.count, reverse: reverse)
+        session = s
+    }
+
+    func select(index: Int) {
+        guard var s = session,
+              let selectedIndex = AltTabSelection.pointerIndex(index, count: s.items.count),
+              selectedIndex != s.selectedIndex else {
+            return
+        }
+        lastSelectionWasKeyboard = false
+        s.selectedIndex = selectedIndex
         session = s
     }
 

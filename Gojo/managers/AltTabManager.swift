@@ -24,6 +24,10 @@ final class AltTabManager: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var recency = AltTabRecency()
     private var started = false
+    /// Where the pointer sat at the last keyboard action, used to tell a
+    /// deliberate hover from a cursor that merely happens to rest over a card.
+    private var pointerGateOrigin: CGPoint?
+    private var pointerHoverArmed = false
 
     private init() {}
 
@@ -95,6 +99,7 @@ final class AltTabManager: ObservableObject {
             : AltTabSelection.initialIndex(count: count)
 
         lastSelectionWasKeyboard = true
+        resetPointerGate()
         session = AltTabSession(items: items, selectedIndex: index, screenUUID: activeScreen.displayUUID)
         panel.present(on: activeScreen)
         enrichTitles()
@@ -140,8 +145,32 @@ final class AltTabManager: ObservableObject {
     func advance(reverse: Bool) {
         guard var s = session else { return }
         lastSelectionWasKeyboard = true
+        resetPointerGate()
         s.selectedIndex = AltTabSelection.advance(from: s.selectedIndex, count: s.items.count, reverse: reverse)
         session = s
+    }
+
+    /// Hover-driven selection. Ignored until the pointer moves again, so neither
+    /// opening the switcher under a stationary cursor nor cycling cards past one
+    /// with the keyboard can hijack the keyboard's choice.
+    func selectFromPointer(index: Int) {
+        if !pointerHoverArmed {
+            guard AltTabSelection.pointerHoverIsIntentional(
+                origin: pointerGateOrigin,
+                current: NSEvent.mouseLocation
+            ) else {
+                return
+            }
+            pointerHoverArmed = true
+        }
+        select(index: index)
+    }
+
+    /// Keyboard input re-arms the gate: hover only wins again once the pointer
+    /// itself moves, rather than because cards slid underneath a resting cursor.
+    private func resetPointerGate() {
+        pointerGateOrigin = NSEvent.mouseLocation
+        pointerHoverArmed = false
     }
 
     func select(index: Int) {
@@ -163,7 +192,16 @@ final class AltTabManager: ObservableObject {
         recency.promote(item.id)
         close()
         Task {
-            _ = await XPCHelperClient.shared.raiseWindow(pid: item.pid, windowID: item.windowID)
+            // Strict activation: never let a missed window lookup foreground a
+            // sibling window of the same process on another display.
+            let raised = await XPCHelperClient.shared.raiseWindow(
+                pid: item.pid,
+                windowID: item.windowID,
+                allowApplicationFallback: false
+            )
+            if !raised {
+                gojoDebug("alt-tab: raise failed for \(item.appName) window \(item.windowID.map(String.init) ?? "none")")
+            }
         }
     }
 

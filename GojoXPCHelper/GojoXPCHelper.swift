@@ -560,7 +560,7 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
         return dict as NSDictionary
     }
 
-    @objc func raiseWindow(_ pid: NSNumber, windowID: NSNumber?, with reply: @escaping (Bool) -> Void) {
+    @objc func raiseWindow(_ pid: NSNumber, windowID: NSNumber?, allowApplicationFallback: Bool, with reply: @escaping (Bool) -> Void) {
         DispatchQueue.main.async { [weak self] in
             guard let self, AXIsProcessTrusted() else {
                 reply(false)
@@ -569,26 +569,47 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
             let pidValue = pid_t(truncating: pid)
             let appElement = AXUIElementCreateApplication(pidValue)
             let cgID = windowID.map { CGWindowID(truncating: $0) }
-            let exactElement = self.windowElement(for: appElement, exactWindowID: cgID)
+            let exactElement = self.activationWindowElement(for: appElement, exactWindowID: cgID)
+            // Callers that requested a specific window and opted out of the
+            // fallback get that window or nothing; the rest keep the historical
+            // "best window of the app" behaviour when the lookup misses.
             guard let element = WindowTargetResolver.windowActivationTarget(
-                requestedWindowID: cgID,
+                requestedWindowID: allowApplicationFallback ? nil : cgID,
                 exactMatch: exactElement,
-                fallback: self.bestWindowElement(for: appElement)
+                fallback: self.activationFallbackElement(
+                    for: appElement,
+                    exactElement: exactElement,
+                    windowID: cgID
+                )
             ) else {
+                helperDebug("raiseWindow: no window resolved for pid \(pidValue) window \(cgID.map(String.init) ?? "none")")
                 reply(false)
                 return
+            }
+
+            // A minimized window is still the exact window the user picked, so
+            // restore it instead of failing the raise.
+            if self.copyBool(element, attribute: kAXMinimizedAttribute) == true {
+                AXUIElementSetAttributeValue(element, kAXMinimizedAttribute as CFString, kCFBooleanFalse)
             }
 
             let raiseResult = AXUIElementPerformAction(element, kAXRaiseAction as CFString)
             let mainResult = AXUIElementSetAttributeValue(element, kAXMainAttribute as CFString, kCFBooleanTrue)
             let focusedResult = AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue)
             guard raiseResult == .success || mainResult == .success || focusedResult == .success else {
+                helperDebug("raiseWindow: every window operation failed for pid \(pidValue)")
                 reply(false)
                 return
             }
 
+            // Foregrounding the owning process is best-effort: the picked window
+            // is already raised and focused, so an app that refuses kAXFrontmost
+            // must not turn a successful raise into a reported failure.
             let frontmostResult = AXUIElementSetAttributeValue(appElement, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
-            reply(frontmostResult == .success)
+            if frontmostResult != .success {
+                helperDebug("raiseWindow: kAXFrontmost failed (\(frontmostResult.rawValue)) for pid \(pidValue)")
+            }
+            reply(true)
         }
     }
 
@@ -670,6 +691,29 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
         guard let cgID = exactWindowID else { return nil }
         guard let windows = copyElements(appElement, attribute: kAXWindowsAttribute) else { return nil }
         return windows.first { isUsableWindow($0) && windowID(of: $0) == cgID }
+    }
+
+    /// Only reached when the caller allows the application fallback: the exact
+    /// window if we found it, otherwise the app's best window.
+    private func activationFallbackElement(
+        for appElement: AXUIElement,
+        exactElement: AXUIElement?,
+        windowID: CGWindowID?
+    ) -> AXUIElement? {
+        if let exactElement {
+            return exactElement
+        }
+        return bestWindowElement(for: appElement, preferredWindowID: windowID)
+    }
+
+    /// The window matching `exactWindowID` without the usable-window filter,
+    /// which rejects minimized windows. Activation still wants the window the
+    /// user picked from the switcher when it is minimized — the caller restores
+    /// it before raising.
+    private func activationWindowElement(for appElement: AXUIElement, exactWindowID: CGWindowID?) -> AXUIElement? {
+        guard let cgID = exactWindowID else { return nil }
+        guard let windows = copyElements(appElement, attribute: kAXWindowsAttribute) else { return nil }
+        return windows.first { windowID(of: $0) == cgID }
     }
 
     private func ensureAccessibilityAuthorizationSync(promptIfNeeded: Bool) -> Bool {

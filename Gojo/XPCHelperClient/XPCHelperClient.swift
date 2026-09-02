@@ -966,13 +966,21 @@ final class XPCHelperClient: NSObject, @unchecked Sendable {
         }
     }
 
-    nonisolated func raiseWindow(pid: pid_t, windowID: CGWindowID?) async -> Bool {
+    nonisolated func raiseWindow(
+        pid: pid_t,
+        windowID: CGWindowID?,
+        allowApplicationFallback: Bool
+    ) async -> Bool {
         do {
             let service = await MainActor.run { ensureRemoteService() }
             let pidNumber = NSNumber(value: pid)
             let windowIDNumber = windowID.map { NSNumber(value: $0) }
             return try await service.withContinuation { service, continuation in
-                service.raiseWindow(pidNumber, windowID: windowIDNumber) { success in
+                service.raiseWindow(
+                    pidNumber,
+                    windowID: windowIDNumber,
+                    allowApplicationFallback: allowApplicationFallback
+                ) { success in
                     continuation.resume(returning: success)
                 }
             }

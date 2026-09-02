@@ -179,7 +179,11 @@ final class WindowActionExecutor {
         state: WindowPowerState
     ) async {
         // Bring the target to front via the helper (which has AX), so the user sees the window appear.
-        _ = await XPCHelperClient.shared.raiseWindow(pid: target.pid, windowID: target.windowID)
+        _ = await XPCHelperClient.shared.raiseWindow(
+            pid: target.pid,
+            windowID: target.windowID,
+            allowApplicationFallback: true
+        )
         NSRunningApplication(processIdentifier: target.pid)?.activate(options: [])
 
         // Display the target window lands on; also where we judge the resulting position.

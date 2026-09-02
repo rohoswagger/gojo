@@ -35,7 +35,7 @@ struct AltTabSwitcherView: View {
                             .contentShape(Rectangle())
                             .onHover { hovering in
                                 if hovering {
-                                    manager.select(index: index)
+                                    manager.selectFromPointer(index: index)
                                 }
                             }
                             .onTapGesture {

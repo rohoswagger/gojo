@@ -162,6 +162,10 @@ actor AppSearchProvider: SearchProvider {
         into entries: inout [AppEntry],
         seenPaths: inout Set<String>
     ) {
+        guard AppBundleIndexPolicy.shouldInclude(infoDictionary: Bundle(url: url)?.infoDictionary) else {
+            return
+        }
+
         let path = url.standardizedFileURL.path
         guard seenPaths.insert(path).inserted else { return }
 

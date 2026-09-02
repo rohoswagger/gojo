@@ -164,7 +164,6 @@ final class AltTabManager: ObservableObject {
         close()
         Task {
             _ = await XPCHelperClient.shared.raiseWindow(pid: item.pid, windowID: item.windowID)
-            NSRunningApplication(processIdentifier: item.pid)?.activate()
         }
     }
 

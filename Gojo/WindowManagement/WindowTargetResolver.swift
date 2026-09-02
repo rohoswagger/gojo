@@ -61,6 +61,17 @@ enum WindowTargetResolver {
         "Gojo"
     ]
 
+    static func windowActivationTarget<T>(
+        requestedWindowID: CGWindowID?,
+        exactMatch: T?,
+        fallback: @autoclosure () -> T?
+    ) -> T? {
+        if requestedWindowID != nil {
+            return exactMatch
+        }
+        return fallback()
+    }
+
     static func resolve(
         frontmost: WindowTargetApplicationSnapshot?,
         lastTarget: WindowTargetApplicationSnapshot?,

@@ -44,6 +44,45 @@ struct AltTabRegressionRunner {
         assertEqual(AltTabSelection.pointerIndex(4, count: 4), nil, "pointer rejects an index past the end")
         assertEqual(AltTabSelection.pointerIndex(0, count: 0), nil, "pointer rejects selection in an empty list")
 
+        assertEqual(
+            WindowTargetResolver.windowActivationTarget(
+                requestedWindowID: 42,
+                exactMatch: "requested",
+                fallback: "sibling"
+            ),
+            "requested",
+            "an exact activation match selects the requested window"
+        )
+        assertEqual(
+            WindowTargetResolver.windowActivationTarget(
+                requestedWindowID: 42,
+                exactMatch: Optional<String>.none,
+                fallback: "sibling"
+            ),
+            nil,
+            "a missing exact activation match never substitutes a sibling window"
+        )
+        assertEqual(
+            WindowTargetResolver.windowActivationTarget(
+                requestedWindowID: nil,
+                exactMatch: Optional<String>.none,
+                fallback: "focused"
+            ),
+            "focused",
+            "activation without a window ID may use the app fallback"
+        )
+        var evaluatedSiblingFallback = false
+        let unresolvedExactTarget = WindowTargetResolver.windowActivationTarget(
+            requestedWindowID: 42,
+            exactMatch: Optional<String>.none,
+            fallback: {
+                evaluatedSiblingFallback = true
+                return "sibling"
+            }()
+        )
+        assertEqual(unresolvedExactTarget, nil, "an unresolved exact target stays unresolved")
+        assertEqual(evaluatedSiblingFallback, false, "an exact request never searches the sibling fallback")
+
         var recency = AltTabRecency()
         assertEqual(
             recency.order(freshIDs: ["brave-a", "mail", "brave-b"]),

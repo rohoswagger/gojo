@@ -569,16 +569,26 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
             let pidValue = pid_t(truncating: pid)
             let appElement = AXUIElementCreateApplication(pidValue)
             let cgID = windowID.map { CGWindowID(truncating: $0) }
-            let element = self.windowElement(for: appElement, exactWindowID: cgID)
-                ?? self.bestWindowElement(for: appElement, preferredWindowID: cgID)
-
-            if let element {
-                AXUIElementPerformAction(element, kAXRaiseAction as CFString)
-                AXUIElementSetAttributeValue(element, kAXMainAttribute as CFString, kCFBooleanTrue)
-                AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+            let exactElement = self.windowElement(for: appElement, exactWindowID: cgID)
+            guard let element = WindowTargetResolver.windowActivationTarget(
+                requestedWindowID: cgID,
+                exactMatch: exactElement,
+                fallback: self.bestWindowElement(for: appElement)
+            ) else {
+                reply(false)
+                return
             }
-            AXUIElementSetAttributeValue(appElement, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
-            reply(element != nil)
+
+            let raiseResult = AXUIElementPerformAction(element, kAXRaiseAction as CFString)
+            let mainResult = AXUIElementSetAttributeValue(element, kAXMainAttribute as CFString, kCFBooleanTrue)
+            let focusedResult = AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+            guard raiseResult == .success || mainResult == .success || focusedResult == .success else {
+                reply(false)
+                return
+            }
+
+            let frontmostResult = AXUIElementSetAttributeValue(appElement, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
+            reply(frontmostResult == .success)
         }
     }
 

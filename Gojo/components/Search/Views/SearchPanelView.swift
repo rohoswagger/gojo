@@ -242,7 +242,7 @@ private struct SearchResultRow: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
 
-                if result.kind == .file, let subtitle = result.subtitle, !subtitle.isEmpty {
+                if let subtitle = result.subtitle, !subtitle.isEmpty {
                     Text(subtitle)
                         .font(.system(size: 11))
                         .foregroundStyle(Color.white.opacity(0.45))

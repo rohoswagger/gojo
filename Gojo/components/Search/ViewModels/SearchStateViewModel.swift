@@ -27,11 +27,12 @@ final class SearchStateViewModel: ObservableObject {
     private(set) var lastSelectionWasKeyboard = true
 
     /// Providers are fanned out in this order and sections publish in this
-    /// same fixed order (Calculator, Applications, Files). Adding a new
+    /// same fixed order (Calculator, Applications, System Settings, Files). Adding a new
     /// provider is a one-line change here — nothing else needs to know.
     private let providers: [SearchProvider] = [
         CalculatorProvider(),
         AppSearchProvider.shared,
+        SystemSettingsSearchProvider(),
         FileSearchProvider(),
     ]
 

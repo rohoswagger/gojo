@@ -6,6 +6,49 @@
     <description>Most recent changes to Gojo, with download links.</description>
     <language>en</language>
     <item>
+      <title>Version 1.5.0</title>
+      <pubDate>Wed, 02 Sep 2026 00:29:48 +0000</pubDate>
+      <sparkle:version>1788308898</sparkle:version>
+      <sparkle:shortVersionString>1.5.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+<p>Dictation is more flexible, more reliable, and no longer limited to a short</p>
+<p>list of compatible apps.</p>
+<h4>Added</h4>
+<ul><li>**Optional OpenRouter transcription.** Use a supported cloud speech model</li></ul>
+<p>  with an API key stored in the macOS Keychain, or keep using the existing</p>
+<p>  private, on-device models.</p>
+<ul><li>**Private transcript cleanup.** Download S1-mini to remove filler, false</li></ul>
+<p>  starts, and accidental repetition entirely on this Mac.</p>
+<ul><li>**Writing styles and vocabulary.** Choose Casual, Conversational, or Formal</li></ul>
+<p>  output and teach Gojo names, terms, and phrases that speech models commonly</p>
+<p>  mishear.</p>
+<ul><li>**Accessibility recovery from the menu bar.** Reopen the same drag-to-grant</li></ul>
+<p>  setup flow at any time from the Gojo menu.</p>
+<h4>Changed</h4>
+<ul><li>**Dictation works across more apps.** Gojo now supports Accessibility-opaque</li></ul>
+<p>  editors without maintaining a per-app allowlist. It keeps insertion locked</p>
+<p>  to the captured app and window, avoids the clipboard, and rechecks secure</p>
+<p>  focused controls while adding text.</p>
+<ul><li>**The Control–Option shortcut recovers more reliably.** Event-tap recovery,</li></ul>
+<p>  cancellation, replacement sessions, and first-use permission handling are</p>
+<p>  more resilient across app activation, wake, and rapid retries.</p>
+<h4>Fixed</h4>
+<ul><li>**Accessibility setup no longer completes before you can drag.** A previous</li></ul>
+<p>  grant can no longer make the menu-triggered recovery flow flash “You're all</p>
+<p>  set” and immediately disappear.</p>
+<ul><li>**Debug and Release builds package the cleanup runtime correctly.** The</li></ul>
+<p>  redundant llama framework embed phase that broke clean builds has been</p>
+<p>  removed.</p>
+      ]]></description>
+      <enclosure
+        url="https://downloads.trygojo.com/Gojo-1.5.0.dmg"
+        sparkle:edSignature="7EwlCduR2fO9uwwc4AcUyoUr98eOyBCJxlESd3pw+sKDCtZvC7LpjCNj8d6/gKsnypIjE4WNw12X4Kf9zEDHBQ=="
+        length="17128954"
+        type="application/octet-stream" />
+    </item>
+
+    <item>
       <title>Version 1.4.0</title>
       <pubDate>Mon, 17 Aug 2026 07:19:56 +0000</pubDate>
       <sparkle:version>1786951090</sparkle:version>

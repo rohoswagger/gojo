@@ -90,24 +90,23 @@ struct NotchAlertView: View {
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(alert.severity.tint)
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .center, spacing: 2) {
                     Text(alert.message)
                         .font(.system(size: 12.5, weight: .medium))
                         .foregroundStyle(.white)
                         .fixedSize(horizontal: false, vertical: true)
-                        .multilineTextAlignment(.leading)
+                        .multilineTextAlignment(.center)
 
                     if let hint = alert.hint {
                         Text(hint)
                             .font(.system(size: 11, weight: .regular))
                             .foregroundStyle(.white.opacity(0.6))
                             .fixedSize(horizontal: false, vertical: true)
-                            .multilineTextAlignment(.leading)
+                            .multilineTextAlignment(.center)
                     }
                 }
-
-                Spacer(minLength: 0)
             }
+            .frame(maxWidth: .infinity)
             .padding(.horizontal, 18)
             .padding(.top, 9)
             .padding(.bottom, 12)

@@ -6,7 +6,6 @@ enum DictationNotchPhase: Equatable {
     case transcribing
     case inserting
     case success
-    case error
 
     var isProcessing: Bool {
         self == .transcribing || self == .inserting
@@ -41,13 +40,9 @@ final class DictationNotchActivityModel: ObservableObject {
                 self?.hideTask = nil
             }
         case .error:
-            phase = .error
-            hideTask = Task { [weak self] in
-                try? await Task.sleep(for: .seconds(2.4))
-                guard !Task.isCancelled else { return }
-                self?.phase = nil
-                self?.hideTask = nil
-            }
+            // The notch alert carries the failure message, and leaving a phase
+            // set here would keep the activity view swallowing hover and tap.
+            phase = nil
         case .idle:
             phase = nil
         }
@@ -74,7 +69,7 @@ struct DictationNotchActivity: View {
             Color.black
                 .frame(width: max(0, closedNotchWidth), height: height)
 
-            trailingActivity
+            waveform
                 .frame(width: Self.sideWidth(for: height), height: height)
         }
         .frame(height: height)
@@ -82,8 +77,8 @@ struct DictationNotchActivity: View {
         .animation(.easeOut(duration: reduceMotion ? 0 : 0.14), value: phase)
         .allowsHitTesting(false)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(phase == .error ? "Dictation failed" : "Dictation active")
-        .accessibilityHidden(phase != .error)
+        .accessibilityLabel("Dictation active")
+        .accessibilityHidden(true)
     }
 
     private var recordControl: some View {
@@ -106,25 +101,6 @@ struct DictationNotchActivity: View {
         phase.isProcessing
             ? Color(red: 0.96, green: 0.96, blue: 0.97)
             : Color(red: 1, green: 0.27, blue: 0.23)
-    }
-
-    @ViewBuilder
-    private var trailingActivity: some View {
-        if phase == .error {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(Color(red: 1, green: 0.34, blue: 0.29))
-                .transition(
-                    .asymmetric(
-                        insertion: .opacity.combined(
-                            with: .scale(scale: 0.82, anchor: .leading)
-                        ),
-                        removal: .opacity
-                    )
-                )
-        } else {
-            waveform
-        }
     }
 
     @ViewBuilder
@@ -161,7 +137,6 @@ struct DictationNotchActivity: View {
         case .arming: 0.42
         case .transcribing, .inserting: 0.72
         case .listening: 1
-        case .error: 0.72
         case .success: 0
         }
     }
@@ -171,7 +146,7 @@ struct DictationNotchActivity: View {
         case .arming: 0.38
         case .transcribing, .inserting: 0.76
         case .listening: 0.94
-        case .success, .error: 0
+        case .success: 0
         }
     }
 

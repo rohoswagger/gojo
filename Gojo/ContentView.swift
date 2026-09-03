@@ -165,6 +165,10 @@ struct ContentView: View {
                                 .timingCurve(0.22, 1, 0.36, 1, duration: 0.18),
                                 value: dictationActivity.phase
                             )
+                            .animation(
+                                .spring(response: 0.34, dampingFraction: 0.86, blendDuration: 0),
+                                value: coordinator.notchAlert
+                            )
                     }
                     .contentShape(Rectangle())
                     .onHover { hovering in
@@ -315,7 +319,12 @@ struct ContentView: View {
                             closedNotchWidth: vm.closedNotchSize.width,
                             notchHeight: vm.effectiveClosedNotchHeight
                         )
-                        .transition(.opacity)
+                        .transition(
+                            .asymmetric(
+                                insertion: .opacity.animation(.easeOut(duration: 0.22).delay(0.06)),
+                                removal: .opacity.animation(.easeIn(duration: 0.12))
+                            )
+                        )
                     } else if shouldShowDictationActivity, let phase = dictationActivity.phase {
                         DictationNotchActivity(
                             phase: phase,

@@ -1429,6 +1429,7 @@ struct DictationSettings: View {
     @State private var accessibilityAuthorized = false
     @State private var modelToRemove: DictationModelID?
     @State private var openRouterAPIKeyDraft = ""
+    @State private var isReplacingOpenRouterKey = false
     @State private var showS1MiniRemovalConfirmation = false
     @State private var vocabularySpokenDraft = ""
     @State private var vocabularyReplacementDraft = ""
@@ -1446,7 +1447,22 @@ struct DictationSettings: View {
                 .pickerStyle(.segmented)
 
                 LabeledContent("Shortcut", value: "⌃⌥")
-                LabeledContent("Status", value: DictationSettingsStatus.title(for: dictation.state))
+                LabeledContent("Status") {
+                    if dictation.isPreparingTranscriber {
+                        HStack(spacing: 6) {
+                            ProgressView().controlSize(.small)
+                            Text("Preparing voice model…")
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Text(DictationSettingsStatus.title(for: dictation.state))
+                    }
+                }
+                if dictation.isPreparingTranscriber {
+                    Text("The first dictation after launch waits for this to finish.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 if let detail = dictation.stateDetail {
                     Text(detail)
                         .foregroundStyle(.orange)
@@ -1469,42 +1485,85 @@ struct DictationSettings: View {
                 .pickerStyle(.segmented)
                 .disabled(!dictation.canChangeModel)
 
-                Text(dictation.selectedProvider.prompt)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
                 if dictation.selectedProvider == .openRouter {
-                    LabeledContent("OpenRouter API key") {
-                        Text(dictation.hasOpenRouterAPIKey ? "Saved" : "Required")
-                            .foregroundStyle(
-                                dictation.hasOpenRouterAPIKey ? Color.secondary : Color.orange
-                            )
+                    if dictation.hasOpenRouterAPIKey, !isReplacingOpenRouterKey {
+                        LabeledContent("API key") {
+                            HStack(spacing: 12) {
+                                Text(dictation.openRouterAPIKeyHint ?? "Saved")
+                                    .font(.body.monospaced())
+                                    .foregroundStyle(.secondary)
+                                    .privacySensitive()
+                                Button("Replace…") {
+                                    isReplacingOpenRouterKey = true
+                                }
+                                Button("Remove", role: .destructive) {
+                                    dictation.removeOpenRouterAPIKey()
+                                    openRouterAPIKeyDraft = ""
+                                }
+                                .accessibilityHint("Removes the saved OpenRouter API key from your macOS Keychain.")
+                            }
+                        }
+                    } else {
+                        LabeledContent("API key") {
+                            HStack(spacing: 8) {
+                                SecureField("API key", text: $openRouterAPIKeyDraft, prompt: Text("sk-or-…"))
+                                    .labelsHidden()
+                                    .textContentType(.password)
+                                    .privacySensitive()
+                                    .onSubmit(saveOpenRouterAPIKey)
+                                    .frame(minWidth: 180)
+                                    .accessibilityLabel("OpenRouter API key")
+                                    .accessibilityHint("Stored securely in your macOS Keychain.")
+
+                                Button("Save") {
+                                    saveOpenRouterAPIKey()
+                                }
+                                .disabled(openRouterAPIKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                                if isReplacingOpenRouterKey {
+                                    Button("Cancel") {
+                                        openRouterAPIKeyDraft = ""
+                                        isReplacingOpenRouterKey = false
+                                    }
+                                }
+                            }
+                        }
                     }
 
-                    SecureField(
-                        dictation.hasOpenRouterAPIKey ? "Replace OpenRouter API key" : "OpenRouter API key",
-                        text: $openRouterAPIKeyDraft
-                    )
-                    .textContentType(.password)
-                    .privacySensitive()
-                    .accessibilityLabel(
-                        dictation.hasOpenRouterAPIKey ? "Replacement OpenRouter API key" : "OpenRouter API key"
-                    )
-                    .accessibilityHint("Stored securely in your macOS Keychain.")
+                    LabeledContent("Speech model") {
+                        HStack(spacing: 8) {
+                            if dictation.availableOpenRouterModels.isEmpty {
+                                if dictation.isRefreshingOpenRouterModels {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                    Text("Loading models…")
+                                        .foregroundStyle(.secondary)
+                                } else {
+                                    Button("Load Models") {
+                                        dictation.refreshOpenRouterModels()
+                                    }
+                                    .disabled(!dictation.canChangeModel)
+                                }
+                            } else {
+                                Picker("Speech model", selection: openRouterModelBinding) {
+                                    ForEach(dictation.availableOpenRouterModels) { model in
+                                        Text(model.displayName).tag(model.id)
+                                    }
+                                }
+                                .labelsHidden()
+                                .disabled(!dictation.canChangeModel)
+                                .accessibilityLabel("Speech model")
+                                .accessibilityHint("Only OpenRouter models that support speech transcription are shown.")
 
-                    HStack {
-                        Button(dictation.hasOpenRouterAPIKey ? "Replace Key" : "Save Key") {
-                            saveOpenRouterAPIKey()
-                        }
-                        .disabled(openRouterAPIKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                        .accessibilityHint("Saves this OpenRouter API key securely in your macOS Keychain.")
-
-                        if dictation.hasOpenRouterAPIKey {
-                            Button("Remove Key", role: .destructive) {
-                                dictation.removeOpenRouterAPIKey()
-                                openRouterAPIKeyDraft = ""
+                                Button {
+                                    dictation.refreshOpenRouterModels()
+                                } label: {
+                                    Image(systemName: "arrow.clockwise")
+                                }
+                                .disabled(!dictation.canChangeModel)
+                                .help("Refresh the model list from OpenRouter")
+                                .accessibilityLabel("Refresh OpenRouter speech models")
                             }
-                            .accessibilityHint("Removes the saved OpenRouter API key from your macOS Keychain.")
                         }
                     }
 
@@ -1513,38 +1572,6 @@ struct DictationSettings: View {
                             .font(.caption)
                             .foregroundStyle(.orange)
                     }
-
-                    HStack {
-                        Text("Speech model")
-                        Spacer()
-                        Button(dictation.isRefreshingOpenRouterModels ? "Refreshing…" : "Refresh") {
-                            dictation.refreshOpenRouterModels()
-                        }
-                        .disabled(dictation.isRefreshingOpenRouterModels || !dictation.canChangeModel)
-                        .accessibilityLabel("Refresh OpenRouter speech models")
-                    }
-
-                    if dictation.availableOpenRouterModels.isEmpty {
-                        Text(dictation.isRefreshingOpenRouterModels ? "Loading supported speech models…" : "Refresh to load supported speech models.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Picker("Speech model", selection: openRouterModelBinding) {
-                            ForEach(dictation.availableOpenRouterModels) { model in
-                                Text(openRouterModelLabel(for: model)).tag(model.id)
-                            }
-                        }
-                        .disabled(dictation.isRefreshingOpenRouterModels || !dictation.canChangeModel)
-                        .accessibilityHint("Only OpenRouter models that support speech transcription are shown.")
-                    }
-
-                    LabeledContent(
-                        "Soniox STT-RT v5",
-                        value: dictation.sonioxAvailable ? "Available" : "Unavailable"
-                    )
-                    Text(sonioxAvailabilityDescription)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
             } header: {
                 Text("Transcription")
@@ -1552,6 +1579,65 @@ struct DictationSettings: View {
                 Text(transcriptionPrivacyDescription)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+
+            if dictation.selectedProvider == .local {
+                Section {
+                    ForEach(DictationModelDescriptor.all) { model in
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(alignment: .firstTextBaseline) {
+                                Text(model.displayName)
+                                    .fontWeight(.medium)
+                                if model.isRecommended {
+                                    Text("Recommended")
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Text("\(model.engineLabel) · \(model.downloadSizeLabel)")
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Text(model.detail)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+
+                            if let error = dictation.modelErrors[model.id] {
+                                Text(error)
+                                    .font(.caption)
+                                    .foregroundStyle(.orange)
+                            }
+
+                            HStack {
+                                Button(modelButtonTitle(for: model.id)) {
+                                    if dictation.isModelInstalled(model.id) {
+                                        dictation.selectModel(model.id)
+                                    } else {
+                                        dictation.downloadModel(model.id)
+                                    }
+                                }
+                                .disabled(modelButtonDisabled(for: model.id))
+
+                                if dictation.isModelInstalled(model.id) {
+                                    Button(
+                                        dictation.removingModel == model.id ? "Removing…" : "Remove",
+                                        role: .destructive
+                                    ) {
+                                        modelToRemove = model.id
+                                    }
+                                    .disabled(!dictation.canChangeModel)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 3)
+                    }
+                } header: {
+                    Text("Voice models")
+                } footer: {
+                    Text("Download one or more models, then choose which one Gojo should use. Dictation stays on this Mac.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Section {
@@ -1728,65 +1814,6 @@ struct DictationSettings: View {
             } header: {
                 Text("Permissions")
             }
-
-            if dictation.selectedProvider == .local {
-                Section {
-                    ForEach(DictationModelDescriptor.all) { model in
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack(alignment: .firstTextBaseline) {
-                                Text(model.displayName)
-                                    .fontWeight(.medium)
-                                if model.isRecommended {
-                                    Text("Recommended")
-                                        .font(.caption2.weight(.semibold))
-                                        .foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                Text("\(model.engineLabel) · \(model.downloadSizeLabel)")
-                                    .foregroundStyle(.secondary)
-                            }
-
-                            Text(model.detail)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-
-                            if let error = dictation.modelErrors[model.id] {
-                                Text(error)
-                                    .font(.caption)
-                                    .foregroundStyle(.orange)
-                            }
-
-                            HStack {
-                                Button(modelButtonTitle(for: model.id)) {
-                                    if dictation.isModelInstalled(model.id) {
-                                        dictation.selectModel(model.id)
-                                    } else {
-                                        dictation.downloadModel(model.id)
-                                    }
-                                }
-                                .disabled(modelButtonDisabled(for: model.id))
-
-                                if dictation.isModelInstalled(model.id) {
-                                    Button(
-                                        dictation.removingModel == model.id ? "Removing…" : "Remove",
-                                        role: .destructive
-                                    ) {
-                                        modelToRemove = model.id
-                                    }
-                                    .disabled(!dictation.canChangeModel)
-                                }
-                            }
-                        }
-                        .padding(.vertical, 3)
-                    }
-                } header: {
-                    Text("Voice models")
-                } footer: {
-                    Text("Download one or more models, then choose which one Gojo should use. Dictation stays on this Mac.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
         }
         .navigationTitle("Dictation")
         .alert(item: $modelToRemove) { model in
@@ -1871,13 +1898,6 @@ struct DictationSettings: View {
         )
     }
 
-    private var sonioxAvailabilityDescription: String {
-        if dictation.sonioxAvailable {
-            return "Soniox stt-rt-v5 is currently available from OpenRouter. Select it above to use it."
-        }
-        return "Soniox stt-rt-v5 is not currently listed by OpenRouter. Choose another supported speech model or refresh the list."
-    }
-
     private var transcriptionPrivacyDescription: String {
         if dictation.selectedProvider == .local {
             return "On-device transcription keeps your audio on this Mac."
@@ -1913,25 +1933,21 @@ struct DictationSettings: View {
         vocabularyError = nil
     }
 
-    private func openRouterModelLabel(for model: OpenRouterTranscriptionModel) -> String {
-        guard let name = model.name, name != model.id else { return model.id }
-        return "\(name) (\(model.id))"
-    }
-
     private func saveOpenRouterAPIKey() {
         let key = openRouterAPIKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !key.isEmpty else { return }
         if dictation.saveOpenRouterAPIKey(key) {
             openRouterAPIKeyDraft = ""
+            isReplacingOpenRouterKey = false
         }
     }
 
     private var dictationActivationHelp: String {
         switch dictationActivationMode {
         case .holdToTalk:
-            return "Click a text field, then hold Control and Option while you talk. Release either key when you are done."
+            return "Click a text field, then hold Control and Option while you talk. Release either key when you are done. If a transcription is taking too long, press the shortcut again to cancel it and start over."
         case .tapToTalk:
-            return "Click a text field, then tap Control and Option to start. Tap them again when you are done."
+            return "Click a text field, then tap Control and Option to start. Tap them again when you are done. If a transcription is taking too long, tap the shortcut again to cancel it and start over."
         }
     }
 

@@ -216,7 +216,15 @@ where TargetProvider: DictationTargetCapturing,
             }
 
             stage = .transcription
+            #if DEBUG
+            let transcriptionStart = ProcessInfo.processInfo.systemUptime
+            #endif
             let rawTranscript = try await transcriber.transcribe(audio)
+            #if DEBUG
+            dictationControllerLatencyLogger.notice(
+                "stage=transcription ms=\(Int(((ProcessInfo.processInfo.systemUptime - transcriptionStart) * 1_000).rounded()), privacy: .public)"
+            )
+            #endif
             try Task.checkCancellation()
             guard isCurrent(expectedSession, state: .transcribing) else { return }
 
@@ -231,8 +239,16 @@ where TargetProvider: DictationTargetCapturing,
             // useful when the optional model is unavailable, returns no text,
             // or rejects a particular utterance.
             let transcript: String
+            #if DEBUG
+            let polishStart = ProcessInfo.processInfo.systemUptime
+            #endif
             do {
                 let polishedTranscript = try await polisher.polish(normalizedRawTranscript)
+                #if DEBUG
+                dictationControllerLatencyLogger.notice(
+                    "stage=polish ms=\(Int(((ProcessInfo.processInfo.systemUptime - polishStart) * 1_000).rounded()), privacy: .public)"
+                )
+                #endif
                 try Task.checkCancellation()
                 guard isCurrent(expectedSession, state: .transcribing) else { return }
                 let normalizedPolishedTranscript = DictationTranscriptPolicy.normalize(polishedTranscript)
@@ -255,7 +271,15 @@ where TargetProvider: DictationTargetCapturing,
             }
 
             stage = .insertion
+            #if DEBUG
+            let insertionStart = ProcessInfo.processInfo.systemUptime
+            #endif
             try await inserter.insert(transcript, into: target)
+            #if DEBUG
+            dictationControllerLatencyLogger.notice(
+                "stage=insertion ms=\(Int(((ProcessInfo.processInfo.systemUptime - insertionStart) * 1_000).rounded()), privacy: .public)"
+            )
+            #endif
             try Task.checkCancellation()
             guard isCurrent(expectedSession, state: .inserting) else { return }
 

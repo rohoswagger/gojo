@@ -17,13 +17,6 @@ enum DictationProvider: String, CaseIterable, Identifiable, Sendable {
         case .openRouter: return "OpenRouter"
         }
     }
-
-    var prompt: String {
-        switch self {
-        case .local: return "Transcribe privately on this Mac using an installed voice model."
-        case .openRouter: return "Send audio to OpenRouter for cloud transcription."
-        }
-    }
 }
 
 enum DictationOpenRouterSettings {

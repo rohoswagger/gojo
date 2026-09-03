@@ -178,6 +178,8 @@ final class GojoDictationService: ObservableObject {
     @Published private(set) var isRefreshingOpenRouterModels = false
     @Published private(set) var openRouterModelError: String?
     @Published private(set) var hasOpenRouterAPIKey: Bool
+    @Published private(set) var isPreparingTranscriber = false
+    @Published private(set) var openRouterAPIKeyHint: String?
     @Published private(set) var cleanupEnabled: Bool
     @Published private(set) var writingStyle: DictationWritingStyle
     @Published private(set) var vocabulary: [DictationVocabularyEntry]
@@ -215,6 +217,7 @@ final class GojoDictationService: ObservableObject {
         ) ?? ""
         let savedOpenRouterAPIKey = try? DictationKeychain.loadOpenRouterAPIKey()
         hasOpenRouterAPIKey = savedOpenRouterAPIKey != nil
+        openRouterAPIKeyHint = Self.maskedAPIKeyHint(savedOpenRouterAPIKey)
         let savedCleanupEnabled = UserDefaults.standard.object(
             forKey: DictationOpenRouterSettings.polishingEnabledDefaultsKey
         ) as? Bool ?? false
@@ -290,6 +293,30 @@ final class GojoDictationService: ObservableObject {
         if selectedProvider == .openRouter {
             refreshOpenRouterModels()
         }
+        warmSelectedTranscriber()
+    }
+
+    /// Loads the selected local speech model in the background so the first
+    /// dictation of a session does not stall in `.transcribing` while multiple
+    /// hundred megabytes of CoreML weights load. The transcriber caches the
+    /// loaded manager, so this is a one-time cost per model per launch.
+    private func warmSelectedTranscriber() {
+        guard selectedProvider == .local else { return }
+        Task { [weak self, localTranscriber] in
+            await self?.loadInitialModelStatusIfNeeded()
+            guard let self, self.installedModels.contains(self.selectedModel) else { return }
+            self.isPreparingTranscriber = true
+            #if DEBUG
+            let warmStart = ProcessInfo.processInfo.systemUptime
+            #endif
+            await localTranscriber.prepare()
+            #if DEBUG
+            dictationLatencyLogger.notice(
+                "stage=transcriberWarm ms=\(Int(((ProcessInfo.processInfo.systemUptime - warmStart) * 1_000).rounded()), privacy: .public)"
+            )
+            #endif
+            self.isPreparingTranscriber = false
+        }
     }
 
     var stateDetail: String? {
@@ -299,12 +326,6 @@ final class GojoDictationService: ObservableObject {
 
     var isModelReady: Bool {
         installedModels.contains(selectedModel)
-    }
-
-    var sonioxAvailable: Bool {
-        availableOpenRouterModels.contains {
-            $0.id == DictationOpenRouterSettings.defaultTranscriptionModel
-        }
     }
 
     var preparingModel: DictationModelID? {
@@ -356,6 +377,16 @@ final class GojoDictationService: ObservableObject {
         guard let controller else { return }
         switch event {
         case .keyDown:
+            if state == .transcribing, modelOperation == nil {
+                // A stuck or slow transcription must never hold the shortcut
+                // hostage: pressing it again abandons the in-flight session so
+                // a fresh one can start immediately. The controller publishes
+                // .idle asynchronously, so mirror it here before the guards run.
+                dictationShortcutLogger.notice("keyDown canceled in-flight transcription")
+                shortcutSessionGate.reset()
+                await controller.cancel()
+                receive(.idle)
+            }
             guard canChangeModel else {
                 let stateName: String
                 switch state {
@@ -493,6 +524,7 @@ final class GojoDictationService: ObservableObject {
                 try await localTranscriber.selectModel(model)
                 selectedModel = model
                 UserDefaults.standard.set(model.rawValue, forKey: Self.selectedModelKey)
+                warmSelectedTranscriber()
             } catch {
                 modelErrors[model] = "Gojo could not switch models. Try again."
             }
@@ -573,6 +605,7 @@ final class GojoDictationService: ObservableObject {
         switch provider {
         case .local:
             hasVerifiedOpenRouterModel = false
+            warmSelectedTranscriber()
         case .openRouter:
             refreshOpenRouterModels()
         }
@@ -588,6 +621,7 @@ final class GojoDictationService: ObservableObject {
         do {
             try DictationKeychain.saveOpenRouterAPIKey(trimmed)
             hasOpenRouterAPIKey = true
+            openRouterAPIKeyHint = Self.maskedAPIKeyHint(trimmed)
             openRouterModelError = nil
             refreshOpenRouterModels()
             return true
@@ -601,10 +635,18 @@ final class GojoDictationService: ObservableObject {
         do {
             try DictationKeychain.deleteOpenRouterAPIKey()
             hasOpenRouterAPIKey = false
+            openRouterAPIKeyHint = nil
             openRouterModelError = nil
         } catch {
             openRouterModelError = error.localizedDescription
         }
+    }
+
+    private static func maskedAPIKeyHint(_ key: String?) -> String? {
+        guard let key = key?.trimmingCharacters(in: .whitespacesAndNewlines), key.count >= 12 else {
+            return nil
+        }
+        return "\(key.prefix(5))******\(key.suffix(4))"
     }
 
     func refreshOpenRouterModels() {

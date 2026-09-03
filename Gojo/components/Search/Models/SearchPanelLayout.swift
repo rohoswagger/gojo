@@ -88,6 +88,10 @@ enum SearchPanelLayout {
         )
     }
 
+    static func headerPanelFrame(visibleFrame: CGRect) -> CGRect {
+        anchoredFrame(visibleFrame: visibleFrame, height: headerHeight)
+    }
+
     private static func anchoredFrame(visibleFrame: CGRect, height: CGFloat) -> CGRect {
         let x = visibleFrame.minX + (visibleFrame.width - width) / 2
         let topEdge = visibleFrame.maxY - visibleFrame.height * topInsetFraction

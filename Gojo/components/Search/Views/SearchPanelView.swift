@@ -1,63 +1,12 @@
 import AppKit
 import SwiftUI
 
-/// Spotlight-style content for the standalone search panel. Results grow below
-/// a fixed header and become scrollable once they reach the viewport cap.
-struct SearchPanelView: View {
+struct SearchHeaderView: View {
     @ObservedObject private var search = SearchStateViewModel.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var searchFieldFocused: Bool
 
-    private var trimmedQuery: String {
-        search.query.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private var hasResults: Bool {
-        !search.sections.isEmpty
-    }
-
-    private var showsNoResults: Bool {
-        !trimmedQuery.isEmpty && !search.isSearching && search.sections.isEmpty
-    }
-
     var body: some View {
-        GeometryReader { proxy in
-            panelSurface(
-                resultsViewportHeight: SearchPanelLayout.visibleResultsViewportHeight(
-                    desiredHeight: search.resultsViewportHeight,
-                    panelHeight: proxy.size.height
-                )
-            )
-            .frame(width: SearchPanelLayout.width)
-            .frame(height: proxy.size.height, alignment: .top)
-        }
-        .frame(width: SearchPanelLayout.width)
-        .onAppear {
-            focusSearchSoon()
-        }
-        .onChange(of: search.searchFocusRequestID) { _, _ in
-            focusSearchSoon()
-        }
-    }
-
-    private func panelSurface(resultsViewportHeight: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            searchFieldRow
-            resultContent(resultsViewportHeight: resultsViewportHeight)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(
-            VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: SearchPanelLayout.cornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: SearchPanelLayout.cornerRadius, style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 1)
-        )
-        .clipped()
-    }
-
-    private var searchFieldRow: some View {
         HStack(spacing: SearchPanelLayout.headerSpacing) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 17, weight: .medium))
@@ -109,15 +58,85 @@ struct SearchPanelView: View {
         }
         .padding(.horizontal, SearchPanelLayout.headerHorizontalPadding)
         .frame(
-            minWidth: 0,
-            maxWidth: .infinity,
-            minHeight: SearchPanelLayout.headerHeight,
-            maxHeight: SearchPanelLayout.headerHeight,
+            width: SearchPanelLayout.width,
+            height: SearchPanelLayout.headerHeight,
             alignment: .leading
         )
         .transaction { transaction in
             transaction.animation = nil
         }
+        .onAppear {
+            focusSearchSoon()
+        }
+        .onChange(of: search.searchFocusRequestID) { _, _ in
+            focusSearchSoon()
+        }
+    }
+
+    private func activateAndHide() {
+        guard search.activateSelection() else { return }
+        SearchPanelController.shared.hide()
+    }
+
+    private func handleEscape() {
+        if !search.query.isEmpty {
+            search.query = ""
+        } else {
+            SearchPanelController.shared.hide()
+        }
+    }
+
+    private func focusSearchSoon() {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(60))
+            searchFieldFocused = true
+        }
+    }
+}
+
+struct SearchResultsSurfaceView: View {
+    @ObservedObject private var search = SearchStateViewModel.shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var trimmedQuery: String {
+        search.query.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var hasResults: Bool {
+        !search.sections.isEmpty
+    }
+
+    private var showsNoResults: Bool {
+        !trimmedQuery.isEmpty && !search.isSearching && search.sections.isEmpty
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            VStack(alignment: .leading, spacing: 0) {
+                Color.clear
+                    .frame(height: SearchPanelLayout.headerHeight)
+
+                resultContent(
+                    resultsViewportHeight: SearchPanelLayout.visibleResultsViewportHeight(
+                        desiredHeight: search.resultsViewportHeight,
+                        panelHeight: proxy.size.height
+                    )
+                )
+            }
+            .frame(width: SearchPanelLayout.width, height: proxy.size.height, alignment: .top)
+            .background(
+                VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
+            )
+            .clipShape(
+                RoundedRectangle(cornerRadius: SearchPanelLayout.cornerRadius, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: SearchPanelLayout.cornerRadius, style: .continuous)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
+            )
+            .clipped()
+        }
+        .frame(width: SearchPanelLayout.width)
     }
 
     private var divider: some View {
@@ -133,12 +152,7 @@ struct SearchPanelView: View {
                 divider
                 resultsArea
                     .frame(height: resultsViewportHeight)
-                    .transition(
-                        .asymmetric(
-                            insertion: .opacity.combined(with: .offset(y: 6)),
-                            removal: .opacity
-                        )
-                    )
+                    .transition(.opacity)
                 divider
                 footer
             } else if showsNoResults {
@@ -148,11 +162,11 @@ struct SearchPanelView: View {
             }
         }
         .animation(
-            reduceMotion ? nil : .smooth(duration: 0.18),
+            reduceMotion ? nil : .easeOut(duration: 0.14),
             value: search.sections
         )
         .animation(
-            reduceMotion ? nil : .smooth(duration: 0.18),
+            reduceMotion ? nil : .easeOut(duration: 0.14),
             value: showsNoResults
         )
     }
@@ -197,7 +211,7 @@ struct SearchPanelView: View {
                                 }
                             }
                         }
-                        .transition(.opacity.combined(with: .offset(y: 6)))
+                        .transition(.opacity)
                     }
                 }
                 .padding(.vertical, 4)
@@ -256,30 +270,10 @@ struct SearchPanelView: View {
         }
     }
 
-    private func activateAndHide(result: SearchResult? = nil) {
-        if let result {
-            result.action()
-        } else {
-            guard search.activateSelection() else { return }
-        }
+    private func activateAndHide(result: SearchResult) {
+        result.action()
         SearchPanelController.shared.hide()
     }
-
-    private func handleEscape() {
-        if !search.query.isEmpty {
-            search.query = ""
-        } else {
-            SearchPanelController.shared.hide()
-        }
-    }
-
-    private func focusSearchSoon() {
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(60))
-            searchFieldFocused = true
-        }
-    }
-
 }
 
 private struct SearchResultRow: View {

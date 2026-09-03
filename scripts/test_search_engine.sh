@@ -19,8 +19,8 @@ if ! grep -Fq 'SearchPanelSpacePolicy.shouldHideAfterResigningKey(' Gojo/compone
   exit 1
 fi
 
-if ! grep -Fq 'isOnActiveSpace: panel.isOnActiveSpace' Gojo/components/Search/SearchPanelController.swift; then
-  echo "SearchPanelController does not read panel.isOnActiveSpace for resign-key policy" >&2
+if ! grep -Fq 'isOnActiveSpace: headerPanel.isOnActiveSpace' Gojo/components/Search/SearchPanelController.swift; then
+  echo "SearchPanelController does not read the fixed header's active-Space state" >&2
   exit 1
 fi
 
@@ -39,8 +39,26 @@ if ! grep -Fq 'SearchPanelLayout.panelFrame(' Gojo/components/Search/SearchPanel
   exit 1
 fi
 
-if ! grep -Fq 'SearchPanelHostingPolicy.configure(hostingView)' Gojo/components/Search/SearchPanelController.swift; then
-  echo "SearchPanelController still lets NSHostingView fight the native panel frame" >&2
+if ! grep -Fq 'SearchPanelLayout.headerPanelFrame(' Gojo/components/Search/SearchPanelController.swift; then
+  echo "SearchPanelController does not give the focused header an immutable native frame" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'private var headerPanel:' Gojo/components/Search/SearchPanelController.swift \
+  || ! grep -Fq 'private var surfacePanel:' Gojo/components/Search/SearchPanelController.swift; then
+  echo "SearchPanelController still hosts the focused header and animated results in one window" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'NSHostingView(rootView: SearchHeaderView())' Gojo/components/Search/SearchPanelController.swift \
+  || ! grep -Fq 'NSHostingView(rootView: SearchResultsSurfaceView())' Gojo/components/Search/SearchPanelController.swift; then
+  echo "SearchPanelController does not isolate header layout from results layout" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'SearchPanelHostingPolicy.configure(headerHostingView)' Gojo/components/Search/SearchPanelController.swift \
+  || ! grep -Fq 'SearchPanelHostingPolicy.configure(surfaceHostingView)' Gojo/components/Search/SearchPanelController.swift; then
+  echo "SearchPanelController still lets a hosting view fight its native panel frame" >&2
   exit 1
 fi
 
@@ -115,13 +133,25 @@ if grep -Fq 'setAffineTransform' Gojo/components/Search/SearchPanelController.sw
   exit 1
 fi
 
-if grep -Fq 'panel.animator().setFrame' Gojo/components/Search/SearchPanelController.swift; then
-  echo "SearchPanelController still animates native frame changes that move the focused header" >&2
+if grep -Fq 'headerPanel.animator().setFrame' Gojo/components/Search/SearchPanelController.swift; then
+  echo "SearchPanelController still animates the focused header's native frame" >&2
   exit 1
 fi
 
-if ! grep -Fq 'panel.setFrame(frame, display: true, animate: false)' Gojo/components/Search/SearchPanelController.swift; then
-  echo "SearchPanelController does not explicitly disable native frame animation" >&2
+if ! grep -Fq 'headerPanel.setFrame(headerFrame, display: true, animate: false)' Gojo/components/Search/SearchPanelController.swift; then
+  echo "SearchPanelController does not keep header positioning non-animated" >&2
+  exit 1
+fi
+
+header_frame_line="$(grep -nF 'headerPanel.setFrame(headerFrame, display: true, animate: false)' Gojo/components/Search/SearchPanelController.swift | cut -d: -f1)"
+surface_frame_line="$(grep -nF 'surfacePanel.setFrame(surfaceFrame, display: true, animate: false)' Gojo/components/Search/SearchPanelController.swift | cut -d: -f1)"
+if [ "$header_frame_line" -ge "$surface_frame_line" ]; then
+  echo "SearchPanelController positions its child surface before its fixed parent header" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'surfacePanel.animator().setFrame(frame, display: true)' Gojo/components/Search/SearchPanelController.swift; then
+  echo "SearchPanelController does not animate results independently below the fixed header" >&2
   exit 1
 fi
 

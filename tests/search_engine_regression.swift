@@ -266,6 +266,9 @@ struct SearchEngineRegressionRunner {
         let expectedTopEdge = visibleFrame.maxY
             - visibleFrame.height * SearchPanelLayout.topInsetFraction
         let stateHeights: [CGFloat] = [56, 56, 165, 418, 56]
+        let headerFrames = stateHeights.map { _ in
+            SearchPanelLayout.headerPanelFrame(visibleFrame: visibleFrame)
+        }
         let panelFrames = stateHeights.map { height in
             SearchPanelLayout.panelFrame(
                 visibleFrame: visibleFrame,
@@ -275,6 +278,20 @@ struct SearchEngineRegressionRunner {
         assertTrue(
             panelFrames.map(\.height) == stateHeights,
             "native search panel tracks the visible result surface without a transparent hit area"
+        )
+        assertTrue(
+            Set(headerFrames.map { NSStringFromRect($0) }).count == 1,
+            "the focused search header has one immutable native frame across every result state"
+        )
+        assertTrue(
+            headerFrames.allSatisfy { $0.height == SearchPanelLayout.headerHeight },
+            "the focused search header never inherits the results surface height"
+        )
+        assertTrue(
+            zip(headerFrames, panelFrames).allSatisfy { header, surface in
+                header.minX == surface.minX && header.maxY == surface.maxY
+            },
+            "the animated results surface stays registered behind the fixed header"
         )
         assertTrue(
             panelFrames.allSatisfy { abs($0.maxY - expectedTopEdge) < 0.001 },

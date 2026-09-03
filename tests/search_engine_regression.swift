@@ -9,6 +9,7 @@
 import AppKit
 import CoreGraphics
 import Foundation
+import SwiftUI
 
 func assertTrue(_ condition: @autoclosure () -> Bool, _ message: String) {
     if !condition() {
@@ -41,6 +42,10 @@ struct SearchEngineRegressionRunner {
         testCalculatorEngine()
         testFuzzyMatcher()
         testFrecencyMath()
+        testAppBundleIndexPolicy()
+        testSearchPanelLayout()
+        testSearchPanelHostingPolicy()
+        testSearchPanelResizeQueue()
         testSearchPanelSpacePolicy()
         testSearchHotkeyMatch()
         await testSystemSettingsSearch()
@@ -186,6 +191,193 @@ struct SearchEngineRegressionRunner {
             launchCount: 20, lastLaunchedAt: base, now: oneHalfLifeLater, halfLifeDays: halfLifeDays
         )
         assertClose(twentyCount, tenCount * 2, tolerance: 0.0001, "frecency scales linearly with launchCount")
+    }
+
+    // MARK: - AppBundleIndexPolicy
+
+    static func testAppBundleIndexPolicy() {
+        assertTrue(
+            AppBundleIndexPolicy.shouldInclude(infoDictionary: nil),
+            "apps without readable bundle metadata remain searchable"
+        )
+        assertTrue(
+            !AppBundleIndexPolicy.shouldInclude(infoDictionary: ["LSUIElement": true]),
+            "UI-element agents stay out of application results"
+        )
+        assertTrue(
+            !AppBundleIndexPolicy.shouldInclude(infoDictionary: ["LSUIElement": "1"]),
+            "string-valued UI-element agents stay out of application results"
+        )
+        assertTrue(
+            !AppBundleIndexPolicy.shouldInclude(infoDictionary: ["LSBackgroundOnly": true]),
+            "background-only apps stay out of application results"
+        )
+        assertTrue(
+            AppBundleIndexPolicy.shouldInclude(infoDictionary: ["LSUIElement": false]),
+            "ordinary applications remain searchable"
+        )
+    }
+
+    // MARK: - SearchPanelLayout
+
+    static func testSearchPanelLayout() {
+        assertTrue(
+            SearchPanelLayout.constrainedHeight(contentHeight: 20, visibleFrameHeight: 900) == 56,
+            "search panel never shrinks below the search field"
+        )
+        assertTrue(
+            SearchPanelLayout.constrainedHeight(contentHeight: 320, visibleFrameHeight: 900) == 320,
+            "search panel preserves content height when it fits"
+        )
+        assertTrue(
+            SearchPanelLayout.constrainedHeight(contentHeight: 800, visibleFrameHeight: 500) == 344,
+            "search panel stays above the screen bottom margin"
+        )
+        let oneResult = [SearchPanelLayout.SectionMetrics(resultCount: 1, usesCalculatorRow: false)]
+        let manyResults = [SearchPanelLayout.SectionMetrics(resultCount: 20, usesCalculatorRow: false)]
+        let calculator = [SearchPanelLayout.SectionMetrics(resultCount: 1, usesCalculatorRow: true)]
+
+        assertTrue(
+            SearchPanelLayout.panelHeight(hasQuery: false, isSearching: false, sections: []) == 56,
+            "empty search keeps the compact header"
+        )
+        assertTrue(
+            SearchPanelLayout.panelHeight(hasQuery: true, isSearching: true, sections: []) == 56,
+            "search stays compact until the first results arrive"
+        )
+        assertTrue(
+            SearchPanelLayout.panelHeight(hasQuery: true, isSearching: false, sections: []) == 117,
+            "finished empty search grows only enough for its message"
+        )
+        assertTrue(
+            SearchPanelLayout.panelHeight(hasQuery: true, isSearching: false, sections: oneResult) == 165,
+            "a single result uses its natural compact height"
+        )
+        assertTrue(
+            SearchPanelLayout.panelHeight(hasQuery: true, isSearching: false, sections: calculator) == 193,
+            "calculator results use their taller row height"
+        )
+        assertTrue(
+            SearchPanelLayout.panelHeight(hasQuery: true, isSearching: false, sections: manyResults) == 418,
+            "large result sets stop growing at the scrollable viewport cap"
+        )
+
+        let visibleFrame = CGRect(x: 100, y: 50, width: 1_440, height: 900)
+        let expectedTopEdge = visibleFrame.maxY
+            - visibleFrame.height * SearchPanelLayout.topInsetFraction
+        let stateHeights: [CGFloat] = [56, 56, 165, 418, 56]
+        let headerFrames = stateHeights.map { _ in
+            SearchPanelLayout.headerPanelFrame(visibleFrame: visibleFrame)
+        }
+        let panelFrames = stateHeights.map { height in
+            SearchPanelLayout.panelFrame(
+                visibleFrame: visibleFrame,
+                contentHeight: height
+            )
+        }
+        assertTrue(
+            panelFrames.map(\.height) == stateHeights,
+            "native search panel tracks the visible result surface without a transparent hit area"
+        )
+        assertTrue(
+            Set(headerFrames.map { NSStringFromRect($0) }).count == 1,
+            "the focused search header has one immutable native frame across every result state"
+        )
+        assertTrue(
+            headerFrames.allSatisfy { $0.height == SearchPanelLayout.headerHeight },
+            "the focused search header never inherits the results surface height"
+        )
+        assertTrue(
+            zip(headerFrames, panelFrames).allSatisfy { header, surface in
+                header.minX == surface.minX && header.maxY == surface.maxY
+            },
+            "the animated results surface stays registered behind the fixed header"
+        )
+        assertTrue(
+            panelFrames.allSatisfy { abs($0.maxY - expectedTopEdge) < 0.001 },
+            "every result state preserves the exact search-header top edge"
+        )
+        assertTrue(
+            panelFrames.allSatisfy { $0.minX == 480 },
+            "every result state preserves the exact horizontal position"
+        )
+        assertTrue(
+            Set(panelFrames.map(\.maxY)).count == 1,
+            "streaming and clearing results cannot move the header vertically"
+        )
+
+        let shortDisplayFrame = SearchPanelLayout.panelFrame(
+            visibleFrame: CGRect(x: 0, y: 50, width: 1_000, height: 500),
+            contentHeight: SearchPanelLayout.maximumContentHeight
+        )
+        assertTrue(
+            shortDisplayFrame.minY == 66,
+            "capped result panels preserve the bottom screen margin"
+        )
+        assertTrue(
+            SearchPanelLayout.visibleResultsViewportHeight(
+                desiredHeight: 330,
+                panelHeight: shortDisplayFrame.height
+            ) == 256,
+            "short displays keep the header and footer while results remain scrollable"
+        )
+        assertTrue(SearchPanelLayout.searchIconCenterX == 30, "magnifier keeps a fixed horizontal center")
+        assertTrue(SearchPanelLayout.queryLeadingX == 54, "query text keeps a fixed leading edge")
+    }
+
+    // MARK: - SearchPanelHostingPolicy
+
+    static func testSearchPanelHostingPolicy() {
+        let hostingView = NSHostingView(
+            rootView: GeometryReader { _ in Color.clear }
+                .frame(width: SearchPanelLayout.width)
+        )
+        SearchPanelHostingPolicy.configure(hostingView)
+
+        assertTrue(
+            hostingView.sizingOptions.isEmpty,
+            "the native panel remains the only search-host size authority"
+        )
+    }
+
+    // MARK: - SearchPanelResizeQueue
+
+    static func testSearchPanelResizeQueue() {
+        var queue = SearchPanelResizeQueue()
+
+        assertTrue(
+            queue.enqueue(165),
+            "the first resize schedules one next-run-loop flush"
+        )
+        assertTrue(
+            !queue.enqueue(418),
+            "additional result batches coalesce instead of scheduling nested layout"
+        )
+        assertTrue(
+            queue.takePendingHeight() == 418,
+            "the scheduled flush applies only the latest result height"
+        )
+        assertTrue(
+            queue.takePendingHeight() == nil,
+            "a completed flush cannot replay a stale panel height"
+        )
+        assertTrue(
+            queue.enqueue(56),
+            "a later clear can schedule a fresh resize"
+        )
+        queue.cancelPending()
+        assertTrue(
+            queue.takePendingHeight() == nil,
+            "hiding the panel cancels queued layout work"
+        )
+
+        assertTrue(queue.enqueue(56), "loading state can schedule its compact height")
+        assertTrue(queue.takePendingHeight() == 56, "loading height flushes correctly")
+        assertTrue(queue.enqueue(117), "a completed empty search schedules its message height")
+        assertTrue(
+            queue.takePendingHeight() == 117,
+            "post-search state cannot be suppressed by a stale loading height"
+        )
     }
 
     // MARK: - SearchPanelSpacePolicy

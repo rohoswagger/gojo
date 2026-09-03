@@ -15,15 +15,13 @@ final class SearchStateViewModel: ObservableObject {
 
     @Published var query: String = ""
     @Published private(set) var sections: [SearchSection] = []
+    @Published private(set) var isSearching = false
     @Published private(set) var selectedResultID: String?
     @Published private(set) var searchFocusRequestID = UUID()
 
-    /// Whether the most recent `selectedResultID` change came from the
-    /// keyboard (arrow keys, auto-select-first-result) as opposed to a
-    /// mouse hover. Views use this to decide whether to auto-scroll —
-    /// scrolling in response to a hover-driven selection change would
-    /// move rows under a stationary cursor and re-trigger hover, causing
-    /// jitter.
+    /// Whether the most recent `selectedResultID` change came from an arrow
+    /// key. Views only auto-scroll for explicit keyboard navigation; automatic
+    /// first-result selection and mouse hover must not move the list.
     private(set) var lastSelectionWasKeyboard = true
 
     /// Providers are fanned out in this order and sections publish in this
@@ -37,6 +35,7 @@ final class SearchStateViewModel: ObservableObject {
     ]
 
     private var searchTask: Task<Void, Never>?
+    private var searchGeneration = 0
     private var cancellables = Set<AnyCancellable>()
 
     private init() {
@@ -47,6 +46,31 @@ final class SearchStateViewModel: ObservableObject {
         sections.flatMap { $0.results }
     }
 
+    var hasQuery: Bool {
+        !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var resultsViewportHeight: CGFloat {
+        SearchPanelLayout.resultsViewportHeight(sections: layoutSectionMetrics)
+    }
+
+    var panelHeight: CGFloat {
+        SearchPanelLayout.panelHeight(
+            hasQuery: hasQuery,
+            isSearching: isSearching,
+            sections: layoutSectionMetrics
+        )
+    }
+
+    private var layoutSectionMetrics: [SearchPanelLayout.SectionMetrics] {
+        sections.map { section in
+            SearchPanelLayout.SectionMetrics(
+                resultCount: section.results.count,
+                usesCalculatorRow: section.results.count == 1 && section.results[0].kind == .calculator
+            )
+        }
+    }
+
     func requestSearchFocus() {
         searchFocusRequestID = UUID()
     }
@@ -55,6 +79,8 @@ final class SearchStateViewModel: ObservableObject {
     func reset() {
         searchTask?.cancel()
         searchTask = nil
+        searchGeneration += 1
+        isSearching = false
         query = ""
         sections = []
         selectedResultID = nil
@@ -106,22 +132,31 @@ final class SearchStateViewModel: ObservableObject {
 
     private func handleQueryChanged(_ newQuery: String) {
         searchTask?.cancel()
+        searchGeneration += 1
+        let generation = searchGeneration
 
         let trimmed = newQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, Defaults[.searchEnabled] else {
+            isSearching = false
             sections = []
             selectedResultID = nil
             return
         }
 
+        isSearching = true
+        sections = []
+        selectedResultID = nil
+
         searchTask = Task { [weak self] in
             try? await Task.sleep(for: Self.debounceInterval)
-            guard !Task.isCancelled else { return }
-            await self?.runSearch(query: newQuery)
+            guard let self, !Task.isCancelled, generation == self.searchGeneration else { return }
+            await self.runSearch(query: newQuery, generation: generation)
+            guard !Task.isCancelled, generation == self.searchGeneration else { return }
+            self.isSearching = false
         }
     }
 
-    private func runSearch(query: String) async {
+    private func runSearch(query: String, generation: Int) async {
         guard !Task.isCancelled else { return }
 
         await withTaskGroup(of: (String, [SearchResult]).self) { group in
@@ -133,17 +168,26 @@ final class SearchStateViewModel: ObservableObject {
             }
 
             var resultsByProvider: [String: [SearchResult]] = [:]
+            var completedProviderIDs = Set<String>()
             for await (providerID, results) in group {
-                guard !Task.isCancelled else { return }
+                guard !Task.isCancelled, generation == searchGeneration else { return }
+                completedProviderIDs.insert(providerID)
                 resultsByProvider[providerID] = results
-                publishSections(resultsByProvider: resultsByProvider)
+                publishSections(
+                    resultsByProvider: resultsByProvider,
+                    completedProviderIDs: completedProviderIDs
+                )
             }
         }
     }
 
-    private func publishSections(resultsByProvider: [String: [SearchResult]]) {
+    private func publishSections(
+        resultsByProvider: [String: [SearchResult]],
+        completedProviderIDs: Set<String>
+    ) {
         var newSections: [SearchSection] = []
         for provider in providers {
+            guard completedProviderIDs.contains(provider.providerID) else { break }
             guard let results = resultsByProvider[provider.providerID], !results.isEmpty else { continue }
             let sorted = results.sorted { $0.score > $1.score }
             newSections.append(SearchSection(id: provider.providerID, title: provider.sectionTitle, results: sorted))
@@ -159,7 +203,7 @@ final class SearchStateViewModel: ObservableObject {
             return
         }
         if selectedResultID == nil || !flat.contains(where: { $0.id == selectedResultID }) {
-            lastSelectionWasKeyboard = true
+            lastSelectionWasKeyboard = false
             selectedResultID = flat.first?.id
         }
     }

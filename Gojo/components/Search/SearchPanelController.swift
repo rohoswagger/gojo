@@ -2,22 +2,25 @@
 //  SearchPanelController.swift
 //  Gojo
 //
-//  Owns the standalone, Spotlight-style floating search panel. Replaces the
-//  old in-notch Search tab: this is a borderless, non-activating NSPanel
-//  positioned above the screen containing the mouse, independent of any
-//  notch window.
+//  Owns the standalone, Spotlight-style floating search panel.
 //
 
 import AppKit
+import Combine
 import SwiftUI
 
-/// Borderless, non-activating panel that hosts `SearchPanelView`. Mirrors
-/// the level/collectionBehavior conventions of `GojoWindow` so it layers
-/// consistently with the rest of the app's floating surfaces.
 private final class SearchPanel: NSPanel {
-    init() {
+    private let acceptsKey: Bool
+
+    init(height: CGFloat, hasShadow: Bool, acceptsKey: Bool) {
+        self.acceptsKey = acceptsKey
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 680, height: 56),
+            contentRect: NSRect(
+                x: 0,
+                y: 0,
+                width: SearchPanelLayout.width,
+                height: height
+            ),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -25,15 +28,17 @@ private final class SearchPanel: NSPanel {
 
         isFloatingPanel = true
         level = .mainMenu + 3
+        animationBehavior = .none
         collectionBehavior = SearchPanelSpacePolicy.collectionBehavior
         isReleasedWhenClosed = false
-        hasShadow = true
+        self.hasShadow = hasShadow
         isOpaque = false
         backgroundColor = .clear
         isMovable = false
+        becomesKeyOnlyIfNeeded = !acceptsKey
     }
 
-    override var canBecomeKey: Bool { true }
+    override var canBecomeKey: Bool { acceptsKey }
     override var canBecomeMain: Bool { false }
 }
 
@@ -41,23 +46,12 @@ private final class SearchPanel: NSPanel {
 final class SearchPanelController: NSObject {
     static let shared = SearchPanelController()
 
-    /// Panel width is fixed; only height animates with content.
-    private static let panelWidth: CGFloat = 680
-    /// Top edge sits this fraction down from the screen's visible top.
-    private static let topInsetFraction: CGFloat = 0.28
-    private static let minHeight: CGFloat = 56
-
-    private var panel: SearchPanel?
+    private var headerPanel: SearchPanel?
+    private var surfacePanel: SearchPanel?
     private var resignKeyObserver: NSObjectProtocol?
-
-    /// Incremented on every hide() call; a hide's fade-completion closure
-    /// captures its generation and only acts if it's still current. This
-    /// invalidates stale completions from a hide() that was superseded by a
-    /// later show()/hide() before its fade finished.
+    private var searchHeightCancellable: AnyCancellable?
+    private var resizeQueue = SearchPanelResizeQueue()
     private var hideGeneration = 0
-    /// True from the moment a hide's fade starts until its (non-stale)
-    /// completion runs. Lets toggle() and updateContentHeight() recognize an
-    /// in-flight hide rather than racing it.
     private var isHiding = false
 
     private override init() {
@@ -65,13 +59,13 @@ final class SearchPanelController: NSObject {
     }
 
     var isVisible: Bool {
-        panel?.isVisible ?? false
+        headerPanel?.isVisible ?? false
     }
 
     func toggle() {
         if SearchPanelSpacePolicy.shouldHideOnToggle(
             isVisible: isVisible,
-            isOnActiveSpace: panel?.isOnActiveSpace ?? false,
+            isOnActiveSpace: headerPanel?.isOnActiveSpace ?? false,
             isHiding: isHiding
         ) {
             hide()
@@ -81,34 +75,34 @@ final class SearchPanelController: NSObject {
     }
 
     func show() {
-        let panel = panelOrMake()
+        let panels = panelsOrMake()
 
-        // Invalidate any pending hide completion and cancel the in-flight
-        // hide state so a reopen mid-fade behaves cleanly.
         isHiding = false
         hideGeneration += 1
+        resizeQueue.cancelPending()
 
-        let screen = screenContainingMouse()
-        positionPanel(panel, on: screen, height: Self.minHeight, animated: false)
-
-        panel.alphaValue = 0
-        centerAnchorPoint(of: panel)
-        panel.contentView?.layer?.setAffineTransform(
-            CGAffineTransform(scaleX: 0.98, y: 0.98)
+        positionPanels(
+            headerPanel: panels.header,
+            surfacePanel: panels.surface,
+            on: screenContainingMouse(),
+            contentHeight: SearchStateViewModel.shared.panelHeight
         )
 
-        panel.makeKeyAndOrderFront(nil)
+        panels.header.alphaValue = 0
+        panels.surface.alphaValue = 0
+        panels.surface.orderFront(nil)
+        panels.header.makeKeyAndOrderFront(nil)
 
         if reduceMotion {
-            panel.alphaValue = 1
-            panel.contentView?.layer?.setAffineTransform(.identity)
+            panels.header.alphaValue = 1
+            panels.surface.alphaValue = 1
         } else {
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = 0.15
                 context.timingFunction = CAMediaTimingFunction(name: .easeOut)
                 context.allowsImplicitAnimation = true
-                panel.animator().alphaValue = 1
-                panel.contentView?.layer?.setAffineTransform(.identity)
+                panels.header.animator().alphaValue = 1
+                panels.surface.animator().alphaValue = 1
             }
         }
 
@@ -116,62 +110,91 @@ final class SearchPanelController: NSObject {
     }
 
     func hide() {
-        guard let panel, panel.isVisible else { return }
+        guard let headerPanel, let surfacePanel, headerPanel.isVisible else { return }
 
         hideGeneration += 1
         let generation = hideGeneration
+        resizeQueue.cancelPending()
+        isHiding = true
 
         if reduceMotion {
-            isHiding = true
-            panel.orderOut(nil)
+            orderOut(headerPanel: headerPanel, surfacePanel: surfacePanel)
             SearchStateViewModel.shared.reset()
             isHiding = false
             return
         }
 
-        isHiding = true
-
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = 0.12
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
             context.allowsImplicitAnimation = true
-            panel.animator().alphaValue = 0
+            headerPanel.animator().alphaValue = 0
+            surfacePanel.animator().alphaValue = 0
         }, completionHandler: { [weak self] in
             guard let self, generation == self.hideGeneration else { return }
-            panel.orderOut(nil)
-            panel.alphaValue = 1
+            self.orderOut(headerPanel: headerPanel, surfacePanel: surfacePanel)
             SearchStateViewModel.shared.reset()
             self.isHiding = false
         })
     }
 
-    /// Called by the SwiftUI content whenever its measured height changes.
-    /// Keeps the panel's top edge fixed while animating the frame.
-    func updateContentHeight(_ contentHeight: CGFloat) {
-        guard let panel, panel.isVisible, !isHiding else { return }
-        let screen = panel.screen ?? screenContainingMouse()
-        let clamped = max(Self.minHeight, contentHeight)
-        positionPanel(panel, on: screen, height: clamped, animated: true)
+    func scheduleContentHeightUpdate(_ contentHeight: CGFloat) {
+        guard headerPanel?.isVisible == true, !isHiding else { return }
+        guard resizeQueue.enqueue(contentHeight) else { return }
+
+        DispatchQueue.main.async { [weak self] in
+            self?.applyPendingContentHeight()
+        }
     }
 
-    private func panelOrMake() -> SearchPanel {
-        if let panel {
-            return panel
+    private func applyPendingContentHeight() {
+        guard let contentHeight = resizeQueue.takePendingHeight() else { return }
+        guard let headerPanel, let surfacePanel, headerPanel.isVisible, !isHiding else { return }
+        positionSurfacePanel(
+            surfacePanel,
+            on: headerPanel.screen ?? screenContainingMouse(),
+            contentHeight: contentHeight,
+            animated: true
+        )
+    }
+
+    private func panelsOrMake() -> (header: SearchPanel, surface: SearchPanel) {
+        if let headerPanel, let surfacePanel {
+            return (headerPanel, surfacePanel)
         }
 
-        let panel = SearchPanel()
-        panel.contentView = NSHostingView(rootView: SearchPanelView())
-        panel.contentView?.wantsLayer = true
+        let surfacePanel = SearchPanel(
+            height: SearchPanelLayout.headerHeight,
+            hasShadow: true,
+            acceptsKey: false
+        )
+        let surfaceHostingView = NSHostingView(rootView: SearchResultsSurfaceView())
+        SearchPanelHostingPolicy.configure(surfaceHostingView)
+        surfacePanel.contentView = surfaceHostingView
+        surfacePanel.contentView?.wantsLayer = true
+        surfacePanel.contentView?.layer?.cornerRadius = SearchPanelLayout.cornerRadius
+        surfacePanel.contentView?.layer?.cornerCurve = .continuous
+        surfacePanel.contentView?.layer?.masksToBounds = true
+
+        let headerPanel = SearchPanel(
+            height: SearchPanelLayout.headerHeight,
+            hasShadow: false,
+            acceptsKey: true
+        )
+        let headerHostingView = NSHostingView(rootView: SearchHeaderView())
+        SearchPanelHostingPolicy.configure(headerHostingView)
+        headerPanel.contentView = headerHostingView
+        headerPanel.addChildWindow(surfacePanel, ordered: .below)
 
         resignKeyObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.didResignKeyNotification,
-            object: panel,
+            object: headerPanel,
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in
                 guard let self else { return }
                 guard SearchPanelSpacePolicy.shouldHideAfterResigningKey(
-                    isOnActiveSpace: panel.isOnActiveSpace
+                    isOnActiveSpace: headerPanel.isOnActiveSpace
                 ) else {
                     return
                 }
@@ -179,44 +202,84 @@ final class SearchPanelController: NSObject {
             }
         }
 
-        self.panel = panel
-        return panel
+        observeSearchHeight()
+        self.headerPanel = headerPanel
+        self.surfacePanel = surfacePanel
+        return (headerPanel, surfacePanel)
     }
 
-    private func positionPanel(_ panel: NSPanel, on screen: NSScreen, height: CGFloat, animated: Bool) {
-        let visibleFrame = screen.visibleFrame
-        let width = Self.panelWidth
-        let x = visibleFrame.minX + (visibleFrame.width - width) / 2
-        // AppKit's origin is bottom-left, so the top edge is computed from
-        // the top of the visible frame minus the inset, then the origin.y
-        // is derived by subtracting the panel height from that top edge.
-        let topEdgeY = visibleFrame.maxY - visibleFrame.height * Self.topInsetFraction
-        let y = topEdgeY - height
+    private func observeSearchHeight() {
+        let search = SearchStateViewModel.shared
+        searchHeightCancellable = Publishers.CombineLatest3(
+            search.$query,
+            search.$isSearching,
+            search.$sections
+        )
+            .map { query, isSearching, sections in
+                let hasQuery = !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                let metrics = sections.map { section in
+                    SearchPanelLayout.SectionMetrics(
+                        resultCount: section.results.count,
+                        usesCalculatorRow: section.results.count == 1
+                            && section.results[0].kind == .calculator
+                    )
+                }
+                return SearchPanelLayout.panelHeight(
+                    hasQuery: hasQuery,
+                    isSearching: isSearching,
+                    sections: metrics
+                )
+            }
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] contentHeight in
+                self?.scheduleContentHeightUpdate(contentHeight)
+            }
+    }
 
-        let newFrame = NSRect(x: x, y: y, width: width, height: height)
+    private func positionPanels(
+        headerPanel: NSPanel,
+        surfacePanel: NSPanel,
+        on screen: NSScreen,
+        contentHeight: CGFloat
+    ) {
+        let surfaceFrame = SearchPanelLayout.panelFrame(
+            visibleFrame: screen.visibleFrame,
+            contentHeight: contentHeight
+        )
+        let headerFrame = SearchPanelLayout.headerPanelFrame(visibleFrame: screen.visibleFrame)
+        headerPanel.setFrame(headerFrame, display: true, animate: false)
+        surfacePanel.setFrame(surfaceFrame, display: true, animate: false)
+    }
 
+    private func positionSurfacePanel(
+        _ surfacePanel: NSPanel,
+        on screen: NSScreen,
+        contentHeight: CGFloat,
+        animated: Bool
+    ) {
+        let frame = SearchPanelLayout.panelFrame(
+            visibleFrame: screen.visibleFrame,
+            contentHeight: contentHeight
+        )
         guard animated, !reduceMotion else {
-            panel.setFrame(newFrame, display: true)
+            surfacePanel.setFrame(frame, display: true, animate: false)
             return
         }
 
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.15
-            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            context.duration = 0.18
+            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.16, 1, 0.3, 1)
             context.allowsImplicitAnimation = true
-            panel.animator().setFrame(newFrame, display: true)
+            surfacePanel.animator().setFrame(frame, display: true)
         }
     }
 
-    /// Re-anchors the content layer to its center so the show() scale
-    /// transform grows from the middle of the panel rather than from the
-    /// layer's default bottom-left anchor point. Changing `anchorPoint`
-    /// shifts `position`, so `position` is recomputed to the bounds'
-    /// midpoint to compensate and keep the layer visually in place.
-    private func centerAnchorPoint(of panel: NSPanel) {
-        guard let layer = panel.contentView?.layer else { return }
-        layer.anchorPoint = CGPoint(x: 0.5, y: 0.5)
-        layer.position = CGPoint(x: layer.bounds.midX, y: layer.bounds.midY)
+    private func orderOut(headerPanel: NSPanel, surfacePanel: NSPanel) {
+        headerPanel.orderOut(nil)
+        surfacePanel.orderOut(nil)
+        headerPanel.alphaValue = 1
+        surfacePanel.alphaValue = 1
     }
 
     private func screenContainingMouse() -> NSScreen {

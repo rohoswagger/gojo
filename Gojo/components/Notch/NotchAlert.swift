@@ -57,51 +57,62 @@ struct NotchAlert: Equatable, Identifiable, Sendable {
     }
 }
 
-/// Renders an alert across the closed notch: message on the left, the physical
-/// notch cutout in the middle, severity glyph on the right. The layout mirrors
-/// the battery notification so both read as the same system.
+/// Renders an alert directly beneath the physical notch.
+///
+/// The camera housing occupies the top strip, so the message is offset below
+/// it rather than squeezed into the slivers on either side — the notch simply
+/// grows taller for as long as the alert is up, and the text gets the full
+/// width to read across.
 struct NotchAlertView: View {
     let alert: NotchAlert
     let closedNotchWidth: CGFloat
-    let height: CGFloat
+    let notchHeight: CGFloat
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// Width added to each side of the notch cutout for the banner content.
-    static let sideWidth: CGFloat = 132
+    /// Width the message column needs to read comfortably without truncating.
+    private static let contentWidth: CGFloat = 360
+
+    /// Total width the notch takes while an alert is showing. The message
+    /// column is centered under the housing rather than beside it.
+    static func totalWidth(closedNotchWidth: CGFloat) -> CGFloat {
+        max(closedNotchWidth + 48, contentWidth)
+    }
 
     var body: some View {
-        HStack(spacing: 0) {
-            HStack(spacing: 6) {
+        VStack(spacing: 0) {
+            // Reserve the physical notch so nothing renders behind the camera.
+            Color.clear
+                .frame(width: max(0, closedNotchWidth), height: notchHeight)
+
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Image(systemName: alert.severity.symbol)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(alert.severity.tint)
 
-                Text(alert.message)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
-            .padding(.leading, 12)
-            .frame(width: Self.sideWidth, alignment: .leading)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(alert.message)
+                        .font(.system(size: 12.5, weight: .medium))
+                        .foregroundStyle(.white)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .multilineTextAlignment(.leading)
 
-            Color.black
-                .frame(width: max(0, closedNotchWidth), height: height)
-
-            HStack {
-                if let hint = alert.hint {
-                    Text(hint)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.62))
-                        .lineLimit(1)
-                        .truncationMode(.tail)
+                    if let hint = alert.hint {
+                        Text(hint)
+                            .font(.system(size: 11, weight: .regular))
+                            .foregroundStyle(.white.opacity(0.6))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .multilineTextAlignment(.leading)
+                    }
                 }
+
+                Spacer(minLength: 0)
             }
-            .padding(.trailing, 12)
-            .frame(width: Self.sideWidth, alignment: .trailing)
+            .padding(.horizontal, 18)
+            .padding(.top, 9)
+            .padding(.bottom, 12)
         }
-        .frame(height: height)
+        .frame(width: Self.totalWidth(closedNotchWidth: closedNotchWidth))
         .animation(.easeOut(duration: reduceMotion ? 0 : 0.16), value: alert)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(

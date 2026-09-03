@@ -65,7 +65,16 @@ struct NotchAlertRegressionRunner {
 
         // The banner reserves fixed side widths; a zero/negative value would collapse
         // the layout around the physical notch cutout.
-        assertCondition(NotchAlertView.sideWidth > 0, "banner side width must be positive")
+        // The banner must always clear the physical notch horizontally, or the
+        // message would render behind the camera housing.
+        assertCondition(
+            NotchAlertView.totalWidth(closedNotchWidth: 200) > 200,
+            "banner must be wider than the notch it sits under"
+        )
+        assertCondition(
+            NotchAlertView.totalWidth(closedNotchWidth: 0) > 0,
+            "banner keeps a usable width on displays without a notch"
+        )
 
         if failures == 0 {
             print("notch-alert-regression-pass")

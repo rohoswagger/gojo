@@ -66,7 +66,7 @@ struct ContentView: View {
         var chinWidth: CGFloat = vm.closedNotchSize.width
 
         if shouldShowNotchAlert {
-            chinWidth += 2 * NotchAlertView.sideWidth
+            chinWidth = NotchAlertView.totalWidth(closedNotchWidth: vm.closedNotchSize.width)
         } else if shouldShowDictationActivity {
             chinWidth += 2 * DictationNotchActivity.sideWidth(
                 for: vm.effectiveClosedNotchHeight
@@ -313,7 +313,7 @@ struct ContentView: View {
                         NotchAlertView(
                             alert: alert,
                             closedNotchWidth: vm.closedNotchSize.width,
-                            height: vm.effectiveClosedNotchHeight
+                            notchHeight: vm.effectiveClosedNotchHeight
                         )
                         .transition(.opacity)
                     } else if shouldShowDictationActivity, let phase = dictationActivity.phase {

@@ -1459,7 +1459,7 @@ struct DictationSettings: View {
                     }
                 }
                 if showsModelPreparation {
-                    Text("You can dictate now; the transcript waits for the model to finish loading.")
+                    Text("Dictation starts once the model finishes loading.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

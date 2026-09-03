@@ -65,7 +65,9 @@ struct ContentView: View {
     private var computedChinWidth: CGFloat {
         var chinWidth: CGFloat = vm.closedNotchSize.width
 
-        if shouldShowDictationActivity {
+        if shouldShowNotchAlert {
+            chinWidth += 2 * NotchAlertView.sideWidth
+        } else if shouldShowDictationActivity {
             chinWidth += 2 * DictationNotchActivity.sideWidth(
                 for: vm.effectiveClosedNotchHeight
             )
@@ -101,6 +103,10 @@ struct ContentView: View {
             return true
         }
         return screenUUID == coordinator.selectedScreenUUID
+    }
+
+    private var shouldShowNotchAlert: Bool {
+        coordinator.notchAlert != nil && vm.notchState == .closed
     }
 
     private var shouldShowDictationActivity: Bool {
@@ -303,7 +309,14 @@ struct ContentView: View {
                     .padding(.top, 40)
                     Spacer()
                 } else {
-                    if shouldShowDictationActivity, let phase = dictationActivity.phase {
+                    if shouldShowNotchAlert, let alert = coordinator.notchAlert {
+                        NotchAlertView(
+                            alert: alert,
+                            closedNotchWidth: vm.closedNotchSize.width,
+                            height: vm.effectiveClosedNotchHeight
+                        )
+                        .transition(.opacity)
+                    } else if shouldShowDictationActivity, let phase = dictationActivity.phase {
                         DictationNotchActivity(
                             phase: phase,
                             audioLevel: Double(dictation.audioLevel),

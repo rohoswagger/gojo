@@ -128,6 +128,7 @@ test-dictation: build
 	./tests/dictation_regression.sh
 	./tests/openrouter_dictation_regression.sh
 	./tests/dictation_offline_policy_regression.sh
+	./tests/notch_alert_regression.sh
 	bash ./tests/dictation_capture_probe_regression.sh
 	./tests/text_insertion_xpc_regression.sh
 	./tests/dictation_unicode_typing_regression.sh

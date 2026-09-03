@@ -397,6 +397,23 @@ final class GojoDictationService: ObservableObject {
                     receive(.idle)
                 }
             }
+            if isPreparingTranscriber, selectedProvider == .local {
+                // The model load is the long pole after launch. Starting a
+                // session now would capture audio the transcriber cannot serve
+                // for tens of seconds, which reads as a hang, so refuse and
+                // say why instead.
+                dictationShortcutLogger.notice("ignored keyDown while transcriber warming")
+                GojoViewCoordinator.shared.postNotchAlert(
+                    NotchAlert(
+                        source: .dictation,
+                        severity: .warning,
+                        message: "Preparing voice model…",
+                        hint: "Try again shortly"
+                    )
+                )
+                rejectShortcutStart()
+                return
+            }
             guard canChangeModel else {
                 let stateName: String
                 switch state {
@@ -603,7 +620,11 @@ final class GojoDictationService: ObservableObject {
         if case .error(let failure) = newState {
             let reason = failure.errorDescription ?? String(describing: failure)
             dictationPipelineLogger.error("state=error reason=\(reason, privacy: .public)")
+            GojoViewCoordinator.shared.postNotchAlert(
+                NotchAlert(source: .dictation, severity: .error, message: reason)
+            )
         } else if case .succeeded = newState {
+            GojoViewCoordinator.shared.dismissNotchAlert(from: .dictation)
             dictationPipelineLogger.notice("state=succeeded")
         }
     }

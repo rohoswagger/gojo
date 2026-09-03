@@ -297,6 +297,37 @@ class GojoViewCoordinator: ObservableObject {
         }
     }
     
+    /// The alert currently shown in the closed notch, if any.
+    ///
+    /// Posting is app-wide: any feature can surface a short failure message
+    /// here without owning notch layout. Alerts auto-hide, and a new alert
+    /// from the same source replaces the previous one so a retry loop cannot
+    /// stack banners.
+    @Published private(set) var notchAlert: NotchAlert?
+
+    private var notchAlertTask: Task<Void, Never>?
+    private static let notchAlertDuration: TimeInterval = 3.4
+
+    func postNotchAlert(_ alert: NotchAlert) {
+        notchAlertTask?.cancel()
+        notchAlert = alert
+        let alertID = alert.id
+        notchAlertTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Self.notchAlertDuration))
+            guard let self, !Task.isCancelled else { return }
+            guard self.notchAlert?.id == alertID else { return }
+            self.notchAlert = nil
+            self.notchAlertTask = nil
+        }
+    }
+
+    func dismissNotchAlert(from source: NotchAlert.Source? = nil) {
+        if let source, notchAlert?.source != source { return }
+        notchAlertTask?.cancel()
+        notchAlertTask = nil
+        notchAlert = nil
+    }
+
     func showEmpty() {
         currentView = .home
     }

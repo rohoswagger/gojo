@@ -203,6 +203,7 @@ final class GojoDictationService: ObservableObject {
     private var hasLoadedInitialModelStatus = false
     private var shortcutPreflighting = false
     private var shortcutSessionGate = DictationShortcutSessionGate()
+    private var transcriberWarmGeneration: UInt = 0
 
     private init() {
         let savedSelection = UserDefaults.standard.string(forKey: Self.selectedModelKey)
@@ -302,9 +303,13 @@ final class GojoDictationService: ObservableObject {
     /// loaded manager, so this is a one-time cost per model per launch.
     private func warmSelectedTranscriber() {
         guard selectedProvider == .local else { return }
+        transcriberWarmGeneration &+= 1
+        let generation = transcriberWarmGeneration
         Task { [weak self, localTranscriber] in
             await self?.loadInitialModelStatusIfNeeded()
-            guard let self, self.installedModels.contains(self.selectedModel) else { return }
+            guard let self,
+                  generation == self.transcriberWarmGeneration,
+                  self.installedModels.contains(self.selectedModel) else { return }
             self.isPreparingTranscriber = true
             #if DEBUG
             let warmStart = ProcessInfo.processInfo.systemUptime
@@ -315,7 +320,9 @@ final class GojoDictationService: ObservableObject {
                 "stage=transcriberWarm ms=\(Int(((ProcessInfo.processInfo.systemUptime - warmStart) * 1_000).rounded()), privacy: .public)"
             )
             #endif
-            self.isPreparingTranscriber = false
+            if generation == self.transcriberWarmGeneration {
+                self.isPreparingTranscriber = false
+            }
         }
     }
 
@@ -380,12 +387,15 @@ final class GojoDictationService: ObservableObject {
             if state == .transcribing, modelOperation == nil {
                 // A stuck or slow transcription must never hold the shortcut
                 // hostage: pressing it again abandons the in-flight session so
-                // a fresh one can start immediately. The controller publishes
-                // .idle asynchronously, so mirror it here before the guards run.
-                dictationShortcutLogger.notice("keyDown canceled in-flight transcription")
-                shortcutSessionGate.reset()
-                await controller.cancel()
-                receive(.idle)
+                // a fresh one can start immediately. The mirrored state can lag
+                // the controller (the session may already be inserting), so the
+                // controller makes the call; on success, mirror .idle here
+                // before the guards below run.
+                if await controller.cancelIfTranscribing() {
+                    dictationShortcutLogger.notice("keyDown canceled in-flight transcription")
+                    shortcutSessionGate.reset()
+                    receive(.idle)
+                }
             }
             guard canChangeModel else {
                 let stateName: String

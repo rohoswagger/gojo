@@ -1470,9 +1470,12 @@ struct DictationRegressionRunner {
 
         await controller.cancel()
         await controller.hotKeyDown()
-        try? await Task.sleep(for: .milliseconds(20))
-        assertEqual(await audio.starts, 1, "replacement capture must wait for inference teardown")
-        await waitForState(.listening, controller: controller, message: "replacement should start after inference exits")
+        await waitForState(
+            .listening,
+            controller: controller,
+            message: "replacement capture should start while the old inference unwinds"
+        )
+        assertEqual(await audio.starts, 2, "replacement capture must not wait for inference teardown")
         await controller.hotKeyUp()
         await waitForState(
             .succeeded("replacement transcript"),
@@ -1508,10 +1511,17 @@ struct DictationRegressionRunner {
 
         await controller.cancel()
         await controller.hotKeyDown()
-        try? await Task.sleep(for: .milliseconds(20))
-        assertEqual(await audio.starts, 1, "replacement capture must wait for polish teardown")
-        await waitForState(.listening, controller: controller, message: "replacement should wait for polishing cleanup")
-        let polisherCancellationCount = await polisher.cancellationCount()
+        await waitForState(
+            .listening,
+            controller: controller,
+            message: "replacement capture should start while the old polish unwinds"
+        )
+        assertEqual(await audio.starts, 2, "replacement capture must not wait for polish teardown")
+        var polisherCancellationCount = await polisher.cancellationCount()
+        for _ in 0..<100 where polisherCancellationCount == 0 {
+            try? await Task.sleep(for: .milliseconds(2))
+            polisherCancellationCount = await polisher.cancellationCount()
+        }
         assertCondition(
             polisherCancellationCount > 0,
             "cancellation cleanup must cancel the active polisher"

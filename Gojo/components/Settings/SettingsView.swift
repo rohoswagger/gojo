@@ -1448,7 +1448,7 @@ struct DictationSettings: View {
 
                 LabeledContent("Shortcut", value: "⌃⌥")
                 LabeledContent("Status") {
-                    if dictation.isPreparingTranscriber {
+                    if showsModelPreparation {
                         HStack(spacing: 6) {
                             ProgressView().controlSize(.small)
                             Text("Preparing voice model…")
@@ -1458,8 +1458,8 @@ struct DictationSettings: View {
                         Text(DictationSettingsStatus.title(for: dictation.state))
                     }
                 }
-                if dictation.isPreparingTranscriber {
-                    Text("The first dictation after launch waits for this to finish.")
+                if showsModelPreparation {
+                    Text("You can dictate now; the transcript waits for the model to finish loading.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -1493,6 +1493,7 @@ struct DictationSettings: View {
                                     .font(.body.monospaced())
                                     .foregroundStyle(.secondary)
                                     .privacySensitive()
+                                    .accessibilityLabel("API key saved")
                                 Button("Replace…") {
                                     isReplacingOpenRouterKey = true
                                 }
@@ -1939,6 +1940,14 @@ struct DictationSettings: View {
         if dictation.saveOpenRouterAPIKey(key) {
             openRouterAPIKeyDraft = ""
             isReplacingOpenRouterKey = false
+        }
+    }
+
+    private var showsModelPreparation: Bool {
+        guard dictation.isPreparingTranscriber else { return false }
+        switch dictation.state {
+        case .idle, .succeeded: return true
+        default: return false
         }
     }
 

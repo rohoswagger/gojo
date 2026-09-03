@@ -37,6 +37,7 @@ where TargetProvider: DictationTargetCapturing,
     private var target: TargetProvider.Target?
     private var operation: Task<Void, Never>?
     private var cleanupTask: Task<Void, Never>?
+    private var audioCleanupTask: Task<Void, Never>?
     private var captureWatchdog: Task<Void, Never>?
     private var sessionID = UUID()
 
@@ -71,7 +72,7 @@ where TargetProvider: DictationTargetCapturing,
         let currentSession = UUID()
         sessionID = currentSession
         target = nil
-        let pendingCleanup = cleanupTask
+        let pendingCleanup = audioCleanupTask
         operation = Task { [weak self] in
             await pendingCleanup?.value
             guard !Task.isCancelled else { return }
@@ -103,6 +104,18 @@ where TargetProvider: DictationTargetCapturing,
         guard machine.handle(.cancel) == .cancel else { return }
         publishState()
         invalidateSessionAndScheduleCleanup()
+    }
+
+    /// The service's published state is an async mirror of this actor's
+    /// machine, so a shortcut press can observe `.transcribing` after the
+    /// session has already moved on to insertion. The decision to abandon a
+    /// transcription must therefore be made here, against the live machine.
+    func cancelIfTranscribing() -> Bool {
+        guard machine.state == .transcribing,
+              machine.handle(.cancel) == .cancel else { return false }
+        publishState()
+        invalidateSessionAndScheduleCleanup()
+        return true
     }
 
     func terminate() {
@@ -216,6 +229,11 @@ where TargetProvider: DictationTargetCapturing,
             }
 
             stage = .transcription
+            if let pendingPipelineCleanup = cleanupTask {
+                await pendingPipelineCleanup.value
+                try Task.checkCancellation()
+                guard isCurrent(expectedSession, state: .transcribing) else { return }
+            }
             #if DEBUG
             let transcriptionStart = ProcessInfo.processInfo.systemUptime
             #endif
@@ -323,13 +341,21 @@ where TargetProvider: DictationTargetCapturing,
         operation?.cancel()
         operation = nil
 
+        // A restarted session must only wait for the microphone to wind down.
+        // Cancelling the transcriber or polisher can block on non-cooperative
+        // inference, so that cleanup runs on its own chain and is awaited
+        // again before the next session's transcription stage instead of
+        // before its capture.
+        let previousAudioCleanup = audioCleanupTask
+        audioCleanupTask = Task { [audioCapture] in
+            await previousAudioCleanup?.value
+            await audioCapture.cancelCapture()
+        }
         let previousCleanup = cleanupTask
-        cleanupTask = Task { [audioCapture, transcriber, polisher] in
+        cleanupTask = Task { [transcriber, polisher] in
             await previousCleanup?.value
-            async let cancelAudio: Void = audioCapture.cancelCapture()
             async let cancelTranscription: Void = transcriber.cancelTranscription()
             async let cancelPolishing: Void = polisher.cancelPolishing()
-            await cancelAudio
             await cancelTranscription
             await cancelPolishing
         }

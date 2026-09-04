@@ -82,7 +82,7 @@
         "@type": "ItemList",
         "@id": "https://trygojo.com/blog/#posts",
         "name": "Gojo blog posts",
-        "numberOfItems": 15,
+        "numberOfItems": 29,
         "itemListElement": [
           {
             "@type": "ListItem",
@@ -148,7 +148,7 @@
             "@type": "ListItem",
             "position": 11,
             "url": "https://trygojo.com/blog/gojo-vs-droppy/",
-            "name": "Gojo vs Droppy: focused notch controls or an all-in-one Mac utility?"
+            "name": "Gojo vs Droppy: local dictation or utility breadth?"
           },
           {
             "@type": "ListItem",
@@ -173,6 +173,90 @@
             "position": 15,
             "url": "https://trygojo.com/blog/best-droppy-alternatives/",
             "name": "5 best Droppy alternatives for Mac in 2026"
+          },
+          {
+            "@type": "ListItem",
+            "position": 16,
+            "url": "https://trygojo.com/blog/best-private-dictation-apps-mac/",
+            "name": "Best private dictation apps for Mac in 2026"
+          },
+          {
+            "@type": "ListItem",
+            "position": 17,
+            "url": "https://trygojo.com/blog/local-voice-dictation-mac/",
+            "name": "Local voice dictation on Mac: what actually stays private"
+          },
+          {
+            "@type": "ListItem",
+            "position": 18,
+            "url": "https://trygojo.com/blog/best-mac-dictation-for-developers/",
+            "name": "Best voice dictation for developers on Mac in 2026"
+          },
+          {
+            "@type": "ListItem",
+            "position": 19,
+            "url": "https://trygojo.com/blog/best-mac-dictation-for-writers/",
+            "name": "Best Mac dictation apps for writers in 2026"
+          },
+          {
+            "@type": "ListItem",
+            "position": 20,
+            "url": "https://trygojo.com/blog/voice-to-text-mac-without-cloud/",
+            "name": "Voice-to-text on Mac without cloud processing"
+          },
+          {
+            "@type": "ListItem",
+            "position": 21,
+            "url": "https://trygojo.com/blog/droppy-alternatives-private-dictation/",
+            "name": "Droppy alternatives for private Mac dictation in 2026"
+          },
+          {
+            "@type": "ListItem",
+            "position": 22,
+            "url": "https://trygojo.com/blog/best-mac-clipboard-manager/",
+            "name": "Best clipboard managers for Mac in 2026"
+          },
+          {
+            "@type": "ListItem",
+            "position": 23,
+            "url": "https://trygojo.com/blog/best-file-shelf-apps-mac/",
+            "name": "Best file shelf apps for Mac in 2026"
+          },
+          {
+            "@type": "ListItem",
+            "position": 24,
+            "url": "https://trygojo.com/blog/best-window-management-tools-mac/",
+            "name": "Best window management tools for Mac in 2026"
+          },
+          {
+            "@type": "ListItem",
+            "position": 25,
+            "url": "https://trygojo.com/blog/best-mac-notch-apps-for-productivity/",
+            "name": "Best Mac notch apps for productivity in 2026"
+          },
+          {
+            "@type": "ListItem",
+            "position": 26,
+            "url": "https://trygojo.com/blog/gojo-vs-superwhisper/",
+            "name": "Gojo vs Superwhisper: local Mac dictation compared"
+          },
+          {
+            "@type": "ListItem",
+            "position": 27,
+            "url": "https://trygojo.com/blog/gojo-vs-macwhisper/",
+            "name": "Gojo vs MacWhisper: direct dictation or transcript work?"
+          },
+          {
+            "@type": "ListItem",
+            "position": 28,
+            "url": "https://trygojo.com/blog/gojo-vs-apple-dictation/",
+            "name": "Gojo vs Apple Dictation: which Mac option?"
+          },
+          {
+            "@type": "ListItem",
+            "position": 29,
+            "url": "https://trygojo.com/blog/gojo-vs-yoink/",
+            "name": "Gojo vs Yoink: Mac file shelf comparison"
           }
         ]
       }
@@ -188,6 +272,104 @@
     "title": "Published notes"
   },
   "posts": [
+    {
+      "slug": "best-private-dictation-apps-mac",
+      "kicker": "Roundup",
+      "date": "September 3, 2026",
+      "title": "Best private dictation apps for Mac in 2026",
+      "summary": "Compare five Mac dictation tools by what stays local, where the finished text goes, and which workflow each one handles best."
+    },
+    {
+      "slug": "local-voice-dictation-mac",
+      "kicker": "Guide",
+      "date": "September 3, 2026",
+      "title": "Local voice dictation on Mac: what actually stays private",
+      "summary": "Trace microphone audio through recognition, cleanup, storage, and insertion, then run a practical offline test."
+    },
+    {
+      "slug": "best-mac-dictation-for-developers",
+      "kicker": "Use case",
+      "date": "September 4, 2026",
+      "title": "Best voice dictation for developers on Mac in 2026",
+      "summary": "A developer-specific test for code symbols, terminals, secrets, correction, and local insertion."
+    },
+    {
+      "slug": "best-mac-dictation-for-writers",
+      "kicker": "Use case",
+      "date": "September 4, 2026",
+      "title": "Best Mac dictation apps for writers in 2026",
+      "summary": "Compare writing workflows by draft quality, punctuation, names, privacy, and where the text lands."
+    },
+    {
+      "slug": "voice-to-text-mac-without-cloud",
+      "kicker": "Guide",
+      "date": "September 4, 2026",
+      "title": "Voice-to-text on Mac without cloud processing",
+      "summary": "Trace audio, recognition, cleanup, storage, and insertion, then test the exact workflow offline."
+    },
+    {
+      "slug": "droppy-alternatives-private-dictation",
+      "kicker": "Alternatives",
+      "date": "September 4, 2026",
+      "title": "Droppy alternatives for private Mac dictation in 2026",
+      "summary": "Choose a switch by endpoint: direct insertion, configurable modes, saved transcripts, or voice notes."
+    },
+    {
+      "slug": "best-mac-clipboard-manager",
+      "kicker": "Roundup",
+      "date": "September 4, 2026",
+      "title": "Best clipboard managers for Mac in 2026",
+      "summary": "Compare Gojo, Maccy, Paste, and Raycast by local storage, sensitive copies, search, and media support."
+    },
+    {
+      "slug": "best-file-shelf-apps-mac",
+      "kicker": "Roundup",
+      "date": "September 4, 2026",
+      "title": "Best file shelf apps for Mac in 2026",
+      "summary": "Compare notch shelves and dedicated drag bridges for staging files between folders and apps."
+    },
+    {
+      "slug": "best-window-management-tools-mac",
+      "kicker": "Roundup",
+      "date": "September 4, 2026",
+      "title": "Best window management tools for Mac in 2026",
+      "summary": "Choose dedicated snapping, command-driven actions, automation, or window controls inside a broader workspace."
+    },
+    {
+      "slug": "best-mac-notch-apps-for-productivity",
+      "kicker": "Roundup",
+      "date": "September 4, 2026",
+      "title": "Best Mac notch apps for productivity in 2026",
+      "summary": "A day-in-the-life comparison of notch apps by the work they remove from your routine."
+    },
+    {
+      "slug": "gojo-vs-superwhisper",
+      "kicker": "Comparison",
+      "date": "September 4, 2026",
+      "title": "Gojo vs Superwhisper: local Mac dictation compared",
+      "summary": "Compare the captured-field workflow with configurable voice and language-model stages."
+    },
+    {
+      "slug": "gojo-vs-macwhisper",
+      "kicker": "Comparison",
+      "date": "September 4, 2026",
+      "title": "Gojo vs MacWhisper: direct dictation or transcript work?",
+      "summary": "Choose between text arriving at your cursor and a specialist workflow for recordings and transcripts."
+    },
+    {
+      "slug": "gojo-vs-apple-dictation",
+      "kicker": "Comparison",
+      "date": "September 4, 2026",
+      "title": "Gojo vs Apple Dictation: which Mac option?",
+      "summary": "Compare Apple's built-in baseline with explicit local models, target validation, and a broader notch workspace."
+    },
+    {
+      "slug": "gojo-vs-yoink",
+      "kicker": "Comparison",
+      "date": "September 4, 2026",
+      "title": "Gojo vs Yoink: Mac file shelf comparison",
+      "summary": "Compare a full daily utility surface with a focused drag-and-drop bridge."
+    },
     {
       "slug": "best-macos-notch-utilities",
       "kicker": "Guide",
@@ -262,8 +444,8 @@
       "slug": "gojo-vs-droppy",
       "kicker": "Comparison",
       "date": "July 11, 2026",
-      "title": "Gojo vs Droppy: focused notch controls or an all-in-one Mac utility?",
-      "summary": "Droppy is built for breadth. Gojo keeps a smaller set of daily Mac controls one quiet hover away."
+      "title": "Gojo vs Droppy: local dictation or utility breadth?",
+      "summary": "Gojo leads with local dictation into the active field. Droppy leads with a larger catalog of optional utilities."
     },
     {
       "slug": "gojo-vs-notchnook",

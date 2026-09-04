@@ -1,0 +1,431 @@
+{
+  "slug": "best-mac-clipboard-manager",
+  "title": "Best clipboard managers for Mac in 2026",
+  "description": "Compare Gojo, Maccy, Paste, and Raycast as Mac clipboard managers by privacy, search, images, files, retention, workflow, and price.",
+  "canonical": "https://trygojo.com/blog/best-mac-clipboard-manager/",
+  "og": {
+    "og:title": "Best clipboard managers for Mac in 2026",
+    "og:description": "A practical comparison of Mac clipboard history tools by privacy, search, retention, supported content, and workflow.",
+    "og:type": "article",
+    "og:url": "https://trygojo.com/blog/best-mac-clipboard-manager/",
+    "og:image": "https://trygojo.com/assets/og.jpg",
+    "og:image:alt": "Gojo clipboard history in a MacBook notch workspace."
+  },
+  "twitter": {
+    "twitter:card": "summary_large_image",
+    "twitter:title": "Best clipboard managers for Mac in 2026",
+    "twitter:description": "Compare Gojo, Maccy, Paste, and Raycast for clipboard history on Mac.",
+    "twitter:image": "https://trygojo.com/assets/og.jpg"
+  },
+  "article": {
+    "published_time": "2026-09-04",
+    "modified_time": "2026-09-04",
+    "section": "macOS utilities",
+    "author": "Gojo",
+    "robots": "index,follow,max-image-preview:large"
+  },
+  "jsonLd": {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "headline": "Best clipboard managers for Mac in 2026",
+        "url": "https://trygojo.com/blog/best-mac-clipboard-manager/",
+        "datePublished": "2026-09-04",
+        "dateModified": "2026-09-04",
+        "author": {
+          "@type": "Organization",
+          "name": "Gojo",
+          "url": "https://trygojo.com/"
+        },
+        "mentions": [
+          {
+            "@type": "SoftwareApplication",
+            "name": "Gojo",
+            "url": "https://trygojo.com/"
+          },
+          {
+            "@type": "SoftwareApplication",
+            "name": "Maccy",
+            "url": "https://maccy.app/"
+          },
+          {
+            "@type": "SoftwareApplication",
+            "name": "Paste",
+            "url": "https://pasteapp.io/"
+          },
+          {
+            "@type": "SoftwareApplication",
+            "name": "Raycast",
+            "url": "https://www.raycast.com/"
+          }
+        ],
+        "citation": [
+          "https://trygojo.com/",
+          "https://maccy.app/",
+          "https://github.com/p0deje/Maccy",
+          "https://pasteapp.io/",
+          "https://pasteapp.io/pricing",
+          "https://www.raycast.com/core-features/clipboard-history",
+          "https://www.raycast.com/pricing"
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the best clipboard manager for Mac?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Choose Maccy for a free, open-source, focused clipboard history. Choose Paste for organized history synced across Mac, iPhone, and iPad. Choose Raycast if you already use its launcher. Choose Gojo when clipboard history belongs beside files, windows, media, and other notch controls."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is Maccy or Paste better for privacy?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Maccy says clipboard data is stored on your computer and that it is open source. Paste says history stays on your devices and in private iCloud, not on Paste servers, and supports exclusions for sensitive apps. The right choice depends on whether local-only storage or cross-device sync matters more."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does Gojo keep clipboard history locally?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Gojo keeps clipboard history local to the Mac and skips content marked private by supported password managers. Gojo's public product materials do not document cross-device clipboard sync or a permanent retention period."
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "hero": {
+    "label": "September 4, 2026",
+    "title": "Best clipboard managers for Mac in 2026",
+    "summary": "The best Mac clipboard manager depends on whether you want a local history, cross-device sync, a keyboard launcher, or clipboard access inside a wider notch workspace.",
+    "meta": ["Checked September 4, 2026", "9 min read"],
+    "breadcrumb": [
+      { "label": "Home", "href": "/" },
+      { "label": "Blog", "href": "/blog/" }
+    ]
+  },
+  "blocks": [
+    {
+      "type": "answer",
+      "label": "Short answer",
+      "copy": "Maccy is the best focused free option, Paste is the best cross-device option, Raycast is the best choice for people already using its launcher, and Gojo is the best fit when clipboard history is one part of a MacBook notch workspace.",
+      "points": [
+        "Best focused and open-source history: Maccy.",
+        "Best Mac, iPhone, and iPad sync: Paste.",
+        "Best launcher plus clipboard workflow: Raycast.",
+        "Best clipboard history beside files, windows, media, and display controls: Gojo."
+      ]
+    },
+    {
+      "type": "note",
+      "content": [
+        {
+          "t": "text",
+          "s": "Disclosure: Gojo publishes this comparison. We checked official product pages, documentation, and pricing on September 4, 2026. Clipboard features and prices can change, so verify the selected plan before buying. We do not treat a privacy label as proof of a particular storage path."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What a clipboard manager needs to answer",
+      "id": "what-to-check"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Clipboard history is a record of things you copied. That can include a harmless URL, but it can also include a password, recovery code, customer message, or private file. Compare where history is stored, how long it stays, which apps can be excluded, and whether your workflow needs text only or images and files too. A bigger history is not automatically safer."
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "head": [
+        "App",
+        "Best for",
+        "Privacy and retention",
+        "Images and files",
+        "Price checked September 4, 2026"
+      ],
+      "rows": [
+        [
+          "Gojo",
+          "Clipboard history inside a notch workspace",
+          "Local to the Mac; skips supported password-manager private content; retention period not publicly documented",
+          "Not publicly documented",
+          "$2.99/month or $9.99 lifetime for 1 Mac; 3-day full trial"
+        ],
+        [
+          "Maccy",
+          "Focused keyboard-first history",
+          "Maccy says data stays on your computer; open source under MIT; retention controls not publicly documented",
+          "Maccy documents text and images; file support not publicly documented",
+          "Free and open source; App Store support build price may vary"
+        ],
+        [
+          "Paste",
+          "Organized history across Apple devices",
+          "History stays on devices and private iCloud; app exclusions are supported; retention is designed as an archive",
+          "Text, links, colors, images, pinboards, and search are documented; file workflow varies by item",
+          "$2.49/month, $29.99/year, or lifetime option on official pricing page"
+        ],
+        [
+          "Raycast",
+          "Launcher, commands, and clipboard in one keyboard window",
+          "Copied content stays on the computer and is encrypted on the local hard drive; password-manager content is ignored by default; free history is 3 months",
+          "Text, images, colors, and links",
+          "Free core features; Pro listed at $10/month or $8/month annually for unlimited history and more"
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "1. Gojo for clipboard history inside a broader Mac workflow",
+      "id": "gojo"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Gojo keeps recent copied text available in a searchable clipboard history inside the notch workspace. It skips content marked private by supported password managers. The useful distinction is placement: you can recover a copied line while the same surface also handles window controls, file staging, media, dictation, and display comfort. Gojo is not the right pick if you need a documented cross-device archive or a deep clipboard-only tool."
+        }
+      ]
+    },
+    {
+      "type": "sourceFacts",
+      "items": [
+        "Gojo is a native macOS 14+ utility.",
+        "Clipboard history is local to the Mac.",
+        "Gojo's public materials do not document a fixed retention limit, image OCR, file previews, or iPhone and iPad sync."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "2. Maccy for a small, focused history",
+      "id": "maccy"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Maccy does one job: keeping copy history at hand. Its official site says it is lightweight, keyboard-first, stored on your computer, and open source under the MIT license. That narrow scope is its appeal. You do not buy a larger workspace to get a clipboard. You give up Gojo's surrounding notch tools and any cross-device sync that Maccy does not publicly document."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "3. Paste for an organized history across Apple devices",
+      "id": "paste"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Paste is the clearest choice when the same snippets need to follow you from Mac to iPhone and iPad. Its official site documents searchable history, pinboards, and private iCloud storage rather than Paste-hosted storage. That convenience brings a different privacy boundary than a local-only manager. If your work policy does not allow clipboard sync, choose a local option instead."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "4. Raycast for a launcher-first workflow",
+      "id": "raycast"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Raycast bundles clipboard history with app launching, commands, snippets, extensions, and window management. Its clipboard documentation lists text, images, colors, and links, plus local encryption and default exclusion of password-manager content. The free plan lists three months of history. Longer retention and unlimited history belong to Pro. Choose Raycast when the launcher is already your main entry point, not because every clipboard job needs a command palette."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Which clipboard manager should you choose?",
+      "id": "decision"
+    },
+    {
+      "type": "table",
+      "head": ["Your workflow", "Choose", "What you get", "What you give up"],
+      "rows": [
+        [
+          "I want a free clipboard-only app on one Mac",
+          "Maccy",
+          "Focused local history, search, keyboard use, and open source",
+          "No documented cross-device sync or broader notch workspace"
+        ],
+        [
+          "I copy between Mac, iPhone, and iPad",
+          "Paste",
+          "Private iCloud sync, pinboards, search, and long-term organization",
+          "A synced data path and a paid plan after the trial"
+        ],
+        [
+          "I already launch everything with a keyboard command",
+          "Raycast",
+          "Clipboard, snippets, extensions, and launcher commands together",
+          "Three-month free retention; unlimited history requires Pro"
+        ],
+        [
+          "I want clipboard history beside files, windows, media, and dictation",
+          "Gojo",
+          "One hoverable MacBook surface for several daily controls",
+          "No public documentation for iPhone sync, image OCR, or a fixed retention period"
+        ],
+        [
+          "I handle sensitive clipboard content",
+          "Maccy or Gojo",
+          "Local Mac storage and password-manager exclusions are documented",
+          "You still need to test app exclusions and avoid treating history as a password vault"
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and method",
+      "id": "sources-and-method"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        { "t": "text", "s": "Primary sources checked September 4, 2026: " },
+        {
+          "t": "link",
+          "s": "Gojo product materials",
+          "href": "https://trygojo.com/"
+        },
+        { "t": "text", "s": ", " },
+        { "t": "link", "s": "Maccy", "href": "https://maccy.app/" },
+        { "t": "text", "s": ", " },
+        { "t": "link", "s": "Paste", "href": "https://pasteapp.io/" },
+        { "t": "text", "s": ", " },
+        {
+          "t": "link",
+          "s": "Paste pricing",
+          "href": "https://pasteapp.io/pricing"
+        },
+        { "t": "text", "s": ", and " },
+        {
+          "t": "link",
+          "s": "Raycast clipboard documentation",
+          "href": "https://www.raycast.com/core-features/clipboard-history"
+        },
+        { "t": "text", "s": " and " },
+        {
+          "t": "link",
+          "s": "pricing",
+          "href": "https://www.raycast.com/pricing"
+        },
+        {
+          "t": "text",
+          "s": ". We compare documented storage, content types, retention, and workflow fit. We do not assign a numeric score."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Frequently asked questions",
+      "id": "faq"
+    },
+    {
+      "type": "faq",
+      "items": [
+        {
+          "q": "What is the best clipboard manager for Mac?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Maccy is the best focused free option. Paste is strongest for Apple-device sync. Raycast suits launcher users. Gojo fits people who want clipboard history as one part of a broader MacBook notch workspace."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "Is Maccy or Paste better for privacy?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Maccy says clipboard data stays on your computer and its source is open under MIT. Paste says history stays on your devices and in private iCloud, not on Paste servers, and supports app exclusions. Local-only and private-cloud sync are different choices, so use the one your workflow allows."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "Does Gojo support clipboard images and files?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Gojo's public product materials document searchable recent copied text and local history. Image handling, file previews, OCR, and a cross-device clipboard are not publicly documented. Choose Raycast or Paste if those documented content types are central to your workflow."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "Can I use Gojo and Maccy together?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Yes, but decide which app should own clipboard history so you do not create duplicate capture streams. Maccy can handle dedicated keyboard-first recall while Gojo handles other notch controls."
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "type": "cta",
+      "label": "Prefer one Mac workspace",
+      "title": "Keep clipboard history beside the rest of your day",
+      "copy": "Try Gojo fully unlocked for three days. Clipboard history sits beside window controls, file staging, media, local dictation, and display comfort.",
+      "actions": [
+        { "label": "Download Gojo", "href": "/downloads/", "primary": true },
+        {
+          "label": "Compare Gojo and Maccy",
+          "href": "/blog/gojo-vs-maccy/",
+          "primary": false
+        }
+      ],
+      "trust": "Signed and notarized · macOS 14+ · 1- and 3-Mac plans"
+    },
+    {
+      "type": "next",
+      "label": "Next",
+      "title": "Compare the focused and integrated options",
+      "copy": [
+        { "t": "text", "s": "Read the " },
+        {
+          "t": "link",
+          "s": "Gojo vs Maccy comparison",
+          "href": "/blog/gojo-vs-maccy/"
+        },
+        { "t": "text", "s": " or see the " },
+        { "t": "link", "s": "Gojo alternatives hub", "href": "/alternatives/" },
+        { "t": "text", "s": "." }
+      ],
+      "links": []
+    }
+  ]
+}

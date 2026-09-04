@@ -1,0 +1,472 @@
+{
+  "slug": "best-window-management-tools-mac",
+  "title": "Best window management tools for Mac in 2026",
+  "description": "Compare Gojo, Rectangle, Magnet, Raycast, and BetterTouchTool for Mac window snapping, keyboard workflows, permissions, and limits.",
+  "canonical": "https://trygojo.com/blog/best-window-management-tools-mac/",
+  "og": {
+    "og:title": "Best window management tools for Mac in 2026",
+    "og:description": "Compare Mac window managers by snapping, keyboard control, permissions, customization, and workflow fit.",
+    "og:type": "article",
+    "og:url": "https://trygojo.com/blog/best-window-management-tools-mac/",
+    "og:image": "https://trygojo.com/assets/og.jpg",
+    "og:image:alt": "Gojo window controls in a MacBook notch workspace."
+  },
+  "twitter": {
+    "twitter:card": "summary_large_image",
+    "twitter:title": "Best window management tools for Mac in 2026",
+    "twitter:description": "Find the right Mac window manager for snapping, keyboard workflows, and multi-app work.",
+    "twitter:image": "https://trygojo.com/assets/og.jpg"
+  },
+  "article": {
+    "published_time": "2026-09-04",
+    "modified_time": "2026-09-04",
+    "section": "macOS utilities",
+    "author": "Gojo",
+    "robots": "index,follow,max-image-preview:large"
+  },
+  "jsonLd": {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "headline": "Best window management tools for Mac in 2026",
+        "url": "https://trygojo.com/blog/best-window-management-tools-mac/",
+        "datePublished": "2026-09-04",
+        "dateModified": "2026-09-04",
+        "author": {
+          "@type": "Organization",
+          "name": "Gojo",
+          "url": "https://trygojo.com/"
+        },
+        "mentions": [
+          {
+            "@type": "SoftwareApplication",
+            "name": "Gojo",
+            "url": "https://trygojo.com/"
+          },
+          {
+            "@type": "SoftwareApplication",
+            "name": "Rectangle",
+            "url": "https://rectangleapp.com/"
+          },
+          {
+            "@type": "SoftwareApplication",
+            "name": "Magnet",
+            "url": "https://apps.apple.com/us/app/magnet/id441258766"
+          },
+          {
+            "@type": "SoftwareApplication",
+            "name": "Raycast",
+            "url": "https://www.raycast.com/"
+          },
+          {
+            "@type": "SoftwareApplication",
+            "name": "BetterTouchTool",
+            "url": "https://folivora.ai/"
+          }
+        ],
+        "citation": [
+          "https://trygojo.com/",
+          "https://rectangleapp.com/",
+          "https://rectangleapp.com/pro/",
+          "https://apps.apple.com/us/app/magnet/id441258766",
+          "https://www.raycast.com/pricing",
+          "https://folivora.ai/features/window-management/",
+          "https://docs.folivora.ai/docs/window-snapping/overview/"
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the best window management app for Mac?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Rectangle is the strongest free and open-source dedicated option. Magnet is a simple paid snapping tool. BetterTouchTool is best for custom gestures and automation. Raycast fits keyboard-first command users. Gojo fits people who want window controls inside a broader MacBook notch workspace."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Do Mac window managers need Accessibility permission?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Window managers commonly need macOS Accessibility permission to move, resize, focus, or inspect windows. The exact prompt depends on the app and feature. Review the permission request before granting it and remove access when you stop using the app."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is Gojo a replacement for Rectangle?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Gojo can replace a basic snapping workflow when you also want clipboard, files, media, dictation, and other notch controls. Rectangle remains the better fit for a dedicated window manager with a broader published shortcut and snap-area system."
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "hero": {
+    "label": "September 4, 2026",
+    "title": "Best window management tools for Mac in 2026",
+    "summary": "Rectangle, Magnet, BetterTouchTool, Raycast, and Gojo all help organize Mac windows, but they begin from different places: dedicated snapping, custom input, command search, or an integrated notch workspace.",
+    "meta": ["Checked September 4, 2026", "10 min read"],
+    "breadcrumb": [
+      { "label": "Home", "href": "/" },
+      { "label": "Blog", "href": "/blog/" }
+    ]
+  },
+  "blocks": [
+    {
+      "type": "answer",
+      "label": "Short answer",
+      "copy": "Rectangle is the best free, open-source dedicated window manager, Magnet is the simplest paid snapping tool, BetterTouchTool is the deepest custom automation option, Raycast is strongest for keyboard commands, and Gojo is the better fit when window controls belong beside a wider MacBook notch workflow.",
+      "points": [
+        "Best free dedicated snapping: Rectangle.",
+        "Best for custom gestures and automation: BetterTouchTool.",
+        "Best for keyboard commands plus window actions: Raycast.",
+        "Best for windows as one part of a notch workspace: Gojo."
+      ]
+    },
+    {
+      "type": "note",
+      "content": [
+        {
+          "t": "text",
+          "s": "Disclosure: Gojo publishes this comparison. Official product pages and documentation were checked on September 4, 2026. A window manager may require Accessibility permission for its actions. Pricing, supported layouts, and permission behavior can change by release or region."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How to evaluate a Mac window manager",
+      "id": "criteria"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Start with the action you repeat: snap left or right, maximize, move between displays, restore a layout, or switch windows. Then check how you trigger it. A dedicated tool may offer more shortcuts and snap areas. A command launcher may keep the action in a keyboard search. A gesture tool may let the trackpad or mouse do the work. Also check Accessibility permission, multi-monitor behavior, fullscreen edge cases, and whether the app becomes another permanent control surface to maintain."
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "head": [
+        "Tool",
+        "Best for",
+        "Window controls",
+        "Keyboard and permissions",
+        "Price or scope checked September 4, 2026"
+      ],
+      "rows": [
+        [
+          "Gojo",
+          "Window controls inside a broader notch workspace",
+          "Preview, focus, organize, and quick snap from the notch",
+          "Accessibility permission is required for window operations; shortcut details vary by setup",
+          "$2.99/month or $9.99 lifetime for 1 Mac; broader utility app"
+        ],
+        [
+          "Rectangle",
+          "Free, dedicated keyboard and snap-area management",
+          "Move and resize by keyboard shortcuts or snap areas; Rectangle Pro adds more layouts and custom actions",
+          "Accessibility permission is expected for controlling windows; free app is open source",
+          "Free and open source; Pro is a separate paid upgrade, current price not stated on the public home page"
+        ],
+        [
+          "Magnet",
+          "Simple paid window snapping",
+          "App Store listing describes arranging windows for multitasking; exact layout and shortcut details should be checked in the current listing",
+          "macOS permission requirements not publicly documented in the source checked",
+          "Paid Mac App Store app; current regional price not used here"
+        ],
+        [
+          "Raycast",
+          "Keyboard launcher with window commands",
+          "Free core plan includes Window Management; Pro adds custom window management commands",
+          "Window actions may require Accessibility permission; account and plan boundaries apply to Pro features",
+          "Free core plan; Pro listed at $10/month or $8/month annually"
+        ],
+        [
+          "BetterTouchTool",
+          "Custom gestures, snap areas, and automation",
+          "Drag-to-snap, custom snap areas, window switcher, movement, and resize actions",
+          "Its docs describe gesture, shortcut, and trigger-based control; Accessibility permission is needed for many window actions",
+          "Large automation utility; current license price not publicly documented in the cited feature page"
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "1. Gojo for window controls without another specialist app",
+      "id": "gojo"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Gojo puts window previews, focus, organization, and quick snapping in the same notch surface as clipboard history, file staging, media, local dictation, and display controls. This works well when your window problem is part of a larger interruption pattern. It is not the specialist choice for complex saved layouts or a large catalog of custom snap targets. Window operations use Accessibility-trusted operations, and some apps or windows can limit what macOS allows Gojo to move or resize."
+        }
+      ]
+    },
+    {
+      "type": "sourceFacts",
+      "items": [
+        "Gojo requires macOS Accessibility permission for window operations.",
+        "Gojo's public feature description promises preview, focus, organize, and quick snapping, not a saved-layout manager.",
+        "Gojo is designed for MacBook owners who want several daily controls in one surface."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "2. Rectangle for dedicated snapping",
+      "id": "rectangle"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Rectangle's official site says the free app is open source, supports macOS 10.15 and later, and moves and resizes windows with keyboard shortcuts or snap areas. Rectangle Pro is a separate closed-source superset with custom size and position, layouts, snap panels, quick throw, stash, and other power-user features. Choose Rectangle when snapping is the job. It is easier to justify than a broader utility if you do not want other modules."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "3. Magnet for a simple paid snap tool",
+      "id": "magnet"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Magnet is a familiar paid Mac App Store option for arranging windows while multitasking. Its exact current layouts, shortcut set, permission prompts, and regional price should be checked in the live listing before purchase. That limited public evidence is why this article does not assign Magnet a feature count or a price claim. It is a sensible candidate when you want an app-store snap utility and do not need a wider workspace."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "4. Raycast for command-driven window actions",
+      "id": "raycast"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Raycast's pricing page includes Window Management in its free core feature set, with Custom Window Management Commands listed under Pro. That is a good fit if you already open Raycast to launch apps, search extensions, run snippets, or control your Mac. It is a different interaction from Gojo's hoverable notch surface. Raycast wins when the keyboard is the home of your workflow; Gojo wins when glanceable controls should stay visible near the top of the screen."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "5. BetterTouchTool for custom input and automation",
+      "id": "bettertouchtool"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "BetterTouchTool's official feature page documents drag-to-snap, custom snap areas on any display, a customizable window switcher, keyboard and modifier actions, and hundreds of trigger types. It is the strongest choice here for someone who wants to design the trigger as carefully as the result. That control takes setup. If you want a ready-made notch workflow, Gojo has fewer decisions to configure."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Which Mac window tool fits your workflow?",
+      "id": "decision"
+    },
+    {
+      "type": "table",
+      "head": ["Need", "Choose", "Reason", "Important limit"],
+      "rows": [
+        [
+          "I need free left, right, half, quarter, and maximize shortcuts",
+          "Rectangle",
+          "Dedicated open-source window management with keyboard and snap areas",
+          "Advanced layouts and power features are in Rectangle Pro"
+        ],
+        [
+          "I want window commands inside my existing launcher",
+          "Raycast",
+          "Window Management is part of its free core feature set",
+          "Custom window commands are a Pro feature"
+        ],
+        [
+          "I want gestures, custom zones, and multi-step triggers",
+          "BetterTouchTool",
+          "Its window tools connect to a large trigger and automation system",
+          "More setup and more permission surface"
+        ],
+        [
+          "I want a simple paid App Store snapping utility",
+          "Magnet",
+          "A focused candidate for arranging windows while multitasking",
+          "Current feature details and price vary by listing and region"
+        ],
+        [
+          "I want window controls with clipboard, files, media, and dictation",
+          "Gojo",
+          "Window actions live in the same MacBook notch workspace",
+          "Not a documented replacement for complex saved layouts"
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and method",
+      "id": "sources-and-method"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        { "t": "text", "s": "Primary sources checked September 4, 2026: " },
+        {
+          "t": "link",
+          "s": "Gojo product materials",
+          "href": "https://trygojo.com/"
+        },
+        { "t": "text", "s": ", " },
+        { "t": "link", "s": "Rectangle", "href": "https://rectangleapp.com/" },
+        { "t": "text", "s": " and " },
+        {
+          "t": "link",
+          "s": "Rectangle Pro",
+          "href": "https://rectangleapp.com/pro/"
+        },
+        { "t": "text", "s": ", the " },
+        {
+          "t": "link",
+          "s": "Magnet Mac App Store listing",
+          "href": "https://apps.apple.com/us/app/magnet/id441258766"
+        },
+        { "t": "text", "s": ", " },
+        {
+          "t": "link",
+          "s": "Raycast pricing",
+          "href": "https://www.raycast.com/pricing"
+        },
+        { "t": "text", "s": ", and " },
+        {
+          "t": "link",
+          "s": "BetterTouchTool window management",
+          "href": "https://folivora.ai/features/window-management/"
+        },
+        { "t": "text", "s": " and " },
+        {
+          "t": "link",
+          "s": "window snapping documentation",
+          "href": "https://docs.folivora.ai/docs/window-snapping/overview/"
+        },
+        {
+          "t": "text",
+          "s": ". Recommendations follow published capabilities and workflow fit."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Frequently asked questions",
+      "id": "faq"
+    },
+    {
+      "type": "faq",
+      "items": [
+        {
+          "q": "What is the best window management app for Mac?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Rectangle is the strongest free, open-source dedicated choice. BetterTouchTool is strongest for custom gestures and automation. Raycast fits launcher users. Gojo fits a wider MacBook notch workflow that includes window controls."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "Do Mac window managers need Accessibility permission?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Apps that move, resize, focus, or inspect windows commonly need Accessibility permission. Review the exact features you are enabling, and remove access when you uninstall or stop using the tool."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "Is Gojo a replacement for Rectangle?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Gojo can cover basic snapping when you also want clipboard, files, media, dictation, and other notch tools. Rectangle remains the better fit for dedicated shortcut and snap-area depth."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "Can I use Gojo and Rectangle together?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Yes. Rectangle can own detailed snapping while Gojo handles the rest of the notch workspace. Avoid assigning conflicting shortcuts and review both apps' Accessibility permissions."
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "type": "cta",
+      "label": "Keep the workspace together",
+      "title": "Snap a window without leaving the notch",
+      "copy": "Try Gojo fully unlocked for three days. Window controls sit beside clipboard, files, media, dictation, and display comfort.",
+      "actions": [
+        { "label": "Download Gojo", "href": "/downloads/", "primary": true },
+        {
+          "label": "Compare Gojo and Rectangle",
+          "href": "/blog/gojo-vs-rectangle/",
+          "primary": false
+        }
+      ],
+      "trust": "Signed and notarized · macOS 14+ · Accessibility permission explained"
+    },
+    {
+      "type": "next",
+      "label": "Next",
+      "title": "Compare dedicated Mac utilities",
+      "copy": [
+        { "t": "text", "s": "Read " },
+        {
+          "t": "link",
+          "s": "Gojo vs Rectangle",
+          "href": "/blog/gojo-vs-rectangle/"
+        },
+        { "t": "text", "s": " or browse the " },
+        {
+          "t": "link",
+          "s": "Mac utility alternatives",
+          "href": "/alternatives/"
+        },
+        { "t": "text", "s": "." }
+      ],
+      "links": []
+    }
+  ]
+}

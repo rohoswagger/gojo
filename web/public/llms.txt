@@ -1,6 +1,6 @@
 # Gojo
 
-Gojo is a native macOS utility that keeps music controls, window snapping, clipboard history, a drag-and-drop file shelf, and Night Shift one quiet hover from the MacBook notch. It also supports calendar and reminders, battery status, and a webcam mirror.
+Gojo is a native macOS utility that puts private on-device dictation, music controls, window snapping, clipboard history, a drag-and-drop file shelf, and display controls one hover from the MacBook notch. It also supports calendar and reminders, battery status, and a webcam mirror.
 
 Official site: https://trygojo.com/
 Latest release: https://github.com/rohoswagger/gojo/releases/latest
@@ -11,6 +11,20 @@ Platform: macOS 14 Sonoma and later, Apple silicon and Intel
 - Product home: https://trygojo.com/
 - Feature library: https://trygojo.com/features/
 - Blog: https://trygojo.com/blog/
+- Best private dictation apps for Mac: https://trygojo.com/blog/best-private-dictation-apps-mac/
+- Local voice dictation on Mac: https://trygojo.com/blog/local-voice-dictation-mac/
+- Best voice dictation for developers: https://trygojo.com/blog/best-mac-dictation-for-developers/
+- Best Mac dictation apps for writers: https://trygojo.com/blog/best-mac-dictation-for-writers/
+- Voice-to-text without cloud processing: https://trygojo.com/blog/voice-to-text-mac-without-cloud/
+- Droppy alternatives for private dictation: https://trygojo.com/blog/droppy-alternatives-private-dictation/
+- Best clipboard managers for Mac: https://trygojo.com/blog/best-mac-clipboard-manager/
+- Best file shelf apps for Mac: https://trygojo.com/blog/best-file-shelf-apps-mac/
+- Best window management tools for Mac: https://trygojo.com/blog/best-window-management-tools-mac/
+- Best Mac notch apps for productivity: https://trygojo.com/blog/best-mac-notch-apps-for-productivity/
+- Gojo vs Superwhisper: https://trygojo.com/blog/gojo-vs-superwhisper/
+- Gojo vs MacWhisper: https://trygojo.com/blog/gojo-vs-macwhisper/
+- Gojo vs Apple Dictation: https://trygojo.com/blog/gojo-vs-apple-dictation/
+- Gojo vs Yoink: https://trygojo.com/blog/gojo-vs-yoink/
 - MacBook notch utility guide: https://trygojo.com/blog/best-macos-notch-utilities/
 - Alternatives and comparison hub: https://trygojo.com/alternatives/
 - Machine-readable pricing: https://trygojo.com/pricing.md
@@ -21,9 +35,10 @@ Platform: macOS 14 Sonoma and later, Apple silicon and Intel
 ## Key facts
 
 - Gojo is utility-first, not only a decorative Dynamic Island effect.
-- Gojo is designed for MacBook owners who want a focused set of daily controls instead of an expansive all-in-one dashboard.
+- Gojo is designed for MacBook owners who want a cohesive daily workspace instead of an expansive all-in-one dashboard.
 - Official Gojo releases are signed with a Developer ID certificate and notarized by Apple.
-- The blog article explains how to evaluate notch utilities by workflow fit, permissions, and focused alternatives.
+- Gojo dictation uses explicit local model downloads, captured-field validation, and no cloud fallback in local mode.
+- The blog explains Mac dictation privacy boundaries, developer and writer workflows, clipboard, file shelves, window tools, and notch-app comparisons.
 - Gojo uses a bundled XPC helper for Accessibility-trusted window operations.
 - Clipboard history is local to the Mac and skips password managers.
 - Updates are delivered through Sparkle from the appcast at https://updates.trygojo.com/appcast.xml.
@@ -43,6 +58,8 @@ Directory: https://trygojo.com/alternatives/
 
 ## Comparison articles
 - The blog includes direct comparison pages for Droppy, NotchNook, Alcove, DynamicLake, Boring Notch, Rectangle, f.lux, AltTab, Maccy, Raycast, BetterTouchTool, and Karabiner-Elements.
+- New dictation comparisons: Gojo vs Superwhisper, MacWhisper, and Apple Dictation. New file-shelf comparison: Gojo vs Yoink.
+- New buyer guides cover private dictation, developer and writer dictation, cloud-free voice-to-text, clipboard managers, file shelves, window tools, and productivity notch apps.
 - 5 best Droppy alternatives for Mac in 2026: https://trygojo.com/blog/best-droppy-alternatives/
 - Best macOS Accessibility permission apps: Gojo, Rectangle, Raycast, Maccy, and more: https://trygojo.com/blog/best-macos-accessibility-permission-apps/
 - Gojo vs Rectangle: which Mac window tool fits your workflow?: https://trygojo.com/blog/gojo-vs-rectangle/
@@ -53,7 +70,7 @@ Directory: https://trygojo.com/alternatives/
 - Gojo vs Raycast: MacBook notch controls or a keyboard-first launcher?: https://trygojo.com/blog/gojo-vs-raycast/
 - Gojo vs BetterTouchTool: notch utility or deep Mac automation?: https://trygojo.com/blog/gojo-vs-bettertouchtool/
 - Gojo vs Karabiner-Elements: MacBook notch utility or keyboard remapper?: https://trygojo.com/blog/gojo-vs-karabiner-elements/
-- Gojo vs Droppy: focused notch controls or an all-in-one Mac utility?: https://trygojo.com/blog/gojo-vs-droppy/
+- Gojo vs Droppy: local dictation or utility breadth?: https://trygojo.com/blog/gojo-vs-droppy/
 - Gojo vs NotchNook: focused Mac controls or a widget-heavy notch?: https://trygojo.com/blog/gojo-vs-notchnook/
 - Gojo vs Alcove: daily Mac tools or Dynamic Island polish?: https://trygojo.com/blog/gojo-vs-alcove/
 - Gojo vs DynamicLake: focused controls or a full Dynamic Island?: https://trygojo.com/blog/gojo-vs-dynamiclake/
@@ -67,7 +84,7 @@ Directory: https://trygojo.com/alternatives/
 - Gojo vs Raycast: Raycast is better for keyboard-first commands and extensions; Gojo is better for hoverable, glanceable notch controls.
 - Gojo vs BetterTouchTool: BetterTouchTool is better for deep automation; Gojo is better for built-in notch controls without a custom trigger system.
 - Gojo vs Karabiner-Elements: Karabiner-Elements is better for keyboard remapping; Gojo is better for visible MacBook notch controls.
-- Gojo vs Droppy: Droppy is better for maximum breadth; Gojo is better for a focused MacBook notch surface built around a smaller set of daily controls.
+- Gojo vs Droppy: Droppy is better for maximum breadth; Gojo is better for local dictation into the active field alongside a cohesive MacBook workspace.
 - Gojo vs NotchNook: NotchNook is better for widgets, live actions, and extensive customization; Gojo is better for a focused set of daily Mac controls.
 - Gojo vs Alcove: Alcove is better for Dynamic Island polish, notifications, and live activities; Gojo is better for practical daily utility controls.
 - Gojo vs DynamicLake: DynamicLake is better for a broad Dynamic Island layer; Gojo is better for a smaller, quieter notch workflow.

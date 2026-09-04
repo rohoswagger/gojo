@@ -1,0 +1,352 @@
+{
+  "slug": "gojo-vs-macwhisper",
+  "title": "Gojo vs MacWhisper: direct dictation or transcript work?",
+  "description": "Compare Gojo and MacWhisper for local dictation, recording transcription, meetings, audio files, editing, and model choices on Mac.",
+  "canonical": "https://trygojo.com/blog/gojo-vs-macwhisper/",
+  "og": {
+    "og:title": "Gojo vs MacWhisper: direct dictation or transcript work?",
+    "og:description": "A clear Mac comparison for text insertion, recordings, transcripts, and local models.",
+    "og:type": "article",
+    "og:url": "https://trygojo.com/blog/gojo-vs-macwhisper/",
+    "og:image": "https://trygojo.com/assets/og.jpg",
+    "og:image:alt": "Gojo local dictation on a MacBook."
+  },
+  "twitter": {
+    "twitter:card": "summary_large_image",
+    "twitter:title": "Gojo vs MacWhisper",
+    "twitter:description": "Choose based on whether the output is a text field or a transcript.",
+    "twitter:image": "https://trygojo.com/assets/og.jpg"
+  },
+  "article": {
+    "published_time": "2026-09-04",
+    "modified_time": "2026-09-04",
+    "section": "Mac dictation",
+    "author": "Gojo",
+    "robots": "index,follow,max-image-preview:large"
+  },
+  "jsonLd": {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "@id": "https://trygojo.com/blog/gojo-vs-macwhisper/#article",
+        "mainEntityOfPage": "https://trygojo.com/blog/gojo-vs-macwhisper/",
+        "headline": "Gojo vs MacWhisper: direct dictation or transcript work?",
+        "description": "Gojo is built for local text insertion into the app in front of you. MacWhisper is built around recording, importing, editing, and exporting transcripts.",
+        "datePublished": "2026-09-04",
+        "dateModified": "2026-09-04",
+        "author": { "@type": "Organization", "name": "Gojo" },
+        "publisher": { "@type": "Organization", "name": "Gojo" },
+        "citation": [
+          "https://trygojo.com/dictation-architecture.md",
+          "https://www.macwhisper.com/",
+          "https://www.macwhisper.com/pricing"
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Should I use Gojo or MacWhisper for dictation?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Use Gojo when you want local dictated text inserted into the field already open. Use MacWhisper when you also need recordings, file transcription, editing, exports, and transcript-focused work."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can MacWhisper dictate into any app?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "MacWhisper's official site advertises real-time dictation for messages, notes, and documents. Confirm its current setup and behavior for the destination apps you use."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does Gojo transcribe meetings?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Gojo's documented dictation feature is a push-to-talk speech-to-text workflow. It is not positioned as a meeting recorder or transcript editor."
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "hero": {
+    "label": "September 4, 2026",
+    "title": "Gojo vs MacWhisper: direct dictation or transcript work?",
+    "summary": "This comparison turns on one practical question. Do you need text in the field you are using now, or a recording and transcript you can search, edit, and export later?",
+    "meta": ["Checked September 4, 2026", "8 min read"],
+    "breadcrumb": [
+      { "label": "Home", "href": "/" },
+      { "label": "Blog", "href": "/blog/" }
+    ]
+  },
+  "blocks": [
+    {
+      "type": "answer",
+      "label": "Short answer",
+      "copy": "Choose Gojo for local push-to-talk dictation that returns final text to the active Mac field. Choose MacWhisper when the recording and transcript are the deliverable, especially for interviews, meetings, lectures, files, subtitles, and speaker-labelled text.",
+      "points": [
+        "Best for writing in the current app: Gojo.",
+        "Best for recordings and transcript production: MacWhisper.",
+        "MacWhisper also advertises real-time dictation, but its depth is in transcript work."
+      ]
+    },
+    {
+      "type": "note",
+      "content": [
+        {
+          "t": "text",
+          "s": "Disclosure: Gojo publishes this comparison. We reviewed MacWhisper's official website and Gojo's public architecture on September 4, 2026. Do not treat a local model option as proof that every optional AI integration is local."
+        }
+      ]
+    },
+    {
+      "type": "jumpNav",
+      "label": "On this page",
+      "items": [
+        { "label": "Comparison", "href": "#comparison" },
+        { "label": "Workflow split", "href": "#workflow-split" },
+        { "label": "Best fit", "href": "#best-fit" },
+        { "label": "FAQ", "href": "#faq" }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Gojo and MacWhisper compared",
+      "id": "comparison"
+    },
+    {
+      "type": "table",
+      "head": ["Area", "Gojo", "MacWhisper"],
+      "rows": [
+        [
+          "Center of gravity",
+          "Short spoken input into the active field",
+          "Recordings, imported media, and editable transcripts"
+        ],
+        [
+          "Input",
+          "Push-to-talk microphone session",
+          "Audio and video files, recordings, meetings, app audio, and dictation"
+        ],
+        [
+          "After transcription",
+          "Insert final text after target validation",
+          "Search, edit, summarize, export, and work with a transcript"
+        ],
+        [
+          "Model path",
+          "Four explicit local model downloads",
+          "Official site describes local and cloud model choices"
+        ],
+        [
+          "Meeting workflow",
+          "Not positioned as a meeting recorder",
+          "Official site says it can record and transcribe supported online meetings"
+        ],
+        ["Notch workspace", "Built in", "Not publicly documented"]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Pick the tool by the artifact you need",
+      "id": "workflow-split"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Gojo is for the moment where a cursor is already waiting. Hold the shortcut, speak, release, and the final transcript goes to the field that was captured at the start if it is still safe to change. This keeps a reply, task, note, or document moving without creating a transcript project first."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "MacWhisper is the better specialist when the audio itself needs a home. Its official site highlights file drag and drop, recording, background transcription for several meeting services, speaker recognition, transcript editing, exports, and batch processing. Those are not side features. They change how someone handles an interview or three-hour recording."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Privacy depends on the model and the follow-up feature",
+      "id": "privacy"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "MacWhisper says local models can process sensitive content without data leaving the Mac. Its site also advertises remote and local AI-model connections. If you turn on summaries, chat, or a connected provider, inspect that feature's model choice and policy rather than assuming it has the same boundary as local file transcription."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Gojo's documented local feature does not send audio or transcripts to a cloud recognizer, does not save raw audio by default, and does not log transcript text. That stricter, narrower boundary comes with a cost. Gojo is not a replacement for a transcript editor, a recording archive, or a meeting review tool."
+        }
+      ]
+    },
+    {
+      "type": "sourceFacts",
+      "items": [
+        "MacWhisper advertises local models, offline processing, and transcription for files and app audio.",
+        "MacWhisper advertises real-time dictation, but also transcript editing, exports, speaker recognition, batch processing, and integrations.",
+        "Gojo documents local Whisper and Parakeet model choices with direct final-text insertion after focus validation.",
+        "Unknown pricing, retention, or integration details are not assumed here. Check the current vendor pages before purchase."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Who should choose each app",
+      "id": "best-fit"
+    },
+    {
+      "type": "table",
+      "head": ["Work you are doing", "Choose", "Reason"],
+      "rows": [
+        [
+          "Replying to messages, writing notes, or drafting in the app already open",
+          "Gojo",
+          "The destination is the active text field."
+        ],
+        [
+          "Transcribing an interview, lecture, podcast, or video file",
+          "MacWhisper",
+          "The source recording and editable transcript are central."
+        ],
+        [
+          "Reviewing a meeting later with speaker labels and exports",
+          "MacWhisper",
+          "Its site positions those transcript functions as first-class features."
+        ],
+        [
+          "Keeping direct dictation offline with no cloud fallback",
+          "Gojo",
+          "That is a documented local-feature invariant."
+        ],
+        [
+          "Using dictation beside file staging, clipboard, windows, media, and controls",
+          "Gojo",
+          "Those tools share one MacBook notch workspace."
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources checked",
+      "id": "sources"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        { "t": "text", "s": "Official sources checked September 4, 2026: " },
+        {
+          "t": "link",
+          "s": "MacWhisper",
+          "href": "https://www.macwhisper.com/"
+        },
+        { "t": "text", "s": " and " },
+        {
+          "t": "link",
+          "s": "Gojo local dictation architecture",
+          "href": "/dictation-architecture.md"
+        },
+        { "t": "text", "s": "." }
+      ]
+    },
+    { "type": "heading", "level": 2, "text": "FAQ", "id": "faq" },
+    {
+      "type": "faq",
+      "items": [
+        {
+          "q": "Should I use Gojo or MacWhisper for dictation?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Use Gojo when the goal is final text in the current field. Use MacWhisper when dictation belongs in a wider recording and transcript workflow."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "Can MacWhisper handle local transcription?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Its official site says local models can process sensitive files on the Mac. Check any optional connected AI service separately."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "Can Gojo replace MacWhisper for meeting recordings?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "No. Gojo is not positioned as a meeting recorder or transcript editor."
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "type": "cta",
+      "label": "Prefer direct local dictation?",
+      "title": "Keep writing in the app in front of you.",
+      "copy": "Try Gojo's push-to-talk dictation with a verified local model.",
+      "actions": [
+        {
+          "label": "Start your free trial",
+          "href": "https://downloads.trygojo.com/Gojo.dmg",
+          "primary": true
+        },
+        {
+          "label": "Read the architecture",
+          "href": "/dictation-architecture.md",
+          "primary": false
+        }
+      ],
+      "trust": "Signed & notarized · macOS 14+ · no cloud fallback in local mode"
+    },
+    {
+      "type": "next",
+      "label": "Related dictation guides",
+      "title": "Start with the right endpoint",
+      "copy": null,
+      "links": [
+        {
+          "label": "Best private dictation apps for Mac",
+          "href": "/blog/best-private-dictation-apps-mac/"
+        },
+        {
+          "label": "Gojo vs Superwhisper",
+          "href": "/blog/gojo-vs-superwhisper/"
+        },
+        {
+          "label": "Gojo vs Apple Dictation",
+          "href": "/blog/gojo-vs-apple-dictation/"
+        }
+      ]
+    }
+  ]
+}

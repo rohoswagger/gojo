@@ -1,11 +1,11 @@
 {
   "slug": "gojo-vs-droppy",
-  "title": "Gojo vs Droppy: focused notch controls or an all-in-one Mac utility?",
-  "description": "Compare Gojo and Droppy for macOS: a focused MacBook notch control surface or a broad, modular productivity suite.",
+  "title": "Gojo vs Droppy: local dictation or utility breadth?",
+  "description": "Compare Gojo and Droppy for local Mac dictation, clipboard, windows, files, media controls, privacy boundaries, and price.",
   "canonical": "https://trygojo.com/blog/gojo-vs-droppy/",
   "og": {
-    "og:title": "Gojo vs Droppy: focused notch controls or an all-in-one Mac utility?",
-    "og:description": "An honest comparison of Gojo's focused notch workflow and Droppy's broad utility suite.",
+    "og:title": "Gojo vs Droppy: local dictation or utility breadth?",
+    "og:description": "Gojo and Droppy compared by dictation workflow, local processing, daily Mac controls, and price.",
     "og:type": "article",
     "og:url": "https://trygojo.com/blog/gojo-vs-droppy/",
     "og:image": "https://trygojo.com/assets/og.jpg",
@@ -13,13 +13,13 @@
   },
   "twitter": {
     "twitter:card": "summary_large_image",
-    "twitter:title": "Gojo vs Droppy: focused notch controls or an all-in-one Mac utility?",
-    "twitter:description": "Compare Gojo's quiet notch surface with Droppy's broad, modular Mac utility suite.",
+    "twitter:title": "Gojo vs Droppy in 2026",
+    "twitter:description": "Compare local dictation, Mac controls, privacy boundaries, and utility breadth.",
     "twitter:image": "https://trygojo.com/assets/og.jpg"
   },
   "article": {
     "published_time": "2026-07-11",
-    "modified_time": "2026-07-15",
+    "modified_time": "2026-09-03",
     "section": "macOS utilities",
     "author": "Gojo",
     "robots": "index,follow,max-image-preview:large"
@@ -31,13 +31,11 @@
         "@type": "BlogPosting",
         "@id": "https://trygojo.com/blog/gojo-vs-droppy/#article",
         "mainEntityOfPage": "https://trygojo.com/blog/gojo-vs-droppy/",
-        "headline": "Gojo vs Droppy: focused notch controls or an all-in-one Mac utility?",
-        "description": "Gojo is a focused MacBook notch control surface. Droppy is a broader, modular macOS productivity suite.",
-        "image": [
-          "https://trygojo.com/assets/og.jpg"
-        ],
+        "headline": "Gojo vs Droppy: local dictation or utility breadth?",
+        "description": "Gojo puts private dictation and daily Mac controls in the notch. Droppy offers a larger modular utility catalog and a voice-note transcription workflow.",
+        "image": ["https://trygojo.com/assets/og.jpg"],
         "datePublished": "2026-07-11",
-        "dateModified": "2026-07-15",
+        "dateModified": "2026-09-03",
         "inLanguage": "en-US",
         "articleSection": "macOS utilities",
         "keywords": [
@@ -75,7 +73,10 @@
         "citation": [
           "https://getdroppy.app/",
           "https://getdroppy.app/compare",
-          "https://trygojo.com/"
+          "https://getdroppy.app/blog/voice-transcription-mac-private",
+          "https://trygojo.com/",
+          "https://trygojo.com/dictation-architecture.md",
+          "https://trygojo.com/dictation-benchmark-results.md"
         ]
       },
       {
@@ -109,7 +110,7 @@
             "name": "Is Gojo a Droppy alternative?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Yes, but they optimize for different preferences. Gojo keeps a focused set of daily controls in the MacBook notch, while Droppy offers a much broader modular productivity suite."
+              "text": "Yes. Gojo is the stronger fit for local push-to-talk dictation into the active text field. Droppy is stronger when you want more optional modules and voice-note transcription inside its Shelf."
             }
           },
           {
@@ -125,7 +126,7 @@
             "name": "Which app should I choose?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Choose Droppy when breadth, optional modules, and notchless Mac support matter most. Choose Gojo when you want a quieter MacBook notch surface built around a smaller set of daily controls."
+              "text": "Choose Droppy when optional modules and notchless Mac support matter most. Choose Gojo when local dictation into the active field should sit beside windows, clipboard, files, media, and system controls."
             }
           }
         ]
@@ -133,13 +134,10 @@
     ]
   },
   "hero": {
-    "label": "July 11, 2026",
-    "title": "Gojo vs Droppy: focused notch controls or an all-in-one Mac utility?",
-    "summary": "Droppy is built for breadth. Gojo keeps a smaller set of daily Mac controls one quiet hover away.",
-    "meta": [
-      "Updated July 15, 2026",
-      "6 min read"
-    ],
+    "label": "September 3, 2026",
+    "title": "Gojo vs Droppy: local dictation or utility breadth?",
+    "summary": "Both apps turn the top of a Mac into a workspace. Gojo's clearest advantage is local dictation that returns text to the active field. Droppy's is a larger catalog of optional utilities.",
+    "meta": ["Updated September 3, 2026", "8 min read"],
     "breadcrumb": [
       {
         "label": "Home",
@@ -155,10 +153,10 @@
     {
       "type": "answer",
       "label": "Short answer",
-      "copy": "Choose Droppy if you want the broadest feature set, optional modules, and support beyond notched MacBooks. Choose Gojo if you want a quieter notch surface centered on music, windows, clipboard history, files, and display comfort.",
+      "copy": "Choose Droppy if you want the broadest catalog of optional Mac utilities and a voice-note workflow built around its Shelf. Choose Gojo if you want private push-to-talk dictation that returns text to the active field, alongside windows, clipboard, files, media, and system controls.",
       "points": [
-        "Best for breadth: Droppy.",
-        "Best for a focused MacBook notch workflow: Gojo.",
+        "Best for optional utility breadth: Droppy.",
+        "Best for local dictation into the active app: Gojo.",
         "Both offer a fully unlocked 3-day trial."
       ]
     },
@@ -192,11 +190,7 @@
     },
     {
       "type": "table",
-      "head": [
-        "Area",
-        "Gojo",
-        "Droppy"
-      ],
+      "head": ["Area", "Gojo", "Droppy"],
       "rows": [
         [
           "Product philosophy",
@@ -208,16 +202,8 @@
           "Music, window snapping, clipboard, files, Night Shift",
           "File tray, clipboard, media, lock screen, cloud sharing, and optional modules"
         ],
-        [
-          "Mac support",
-          "MacBooks with a notch",
-          "Notched and notchless Macs"
-        ],
-        [
-          "Trial",
-          "3 days, full access, no card",
-          "3 days, fully unlocked"
-        ],
+        ["Mac support", "MacBooks with a notch", "Notched and notchless Macs"],
+        ["Trial", "3 days, full access, no card", "3 days, fully unlocked"],
         [
           "Plans checked July 30, 2026",
           "Starts at $2.99 monthly or $9.99 lifetime; 1- or 3-Mac plans",
@@ -242,22 +228,22 @@
       "content": [
         {
           "t": "text",
-          "s": "Droppy is the stronger fit when you want one app to cover as many Mac workflows as possible. Its official site highlights a file tray, clipboard manager, lock-screen controls, media tools, cloud sharing, and 24 optional Droplets."
+          "s": "Droppy is the stronger fit when you want the longest feature list. Its official site covers files, clipboard, notifications, media, cloud sharing, and optional Droplets. Its Voice Transcribe tool records or imports audio, runs Whisper or Parakeet locally, then returns the transcript through the Shelf and clipboard."
         }
       ]
     },
     {
       "type": "heading",
       "level": 3,
-      "text": "Choose Gojo for a quieter surface",
-      "id": "choose-gojo-for-a-quieter-surface"
+      "text": "Choose Gojo for direct local dictation",
+      "id": "choose-gojo-for-direct-local-dictation"
     },
     {
       "type": "paragraph",
       "content": [
         {
           "t": "text",
-          "s": "Gojo is for MacBook owners who want a smaller set of daily controls without building a second dashboard at the top of the screen. Its core stays close to the actions people repeat throughout the day: control music, arrange a window, recover a clipboard item, stage a file, or adjust display warmth."
+          "s": "Gojo is for MacBook owners who want dictation, windows, clipboard, files, media, and system controls to behave like one native workspace. Its dictation captures the original text target, transcribes with a verified local Whisper or Parakeet model, and inserts only the final text after checking that the target is still valid."
         }
       ]
     },
@@ -314,7 +300,7 @@
       "content": [
         {
           "t": "text",
-          "s": "Official sources checked July 13, 2026: "
+          "s": "Official sources checked September 3, 2026: "
         },
         {
           "t": "link",
@@ -369,7 +355,7 @@
             [
               {
                 "t": "text",
-                "s": "Yes, but they optimize for different preferences. Gojo keeps a focused set of daily controls in the MacBook notch, while Droppy offers a much broader modular productivity suite."
+                "s": "Yes. Pick Gojo for local push-to-talk dictation into the active field and an integrated MacBook workspace. Pick Droppy for more optional modules and a Shelf-based voice-note workflow."
               }
             ]
           ]
@@ -411,8 +397,8 @@
     },
     {
       "type": "cta",
-      "label": "Prefer the focused option?",
-      "title": "Put five daily Mac tools one hover away.",
+      "label": "Prefer direct dictation?",
+      "title": "Speak into the field you are already using.",
       "copy": "Try every Gojo feature free for three days. No account or card required.",
       "actions": [
         {

@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import Image from "next/image"
 import Link from "next/link"
 
 import { ClipboardList, FolderOpen, LayoutGrid, Mic, Music, Sunset } from "lucide-react";
@@ -202,7 +203,7 @@ export default function Home() {
           >
             <div className="utility-apps">
               <a className="utility-app" href="https://theboring.name/" target="_blank" rel="noopener">
-                <img src="/assets/utilities/boringnotch.png" width={64} height={64} loading="lazy" alt="" />
+                <Image src="/assets/utilities/boringnotch.png" width={64} height={64} loading="lazy" alt="" />
                 <span>Boring Notch</span>
               </a>
               <a
@@ -211,19 +212,19 @@ export default function Home() {
                 target="_blank"
                 rel="noopener"
               >
-                <img src="/assets/utilities/maccy.png" width={64} height={64} loading="lazy" alt="" />
+                <Image src="/assets/utilities/maccy.png" width={64} height={64} loading="lazy" alt="" />
                 <span>Maccy</span>
               </a>
               <a className="utility-app" href="https://justgetflux.com/" target="_blank" rel="noopener">
-                <img src="/assets/utilities/flux.png" width={64} height={64} loading="lazy" alt="" />
+                <Image src="/assets/utilities/flux.png" width={64} height={64} loading="lazy" alt="" />
                 <span>f.lux</span>
               </a>
               <a className="utility-app" href="https://rectangleapp.com/" target="_blank" rel="noopener">
-                <img src="/assets/utilities/rectangle.png" width={64} height={64} loading="lazy" alt="" />
+                <Image src="/assets/utilities/rectangle.png" width={64} height={64} loading="lazy" alt="" />
                 <span>Rectangle</span>
               </a>
               <a className="utility-app" href="https://dropoverapp.com/" target="_blank" rel="noopener">
-                <img src="/assets/utilities/dropover.png" width={64} height={64} loading="lazy" alt="" />
+                <Image src="/assets/utilities/dropover.png" width={64} height={64} loading="lazy" alt="" />
                 <span>Dropover</span>
               </a>
             </div>
@@ -283,7 +284,7 @@ export default function Home() {
               </ul>
             </div>
             <figure className="act-shot shot-inset">
-              <img
+              <Image
                 src="/screenshots/dictation-models.png"
                 width={460}
                 height={171}
@@ -316,7 +317,7 @@ export default function Home() {
                 </ul>
               </div>
               <figure className="act-shot">
-                <img
+                <Image
                   src="/screenshots/media.png"
                   width={654}
                   height={196}
@@ -346,7 +347,7 @@ export default function Home() {
                 </ul>
               </div>
               <figure className="act-shot">
-                <img
+                <Image
                   src="/screenshots/clipboard.png"
                   width={694}
                   height={197}
@@ -379,7 +380,7 @@ export default function Home() {
                 </ul>
               </div>
               <figure className="act-shot">
-                <img
+                <Image
                   src="/screenshots/windows.png"
                   width={661}
                   height={209}
@@ -409,7 +410,7 @@ export default function Home() {
                 </ul>
               </div>
               <figure className="act-shot">
-                <img
+                <Image
                   src="/screenshots/shelf.png"
                   width={649}
                   height={196}
@@ -439,7 +440,7 @@ export default function Home() {
                 </ul>
               </div>
               <figure className="act-shot shot-window">
-                <img
+                <Image
                   src="/screenshots/settings-nightshift.png"
                   width={681}
                   height={589}

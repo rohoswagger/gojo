@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.1] — 2026-09-04
+
+This patch release makes dictation react consistently and tightens the search
+and window-switching work that shipped alongside it.
+
+### Changed
+
+- **Dictation starts while its local model is warming.** Gojo begins recording
+  immediately and finishes model preparation in the background instead of
+  making the shortcut appear unresponsive.
+- **Search includes System Settings.** Common panes and controls now appear as
+  ranked results and open directly to the requested destination.
+
+### Fixed
+
+- **Dictation no longer stalls the app's input handling.** The Control–Option
+  event tap now runs on its own high-priority run loop, recovers after macOS
+  disables it, and preserves quick releases while the microphone starts.
+- **Speech and cleanup models no longer compete during launch.** Their warmups
+  run in sequence at utility priority, reducing CPU, GPU, and memory pressure.
+- **Retry feedback stays accurate.** A previous error disappears when a new
+  recording starts, and captured audio that produces no words now gets a
+  distinct message instead of being reported as silence.
+- **Search stays still while results arrive.** The focused input no longer
+  moves or relayouts as the results panel grows, and search remains on the
+  Space where it was opened.
+- **Alt-Tab targets the window you selected.** Pointer and keyboard selection
+  now raise the exact window shown, including windows on another display.
+
 ## [1.5.0] — 2026-09-01
 
 Dictation is more flexible, more reliable, and no longer limited to a short
@@ -174,7 +203,9 @@ Meet Gojo — it turns the dead space around your MacBook's notch into a control
 - **Guided setup** — a polished first launch that gets you going in seconds.
 - **Automatic updates** — new versions install themselves; no re-downloading.
 
-[Unreleased]: https://github.com/rohoswagger/gojo/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/rohoswagger/gojo/compare/v1.5.1...HEAD
+[1.5.1]: https://github.com/rohoswagger/gojo/compare/v1.5.0...v1.5.1
+[1.5.0]: https://github.com/rohoswagger/gojo/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/rohoswagger/gojo/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/rohoswagger/gojo/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/rohoswagger/gojo/compare/v1.1.2...v1.2.0

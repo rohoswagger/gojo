@@ -1,0 +1,401 @@
+{
+  "slug": "gojo-vs-superwhisper",
+  "title": "Gojo vs Superwhisper: local Mac dictation compared",
+  "description": "Compare Gojo and Superwhisper for local Mac dictation, active-field insertion, configurable voice modes, cleanup models, and privacy controls.",
+  "canonical": "https://trygojo.com/blog/gojo-vs-superwhisper/",
+  "og": {
+    "og:title": "Gojo vs Superwhisper: local Mac dictation compared",
+    "og:description": "A practical comparison of local Mac dictation, output cleanup, and privacy boundaries.",
+    "og:type": "article",
+    "og:url": "https://trygojo.com/blog/gojo-vs-superwhisper/",
+    "og:image": "https://trygojo.com/assets/og.jpg",
+    "og:image:alt": "Gojo local dictation on a MacBook."
+  },
+  "twitter": {
+    "twitter:card": "summary_large_image",
+    "twitter:title": "Gojo vs Superwhisper",
+    "twitter:description": "Compare active-field dictation, voice modes, and local processing.",
+    "twitter:image": "https://trygojo.com/assets/og.jpg"
+  },
+  "article": {
+    "published_time": "2026-09-04",
+    "modified_time": "2026-09-04",
+    "section": "Mac dictation",
+    "author": "Gojo",
+    "robots": "index,follow,max-image-preview:large"
+  },
+  "jsonLd": {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "@id": "https://trygojo.com/blog/gojo-vs-superwhisper/#article",
+        "mainEntityOfPage": "https://trygojo.com/blog/gojo-vs-superwhisper/",
+        "headline": "Gojo vs Superwhisper: local Mac dictation compared",
+        "description": "Gojo favors a focused local dictation path into the captured text field. Superwhisper offers independently configurable voice and language-model stages.",
+        "image": ["https://trygojo.com/assets/og.jpg"],
+        "datePublished": "2026-09-04",
+        "dateModified": "2026-09-04",
+        "inLanguage": "en-US",
+        "articleSection": "Mac dictation",
+        "author": {
+          "@type": "Organization",
+          "name": "Gojo",
+          "url": "https://trygojo.com/"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Gojo",
+          "url": "https://trygojo.com/"
+        },
+        "mentions": [
+          {
+            "@type": "SoftwareApplication",
+            "name": "Gojo",
+            "operatingSystem": "macOS 14+",
+            "url": "https://trygojo.com/"
+          },
+          {
+            "@type": "SoftwareApplication",
+            "name": "Superwhisper",
+            "operatingSystem": "macOS",
+            "url": "https://superwhisper.com/"
+          }
+        ],
+        "citation": [
+          "https://trygojo.com/dictation-architecture.md",
+          "https://superwhisper.com/docs/security/sensitive-data",
+          "https://superwhisper.com/docs/modes/voice-to-text"
+        ]
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Gojo",
+            "item": "https://trygojo.com/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Blog",
+            "item": "https://trygojo.com/blog/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Gojo vs Superwhisper",
+            "item": "https://trygojo.com/blog/gojo-vs-superwhisper/"
+          }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is Gojo or Superwhisper better for local dictation?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Choose Gojo when you want a focused local speech-to-text path that returns final text to the field you started in. Choose Superwhisper when you need to configure voice recognition, post-processing, and output modes separately."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can Superwhisper run fully locally?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Superwhisper documents configurations with a local voice model and a local language model, or transcription only without post-processing. Its cloud-capable configurations have a different data path."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does Gojo replace Superwhisper modes?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Gojo does not try to replicate a large library of format-specific modes. It is better suited to direct dictated text beside its notch workspace tools."
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "hero": {
+    "label": "September 4, 2026",
+    "title": "Gojo vs Superwhisper: local Mac dictation compared",
+    "summary": "Gojo keeps the path narrow: speak, transcribe on the Mac, and return final text to the field you started in. Superwhisper gives you more control over what happens after transcription.",
+    "meta": ["Checked September 4, 2026", "8 min read"],
+    "breadcrumb": [
+      { "label": "Home", "href": "/" },
+      { "label": "Blog", "href": "/blog/" }
+    ]
+  },
+  "blocks": [
+    {
+      "type": "answer",
+      "label": "Short answer",
+      "copy": "Choose Gojo for private push-to-talk dictation that is designed to insert final text into the active Mac field, with windows, clipboard, files, media, and system controls nearby. Choose Superwhisper if voice modes, custom formatting, and separately configurable local or cloud model stages are the job.",
+      "points": [
+        "Best for a focused local dictation path: Gojo.",
+        "Best for configurable transcription and formatting modes: Superwhisper.",
+        "Both need permission and model choices checked before sensitive use."
+      ]
+    },
+    {
+      "type": "note",
+      "content": [
+        {
+          "t": "text",
+          "s": "Disclosure: Gojo publishes this comparison. We reviewed Gojo's public dictation architecture and Superwhisper's official security documentation on September 4, 2026. Features and model choices can change."
+        }
+      ]
+    },
+    {
+      "type": "jumpNav",
+      "label": "On this page",
+      "items": [
+        { "label": "Comparison", "href": "#comparison" },
+        { "label": "Data path", "href": "#data-path" },
+        { "label": "Best fit", "href": "#best-fit" },
+        { "label": "FAQ", "href": "#faq" }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Gojo and Superwhisper compared",
+      "id": "comparison"
+    },
+    {
+      "type": "table",
+      "head": ["Area", "Gojo", "Superwhisper"],
+      "rows": [
+        [
+          "Primary job",
+          "Dictate final text into the captured active field",
+          "Capture voice and run mode-specific transcription and transformation"
+        ],
+        [
+          "Recognition choices",
+          "Four explicit, downloadable local Whisper and Parakeet models",
+          "Local and cloud voice models are independently selectable"
+        ],
+        [
+          "Post-processing",
+          "Local transcript policy before insertion",
+          "Optional language-model stage, local or cloud depending on mode"
+        ],
+        [
+          "Output shape",
+          "Direct text insertion when the target remains valid",
+          "Mode-dependent output and formatting"
+        ],
+        [
+          "Privacy boundary",
+          "No cloud fallback in the documented local feature",
+          "Depends on the selected voice and language models"
+        ],
+        [
+          "Broader Mac tools",
+          "Windows, clipboard, files, media, and system controls",
+          "Not publicly documented in the security guide"
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The important difference is the second model stage",
+      "id": "data-path"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Superwhisper documents two separate stages: speech becomes raw text, then an optional language model can refine or transform it. Either stage can be local or cloud-based. That is useful when an email, meeting note, or custom format needs different treatment. It also means the privacy answer is configuration-specific."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Gojo makes a different trade. Its documented local feature uses an installed local recognizer, applies local transcript policy, then tries to insert only the final result into the original text target. It does not silently switch to a cloud recognizer. Gojo does not offer Superwhisper's broad mode system, and that is a real limitation for people who dictate in several output formats."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Direct insertion has its own safety rules",
+      "id": "insertion"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "For a quick reply or document draft, the endpoint matters more than the transcript window. Gojo captures the focus target before recording and rechecks the application, window, and field before changing anything. It refuses secure fields. If the target changed while you spoke, the documented behavior is to cancel instead of sending the words somewhere new."
+        }
+      ]
+    },
+    {
+      "type": "sourceFacts",
+      "items": [
+        "Gojo says model downloads happen only after a Settings action, not during a dictation shortcut.",
+        "Gojo documents local-only recognition, no transcript or audio logging, and no cloud fallback for this feature.",
+        "Superwhisper documents a fully local configuration using local voice and language models, or transcription-only mode without language-model processing.",
+        "Superwhisper says transcription history is stored locally. Review its retention settings for sensitive material."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Who should choose each app",
+      "id": "best-fit"
+    },
+    {
+      "type": "table",
+      "head": ["If your daily decision is", "Choose", "Why"],
+      "rows": [
+        [
+          "Put a spoken sentence in the chat, note, or document already open",
+          "Gojo",
+          "Its workflow is centered on final text insertion into the captured field."
+        ],
+        [
+          "Make dictated text match a different template for each task",
+          "Superwhisper",
+          "Its modes can use separate voice and language-model choices."
+        ],
+        [
+          "Keep audio and cleanup text on-device",
+          "Either, after setup",
+          "Select local components in Superwhisper. Use an installed local model in Gojo."
+        ],
+        [
+          "Need a transcript library or many output transformations",
+          "Superwhisper",
+          "That configurable workflow is outside Gojo's stated scope."
+        ],
+        [
+          "Want dictation beside a notch workspace",
+          "Gojo",
+          "Gojo also groups files, clipboard, windows, media, and system controls."
+        ]
+      ]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Neither choice makes a sensitive workflow compliant by itself. Test the exact mode, local model, retention setting, destination app, and organizational policy. Superwhisper's own guidance makes the same point for regulated use."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources checked",
+      "id": "sources"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        { "t": "text", "s": "Official sources checked September 4, 2026: " },
+        {
+          "t": "link",
+          "s": "Gojo local dictation architecture",
+          "href": "/dictation-architecture.md"
+        },
+        { "t": "text", "s": " and " },
+        {
+          "t": "link",
+          "s": "Superwhisper sensitive-data guidance",
+          "href": "https://superwhisper.com/docs/security/sensitive-data"
+        },
+        { "t": "text", "s": "." }
+      ]
+    },
+    { "type": "heading", "level": 2, "text": "FAQ", "id": "faq" },
+    {
+      "type": "faq",
+      "items": [
+        {
+          "q": "Is Gojo or Superwhisper better for local dictation?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Choose Gojo for focused local dictation into the original active field. Choose Superwhisper for configurable voice, language-model, and formatting modes."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "Can Superwhisper keep both stages local?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Yes. Its documentation describes local voice and language-model choices, and a transcription-only path that skips language-model processing."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "What does Gojo give up?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Gojo does not offer Superwhisper's large mode system or its range of output transformations."
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "type": "cta",
+      "label": "Prefer direct local dictation?",
+      "title": "Speak into the field you are using.",
+      "copy": "Try Gojo's local dictation alongside the rest of the MacBook notch workspace.",
+      "actions": [
+        {
+          "label": "Start your free trial",
+          "href": "https://downloads.trygojo.com/Gojo.dmg",
+          "primary": true
+        },
+        {
+          "label": "Read the dictation architecture",
+          "href": "/dictation-architecture.md",
+          "primary": false
+        }
+      ],
+      "trust": "Signed & notarized · macOS 14+ · local model downloads"
+    },
+    {
+      "type": "next",
+      "label": "Related dictation guides",
+      "title": "Compare the endpoint before choosing a tool",
+      "copy": null,
+      "links": [
+        {
+          "label": "Best private dictation apps for Mac",
+          "href": "/blog/best-private-dictation-apps-mac/"
+        },
+        {
+          "label": "Local voice dictation on Mac",
+          "href": "/blog/local-voice-dictation-mac/"
+        },
+        { "label": "Gojo vs MacWhisper", "href": "/blog/gojo-vs-macwhisper/" }
+      ]
+    }
+  ]
+}

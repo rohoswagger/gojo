@@ -1,0 +1,412 @@
+{
+  "slug": "voice-to-text-mac-without-cloud",
+  "title": "Voice-to-text on Mac without cloud processing",
+  "description": "A technical guide to fully local Mac voice-to-text: microphone capture, model downloads, transcription, cleanup, storage, insertion, and an offline test.",
+  "canonical": "https://trygojo.com/blog/voice-to-text-mac-without-cloud/",
+  "og": {
+    "og:title": "Voice-to-text on Mac without cloud processing",
+    "og:description": "Trace what happens to audio and transcript text before you call a Mac dictation workflow local.",
+    "og:type": "article",
+    "og:url": "https://trygojo.com/blog/voice-to-text-mac-without-cloud/",
+    "og:image": "https://trygojo.com/assets/og.jpg",
+    "og:image:alt": "Gojo local voice-to-text settings on a MacBook."
+  },
+  "twitter": {
+    "twitter:card": "summary_large_image",
+    "twitter:title": "Voice-to-text on Mac without cloud processing",
+    "twitter:description": "The offline test and data-path questions that make a local voice-to-text claim meaningful.",
+    "twitter:image": "https://trygojo.com/assets/og.jpg"
+  },
+  "article": {
+    "published_time": "2026-09-04",
+    "modified_time": "2026-09-04",
+    "section": "Mac dictation",
+    "author": "Gojo",
+    "robots": "index,follow,max-image-preview:large"
+  },
+  "jsonLd": {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "headline": "Voice-to-text on Mac without cloud processing",
+        "url": "https://trygojo.com/blog/voice-to-text-mac-without-cloud/",
+        "datePublished": "2026-09-04",
+        "dateModified": "2026-09-04",
+        "author": {
+          "@type": "Organization",
+          "name": "Gojo",
+          "url": "https://trygojo.com/"
+        },
+        "about": {
+          "@type": "Thing",
+          "name": "Offline and local Mac voice-to-text"
+        },
+        "citation": [
+          "https://trygojo.com/dictation-architecture.md",
+          "https://trygojo.com/dictation-benchmark-results.md",
+          "https://superwhisper.com/docs/security/sensitive-data",
+          "https://docs.macwhisper.com/article/52-keeping-transcriptions-private",
+          "https://docs.macwhisper.com/article/54-file-locations",
+          "https://support.apple.com/guide/mac-help/use-dictation-mh40584/26/mac/26",
+          "https://getdroppy.app/blog/voice-transcription-mac-private"
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Can Mac voice-to-text work without internet?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. A local app may need a one-time explicit model download, then transcribe a new recording with networking disabled. Check cleanup, sync, and storage separately because they can follow different paths."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does local transcription mean the whole workflow is private?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Not necessarily. Audio recognition, transcript cleanup, retention, analytics, sync, and the destination application are separate boundaries. A local speech model alone does not settle all of them."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does Gojo send audio to a server?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "In Gojo local dictation mode, audio samples and transcripts stay in process, required models are explicit downloads, and the architecture specifies no cloud fallback. Raw audio is not persisted by default."
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "hero": {
+    "label": "September 4, 2026",
+    "title": "Voice-to-text on Mac without cloud processing",
+    "summary": "The clean test is not a privacy badge. It is whether the installed configuration can record, transcribe, clean up, and return a new sentence with the network disabled.",
+    "meta": ["Reviewed September 4, 2026", "8 min read"],
+    "breadcrumb": [
+      { "label": "Home", "href": "/" },
+      { "label": "Blog", "href": "/blog/" }
+    ]
+  },
+  "blocks": [
+    {
+      "type": "answer",
+      "label": "The direct answer",
+      "copy": "Voice-to-text can run on a Mac without cloud processing when the downloaded speech model, any cleanup model, and the app's normal session path all run locally. A model download does not disqualify the later offline session. A cloud rewrite, cloud transcription provider, or transcript sync service does change the boundary.",
+      "points": [
+        "Check recognition and cleanup separately.",
+        "Check whether recordings and transcripts are retained locally.",
+        "Run a new dictation after disabling every network connection.",
+        "Treat the destination app as its own privacy decision."
+      ]
+    },
+    {
+      "type": "note",
+      "content": [
+        {
+          "t": "text",
+          "s": "Observed September 4, 2026. This guide describes technical boundaries, not legal compliance. A local path does not by itself satisfy a company's policy, contract, or regulation."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The six places voice data can go",
+      "id": "data-path"
+    },
+    {
+      "type": "table",
+      "head": ["Stage", "Question", "A local-only answer"],
+      "rows": [
+        [
+          "Model install",
+          "Where does the speech model arrive from?",
+          "An explicit download is acceptable if later sessions use the verified local files"
+        ],
+        [
+          "Microphone capture",
+          "Does audio leave memory or get uploaded?",
+          "The recording remains on the Mac and is not uploaded"
+        ],
+        [
+          "Recognition",
+          "Which engine receives the audio?",
+          "A model running on the device"
+        ],
+        [
+          "Cleanup",
+          "Does another model punctuate, rewrite, or format the transcript?",
+          "No cleanup, or a local cleanup model"
+        ],
+        [
+          "Storage and sync",
+          "Where do audio, transcripts, history, and settings go?",
+          "Only local storage, with clear retention and deletion behavior"
+        ],
+        [
+          "Insertion",
+          "Where is final text delivered?",
+          "The selected local text field, followed by the destination app's own data policy"
+        ]
+      ]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "The fourth row causes most bad answers. A tool can recognize speech locally and then send the transcript to a hosted language model for punctuation or rewriting. That may be a useful opt-in feature, but it is not a fully local voice-to-text session. Superwhisper documents this split explicitly: voice recognition and post-processing are independent stages, and either can be local or cloud-based depending on the selected configuration."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What the official docs say about local paths",
+      "id": "examples"
+    },
+    {
+      "type": "table",
+      "head": ["Product", "Documented local claim", "Boundary to inspect"],
+      "rows": [
+        [
+          "Gojo",
+          "Downloaded Whisper or Parakeet models run on the Mac with no cloud fallback in local dictation",
+          "The active field needs Microphone and Accessibility permissions for cross-app insertion"
+        ],
+        [
+          "Superwhisper",
+          "Local voice models and local language models are available on macOS",
+          "Cloud models and selected cloud providers create a separate API path"
+        ],
+        [
+          "MacWhisper",
+          "Default transcription runs locally after a model download",
+          "Cloud transcription, DeepL translation, and AI prompts can send data to providers"
+        ],
+        [
+          "Droppy Voice Transcribe",
+          "Recording and transcription run locally after runtime and model downloads",
+          "Voice-note retention is configurable and its classic result flow can copy to the clipboard"
+        ],
+        [
+          "Apple Dictation",
+          "Apple tells users to check Keyboard settings for on-device general-text dictation",
+          "Language, region, setting, and feature availability vary"
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Run an offline test that can fail",
+      "id": "offline-test"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Do the setup while you are online. Download the exact speech and language models you want, turn off any optional cloud mode, and make one ordinary test dictation. Then use a new sentence for the actual test. Reusing an old transcript tells you nothing."
+        }
+      ]
+    },
+    {
+      "type": "list",
+      "ordered": true,
+      "items": [
+        [
+          {
+            "t": "text",
+            "s": "Quit the app after the selected models are installed."
+          }
+        ],
+        [
+          {
+            "t": "text",
+            "s": "Disable Wi-Fi, disconnect Ethernet, and turn off VPN or tethering routes."
+          }
+        ],
+        [
+          {
+            "t": "text",
+            "s": "Reopen the app and dictate a sentence containing a name and punctuation into a normal local text field."
+          }
+        ],
+        [
+          {
+            "t": "text",
+            "s": "Confirm that recognition, any chosen cleanup, and insertion finish without a network error."
+          }
+        ],
+        [
+          {
+            "t": "text",
+            "s": "Inspect history, recording retention, and settings. Remove a test recording if you do not intend to keep it."
+          }
+        ],
+        [
+          {
+            "t": "text",
+            "s": "Repeat after a reboot if the app only proved it could use a warm model already in memory."
+          }
+        ]
+      ]
+    },
+    {
+      "type": "note",
+      "content": [
+        {
+          "t": "text",
+          "s": "An offline test is evidence about a selected workflow. It does not prove that an app never makes unrelated network requests, nor does it audit the product's source code or every future update."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Gojo's documented boundary",
+      "id": "gojo"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Gojo makes the model download an explicit Settings action. Its local dictation architecture says normal transcription reads a verified local model snapshot, does not send audio samples or transcripts to Gojo or model hosts, and has no cloud recognizer fallback. It does not write raw audio to disk by default and excludes dictated content from operational logs. The app captures the intended text target before recording and refuses insertion if it is no longer valid."
+        }
+      ]
+    },
+    {
+      "type": "sourceFacts",
+      "items": [
+        "Gojo's model choices are Parakeet Unified, Parakeet v3, Whisper Small, and Whisper Large v3. They are user-installed downloads, not a background shortcut action.",
+        "The published benchmark is a local implementation benchmark on a documented M4 Pro environment. It is not a privacy audit or a comparison with other products.",
+        "Gojo is a macOS 14+ app. Its focused-field insertion depends on macOS permissions and target-app accessibility behavior."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Choose the tool by the endpoint",
+      "id": "decision"
+    },
+    {
+      "type": "table",
+      "head": ["You need", "Best starting point", "Reason"],
+      "rows": [
+        [
+          "Spoken text in the field already under your cursor",
+          "Gojo",
+          "Its local dictation path is designed for captured-field insertion"
+        ],
+        [
+          "A configurable local transcription and local formatting mode",
+          "Superwhisper",
+          "Its documentation separates and exposes both stages"
+        ],
+        [
+          "A transcript from a saved meeting or media file",
+          "MacWhisper",
+          "Its local default is built around transcription artifacts"
+        ],
+        [
+          "A locally transcribed voice note with a retention choice",
+          "Droppy Voice Transcribe",
+          "Its documentation describes recording and retention controls"
+        ],
+        [
+          "No extra installation for occasional text entry",
+          "Apple Dictation",
+          "It is included with macOS, subject to its settings and language support"
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Frequently asked questions",
+      "id": "faq"
+    },
+    {
+      "type": "faq",
+      "items": [
+        {
+          "q": "Can Mac voice-to-text work without internet?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Yes. Download required local models while connected, then use the selected mode with networking disabled. Check recognition, cleanup, history, and sync because they are separate paths."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "Does local transcription mean the whole workflow is private?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "No. A local speech model does not answer whether a cleanup model, sync service, saved recording, analytics system, or destination app receives text. Follow each boundary."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "Does Gojo save my dictation recordings?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Gojo's local dictation architecture says it does not persist raw audio by default. It also excludes transcript text and audio buffers from operational logs."
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "type": "cta",
+      "label": "Use a local path",
+      "title": "Install the model before you need the words",
+      "copy": "Gojo keeps model installation explicit, then uses local transcription for the active text field. Test it offline before sensitive work.",
+      "actions": [
+        { "label": "Download Gojo", "href": "/downloads/", "primary": true },
+        {
+          "label": "Read the architecture",
+          "href": "/dictation-architecture.md",
+          "primary": false
+        }
+      ],
+      "trust": "macOS 14+ · explicit local model downloads · no cloud fallback in local mode"
+    },
+    {
+      "type": "next",
+      "label": "Compare privacy claims",
+      "title": "A privacy label is only the first question",
+      "copy": [
+        {
+          "t": "text",
+          "s": "The useful next comparison is between a direct dictation workflow and a recorder that produces a transcript to copy later."
+        }
+      ],
+      "links": [
+        {
+          "label": "Local voice dictation on Mac",
+          "href": "/blog/local-voice-dictation-mac/"
+        },
+        {
+          "label": "Best private dictation apps for Mac",
+          "href": "/blog/best-private-dictation-apps-mac/"
+        }
+      ]
+    }
+  ]
+}

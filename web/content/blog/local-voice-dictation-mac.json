@@ -1,0 +1,333 @@
+{
+  "slug": "local-voice-dictation-mac",
+  "title": "Local voice dictation on Mac: what actually stays private",
+  "description": "Understand local Mac dictation from microphone capture through transcription, cleanup, storage, and text insertion, with a practical offline test.",
+  "canonical": "https://trygojo.com/blog/local-voice-dictation-mac/",
+  "og": {
+    "og:title": "Local voice dictation on Mac: what actually stays private",
+    "og:description": "A concrete privacy test for Mac dictation, from audio capture to the final text field.",
+    "og:type": "article",
+    "og:url": "https://trygojo.com/blog/local-voice-dictation-mac/",
+    "og:image": "https://trygojo.com/assets/og.jpg",
+    "og:image:alt": "Gojo local dictation running from the MacBook notch."
+  },
+  "twitter": {
+    "twitter:card": "summary_large_image",
+    "twitter:title": "Local voice dictation on Mac",
+    "twitter:description": "What local should mean at every step of Mac dictation.",
+    "twitter:image": "https://trygojo.com/assets/og.jpg"
+  },
+  "article": {
+    "published_time": "2026-09-03",
+    "modified_time": "2026-09-03",
+    "section": "Mac dictation",
+    "author": "Gojo",
+    "robots": "index,follow,max-image-preview:large"
+  },
+  "jsonLd": {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "headline": "Local voice dictation on Mac: what actually stays private",
+        "url": "https://trygojo.com/blog/local-voice-dictation-mac/",
+        "datePublished": "2026-09-03",
+        "dateModified": "2026-09-03",
+        "author": {
+          "@type": "Organization",
+          "name": "Gojo",
+          "url": "https://trygojo.com/"
+        },
+        "citation": [
+          "https://trygojo.com/dictation-architecture.md",
+          "https://trygojo.com/dictation-model-evaluation.md",
+          "https://support.apple.com/guide/mac-help/mh40584/mac",
+          "https://getdroppy.app/blog/voice-transcription-mac-private"
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What does local dictation mean?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Local dictation means microphone audio is transcribed on the device. For the full workflow to stay local, transcript cleanup and storage must also remain on the device."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can a local dictation app need internet?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Many apps need internet to download a speech model. That does not mean later recordings are uploaded. The practical test is whether an installed model can complete a new dictation with networking disabled."
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "hero": {
+    "label": "September 3, 2026",
+    "title": "Local voice dictation on Mac: what actually stays private",
+    "summary": "A microphone badge and a local model do not settle the privacy question. Follow the audio and text through the entire workflow.",
+    "meta": ["Reviewed September 3, 2026", "8 min read"],
+    "breadcrumb": [
+      { "label": "Home", "href": "/" },
+      { "label": "Blog", "href": "/blog/" }
+    ]
+  },
+  "blocks": [
+    {
+      "type": "answer",
+      "label": "The practical definition",
+      "copy": "A fully local dictation session records, transcribes, optionally cleans up, and inserts text without sending audio or transcript content off the Mac. A one-time model download is compatible with that definition. A hidden cloud cleanup step is not.",
+      "points": [
+        "Check the voice model and cleanup model separately.",
+        "Ask whether raw audio or transcripts are saved.",
+        "Run a real dictation after disabling the network."
+      ]
+    },
+    {
+      "type": "jumpNav",
+      "label": "On this page",
+      "items": [
+        { "label": "Data path", "href": "#data-path" },
+        { "label": "Offline test", "href": "#offline-test" },
+        { "label": "Permissions", "href": "#permissions" },
+        { "label": "Gojo's boundary", "href": "#gojo-boundary" },
+        { "label": "Choosing a workflow", "href": "#choose" },
+        { "label": "FAQ", "href": "#faq" }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Trace the full dictation data path",
+      "id": "data-path"
+    },
+    {
+      "type": "table",
+      "head": ["Stage", "Question to ask", "Gojo local mode"],
+      "rows": [
+        [
+          "Capture",
+          "Is microphone audio written to disk or uploaded?",
+          "Audio stays in process and is not persisted by default"
+        ],
+        [
+          "Recognition",
+          "Which speech model receives the samples?",
+          "A user-installed Whisper or Parakeet model on the Mac"
+        ],
+        [
+          "Cleanup",
+          "Does another model rewrite the transcript?",
+          "Local deterministic policies and optional on-device S1-mini polishing"
+        ],
+        [
+          "Insertion",
+          "How does text reach the destination?",
+          "The captured field is revalidated; secure fields are refused"
+        ],
+        [
+          "Logs",
+          "Can logs contain spoken content?",
+          "Transcript text, clipboard contents, and audio buffers are excluded"
+        ]
+      ]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "The cleanup row catches the most common ambiguity. A product may advertise local Whisper transcription, then send the resulting text to a hosted language model for punctuation or rewriting. That can be a reasonable opt-in feature. It is not a fully local session."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Run the offline test",
+      "id": "offline-test"
+    },
+    {
+      "type": "list",
+      "ordered": true,
+      "items": [
+        [{ "t": "text", "s": "Install and select the model while online." }],
+        [
+          {
+            "t": "text",
+            "s": "Quit the dictation app, disable Wi-Fi and unplug Ethernet."
+          }
+        ],
+        [
+          {
+            "t": "text",
+            "s": "Reopen the app and dictate a new sentence into an ordinary text field."
+          }
+        ],
+        [
+          {
+            "t": "text",
+            "s": "Confirm that recognition, cleanup, and insertion all finish."
+          }
+        ],
+        [
+          {
+            "t": "text",
+            "s": "Check whether the app created a saved recording or transcript you did not request."
+          }
+        ]
+      ]
+    },
+    {
+      "type": "note",
+      "content": [
+        {
+          "t": "text",
+          "s": "This test proves that the selected workflow can function offline. It does not replace a code, network, or privacy-policy audit."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Microphone and Accessibility permissions do different jobs",
+      "id": "permissions"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Microphone access lets an app capture speech. Accessibility access can let it identify the active control and insert text into another app. A dictation tool should request each permission when the related feature is used, explain why it is needed, and fail without changing the destination when permission is missing."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Gojo's local boundary",
+      "id": "gojo-boundary"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Gojo makes model installation an explicit Settings action. The dictation shortcut never begins a download. Once installed, the chosen local model receives 16 kHz mono audio in memory. Gojo inserts only the final transcript, refuses secure fields, and cancels insertion if the original app, window, or field is no longer valid."
+        }
+      ]
+    },
+    {
+      "type": "sourceFacts",
+      "items": [
+        "Available local engines are WhisperKit and FluidAudio, with four explicit model choices.",
+        "Downloaded model assets use pinned revisions, size limits, and source-controlled hashes.",
+        "There is no cloud fallback in local mode.",
+        "Gojo publishes its architecture, model evaluation method, and current benchmark results as crawlable documents."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Choose dictation or transcription by the endpoint",
+      "id": "choose"
+    },
+    {
+      "type": "table",
+      "head": ["You want to end with", "Look for", "Example fit"],
+      "rows": [
+        [
+          "Text in the field under your cursor",
+          "Captured-target validation and cross-app insertion",
+          "Gojo or another direct dictation app"
+        ],
+        [
+          "A transcript to edit, export, or subtitle",
+          "File import, speakers, timestamps, and export formats",
+          "MacWhisper"
+        ],
+        [
+          "A saved voice note plus a transcript",
+          "Recording library and retention controls",
+          "Droppy Voice Transcribe"
+        ],
+        [
+          "Simple occasional text entry",
+          "A built-in shortcut and supported on-device language",
+          "Apple Dictation"
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Frequently asked questions",
+      "id": "faq"
+    },
+    {
+      "type": "faq",
+      "items": [
+        {
+          "q": "Does local dictation mean no internet is ever needed?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "No. The app may need internet for an explicit model download or update. The speech session can still stay local after installation."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "Is Apple Dictation always processed on-device?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Apple says users should check Keyboard settings because on-device processing depends on the language and configuration. Do not assume one answer applies to every Mac."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "Does Gojo save recordings?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Gojo does not persist raw dictation audio by default. Its local architecture also excludes transcript text and audio buffers from operational logs."
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "type": "next",
+      "label": "Compare the options",
+      "title": "Pick the workflow, then pick the app",
+      "copy": [
+        {
+          "t": "text",
+          "s": "A private recorder and private cross-app dictation solve different jobs."
+        }
+      ],
+      "links": [
+        {
+          "label": "Best private dictation apps for Mac",
+          "href": "/blog/best-private-dictation-apps-mac/"
+        },
+        {
+          "label": "Gojo dictation architecture",
+          "href": "/dictation-architecture.md"
+        }
+      ]
+    }
+  ]
+}

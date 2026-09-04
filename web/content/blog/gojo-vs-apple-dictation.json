@@ -1,0 +1,354 @@
+{
+  "slug": "gojo-vs-apple-dictation",
+  "title": "Gojo vs Apple Dictation: which Mac option?",
+  "description": "Compare Gojo and Apple Dictation for Mac text entry, on-device processing status, model choices, active-field safeguards, and everyday workflow.",
+  "canonical": "https://trygojo.com/blog/gojo-vs-apple-dictation/",
+  "og": {
+    "og:title": "Gojo vs Apple Dictation: which Mac option?",
+    "og:description": "Compare Apple's built-in Mac Dictation with Gojo's local, model-selectable speech-to-text workflow.",
+    "og:type": "article",
+    "og:url": "https://trygojo.com/blog/gojo-vs-apple-dictation/",
+    "og:image": "https://trygojo.com/assets/og.jpg",
+    "og:image:alt": "Gojo local dictation on a MacBook."
+  },
+  "twitter": {
+    "twitter:card": "summary_large_image",
+    "twitter:title": "Gojo vs Apple Dictation",
+    "twitter:description": "A fair comparison of Mac speech input, local processing, and workflow controls.",
+    "twitter:image": "https://trygojo.com/assets/og.jpg"
+  },
+  "article": {
+    "published_time": "2026-09-04",
+    "modified_time": "2026-09-04",
+    "section": "Mac dictation",
+    "author": "Gojo",
+    "robots": "index,follow,max-image-preview:large"
+  },
+  "jsonLd": {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "@id": "https://trygojo.com/blog/gojo-vs-apple-dictation/#article",
+        "mainEntityOfPage": "https://trygojo.com/blog/gojo-vs-apple-dictation/",
+        "headline": "Gojo vs Apple Dictation: which Mac option?",
+        "description": "Apple Dictation is the zero-install baseline for speech input. Gojo adds explicit downloadable local models and a documented active-target insertion path.",
+        "datePublished": "2026-09-04",
+        "dateModified": "2026-09-04",
+        "author": { "@type": "Organization", "name": "Gojo" },
+        "publisher": { "@type": "Organization", "name": "Gojo" },
+        "citation": [
+          "https://support.apple.com/guide/mac-help/use-dictation-mh40584/26/mac/26",
+          "https://support.apple.com/guide/mac-help/keyboard-settings-kbdm162/26/mac/26",
+          "https://trygojo.com/dictation-architecture.md",
+          "https://trygojo.com/dictation-model-evaluation.md"
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is Apple Dictation processed on-device?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Apple says Keyboard settings show whether voice inputs and transcripts for general text Dictation are processed on the device. It gives that wording for general text Dictation and notes that availability varies by language and region."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why use Gojo instead of Apple Dictation?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Use Gojo when explicit local speech-model choices, offline operation after model installation, and documented focus validation before insertion matter. Apple Dictation is the simpler free option for ordinary speech input."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does Gojo need an internet connection for dictation?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Gojo documents that an optional local model must be explicitly downloaded first. Once installed, its local dictation feature is intended to work with networking disabled."
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "hero": {
+    "label": "September 4, 2026",
+    "title": "Gojo vs Apple Dictation: which Mac option?",
+    "summary": "Apple Dictation is already on the Mac and should be the first baseline most people try. Gojo makes sense when the exact local model, offline path, and insertion behavior need more control.",
+    "meta": ["Checked September 4, 2026", "7 min read"],
+    "breadcrumb": [
+      { "label": "Home", "href": "/" },
+      { "label": "Blog", "href": "/blog/" }
+    ]
+  },
+  "blocks": [
+    {
+      "type": "answer",
+      "label": "Short answer",
+      "copy": "Choose Apple Dictation for free, built-in speech input wherever you can type. Choose Gojo when you want to select and download a local Whisper or Parakeet model, keep the documented speech path offline after installation, and use dictation beside a MacBook notch workspace.",
+      "points": [
+        "Best no-install baseline: Apple Dictation.",
+        "Best for explicit local-model choice: Gojo.",
+        "Apple's on-device status depends on the language and settings shown in Keyboard settings."
+      ]
+    },
+    {
+      "type": "note",
+      "content": [
+        {
+          "t": "text",
+          "s": "Disclosure: Gojo publishes this comparison. We reviewed Apple's current Mac Dictation documentation and Gojo's public architecture on September 4, 2026. Apple does not present one blanket network statement for every Dictation scenario, language, or text surface."
+        }
+      ]
+    },
+    {
+      "type": "jumpNav",
+      "label": "On this page",
+      "items": [
+        { "label": "Comparison", "href": "#comparison" },
+        { "label": "On-device status", "href": "#on-device-status" },
+        { "label": "Best fit", "href": "#best-fit" },
+        { "label": "FAQ", "href": "#faq" }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Gojo and Apple Dictation compared",
+      "id": "comparison"
+    },
+    {
+      "type": "table",
+      "head": ["Area", "Gojo", "Apple Dictation"],
+      "rows": [
+        [
+          "Starting point",
+          "Separate MacBook utility",
+          "Built into macOS Keyboard settings"
+        ],
+        [
+          "Model choice",
+          "Four named local Whisper and Parakeet downloads",
+          "Not publicly documented as user-selectable speech models"
+        ],
+        [
+          "Local status",
+          "Documented local feature with no cloud fallback",
+          "Check Keyboard settings for general-text on-device processing status"
+        ],
+        [
+          "Internet after setup",
+          "Documented to work with networking disabled after model installation",
+          "Not publicly documented as one universal rule"
+        ],
+        [
+          "Destination safeguards",
+          "Captures and rechecks the target, refuses secure fields where exposed",
+          "Not publicly documented in Apple's user guide"
+        ],
+        [
+          "Other tools",
+          "Notch controls for files, clipboard, windows, media, and system settings",
+          "System speech-input feature"
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Apple's own on-device wording is deliberately specific",
+      "id": "on-device-status"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Apple says you can check Keyboard settings to see whether voice inputs and transcripts for general text Dictation, such as composing messages and notes, are processed on-device and not sent to Siri servers. Apple distinguishes that example from dictating in a search box. It also says Dictation availability and features vary by language and region."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "That means the honest comparison is not that Apple Dictation is always cloud-based or always local. It is the free baseline with a status Apple asks users to verify in their own settings. If data handling is important, check that screen for the selected language and test the exact place where you plan to dictate."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Gojo puts the local choices in the product",
+      "id": "gojo-workflow"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Gojo exposes four explicit local speech-model downloads: Whisper Small, Whisper Large v3, Parakeet Unified, and Parakeet v3. The shortcut never starts a download. With a verified model installed, Gojo documents a local-only path, no cloud fallback, and a focus check before it inserts final text. These controls add setup work, microphone and Accessibility permissions, and a paid app to a job Apple already gives away."
+        }
+      ]
+    },
+    {
+      "type": "sourceFacts",
+      "items": [
+        "Apple says Dictation can enter text anywhere you can type.",
+        "Apple says Keyboard settings reveal whether general text Dictation voice inputs and transcripts are processed on-device.",
+        "Apple says Dictation is not available in all languages or regions and feature availability varies.",
+        "Gojo's published local model list and focus-validation behavior apply to its own documented feature, not to Apple Dictation."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Who should choose each option",
+      "id": "best-fit"
+    },
+    {
+      "type": "table",
+      "head": ["Your situation", "Choose", "Reason"],
+      "rows": [
+        [
+          "You want to dictate a few messages without installing anything",
+          "Apple Dictation",
+          "It is included with macOS."
+        ],
+        [
+          "You need a visible on-device status for general-text Dictation",
+          "Apple Dictation",
+          "Keyboard settings provide Apple's current status for that case."
+        ],
+        [
+          "You want an explicit downloadable local model and offline test path",
+          "Gojo",
+          "Its model and network boundaries are documented."
+        ],
+        [
+          "You want direct dictation beside a file shelf, clipboard, windows, and media controls",
+          "Gojo",
+          "Those are part of one MacBook notch workspace."
+        ],
+        [
+          "You need speech input in a language Apple does not support",
+          "Neither by assumption",
+          "Check Apple's availability and each Gojo model's supported languages before deciding."
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources checked",
+      "id": "sources"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        { "t": "text", "s": "Official sources checked September 4, 2026: " },
+        {
+          "t": "link",
+          "s": "Apple's Mac Dictation guide",
+          "href": "https://support.apple.com/guide/mac-help/use-dictation-mh40584/26/mac/26"
+        },
+        { "t": "text", "s": ", " },
+        {
+          "t": "link",
+          "s": "Apple Keyboard settings guide",
+          "href": "https://support.apple.com/guide/mac-help/keyboard-settings-kbdm162/26/mac/26"
+        },
+        { "t": "text", "s": ", and " },
+        {
+          "t": "link",
+          "s": "Gojo local dictation architecture",
+          "href": "/dictation-architecture.md"
+        },
+        { "t": "text", "s": "." }
+      ]
+    },
+    { "type": "heading", "level": 2, "text": "FAQ", "id": "faq" },
+    {
+      "type": "faq",
+      "items": [
+        {
+          "q": "Is Apple Dictation processed on-device?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Apple says Keyboard settings show whether general-text Dictation inputs and transcripts are processed on-device. Check the status for your selected language and use case."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "Why use Gojo instead of Apple Dictation?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Use Gojo for explicit local model choice, an offline local path after installation, and documented target validation before final insertion."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "What does Gojo give up compared with Apple?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Apple Dictation is built in and does not require a separate app, paid license, or model download."
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "type": "cta",
+      "label": "Want an explicit local path?",
+      "title": "Choose the model before you speak.",
+      "copy": "Try Gojo's local dictation workflow and the rest of its MacBook notch controls.",
+      "actions": [
+        {
+          "label": "Start your free trial",
+          "href": "https://downloads.trygojo.com/Gojo.dmg",
+          "primary": true
+        },
+        {
+          "label": "Read the dictation architecture",
+          "href": "/dictation-architecture.md",
+          "primary": false
+        }
+      ],
+      "trust": "Signed & notarized · macOS 14+ · explicit local model downloads"
+    },
+    {
+      "type": "next",
+      "label": "Related dictation guides",
+      "title": "Test the baseline, then compare the workflow",
+      "copy": null,
+      "links": [
+        {
+          "label": "Best private dictation apps for Mac",
+          "href": "/blog/best-private-dictation-apps-mac/"
+        },
+        {
+          "label": "Local voice dictation on Mac",
+          "href": "/blog/local-voice-dictation-mac/"
+        },
+        {
+          "label": "Gojo vs Superwhisper",
+          "href": "/blog/gojo-vs-superwhisper/"
+        }
+      ]
+    }
+  ]
+}

@@ -17,7 +17,12 @@ export type Inline = {
 };
 
 export type Block =
-  | { type: "answer"; label: string | null; copy: string | null; points: string[] }
+  | {
+      type: "answer";
+      label: string | null;
+      copy: string | null;
+      points: string[];
+    }
   | { type: "jumpNav"; label: string; items: { label: string; href: string }[] }
   | { type: "heading"; level: 2 | 3; text: string; id: string }
   | { type: "paragraph"; content: Inline[] }
@@ -28,7 +33,12 @@ export type Block =
   | { type: "faq"; items: { q: string; a: Inline[][] }[] }
   | {
       type: "miniCards";
-      cards: { name: string | null; title: string; copy: string; href: string }[];
+      cards: {
+        name: string | null;
+        title: string;
+        copy: string;
+        href: string;
+      }[];
     }
   | {
       type: "cta";
@@ -89,11 +99,20 @@ export type BlogHub = PostMeta & {
 const CONTENT_DIR = path.join(process.cwd(), "content", "blog");
 
 export const POST_SLUGS = [
+  "best-mac-clipboard-manager",
+  "best-mac-dictation-for-developers",
+  "best-mac-dictation-for-writers",
+  "best-mac-notch-apps-for-productivity",
+  "best-private-dictation-apps-mac",
   "best-droppy-alternatives",
+  "best-file-shelf-apps-mac",
   "best-macos-accessibility-permission-apps",
   "best-macos-notch-utilities",
+  "best-window-management-tools-mac",
+  "droppy-alternatives-private-dictation",
   "gojo-vs-alcove",
   "gojo-vs-alttab",
+  "gojo-vs-apple-dictation",
   "gojo-vs-bettertouchtool",
   "gojo-vs-boring-notch",
   "gojo-vs-droppy",
@@ -101,9 +120,14 @@ export const POST_SLUGS = [
   "gojo-vs-flux",
   "gojo-vs-karabiner-elements",
   "gojo-vs-maccy",
+  "gojo-vs-macwhisper",
   "gojo-vs-notchnook",
   "gojo-vs-raycast",
   "gojo-vs-rectangle",
+  "gojo-vs-superwhisper",
+  "gojo-vs-yoink",
+  "local-voice-dictation-mac",
+  "voice-to-text-mac-without-cloud",
 ] as const;
 
 export function loadPost(slug: string): BlogPost {

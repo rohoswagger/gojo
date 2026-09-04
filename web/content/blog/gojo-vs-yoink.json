@@ -1,0 +1,343 @@
+{
+  "slug": "gojo-vs-yoink",
+  "title": "Gojo vs Yoink: Mac file shelf comparison",
+  "description": "Compare Gojo and Yoink for staging files, drag and drop, clipboard history, temporary shelves, MacBook notch controls, and workflow fit.",
+  "canonical": "https://trygojo.com/blog/gojo-vs-yoink/",
+  "og": {
+    "og:title": "Gojo vs Yoink: Mac file shelf comparison",
+    "og:description": "Compare temporary file staging with a broader MacBook notch workspace.",
+    "og:type": "article",
+    "og:url": "https://trygojo.com/blog/gojo-vs-yoink/",
+    "og:image": "https://trygojo.com/assets/og.jpg",
+    "og:image:alt": "Gojo file shelf in the MacBook notch."
+  },
+  "twitter": {
+    "twitter:card": "summary_large_image",
+    "twitter:title": "Gojo vs Yoink",
+    "twitter:description": "Choose between a dedicated drag-and-drop shelf and a MacBook notch workspace.",
+    "twitter:image": "https://trygojo.com/assets/og.jpg"
+  },
+  "article": {
+    "published_time": "2026-09-04",
+    "modified_time": "2026-09-04",
+    "section": "macOS utilities",
+    "author": "Gojo",
+    "robots": "index,follow,max-image-preview:large"
+  },
+  "jsonLd": {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "@id": "https://trygojo.com/blog/gojo-vs-yoink/#article",
+        "mainEntityOfPage": "https://trygojo.com/blog/gojo-vs-yoink/",
+        "headline": "Gojo vs Yoink: Mac file shelf comparison",
+        "description": "Yoink specializes in temporary drag-and-drop staging. Gojo includes file staging in a broader MacBook notch workspace with local dictation, windows, clipboard, media, and controls.",
+        "datePublished": "2026-09-04",
+        "dateModified": "2026-09-04",
+        "author": { "@type": "Organization", "name": "Gojo" },
+        "publisher": { "@type": "Organization", "name": "Gojo" },
+        "citation": [
+          "https://eternalstorms.at/yoink/mac/",
+          "https://updates.eternalstorms.at/notes/YNKMC/",
+          "https://trygojo.com/"
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is Gojo an alternative to Yoink?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Gojo can suit people who want basic file staging as one part of a MacBook notch workspace. Yoink is the better fit when temporary drag-and-drop staging, clipboard history, and its macOS integrations are the primary job."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What does Yoink do?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yoink is a temporary shelf for files and app content that you want to move or copy. Its official site says it can hold virtually anything you can drag while you navigate to the destination."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does Yoink replace a notch utility?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Yoink specializes in drag-and-drop staging. It is not described by its developer as a full notch workspace for dictation, window management, media, and system controls."
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "hero": {
+    "label": "September 4, 2026",
+    "title": "Gojo vs Yoink: Mac file shelf comparison",
+    "summary": "Yoink earns its place when file dragging is a frequent, fiddly job. Gojo makes more sense when file staging is only one of several Mac tasks you want near the notch.",
+    "meta": ["Checked September 4, 2026", "7 min read"],
+    "breadcrumb": [
+      { "label": "Home", "href": "/" },
+      { "label": "Blog", "href": "/blog/" }
+    ]
+  },
+  "blocks": [
+    {
+      "type": "answer",
+      "label": "Short answer",
+      "copy": "Choose Yoink if temporary drag-and-drop staging is your main problem. It is a dedicated shelf that appears while dragging and can hold files or app content until you reach the destination. Choose Gojo if you want file staging inside a MacBook notch workspace that also handles local dictation, windows, clipboard, media, and system controls.",
+      "points": [
+        "Best dedicated drag-and-drop shelf: Yoink.",
+        "Best broader MacBook notch workspace with file staging: Gojo.",
+        "Yoink's macOS integration depth is a genuine reason to choose it."
+      ]
+    },
+    {
+      "type": "note",
+      "content": [
+        {
+          "t": "text",
+          "s": "Disclosure: Gojo publishes this comparison. Yoink-specific facts in this page come from Eternal Storms Software's official Yoink website and release notes, checked September 4, 2026. Gojo is not presented as a full substitute for Yoink's specialist workflow."
+        }
+      ]
+    },
+    {
+      "type": "jumpNav",
+      "label": "On this page",
+      "items": [
+        { "label": "Comparison", "href": "#comparison" },
+        { "label": "File staging", "href": "#file-staging" },
+        { "label": "Best fit", "href": "#best-fit" },
+        { "label": "FAQ", "href": "#faq" }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Gojo and Yoink compared",
+      "id": "comparison"
+    },
+    {
+      "type": "table",
+      "head": ["Area", "Gojo", "Yoink"],
+      "rows": [
+        [
+          "Core idea",
+          "MacBook notch workspace with a file-staging feature",
+          "Temporary shelf for files and app content"
+        ],
+        [
+          "Drag behavior",
+          "File shelf from the notch workspace",
+          "Appears at a screen edge or cursor while you drag, according to its settings"
+        ],
+        [
+          "Content",
+          "Files for short-term staging",
+          "Files and virtually anything you can drag, including text and images"
+        ],
+        [
+          "Clipboard",
+          "Clipboard history as part of the workspace",
+          "Clipboard history with app exclusion controls, according to its official site"
+        ],
+        [
+          "Mac integrations",
+          "Not publicly documented as Yoink-equivalent",
+          "System services, Quick Action, Share extension, Handoff, Continuity Camera, Terminal, and Automator support"
+        ],
+        [
+          "Other daily controls",
+          "Dictation, windows, media, display comfort, and glanceable tools",
+          "Not publicly documented as a notch workspace"
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Yoink is built around the drag itself",
+      "id": "file-staging"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Yoink's official explanation is refreshingly plain. Drag something to its shelf, release the mouse, travel to the destination, then drag it out. It behaves like Finder for moving or copying files, and its developer documents options for where and when the shelf appears. If you routinely collect attachments, images, snippets, and downloads across spaces or full-screen apps, that narrow focus is the point."
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Yoink also goes further than a temporary holding area. Its official site lists Quick Action and Share extension support, Handoff with its iPhone and iPad app, Continuity Camera, Terminal and Automator use, and clipboard history. It has a 200-item clipboard-history capacity on macOS 14.4 and later in its version 3.7 notes. Gojo does not claim an equivalent set of file-transfer integrations."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Gojo treats files as one part of the workday",
+      "id": "gojo-workspace"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Gojo is for the person who wants a small number of everyday controls gathered in the MacBook notch. Its file shelf sits beside clipboard history, window snapping, media, display controls, and local dictation. That can remove an app from the menu bar for someone with simple staging needs. It does not make Gojo the better file tool when the handoff itself is your recurring bottleneck."
+        }
+      ]
+    },
+    {
+      "type": "sourceFacts",
+      "items": [
+        "Yoink says it holds files and app content until you move or copy them to a destination.",
+        "Yoink says the shelf can appear while dragging, and offers options to change its position and trigger behavior.",
+        "Yoink documents Finder-like copy and move behavior when dragging files out.",
+        "Yoink lists its macOS integrations and clipboard-history controls on its official product page."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Who should choose each app",
+      "id": "best-fit"
+    },
+    {
+      "type": "table",
+      "head": ["If you spend time on", "Choose", "Reason"],
+      "rows": [
+        [
+          "Moving many files, links, images, and text snippets between windows or spaces",
+          "Yoink",
+          "Temporary drag-and-drop staging is its entire product focus."
+        ],
+        [
+          "Using Handoff, Continuity Camera, Share extensions, Terminal, or Automator with a shelf",
+          "Yoink",
+          "Its developer documents those integrations."
+        ],
+        [
+          "Keeping a few files near daily Mac controls",
+          "Gojo",
+          "File staging sits with other notch workspace features."
+        ],
+        [
+          "Using one surface for local dictation, windows, media, clipboard, and files",
+          "Gojo",
+          "That integrated MacBook workflow is Gojo's purpose."
+        ],
+        [
+          "Replacing Yoink's specialist drag workflow",
+          "Do not assume Gojo",
+          "Gojo does not claim Yoink's full feature and integration set."
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources checked",
+      "id": "sources"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Official Yoink sources checked September 4, 2026: "
+        },
+        {
+          "t": "link",
+          "s": "Yoink for Mac",
+          "href": "https://eternalstorms.at/yoink/mac/"
+        },
+        { "t": "text", "s": " and " },
+        {
+          "t": "link",
+          "s": "Yoink release notes",
+          "href": "https://updates.eternalstorms.at/notes/YNKMC/"
+        },
+        { "t": "text", "s": "." }
+      ]
+    },
+    { "type": "heading", "level": 2, "text": "FAQ", "id": "faq" },
+    {
+      "type": "faq",
+      "items": [
+        {
+          "q": "Is Gojo an alternative to Yoink?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Gojo can replace a simple file shelf for people who want it inside a broader notch workspace. Yoink remains the better fit when file staging and integrations are the main job."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "What does Yoink do?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Yoink is a temporary shelf for files and app content that you want to move or copy while you navigate to the destination."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "Does Yoink replace a full notch utility?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "No. Yoink specializes in staging dragged content and does not describe itself as a full workspace for dictation, windows, media, and system controls."
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "type": "cta",
+      "label": "Want files beside your other controls?",
+      "title": "Keep the everyday Mac jobs in one place.",
+      "copy": "Try Gojo's MacBook notch workspace, including file staging, local dictation, windows, clipboard, and media controls.",
+      "actions": [
+        {
+          "label": "Start your free trial",
+          "href": "https://downloads.trygojo.com/Gojo.dmg",
+          "primary": true
+        },
+        { "label": "See Gojo", "href": "/", "primary": false }
+      ],
+      "trust": "Signed & notarized · macOS 14+ · 3-day full-access trial"
+    },
+    {
+      "type": "next",
+      "label": "Related comparisons",
+      "title": "Compare the Mac job, not the feature count",
+      "copy": null,
+      "links": [
+        { "label": "Gojo vs Droppy", "href": "/blog/gojo-vs-droppy/" },
+        {
+          "label": "Gojo vs Boring Notch",
+          "href": "/blog/gojo-vs-boring-notch/"
+        },
+        {
+          "label": "Best macOS notch utilities",
+          "href": "/blog/best-macos-notch-utilities/"
+        }
+      ]
+    }
+  ]
+}

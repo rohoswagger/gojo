@@ -1,9 +1,5 @@
 # Product
 
-## Register
-
-brand
-
 ## Users
 
 Gojo is for MacBook owners who want fewer utility apps competing for attention. They move between writing, calls, files, windows, music, and system controls all day and want those workflows gathered into one fast, native surface.

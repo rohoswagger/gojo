@@ -93,16 +93,10 @@ actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
 
     func cancelTranscription() async {
         transcriptionGeneration &+= 1
-        loadGeneration &+= 1
         let cancelledGeneration = activeTranscriptionGeneration
         let cancelledTranscription = transcriptionTask
-        let cancelledLoad = loadTask
         cancelledTranscription?.task.cancel()
-        cancelledLoad?.task.cancel()
         if let task = cancelledTranscription?.task {
-            _ = await task.result
-        }
-        if let task = cancelledLoad?.task {
             _ = await task.result
         }
         if activeTranscriptionGeneration == cancelledGeneration {
@@ -110,9 +104,6 @@ actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
         }
         if transcriptionTask?.generation == cancelledTranscription?.generation {
             transcriptionTask = nil
-        }
-        if loadTask?.generation == cancelledLoad?.generation {
-            loadTask = nil
         }
     }
 

@@ -65,7 +65,9 @@ struct ContentView: View {
     private var computedChinWidth: CGFloat {
         var chinWidth: CGFloat = vm.closedNotchSize.width
 
-        if shouldShowDictationActivity {
+        if shouldShowNotchAlert {
+            chinWidth = NotchAlertView.totalWidth(closedNotchWidth: vm.closedNotchSize.width)
+        } else if shouldShowDictationActivity {
             chinWidth += 2 * DictationNotchActivity.sideWidth(
                 for: vm.effectiveClosedNotchHeight
             )
@@ -96,6 +98,26 @@ struct ContentView: View {
                NSDeviceDescriptionKey("NSScreenNumber")
            ] as? NSNumber {
             return CGDirectDisplayID(screenNumber.uint32Value) == sessionDisplayID
+        }
+        guard let screenUUID = vm.screenUUID, !coordinator.selectedScreenUUID.isEmpty else {
+            return true
+        }
+        return screenUUID == coordinator.selectedScreenUUID
+    }
+
+    private var shouldShowNotchAlert: Bool {
+        guard let alert = coordinator.notchAlert, vm.notchState == .closed else { return false }
+        return isAlertTargetDisplay(alert)
+    }
+
+    private func isAlertTargetDisplay(_ alert: NotchAlert) -> Bool {
+        if Defaults[.showOnAllDisplays],
+           let targetDisplayID = alert.targetDisplayID,
+           let screen = vm.screenUUID.flatMap({ NSScreen.screen(withUUID: $0) }),
+           let screenNumber = screen.deviceDescription[
+               NSDeviceDescriptionKey("NSScreenNumber")
+           ] as? NSNumber {
+            return CGDirectDisplayID(screenNumber.uint32Value) == targetDisplayID
         }
         guard let screenUUID = vm.screenUUID, !coordinator.selectedScreenUUID.isEmpty else {
             return true
@@ -158,6 +180,10 @@ struct ContentView: View {
                             .animation(
                                 .timingCurve(0.22, 1, 0.36, 1, duration: 0.18),
                                 value: dictationActivity.phase
+                            )
+                            .animation(
+                                .spring(response: 0.34, dampingFraction: 0.86, blendDuration: 0),
+                                value: coordinator.notchAlert
                             )
                     }
                     .contentShape(Rectangle())
@@ -303,7 +329,19 @@ struct ContentView: View {
                     .padding(.top, 40)
                     Spacer()
                 } else {
-                    if shouldShowDictationActivity, let phase = dictationActivity.phase {
+                    if shouldShowNotchAlert, let alert = coordinator.notchAlert {
+                        NotchAlertView(
+                            alert: alert,
+                            closedNotchWidth: vm.closedNotchSize.width,
+                            notchHeight: vm.effectiveClosedNotchHeight
+                        )
+                        .transition(
+                            .asymmetric(
+                                insertion: .opacity.animation(.easeOut(duration: 0.22).delay(0.06)),
+                                removal: .opacity.animation(.easeIn(duration: 0.12))
+                            )
+                        )
+                    } else if shouldShowDictationActivity, let phase = dictationActivity.phase {
                         DictationNotchActivity(
                             phase: phase,
                             audioLevel: Double(dictation.audioLevel),

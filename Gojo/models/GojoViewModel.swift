@@ -193,6 +193,9 @@ class GojoViewModel: NSObject, ObservableObject {
     }
 
     func open() {
+        // Reaching for the notch outranks a transient alert: drop it now so the
+        // banner cannot reappear underneath when the notch closes again.
+        self.coordinator.dismissNotchAlert()
         self.notchSize = openNotchSize
         self.notchState = .open
         

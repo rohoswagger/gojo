@@ -40,6 +40,7 @@ where TargetProvider: DictationTargetCapturing,
     private var audioCleanupTask: Task<Void, Never>?
     private var captureWatchdog: Task<Void, Never>?
     private var sessionID = UUID()
+    private var startupReleaseSessionID: UUID?
 
     init(
         targetProvider: TargetProvider,
@@ -71,6 +72,7 @@ where TargetProvider: DictationTargetCapturing,
 
         let currentSession = UUID()
         sessionID = currentSession
+        startupReleaseSessionID = nil
         target = nil
         let pendingCleanup = audioCleanupTask
         operation = Task { [weak self] in
@@ -82,6 +84,11 @@ where TargetProvider: DictationTargetCapturing,
     }
 
     func hotKeyUp() {
+        if machine.state == .requestingPermission {
+            startupReleaseSessionID = sessionID
+            return
+        }
+
         let action = machine.handle(.hotKeyUp)
         switch action {
         case .finishCapture:
@@ -203,6 +210,12 @@ where TargetProvider: DictationTargetCapturing,
                 "stage=listeningPublished ms=\(listeningMilliseconds, privacy: .public)"
             )
             #endif
+            if consumeStartupRelease(for: expectedSession) {
+                operation = Task { [weak self] in
+                    await self?.finishCapture(sessionID: expectedSession)
+                }
+                return
+            }
             startCaptureWatchdog(for: expectedSession)
             operation = nil
         } catch is CancellationError {
@@ -248,7 +261,7 @@ where TargetProvider: DictationTargetCapturing,
 
             let normalizedRawTranscript = DictationTranscriptPolicy.normalize(rawTranscript)
             guard !normalizedRawTranscript.isEmpty else {
-                transition(.failed(.emptyTranscript))
+                transition(.failed(.transcriptionReturnedNoText))
                 operation = nil
                 return
             }
@@ -325,6 +338,12 @@ where TargetProvider: DictationTargetCapturing,
     @discardableResult
     private func transition(_ event: DictationSessionStateMachine.Event) -> DictationSessionStateMachine.Action {
         let action = machine.handle(event)
+        switch machine.state {
+        case .idle, .succeeded, .error:
+            startupReleaseSessionID = nil
+        case .requestingPermission, .listening, .transcribing, .inserting:
+            break
+        }
         publishState()
         return action
     }
@@ -335,6 +354,7 @@ where TargetProvider: DictationTargetCapturing,
 
     private func invalidateSessionAndScheduleCleanup() {
         sessionID = UUID()
+        startupReleaseSessionID = nil
         target = nil
         captureWatchdog?.cancel()
         captureWatchdog = nil
@@ -363,6 +383,19 @@ where TargetProvider: DictationTargetCapturing,
 
     private func isCurrent(_ expectedSession: UUID, state expectedState: DictationState) -> Bool {
         expectedSession == sessionID && machine.state == expectedState
+    }
+
+    private func consumeStartupRelease(for expectedSession: UUID) -> Bool {
+        guard startupReleaseSessionID == expectedSession,
+              isCurrent(expectedSession, state: .listening),
+              machine.handle(.hotKeyUp) == .finishCapture else {
+            return false
+        }
+        startupReleaseSessionID = nil
+        publishState()
+        captureWatchdog?.cancel()
+        captureWatchdog = nil
+        return true
     }
 
     private static func userFacingDetail(for error: Error) -> String {

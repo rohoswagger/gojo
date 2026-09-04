@@ -70,6 +70,15 @@ struct NotchAlert: Equatable, Identifiable, Sendable {
     }
 }
 
+enum NotchAlertPolicy {
+    static func shouldDismissAlertForDictationActivity(
+        _ alert: NotchAlert?,
+        isActive: Bool
+    ) -> Bool {
+        isActive && alert?.source == .dictation
+    }
+}
+
 /// Renders an alert directly beneath the physical notch.
 ///
 /// The camera housing occupies the top strip, so the message is offset below

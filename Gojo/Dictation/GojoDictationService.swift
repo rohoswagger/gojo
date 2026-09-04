@@ -204,6 +204,7 @@ final class GojoDictationService: ObservableObject {
     private var shortcutPreflighting = false
     private var shortcutSessionGate = DictationShortcutSessionGate()
     private var transcriberWarmGeneration: UInt = 0
+    private let warmupSequencer = DictationWarmupSequencer()
 
     private init() {
         let savedSelection = UserDefaults.standard.string(forKey: Self.selectedModelKey)
@@ -275,18 +276,18 @@ final class GojoDictationService: ObservableObject {
             stateObserver: observer
         )
         Task { await audioCapture.prepareForCaptureIfAuthorized() }
-        initialModelStatusTask = Task { [localTranscriber] in
+        initialModelStatusTask = Task(priority: .utility) { [localTranscriber] in
             await Self.scanInstalledModels(using: localTranscriber)
         }
         Task { [weak self] in
             await self?.loadInitialModelStatusIfNeeded()
         }
-        Task { [weak self, polisher] in
+        Task(priority: .utility) { [weak self, polisher] in
             let installed = await polisher.isModelInstalled()
             guard let self else { return }
             s1MiniInstalled = installed
-            if installed, cleanupEnabled {
-                await polisher.prepareIfInstalled()
+            if installed, cleanupEnabled, !isPreparingTranscriber {
+                scheduleS1MiniWarmupAfterSpeech()
             } else if !installed, cleanupEnabled {
                 setCleanupEnabled(false)
             }
@@ -305,25 +306,57 @@ final class GojoDictationService: ObservableObject {
         guard selectedProvider == .local else { return }
         transcriberWarmGeneration &+= 1
         let generation = transcriberWarmGeneration
-        Task { [weak self, localTranscriber] in
+        isPreparingTranscriber = true
+        Task(priority: .utility) { [weak self, localTranscriber, warmupSequencer] in
             await self?.loadInitialModelStatusIfNeeded()
-            guard let self,
-                  generation == self.transcriberWarmGeneration,
-                  self.installedModels.contains(self.selectedModel) else { return }
-            self.isPreparingTranscriber = true
-            #if DEBUG
-            let warmStart = ProcessInfo.processInfo.systemUptime
-            #endif
-            await localTranscriber.prepare()
-            #if DEBUG
-            dictationLatencyLogger.notice(
-                "stage=transcriberWarm ms=\(Int(((ProcessInfo.processInfo.systemUptime - warmStart) * 1_000).rounded()), privacy: .public)"
-            )
-            #endif
-            if generation == self.transcriberWarmGeneration {
-                self.isPreparingTranscriber = false
+            guard let self else { return }
+            guard generation == self.transcriberWarmGeneration,
+                  self.installedModels.contains(self.selectedModel) else {
+                self.finishTranscriberWarmupIfCurrent(generation: generation)
+                return
             }
+            await warmupSequencer.startSpeechThenCleanup(
+                generation: generation,
+                prepareSpeech: {
+                    guard await self.shouldPrepareTranscriberWarmup(generation: generation) else { return }
+                    #if DEBUG
+                    let warmStart = ProcessInfo.processInfo.systemUptime
+                    #endif
+                    await localTranscriber.prepare()
+                    #if DEBUG
+                    dictationLatencyLogger.notice(
+                        "stage=transcriberWarm ms=\(Int(((ProcessInfo.processInfo.systemUptime - warmStart) * 1_000).rounded()), privacy: .public)"
+                    )
+                    #endif
+                },
+                speechReady: { [self] completedGeneration in
+                    await self.finishTranscriberWarmupIfCurrent(generation: completedGeneration)
+                },
+                shouldRunCleanup: { [self] completedGeneration in
+                    await self.shouldRunS1MiniWarmup(generation: completedGeneration)
+                },
+                prepareCleanup: { [polisher] in
+                    await polisher.prepareIfInstalled()
+                }
+            )
         }
+    }
+
+    private func finishTranscriberWarmupIfCurrent(generation: UInt) {
+        guard generation == transcriberWarmGeneration else { return }
+        isPreparingTranscriber = false
+    }
+
+    private func shouldPrepareTranscriberWarmup(generation: UInt) -> Bool {
+        generation == transcriberWarmGeneration
+            && selectedProvider == .local
+            && installedModels.contains(selectedModel)
+    }
+
+    private func shouldRunS1MiniWarmup(generation: UInt) -> Bool {
+        generation == transcriberWarmGeneration
+            && cleanupEnabled
+            && s1MiniInstalled
     }
 
     var stateDetail: String? {
@@ -396,24 +429,6 @@ final class GojoDictationService: ObservableObject {
                     shortcutSessionGate.reset()
                     receive(.idle)
                 }
-            }
-            if isPreparingTranscriber, selectedProvider == .local {
-                // The model load is the long pole after launch. Starting a
-                // session now would capture audio the transcriber cannot serve
-                // for tens of seconds, which reads as a hang, so refuse and
-                // say why instead.
-                dictationShortcutLogger.notice("ignored keyDown while transcriber warming")
-                GojoViewCoordinator.shared.postNotchAlert(
-                    NotchAlert(
-                        source: .dictation,
-                        severity: .warning,
-                        message: "Preparing voice model…",
-                        hint: "Try again shortly",
-                        targetDisplayID: sessionDisplayID
-                    )
-                )
-                rejectShortcutStart()
-                return
             }
             guard canChangeModel else {
                 let stateName: String
@@ -603,7 +618,7 @@ final class GojoDictationService: ObservableObject {
         if let initialModelStatusTask {
             task = initialModelStatusTask
         } else {
-            task = Task { [localTranscriber] in
+            task = Task(priority: .utility) { [localTranscriber] in
                 await Self.scanInstalledModels(using: localTranscriber)
             }
             initialModelStatusTask = task
@@ -617,6 +632,12 @@ final class GojoDictationService: ObservableObject {
         state = newState
         if newState != .listening {
             audioLevel = 0
+        }
+        if NotchAlertPolicy.shouldDismissAlertForDictationActivity(
+            GojoViewCoordinator.shared.notchAlert,
+            isActive: newState == .requestingPermission || newState == .listening
+        ) {
+            GojoViewCoordinator.shared.dismissNotchAlert(from: .dictation)
         }
         if case .error(let failure) = newState {
             let reason = failure.errorDescription ?? String(describing: failure)
@@ -637,6 +658,7 @@ final class GojoDictationService: ObservableObject {
 
     func setProvider(_ provider: DictationProvider) {
         guard canChangeModel else { return }
+        guard provider != selectedProvider else { return }
         selectedProvider = provider
         UserDefaults.standard.set(provider.rawValue, forKey: DictationProvider.defaultsKey)
         switch provider {
@@ -644,6 +666,8 @@ final class GojoDictationService: ObservableObject {
             hasVerifiedOpenRouterModel = false
             warmSelectedTranscriber()
         case .openRouter:
+            transcriberWarmGeneration &+= 1
+            isPreparingTranscriber = false
             refreshOpenRouterModels()
         }
     }
@@ -746,7 +770,22 @@ final class GojoDictationService: ObservableObject {
             forKey: DictationOpenRouterSettings.polishingEnabledDefaultsKey
         )
         if enabled {
-            Task { [polisher] in await polisher.prepareIfInstalled() }
+            scheduleS1MiniWarmupAfterSpeech()
+        }
+    }
+
+    private func scheduleS1MiniWarmupAfterSpeech() {
+        let generation = transcriberWarmGeneration
+        Task { [self, warmupSequencer, polisher] in
+            await warmupSequencer.startCleanupAfterCurrentSpeech(
+                generation: generation,
+                shouldRunCleanup: { [self] completedGeneration in
+                    await self.shouldRunS1MiniWarmup(generation: completedGeneration)
+                },
+                prepareCleanup: { [polisher] in
+                    await polisher.prepareIfInstalled()
+                }
+            )
         }
     }
 
@@ -909,6 +948,8 @@ extension DictationFailure: LocalizedError {
             return detail
         case .emptyTranscript:
             return "Gojo did not hear anything."
+        case .transcriptionReturnedNoText:
+            return "Gojo recorded audio but could not recognize speech. Try speaking a little longer."
         case .insertionFailed(let detail):
             return detail
         }

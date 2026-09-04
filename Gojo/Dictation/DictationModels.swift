@@ -268,6 +268,77 @@ enum S1MiniVocabularyPipeline {
     }
 }
 
+actor DictationWarmupSequencer {
+    typealias Generation = UInt
+    typealias Prepare = @Sendable () async -> Void
+    typealias SpeechReady = @Sendable (Generation) async -> Void
+    typealias ShouldRunCleanup = @Sendable (Generation) async -> Bool
+
+    private var speechTask: Task<Void, Never>?
+    private var cleanupTask: Task<Void, Never>?
+
+    func startSpeechThenCleanup(
+        generation: Generation,
+        prepareSpeech: @escaping Prepare,
+        speechReady: @escaping SpeechReady,
+        shouldRunCleanup: @escaping ShouldRunCleanup,
+        prepareCleanup: @escaping Prepare
+    ) {
+        let previousSpeechTask = speechTask
+        let previousCleanupTask = cleanupTask
+        speechTask = Task {
+            await previousSpeechTask?.value
+            await previousCleanupTask?.value
+            guard !Task.isCancelled else { return }
+
+            await prepareSpeech()
+            await speechReady(generation)
+            startCleanup(
+                generation: generation,
+                after: nil,
+                shouldRunCleanup: shouldRunCleanup,
+                prepareCleanup: prepareCleanup
+            )
+        }
+    }
+
+    func startCleanupAfterCurrentSpeech(
+        generation: Generation,
+        shouldRunCleanup: @escaping ShouldRunCleanup,
+        prepareCleanup: @escaping Prepare
+    ) {
+        startCleanup(
+            generation: generation,
+            after: speechTask,
+            shouldRunCleanup: shouldRunCleanup,
+            prepareCleanup: prepareCleanup
+        )
+    }
+
+    private func startCleanup(
+        generation: Generation,
+        after speechTask: Task<Void, Never>?,
+        shouldRunCleanup: @escaping ShouldRunCleanup,
+        prepareCleanup: @escaping Prepare
+    ) {
+        guard cleanupTask == nil else { return }
+        cleanupTask = Task {
+            await speechTask?.value
+            guard !Task.isCancelled, await shouldRunCleanup(generation) else {
+                finishCleanup()
+                return
+            }
+
+            await prepareCleanup()
+            finishCleanup()
+        }
+    }
+
+    private func finishCleanup() {
+        cleanupTask = nil
+    }
+}
+
 enum DictationModelRequest: Sendable {
     case settingsDownload
     case transcription
@@ -533,6 +604,7 @@ enum DictationFailure: Error, Equatable, Sendable {
     case captureFailed(String)
     case transcriptionFailed(String)
     case emptyTranscript
+    case transcriptionReturnedNoText
     case insertionFailed(String)
 }
 

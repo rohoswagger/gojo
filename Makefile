@@ -126,6 +126,7 @@ test-accessibility-menu:
 
 test-dictation: build
 	./tests/dictation_regression.sh
+	./tests/dictation_event_tap_host_regression.sh
 	./tests/openrouter_dictation_regression.sh
 	./tests/dictation_offline_policy_regression.sh
 	./tests/notch_alert_regression.sh

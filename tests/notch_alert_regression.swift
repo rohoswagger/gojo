@@ -66,6 +66,18 @@ struct NotchAlertRegressionRunner {
             nil,
             "an untargeted alert falls back to the selected notch"
         )
+        assertCondition(
+            NotchAlertPolicy.shouldDismissAlertForDictationActivity(first, isActive: true),
+            "an active dictation retry should clear a stale dictation alert"
+        )
+        assertCondition(
+            !NotchAlertPolicy.shouldDismissAlertForDictationActivity(first, isActive: false),
+            "an inactive dictation state should leave the alert policy alone"
+        )
+        assertCondition(
+            !NotchAlertPolicy.shouldDismissAlertForDictationActivity(nil, isActive: true),
+            "the alert policy should ignore active dictation when no alert is showing"
+        )
 
         // The warm-block path posts a hint; every severity needs a distinct glyph so
         // the banner reads differently at a glance.

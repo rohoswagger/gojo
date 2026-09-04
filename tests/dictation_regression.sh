@@ -21,5 +21,6 @@ swiftc \
 "$binary_path"
 
 notch_activity_source="Gojo/Dictation/DictationNotchActivity.swift"
+notch_alert_source="Gojo/components/Notch/NotchAlert.swift"
 grep -Fq "recordControl" "$notch_activity_source"
-grep -Fq 'Image(systemName: "exclamationmark.triangle.fill")' "$notch_activity_source"
+grep -Fq 'case .error: return "exclamationmark.triangle.fill"' "$notch_alert_source"

@@ -19,6 +19,7 @@ actor EventLog {
 
     func append(_ value: String) { values.append(value) }
     func snapshot() -> [String] { values }
+    func count(of value: String) -> Int { values.filter { $0 == value }.count }
 }
 
 actor FakeTargetProvider: DictationTargetCapturing {
@@ -74,15 +75,73 @@ actor FakeAudioCapture: DictationAudioCapturing {
 }
 
 actor FakeTranscriber: LocalDictationTranscribing {
+    enum Behavior {
+        case fixed(String)
+    }
+
     let log: EventLog
+    private var behavior: Behavior
     private(set) var calls = 0
 
-    init(log: EventLog) { self.log = log }
+    init(log: EventLog, behavior: Behavior = .fixed("  locally transcribed  ")) {
+        self.log = log
+        self.behavior = behavior
+    }
 
     func transcribe(_ audio: DictationAudio) async throws -> String {
         calls += 1
         await log.append("transcribe")
-        return "  locally transcribed  "
+        switch behavior {
+        case .fixed(let transcript):
+            return transcript
+        }
+    }
+}
+
+actor GatedAudioCapture: DictationAudioCapturing {
+    let log: EventLog
+    var audio = DictationAudio(samples: Array(repeating: 0.25, count: 3_200))
+    private(set) var permissionRequests = 0
+    private(set) var starts = 0
+    private(set) var stops = 0
+    private(set) var cancellations = 0
+    private var continuation: CheckedContinuation<Void, Never>?
+    private var released = false
+
+    init(log: EventLog) { self.log = log }
+
+    func requestPermission() async -> Bool {
+        permissionRequests += 1
+        await log.append("permission")
+        return true
+    }
+
+    func startCapture() async throws {
+        starts += 1
+        await log.append("start-waiting")
+        if !released {
+            await withCheckedContinuation { continuation = $0 }
+        }
+        await log.append("start")
+    }
+
+    func stopCapture() async throws -> DictationAudio {
+        stops += 1
+        await log.append("stop")
+        return audio
+    }
+
+    func cancelCapture() async {
+        cancellations += 1
+        await log.append("cancel-audio")
+    }
+
+    func isWaiting() -> Bool { continuation != nil }
+
+    func releaseStart() {
+        released = true
+        continuation?.resume()
+        continuation = nil
     }
 }
 
@@ -296,6 +355,9 @@ struct DictationRegressionRunner {
         testModelDownloadPolicy()
         testVocabularyPolicy()
         testS1MiniContract()
+        await testWarmupSequencerRunsSpeechBeforeCleanup()
+        await testWarmupSequencerDeduplicatesCleanup()
+        await testSpeechWarmupWaitsForActiveCleanup()
         testModelStorageRemoval()
         testWhisperModelCatalog()
         testModifierOnlyShortcutPolicy()
@@ -307,7 +369,11 @@ struct DictationRegressionRunner {
         await testShortcutEventOrdering()
         await testTargetCapturedBeforeHUDStatePublication()
         await testSuccessfulControllerFlow()
+        await testStartupReleaseFinishesAfterCaptureStarts()
+        await testStartupReleaseLatchResetsOnCancel()
+        await testStartupReleaseLatchResetsOnFailure()
         await testPolishingFallbacks()
+        await testEmptyModelOutputUsesDistinctFailure()
         await testShortAudioAndCancellation()
         await testRapidCancelThenRestart()
         await testTranscriptionTeardownBeforeRestart()
@@ -481,6 +547,106 @@ struct DictationRegressionRunner {
                 protectedTerms: []
             ),
             "disproportionately long S1-mini output should fall back"
+        )
+    }
+
+    static func testWarmupSequencerRunsSpeechBeforeCleanup() async {
+        let log = EventLog()
+        let sequencer = DictationWarmupSequencer()
+
+        await sequencer.startSpeechThenCleanup(
+            generation: 1,
+            prepareSpeech: {
+                await log.append("speech-start")
+                try? await Task.sleep(for: .milliseconds(20))
+                await log.append("speech-end")
+            },
+            speechReady: { generation in
+                await log.append("speech-ready-\(generation)")
+            },
+            shouldRunCleanup: { generation in
+                await log.append("cleanup-check-\(generation)")
+                return true
+            },
+            prepareCleanup: {
+                await log.append("cleanup-start")
+            }
+        )
+
+        for _ in 0..<100 where !(await log.snapshot()).contains("cleanup-start") {
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        let values = await log.snapshot()
+        assertEqual(
+            values,
+            ["speech-start", "speech-end", "speech-ready-1", "cleanup-check-1", "cleanup-start"],
+            "warmup should finish speech and publish readiness before cleanup model preparation"
+        )
+    }
+
+    static func testWarmupSequencerDeduplicatesCleanup() async {
+        let log = EventLog()
+        let sequencer = DictationWarmupSequencer()
+
+        await sequencer.startCleanupAfterCurrentSpeech(
+            generation: 2,
+            shouldRunCleanup: { _ in true },
+            prepareCleanup: {
+                await log.append("cleanup")
+                try? await Task.sleep(for: .milliseconds(25))
+            }
+        )
+        await sequencer.startCleanupAfterCurrentSpeech(
+            generation: 2,
+            shouldRunCleanup: { _ in true },
+            prepareCleanup: {
+                await log.append("cleanup")
+            }
+        )
+
+        try? await Task.sleep(for: .milliseconds(60))
+        assertEqual(
+            await log.count(of: "cleanup"),
+            1,
+            "warmup should not start a second cleanup preparation while one is active"
+        )
+    }
+
+    static func testSpeechWarmupWaitsForActiveCleanup() async {
+        let log = EventLog()
+        let sequencer = DictationWarmupSequencer()
+
+        await sequencer.startCleanupAfterCurrentSpeech(
+            generation: 1,
+            shouldRunCleanup: { _ in true },
+            prepareCleanup: {
+                await log.append("cleanup-start")
+                try? await Task.sleep(for: .milliseconds(30))
+                await log.append("cleanup-end")
+            }
+        )
+        for _ in 0..<100 where !(await log.snapshot()).contains("cleanup-start") {
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+
+        await sequencer.startSpeechThenCleanup(
+            generation: 2,
+            prepareSpeech: {
+                await log.append("speech-start")
+            },
+            speechReady: { _ in },
+            shouldRunCleanup: { _ in false },
+            prepareCleanup: {}
+        )
+
+        for _ in 0..<100 where !(await log.snapshot()).contains("speech-start") {
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        assertEqual(
+            await log.snapshot(),
+            ["cleanup-start", "cleanup-end", "speech-start"],
+            "a new speech-model warmup must wait for active cleanup-model preparation"
         )
     }
 
@@ -1290,6 +1456,116 @@ struct DictationRegressionRunner {
         )
     }
 
+    static func testStartupReleaseFinishesAfterCaptureStarts() async {
+        let log = EventLog()
+        let audio = GatedAudioCapture(log: log)
+        let transcriber = FakeTranscriber(log: log)
+        let polisher = FakePolisher(log: log)
+        let inserter = FakeInserter(log: log)
+        let controller = DictationController(
+            targetProvider: FakeTargetProvider(log: log),
+            audioCapture: audio,
+            transcriber: transcriber,
+            polisher: polisher,
+            inserter: inserter
+        )
+
+        await controller.hotKeyDown()
+        for _ in 0..<100 where !(await audio.isWaiting()) {
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        let audioIsWaiting = await audio.isWaiting()
+        assertCondition(audioIsWaiting, "audio startup should be gated before key-up")
+        await controller.hotKeyUp()
+        assertEqual(
+            await controller.state,
+            .requestingPermission,
+            "startup key-up should be latched without cancelling the pending session"
+        )
+
+        await audio.releaseStart()
+        await waitForState(
+            .succeeded("locally transcribed"),
+            controller: controller,
+            message: "latched startup release should finish after capture starts"
+        )
+        assertEqual(await audio.starts, 1, "latched startup release must not restart capture")
+        assertEqual(await audio.stops, 1, "latched startup release should stop capture exactly once")
+        assertEqual(await transcriber.calls, 1, "latched startup release should transcribe exactly once")
+        assertEqual(await inserter.insertionCount(), 1, "latched startup release should insert exactly once")
+        assertEqual(
+            await log.snapshot(),
+            ["target", "permission", "start-waiting", "start", "stop", "transcribe", "polish", "insert"],
+            "latched startup release should replay through the normal finish pipeline once"
+        )
+    }
+
+    static func testStartupReleaseLatchResetsOnCancel() async {
+        let log = EventLog()
+        let audio = GatedAudioCapture(log: log)
+        let transcriber = FakeTranscriber(log: log)
+        let inserter = FakeInserter(log: log)
+        let controller = DictationController(
+            targetProvider: FakeTargetProvider(log: log),
+            audioCapture: audio,
+            transcriber: transcriber,
+            polisher: FakePolisher(log: log),
+            inserter: inserter
+        )
+
+        await controller.hotKeyDown()
+        for _ in 0..<100 where !(await audio.isWaiting()) {
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        await controller.hotKeyUp()
+        await controller.cancel()
+        await audio.releaseStart()
+        await waitForState(.idle, controller: controller, message: "cancelled startup release should return idle")
+        for _ in 0..<100 where await audio.cancellations == 0 {
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        assertEqual(await audio.stops, 0, "cancelled startup release must not stop as a finished recording")
+        assertEqual(await transcriber.calls, 0, "cancelled startup release must not transcribe")
+        assertEqual(await inserter.insertionCount(), 0, "cancelled startup release must not insert")
+
+        await controller.hotKeyDown()
+        await waitForState(.listening, controller: controller, message: "new session should not inherit old latch")
+        assertEqual(await audio.stops, 0, "new session should remain listening until its own key-up")
+        await controller.hotKeyUp()
+        await waitForState(
+            .succeeded("locally transcribed"),
+            controller: controller,
+            message: "new session should finish normally after its own release"
+        )
+        assertEqual(await audio.stops, 1, "only the new session should stop")
+        assertEqual(await transcriber.calls, 1, "only the new session should transcribe")
+    }
+
+    static func testStartupReleaseLatchResetsOnFailure() async {
+        let log = EventLog()
+        let audio = FakeAudioCapture(log: log)
+        let transcriber = FakeTranscriber(log: log)
+        let inserter = FakeInserter(log: log)
+        let controller = DictationController(
+            targetProvider: FailingTargetProvider(),
+            audioCapture: audio,
+            transcriber: transcriber,
+            polisher: FakePolisher(log: log),
+            inserter: inserter
+        )
+
+        await controller.hotKeyDown()
+        await controller.hotKeyUp()
+        await waitForState(
+            .error(.targetUnavailable("Enable the required permission in System Settings.")),
+            controller: controller,
+            message: "startup failure should still surface the target error"
+        )
+        assertEqual(await audio.starts, 0, "failed startup should not begin capture")
+        assertEqual(await transcriber.calls, 0, "failed startup should not consume the latched release")
+        assertEqual(await inserter.insertionCount(), 0, "failed startup should not insert")
+    }
+
     static func testPolishingFallbacks() async {
         for (behavior, label) in [
             (FakePolisher.Behavior.fail, "an unavailable polisher"),
@@ -1319,6 +1595,37 @@ struct DictationRegressionRunner {
                 "\(label) should still insert text"
             )
         }
+    }
+
+    static func testEmptyModelOutputUsesDistinctFailure() async {
+        let log = EventLog()
+        let audio = FakeAudioCapture(log: log)
+        let transcriber = FakeTranscriber(log: log, behavior: .fixed(" \n\t "))
+        let inserter = FakeInserter(log: log)
+        let controller = DictationController(
+            targetProvider: FakeTargetProvider(log: log),
+            audioCapture: audio,
+            transcriber: transcriber,
+            polisher: FakePolisher(log: log),
+            inserter: inserter,
+            audioPolicy: DictationAudioPolicy(minimumDuration: 0.10)
+        )
+
+        await controller.hotKeyDown()
+        await waitForState(.listening, controller: controller, message: "empty-output session should listen")
+        await controller.hotKeyUp()
+        await waitForState(
+            .error(.transcriptionReturnedNoText),
+            controller: controller,
+            message: "empty model output should be distinct from short or missing audio"
+        )
+        assertEqual(await transcriber.calls, 1, "policy-approved audio should still call the transcriber")
+        assertEqual(await inserter.insertionCount(), 0, "empty model output must not insert text")
+        let events = await log.snapshot()
+        assertCondition(
+            events.contains("transcribe"),
+            "empty model output failure should happen after transcription"
+        )
     }
 
     static func testShortcutEventOrdering() async {
@@ -1408,7 +1715,10 @@ struct DictationRegressionRunner {
         await waitForState(.listening, controller: controller, message: "second session should listen")
         await controller.terminate()
         await waitForState(.idle, controller: controller, message: "termination should return to idle")
-        for _ in 0..<100 where await audio.cancellations == 0 {
+        for _ in 0..<100 {
+            if await audio.cancellations > 0, await polisher.cancellations > 0 {
+                break
+            }
             try? await Task.sleep(nanoseconds: 5_000_000)
         }
         let cancellationCount = await audio.cancellations

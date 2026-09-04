@@ -1,3 +1,4 @@
+import CoreGraphics
 import SwiftUI
 
 /// A transient message shown in the closed notch.
@@ -41,12 +42,23 @@ struct NotchAlert: Equatable, Identifiable, Sendable {
     let message: String
     /// Optional short trailing hint, e.g. the shortcut to press to retry.
     let hint: String?
+    /// The display this alert belongs to. With "show on all displays" enabled
+    /// every screen runs its own notch, so an untargeted alert would render on
+    /// all of them at once; nil falls back to the user's selected notch.
+    let targetDisplayID: CGDirectDisplayID?
 
-    init(source: Source, severity: Severity, message: String, hint: String? = nil) {
+    init(
+        source: Source,
+        severity: Severity,
+        message: String,
+        hint: String? = nil,
+        targetDisplayID: CGDirectDisplayID? = nil
+    ) {
         self.source = source
         self.severity = severity
         self.message = message
         self.hint = hint
+        self.targetDisplayID = targetDisplayID
     }
 
     static func == (lhs: NotchAlert, rhs: NotchAlert) -> Bool {
@@ -54,6 +66,7 @@ struct NotchAlert: Equatable, Identifiable, Sendable {
             && lhs.severity == rhs.severity
             && lhs.message == rhs.message
             && lhs.hint == rhs.hint
+            && lhs.targetDisplayID == rhs.targetDisplayID
     }
 }
 

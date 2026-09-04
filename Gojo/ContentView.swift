@@ -106,7 +106,23 @@ struct ContentView: View {
     }
 
     private var shouldShowNotchAlert: Bool {
-        coordinator.notchAlert != nil && vm.notchState == .closed
+        guard let alert = coordinator.notchAlert, vm.notchState == .closed else { return false }
+        return isAlertTargetDisplay(alert)
+    }
+
+    private func isAlertTargetDisplay(_ alert: NotchAlert) -> Bool {
+        if Defaults[.showOnAllDisplays],
+           let targetDisplayID = alert.targetDisplayID,
+           let screen = vm.screenUUID.flatMap({ NSScreen.screen(withUUID: $0) }),
+           let screenNumber = screen.deviceDescription[
+               NSDeviceDescriptionKey("NSScreenNumber")
+           ] as? NSNumber {
+            return CGDirectDisplayID(screenNumber.uint32Value) == targetDisplayID
+        }
+        guard let screenUUID = vm.screenUUID, !coordinator.selectedScreenUUID.isEmpty else {
+            return true
+        }
+        return screenUUID == coordinator.selectedScreenUUID
     }
 
     private var shouldShowDictationActivity: Bool {

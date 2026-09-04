@@ -50,6 +50,23 @@ struct NotchAlertRegressionRunner {
             "hint must participate in equality"
         )
 
+        // With "show on all displays" every screen runs its own notch, so the
+        // target display distinguishes otherwise-identical alerts.
+        assertCondition(
+            first != NotchAlert(
+                source: .dictation,
+                severity: .error,
+                message: "Gojo did not hear anything.",
+                targetDisplayID: 2
+            ),
+            "target display must participate in equality"
+        )
+        assertEqual(
+            first.targetDisplayID,
+            nil,
+            "an untargeted alert falls back to the selected notch"
+        )
+
         // The warm-block path posts a hint; every severity needs a distinct glyph so
         // the banner reads differently at a glance.
         let symbols = Set([

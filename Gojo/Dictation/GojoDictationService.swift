@@ -408,7 +408,8 @@ final class GojoDictationService: ObservableObject {
                         source: .dictation,
                         severity: .warning,
                         message: "Preparing voice model…",
-                        hint: "Try again shortly"
+                        hint: "Try again shortly",
+                        targetDisplayID: sessionDisplayID
                     )
                 )
                 rejectShortcutStart()
@@ -621,7 +622,12 @@ final class GojoDictationService: ObservableObject {
             let reason = failure.errorDescription ?? String(describing: failure)
             dictationPipelineLogger.error("state=error reason=\(reason, privacy: .public)")
             GojoViewCoordinator.shared.postNotchAlert(
-                NotchAlert(source: .dictation, severity: .error, message: reason)
+                NotchAlert(
+                    source: .dictation,
+                    severity: .error,
+                    message: reason,
+                    targetDisplayID: sessionDisplayID
+                )
             )
         } else if case .succeeded = newState {
             GojoViewCoordinator.shared.dismissNotchAlert(from: .dictation)

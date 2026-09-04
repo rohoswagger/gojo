@@ -6,6 +6,43 @@
     <description>Most recent changes to Gojo, with download links.</description>
     <language>en</language>
     <item>
+      <title>Version 1.5.1</title>
+      <pubDate>Fri, 04 Sep 2026 19:20:44 +0000</pubDate>
+      <sparkle:version>1788549568</sparkle:version>
+      <sparkle:shortVersionString>1.5.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+<p>This patch release makes dictation react consistently and tightens the search</p>
+<p>and window-switching work that shipped alongside it.</p>
+<h4>Changed</h4>
+<ul><li>**Dictation starts while its local model is warming.** Gojo begins recording</li></ul>
+<p>  immediately and finishes model preparation in the background instead of</p>
+<p>  making the shortcut appear unresponsive.</p>
+<ul><li>**Search includes System Settings.** Common panes and controls now appear as</li></ul>
+<p>  ranked results and open directly to the requested destination.</p>
+<h4>Fixed</h4>
+<ul><li>**Dictation no longer stalls the app's input handling.** The Control–Option</li></ul>
+<p>  event tap now runs on its own high-priority run loop, recovers after macOS</p>
+<p>  disables it, and preserves quick releases while the microphone starts.</p>
+<ul><li>**Speech and cleanup models no longer compete during launch.** Their warmups</li></ul>
+<p>  run in sequence at utility priority, reducing CPU, GPU, and memory pressure.</p>
+<ul><li>**Retry feedback stays accurate.** A previous error disappears when a new</li></ul>
+<p>  recording starts, and captured audio that produces no words now gets a</p>
+<p>  distinct message instead of being reported as silence.</p>
+<ul><li>**Search stays still while results arrive.** The focused input no longer</li></ul>
+<p>  moves or relayouts as the results panel grows, and search remains on the</p>
+<p>  Space where it was opened.</p>
+<ul><li>**Alt-Tab targets the window you selected.** Pointer and keyboard selection</li></ul>
+<p>  now raise the exact window shown, including windows on another display.</p>
+      ]]></description>
+      <enclosure
+        url="https://downloads.trygojo.com/Gojo-1.5.1.dmg"
+        sparkle:edSignature="OVHz3frULBvebsePRBEr+jtxaChjZn/Ua5vR4j/iNwt43UIqzL0o1vr69PYT+bP9I0Cf/+JKRnkQZOW50cF0Cg=="
+        length="17217841"
+        type="application/octet-stream" />
+    </item>
+
+    <item>
       <title>Version 1.5.0</title>
       <pubDate>Wed, 02 Sep 2026 00:29:48 +0000</pubDate>
       <sparkle:version>1788308898</sparkle:version>

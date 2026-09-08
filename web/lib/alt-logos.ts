@@ -9,9 +9,17 @@
  * every page carries the "not affiliated with or endorsed by" note.
  */
 const LOGO_FILES: Record<string, string> = {
+  alcove: "alcove.png",
+  alttab: "alttab.png",
+  bettertouchtool: "bettertouchtool.png",
   "boring-notch": "boringnotch.png",
+  droppy: "droppy.png",
+  dynamiclake: "dynamiclake.png",
   flux: "flux.png",
+  "karabiner-elements": "karabiner-elements.png",
   maccy: "maccy.png",
+  notchnook: "notchnook.png",
+  raycast: "raycast.png",
   rectangle: "rectangle.png",
 }
 

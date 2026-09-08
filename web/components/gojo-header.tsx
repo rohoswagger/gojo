@@ -14,9 +14,15 @@ const LINKS = [
  * emit as HTML strings, so both rendering paths land on the same `.site-header`
  * rules in app/skin.css.
  */
-export function GojoHeader({ links = LINKS }: { links?: { href: string; label: string }[] }) {
+export function GojoHeader({
+  links = LINKS,
+  overlay = false,
+}: {
+  links?: { href: string; label: string }[]
+  overlay?: boolean
+}) {
   return (
-    <header className="site-header">
+    <header className={`site-header${overlay ? " site-header-overlay" : ""}`}>
       <Link className="brand" href="/" aria-label="Gojo home">
         <GojoLogo />
         Gojo
@@ -28,6 +34,11 @@ export function GojoHeader({ links = LINKS }: { links?: { href: string; label: s
           </Link>
         ))}
       </nav>
+      {overlay ? (
+        <Link className="btn btn-primary nav-cta" href="/downloads/">
+          Download
+        </Link>
+      ) : null}
     </header>
   )
 }

@@ -82,7 +82,7 @@
         "@type": "ItemList",
         "@id": "https://trygojo.com/blog/#posts",
         "name": "Gojo blog posts",
-        "numberOfItems": 31,
+        "numberOfItems": 32,
         "itemListElement": [
           {
             "@type": "ListItem",
@@ -269,6 +269,12 @@
             "position": 31,
             "url": "https://trygojo.com/blog/best-droppy-alternatives/",
             "name": "5 best Droppy alternatives for Mac in 2026"
+          },
+          {
+            "@type": "ListItem",
+            "position": 32,
+            "url": "https://trygojo.com/blog/best-local-dictation-apps-mac/",
+            "name": "Best local dictation apps for Mac in 2026"
           }
         ]
       }
@@ -500,6 +506,13 @@
       "date": "July 13, 2026",
       "title": "5 best Droppy alternatives for Mac in 2026",
       "summary": "Compare Gojo, NotchNook, Alcove, DynamicLake, and Boring Notch by focus, customization, polish, breadth, and price."
+    },
+    {
+      "slug": "best-local-dictation-apps-mac",
+      "kicker": "Guide",
+      "date": "September 8, 2026",
+      "title": "Best local dictation apps for Mac in 2026",
+      "summary": "Compare Apple Dictation, Voice Control, Gojo, and MacWhisper by workflow, offline behavior, and where speech is processed."
     }
   ]
 }

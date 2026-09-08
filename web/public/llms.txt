@@ -11,6 +11,7 @@ Platform: macOS 14 Sonoma and later, Apple silicon and Intel
 - Product home: https://trygojo.com/
 - Feature library: https://trygojo.com/features/
 - Blog: https://trygojo.com/blog/
+- Best local dictation apps for Mac: https://trygojo.com/blog/best-local-dictation-apps-mac/
 - Best private dictation apps for Mac: https://trygojo.com/blog/best-private-dictation-apps-mac/
 - Local voice dictation on Mac: https://trygojo.com/blog/local-voice-dictation-mac/
 - Best voice dictation for developers: https://trygojo.com/blog/best-mac-dictation-for-developers/

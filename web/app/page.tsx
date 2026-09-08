@@ -1,10 +1,10 @@
 import type { Metadata } from "next"
 import Image from "next/image"
-import Link from "next/link"
 
 import { ClipboardList, FolderOpen, LayoutGrid, Mic, Music, Sunset } from "lucide-react";
 import { AutoplayVideo } from "@/components/autoplay-video"
 import { GojoFooter } from "@/components/gojo-footer"
+import { GojoHeader } from "@/components/gojo-header"
 import { GojoLogo } from "@/components/gojo-logo"
 import { NightShiftComparison } from "@/components/night-shift-comparison"
 import {
@@ -121,26 +121,7 @@ export default function Home() {
       <div className="shell hero-shell">
         {/* The header sits inside the hero panel and over the photograph
             rather than on a bar above it. */}
-        <header className="site-header site-header-overlay">
-          <Link className="brand" href="/" aria-label="Gojo home">
-            <GojoLogo />
-            Gojo
-          </Link>
-          <nav className="nav" aria-label="Site">
-            <a className="ghost-link" href="#features">
-              Features
-            </a>
-            <a className="ghost-link" href="#buy">
-              Pricing
-            </a>
-            <Link className="ghost-link" href="/blog/">
-              Blog
-            </Link>
-          </nav>
-          <Link className="btn btn-primary nav-cta" href="/downloads/">
-            Download
-          </Link>
-        </header>
+        <GojoHeader overlay home />
 
         <main className="hero">
           <h1>

@@ -107,6 +107,7 @@ export const POST_SLUGS = [
   "best-private-dictation-apps-mac",
   "best-droppy-alternatives",
   "best-file-shelf-apps-mac",
+  "best-local-dictation-apps-mac",
   "best-macos-accessibility-permission-apps",
   "best-macos-notch-utilities",
   "best-window-management-tools-mac",

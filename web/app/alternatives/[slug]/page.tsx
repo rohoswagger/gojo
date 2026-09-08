@@ -71,14 +71,7 @@ export default async function AlternativePage({ params }: Params) {
           page on the site, so these stop reading as a separate world. */}
       <div className="article-shell" data-compare="true" data-gojo-editorial="warm">
         <div className="article-top alternative-shell">
-          <GojoHeader
-            overlay
-            links={[
-              { href: "/features/", label: "Features" },
-              { href: "/#buy", label: "Pricing" },
-              { href: "/blog/", label: "Blog" },
-            ]}
-          />
+          <GojoHeader overlay />
 
           <main>
               <section className="article-hero">

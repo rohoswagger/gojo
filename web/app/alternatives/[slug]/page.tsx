@@ -70,30 +70,39 @@ export default async function AlternativePage({ params }: Params) {
       {/* Dark hero, then a light body. Same rhythm as every other article
           page on the site, so these stop reading as a separate world. */}
       <div className="article-shell" data-compare="true" data-gojo-editorial="warm">
-        <div className="article-top">
-          <GojoHeader />
+        <div className="article-top alternative-shell">
+          <GojoHeader
+            overlay
+            links={[
+              { href: "/features/", label: "Features" },
+              { href: "/#buy", label: "Pricing" },
+              { href: "/blog/", label: "Blog" },
+            ]}
+          />
 
           <main>
               <section className="article-hero">
-                <div className="wrap">
-                  <nav className="breadcrumb" aria-label="Breadcrumb">
-                    <Link href="/">Home</Link>
-                    <span aria-hidden="true">/</span>
-                    <Link href="/alternatives/">Alternatives</Link>
-                  </nav>
-                  <h1>
-                    {alternative.name} vs Gojo: which fits your Mac?
-                  </h1>
-                  <p className="article-summary">{alternative.tradeoff}</p>
+                <div className="wrap alternative-detail-grid">
+                  <div className="alternative-detail-copy">
+                    <nav className="breadcrumb" aria-label="Breadcrumb">
+                      <Link href="/">Home</Link>
+                      <span aria-hidden="true">/</span>
+                      <Link href="/alternatives/">Alternatives</Link>
+                    </nav>
+                    <h1>
+                      {alternative.name} vs Gojo: which fits your Mac?
+                    </h1>
+                    <p className="article-summary">{alternative.tradeoff}</p>
+                    <div className="article-meta">
+                      <span>Updated {updated}</span>
+                      <span>Checked against the official {alternative.name} site</span>
+                    </div>
+                  </div>
                   <Versus
                     slug={alternative.slug}
                     name={alternative.name}
                     category={alternative.category}
                   />
-                  <div className="article-meta">
-                    <span>Updated {updated}</span>
-                    <span>Checked against the official {alternative.name} site</span>
-                  </div>
                 </div>
               </section>
           </main>

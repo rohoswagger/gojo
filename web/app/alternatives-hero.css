@@ -1,0 +1,200 @@
+/* Claude/Impeccable direction: cream sheet + logo index. */
+.article-shell[data-gojo-editorial="warm"] .alternatives-hub-top.alternative-shell {
+  margin: 0;
+  overflow: visible;
+  border-radius: 0;
+  background: #fdf6ee;
+}
+
+.article-shell[data-gojo-editorial="warm"] .alternatives-hub-top.alternative-shell::before {
+  content: none;
+}
+
+.article-shell[data-gojo-editorial="warm"] .alternatives-hub-top.alternative-shell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(circle at 82% 17%, rgba(255, 217, 190, 0.72), transparent 25rem), linear-gradient(180deg, #fdf6ee, #fffaf5);
+  mask-image: none;
+}
+
+.article-shell[data-gojo-editorial="warm"]
+  .alternatives-hub-top.alternative-shell
+  .site-header.site-header-overlay {
+  position: sticky;
+  top: 12px;
+  z-index: 50;
+  width: min(calc(100% - 2.5rem), 70rem);
+  min-height: 56px;
+  margin: 12px auto 0;
+  padding: 0.55rem 0.75rem 0.55rem 1rem;
+  border: 1px solid rgba(43, 27, 18, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 1px 2px rgba(43, 27, 18, 0.04), 0 8px 24px rgba(43, 27, 18, 0.06);
+  backdrop-filter: blur(20px) saturate(180%);
+}
+
+.article-shell[data-gojo-editorial="warm"] .alternatives-hub-top.alternative-shell .site-header-overlay :is(.brand, .ghost-link) {
+  color: #6b5245;
+  text-shadow: none;
+}
+
+.article-shell[data-gojo-editorial="warm"] .alternatives-hub-top.alternative-shell .site-header-overlay .brand { color: #2b1b12; }
+
+.article-shell[data-gojo-editorial="warm"] .alternatives-hub-top.alternative-shell .site-header-overlay .nav-cta,
+.alternatives-hero-actions .btn {
+  border: 0;
+  border-radius: 999px;
+  background: #b9472d;
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(185, 71, 45, 0.22);
+}
+
+.article-shell[data-gojo-editorial="warm"] .alternatives-hub-top.alternative-shell .site-header-overlay .nav-cta:hover,
+.alternatives-hero-actions .btn:hover { background: #9f3822; }
+
+.article-shell[data-gojo-editorial="warm"] .alternatives-hub-top .alternatives-hub-hero {
+  min-height: 0;
+  padding: clamp(5rem, 8vw, 6.5rem) 0 clamp(4rem, 7vw, 5.5rem);
+  background: transparent;
+}
+
+.article-shell[data-gojo-editorial="warm"] .alternatives-hub-top .alternatives-hub-hero::before { content: none; }
+
+.article-shell[data-gojo-editorial="warm"] .alternatives-hub-top .alternatives-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(30rem, 6fr);
+  align-items: start;
+  gap: clamp(3.5rem, 6vw, 4.5rem);
+  max-width: 70rem;
+}
+
+.alternatives-kicker {
+  margin: 0 0 1.25rem;
+  color: #6b5245;
+  font: 600 0.8125rem/1.1 var(--body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.article-shell[data-gojo-editorial="warm"] .alternatives-hub-top .alternatives-hero-copy h1 {
+  max-width: 10ch;
+  margin: 0;
+  color: #2b1b12;
+  font-size: clamp(2.75rem, 5.2vw, 4.25rem);
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.03em;
+  text-shadow: none;
+}
+
+.article-shell[data-gojo-editorial="warm"] .alternatives-hub-top .alternatives-hero-copy .article-summary {
+  max-width: 46ch;
+  margin-top: 1.25rem;
+  color: #6b5245;
+  font-size: clamp(1rem, 1.5vw, 1.1875rem);
+  line-height: 1.55;
+  text-shadow: none;
+}
+
+.alternatives-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.875rem 1.25rem;
+  margin-top: 2rem;
+}
+
+.alternatives-hero-actions .btn { min-height: 48px; padding-inline: 1.4rem; }
+
+.alternatives-hero-actions > a:not(.btn) {
+  color: #a33f27;
+  font-size: 0.9375rem;
+  font-weight: 550;
+  text-decoration: none;
+}
+
+.alternatives-hero-trust { margin: 0.875rem 0 0; color: #6b5245; font-size: 0.75rem; }
+.alternatives-index { display: grid; gap: 1.5rem; }
+
+.alt-index-group h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 0 0.625rem;
+  color: #6b5245;
+  font: 620 0.75rem/1 var(--body);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.alt-index-group h2::after { content: ""; height: 1px; flex: 1; background: #e8d9c9; }
+.alt-index-group > div { display: grid; gap: 0.25rem; }
+
+.alt-index-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.875rem;
+  min-height: 3.75rem;
+  padding: 0.55rem 0.75rem;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: #2b1b12;
+  text-decoration: none;
+  transition: border-color 160ms ease-out, background-color 160ms ease-out;
+}
+
+.alt-index-row::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  background: #b9472d;
+  transform: scaleY(0);
+  transition: transform 160ms ease-out;
+}
+
+.alt-index-row:hover { border-color: #e8d9c9; background: rgba(255, 255, 255, 0.82); }
+.alt-index-row:hover::before { transform: scaleY(1); }
+
+.alt-index-row .alt-mark {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-color: #e8d9c9;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.alt-index-row .alt-mark img { width: 1.4rem; height: 1.4rem; }
+.alt-index-copy { display: grid; gap: 0.15rem; min-width: 0; }
+.alt-index-copy strong { color: #2b1b12; font-size: 0.9375rem; font-weight: 600; }
+.alt-index-copy small { overflow: hidden; color: #6b5245; font-size: 0.8125rem; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.alt-index-arrow { color: #a33f27; transition: transform 160ms ease-out; }
+.alt-index-row:hover .alt-index-arrow { transform: translateX(3px); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .alt-index-row { animation: alt-index-arrive 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: calc(var(--row) * 28ms); }
+}
+
+@keyframes alt-index-arrive {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 900px) {
+  .article-shell[data-gojo-editorial="warm"] .alternatives-hub-top .alternatives-hero-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px) {
+  .article-shell[data-gojo-editorial="warm"] .alternatives-hub-top .site-header-overlay { border-radius: 18px; }
+  .article-shell[data-gojo-editorial="warm"] .alternatives-hub-top .alternatives-hub-hero { padding-top: 4rem; }
+  .article-shell[data-gojo-editorial="warm"] .alternatives-hub-top .alternatives-hero-copy h1 { max-width: 11ch; font-size: clamp(2.5rem, 11vw, 3.4rem); }
+  .alternatives-hero-actions .btn { width: 100%; }
+  .alt-index-row { min-height: 3.25rem; }
+  .alt-index-copy small, .alt-index-arrow { display: none; }
+}

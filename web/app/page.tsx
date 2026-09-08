@@ -6,6 +6,7 @@ import { ClipboardList, FolderOpen, LayoutGrid, Mic, Music, Sunset } from "lucid
 import { AutoplayVideo } from "@/components/autoplay-video"
 import { GojoFooter } from "@/components/gojo-footer"
 import { GojoLogo } from "@/components/gojo-logo"
+import { NightShiftComparison } from "@/components/night-shift-comparison"
 import {
   PricingTabsProvider,
   PricingTabList,
@@ -439,15 +440,7 @@ export default function Home() {
                   <li>Location is used locally and never sent anywhere</li>
                 </ul>
               </div>
-              <figure className="act-shot shot-window">
-                <Image
-                  src="/screenshots/settings-nightshift.png"
-                  width={681}
-                  height={589}
-                  loading="lazy"
-                  alt="Gojo's Night Shift settings: enable toggle, a 6500K day status, a notch toggle, start-at-login, and sunrise and sunset times for San Francisco."
-                />
-              </figure>
+              <NightShiftComparison />
             </div>
           </article>
         </div>

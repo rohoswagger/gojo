@@ -20,7 +20,9 @@ Platform: macOS 14 Sonoma and later, Apple silicon and Intel
 - Best clipboard managers for Mac: https://trygojo.com/blog/best-mac-clipboard-manager/
 - Best file shelf apps for Mac: https://trygojo.com/blog/best-file-shelf-apps-mac/
 - Best window management tools for Mac: https://trygojo.com/blog/best-window-management-tools-mac/
+- Best window tiling apps for Mac: https://trygojo.com/blog/best-window-tiling-apps-mac/
 - Best Mac notch apps for productivity: https://trygojo.com/blog/best-mac-notch-apps-for-productivity/
+- Best NotchNook alternatives: https://trygojo.com/blog/best-notchnook-alternatives/
 - Gojo vs Superwhisper: https://trygojo.com/blog/gojo-vs-superwhisper/
 - Gojo vs MacWhisper: https://trygojo.com/blog/gojo-vs-macwhisper/
 - Gojo vs Apple Dictation: https://trygojo.com/blog/gojo-vs-apple-dictation/

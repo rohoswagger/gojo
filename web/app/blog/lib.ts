@@ -99,6 +99,14 @@ export type BlogHub = PostMeta & {
 const CONTENT_DIR = path.join(process.cwd(), "content", "blog");
 
 export const POST_SLUGS = [
+  "best-macbook-notch-apps",
+  "best-dictation-apps-for-mac",
+  "how-to-choose-a-macbook-notch-app",
+  "apple-dictation-vs-local-whisper",
+  "mac-dictation-privacy",
+  "how-to-see-clipboard-history-on-mac",
+  "speech-to-text-on-mac",
+  "how-to-dictate-on-mac",
   "best-mac-clipboard-manager",
   "best-mac-dictation-for-developers",
   "best-mac-dictation-for-writers",

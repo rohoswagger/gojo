@@ -1,0 +1,416 @@
+{
+  "slug": "how-to-dictate-on-mac",
+  "title": "How to dictate on Mac in 2026",
+  "description": "Learn how to dictate on a Mac with Apple Dictation, Voice Control, and Gojo's local dictation workflow.",
+  "canonical": "https://trygojo.com/blog/how-to-dictate-on-mac/",
+  "og": {
+    "og:title": "How to dictate on Mac in 2026",
+    "og:description": "A practical Mac dictation setup guide for built-in Apple tools and local Gojo dictation.",
+    "og:type": "article",
+    "og:url": "https://trygojo.com/blog/how-to-dictate-on-mac/",
+    "og:image": "https://trygojo.com/assets/og.jpg",
+    "og:image:alt": "Gojo dictation running from the MacBook notch."
+  },
+  "twitter": {
+    "twitter:card": "summary_large_image",
+    "twitter:title": "How to dictate on Mac in 2026",
+    "twitter:description": "Set up Mac dictation, choose the right dictation mode, and check privacy before speaking.",
+    "twitter:image": "https://trygojo.com/assets/og.jpg"
+  },
+  "article": {
+    "published_time": "2026-09-08",
+    "modified_time": "2026-09-08",
+    "section": "Mac dictation",
+    "author": "Gojo",
+    "robots": "index,follow,max-image-preview:large"
+  },
+  "jsonLd": {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "headline": "How to dictate on Mac in 2026",
+        "description": "A step-by-step guide to dictating on Mac with Apple Dictation, Voice Control, and Gojo.",
+        "url": "https://trygojo.com/blog/how-to-dictate-on-mac/",
+        "datePublished": "2026-09-08",
+        "dateModified": "2026-09-08",
+        "author": {
+          "@type": "Organization",
+          "name": "Gojo"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Gojo",
+          "url": "https://trygojo.com/"
+        },
+        "citation": [
+          "https://support.apple.com/guide/mac-help/mh40584/26/mac/26",
+          "https://support.apple.com/guide/mac-help/turn-voice-control-on-or-off-mchl63d14732/mac",
+          "https://trygojo.com/features/local-dictation/"
+        ],
+        "mainEntityOfPage": "https://trygojo.com/blog/how-to-dictate-on-mac/"
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How do I dictate on a Mac?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Enable Dictation in Keyboard settings, click a destination field, press the dictation shortcut, speak, and review the inserted text before using it."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I dictate on Mac without the cloud?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes, in supported workflows. Apple asks users to check their Dictation settings for processing details. Voice Control works offline after setup. Gojo uses a downloaded local model."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between Dictation and Voice Control?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Dictation enters text. Voice Control can also navigate, click, select, and edit the Mac by voice."
+            }
+          }
+        ]
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Gojo",
+            "item": "https://trygojo.com/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Blog",
+            "item": "https://trygojo.com/blog/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "How to dictate on Mac",
+            "item": "https://trygojo.com/blog/how-to-dictate-on-mac/"
+          }
+        ]
+      }
+    ]
+  },
+  "hero": {
+    "label": "September 8, 2026",
+    "title": "How to dictate on Mac in 2026",
+    "summary": "Mac dictation is no longer one feature. Apple Dictation, Voice Control, and local third-party dictation solve different jobs.",
+    "meta": [
+      "Updated September 8, 2026",
+      "6 min read",
+      "Primary sources checked"
+    ],
+    "breadcrumb": [
+      {
+        "label": "Home",
+        "href": "/"
+      },
+      {
+        "label": "Blog",
+        "href": "/blog/"
+      }
+    ]
+  },
+  "blocks": [
+    {
+      "type": "answer",
+      "label": "Short answer",
+      "copy": "To dictate on a Mac, enable Dictation in Keyboard settings, click where the words should go, press the dictation shortcut, speak, then review the text. Use Voice Control for hands-free Mac control. Use Gojo when you want local-model dictation that types into the focused field.",
+      "points": [
+        "Built-in text entry: Apple Dictation.",
+        "Hands-free navigation and editing: Voice Control.",
+        "Local-model dictation into the current text field: Gojo."
+      ]
+    },
+    {
+      "type": "jumpNav",
+      "label": "On this page",
+      "items": [
+        {
+          "label": "Apple Dictation",
+          "href": "#apple-dictation"
+        },
+        {
+          "label": "Voice Control",
+          "href": "#voice-control"
+        },
+        {
+          "label": "Gojo",
+          "href": "#gojo"
+        },
+        {
+          "label": "Privacy",
+          "href": "#privacy"
+        },
+        {
+          "label": "FAQ",
+          "href": "#faq"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Set up Apple Dictation first",
+      "id": "apple-dictation"
+    },
+    {
+      "type": "list",
+      "ordered": true,
+      "items": [
+        [
+          {
+            "t": "text",
+            "s": "Open System Settings and go to Keyboard."
+          }
+        ],
+        [
+          {
+            "t": "text",
+            "s": "Turn on Dictation and choose the shortcut, language, and microphone you want to use."
+          }
+        ],
+        [
+          {
+            "t": "text",
+            "s": "Click into the app where text should appear."
+          }
+        ],
+        [
+          {
+            "t": "text",
+            "s": "Press the dictation shortcut, speak clearly, and stop dictation when you are done."
+          }
+        ],
+        [
+          {
+            "t": "text",
+            "s": "Read the text before sending. Names, product terms, punctuation, and code still need review."
+          }
+        ]
+      ]
+    },
+    {
+      "type": "note",
+      "content": [
+        {
+          "t": "text",
+          "s": "Apple says the text beneath Dictation in Keyboard settings explains whether general voice input and transcripts are processed on-device or sent to Siri servers. Check that setting on the Mac you actually use."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Use Voice Control when speech should control the Mac",
+      "id": "voice-control"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Voice Control is different from ordinary dictation. It can navigate, click, select text, and edit with spoken commands. Apple says it requires internet for a one-time file download, then works without an internet connection."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Use Gojo for local dictation into the current field",
+      "id": "gojo"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Gojo downloads a local speech model and types dictated text into the field that is already active. That matters when you want the words to land in Messages, Notes, Slack, a browser form, or a document without copying from a transcript app. Read the "
+        },
+        {
+          "t": "link",
+          "s": "local dictation feature guide",
+          "href": "/features/local-dictation/"
+        },
+        {
+          "t": "text",
+          "s": " for the product behavior."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Check privacy before you start dictating",
+      "id": "privacy"
+    },
+    {
+      "type": "list",
+      "ordered": false,
+      "items": [
+        [
+          {
+            "t": "text",
+            "s": "Does the selected workflow process speech on-device, in a cloud service, or both depending on mode?"
+          }
+        ],
+        [
+          {
+            "t": "text",
+            "s": "Does the app store audio, transcripts, corrections, or history?"
+          }
+        ],
+        [
+          {
+            "t": "text",
+            "s": "Does it need microphone, Accessibility, automation, or file access permissions?"
+          }
+        ],
+        [
+          {
+            "t": "text",
+            "s": "Does the receiving app sync the inserted text after dictation?"
+          }
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and method",
+      "id": "sources"
+    },
+    {
+      "type": "sourceFacts",
+      "items": [
+        "Apple Dictation and Voice Control support pages checked September 8, 2026.",
+        "Gojo local dictation behavior checked against the public feature page and architecture notes on September 8, 2026.",
+        "No accuracy benchmark is claimed because this guide is about setup and workflow choice."
+      ]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "link",
+          "s": "Apple Dictation guide",
+          "href": "https://support.apple.com/guide/mac-help/mh40584/26/mac/26"
+        },
+        {
+          "t": "text",
+          "s": " | "
+        },
+        {
+          "t": "link",
+          "s": "Apple Voice Control guide",
+          "href": "https://support.apple.com/guide/mac-help/turn-voice-control-on-or-off-mchl63d14732/mac"
+        },
+        {
+          "t": "text",
+          "s": " | "
+        },
+        {
+          "t": "link",
+          "s": "Gojo dictation architecture",
+          "href": "/dictation-architecture.md"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Frequently asked questions",
+      "id": "faq"
+    },
+    {
+      "type": "faq",
+      "items": [
+        {
+          "q": "How do I dictate on a Mac?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Enable Dictation in Keyboard settings, click a destination field, press the dictation shortcut, speak, and review the inserted text before using it."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "Can I dictate on Mac without the cloud?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Yes, in supported workflows. Apple asks users to check their Dictation settings for processing details. Voice Control works offline after setup. Gojo uses a downloaded local model."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "What is the difference between Dictation and Voice Control?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Dictation enters text. Voice Control can also navigate, click, select, and edit the Mac by voice."
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "type": "cta",
+      "label": "Want local dictation in your normal Mac apps?",
+      "title": "Try Gojo for three days.",
+      "copy": "Speak into the field you already use, then keep clipboard, windows, files, media, and display controls in the same notch workspace.",
+      "actions": [
+        {
+          "label": "Download for macOS",
+          "href": "https://downloads.trygojo.com/Gojo.dmg",
+          "primary": true
+        },
+        {
+          "label": "Compare local dictation apps",
+          "href": "/blog/best-local-dictation-apps-mac/",
+          "primary": false
+        }
+      ],
+      "trust": "No account or card required. macOS 14+."
+    },
+    {
+      "type": "next",
+      "label": "Related dictation guides",
+      "title": "Keep comparing Mac dictation options",
+      "copy": null,
+      "links": [
+        {
+          "label": "Best local dictation apps for Mac",
+          "href": "/blog/best-local-dictation-apps-mac/"
+        },
+        {
+          "label": "Voice-to-text on Mac without cloud processing",
+          "href": "/blog/voice-to-text-mac-without-cloud/"
+        },
+        {
+          "label": "Gojo vs Apple Dictation",
+          "href": "/blog/gojo-vs-apple-dictation/"
+        }
+      ]
+    }
+  ]
+}

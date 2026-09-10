@@ -1,0 +1,276 @@
+{
+  "slug": "speech-to-text-on-mac",
+  "title": "Speech to text on Mac: built-in and local options",
+  "description": "A practical guide to speech-to-text on Mac, including Apple Dictation, Voice Control, and Gojo local dictation.",
+  "canonical": "https://trygojo.com/blog/speech-to-text-on-mac/",
+  "og": {
+    "og:title": "Speech to text on Mac: built-in and local options",
+    "og:description": "Compare Mac speech-to-text workflows by setup, privacy, and where the text appears.",
+    "og:type": "article",
+    "og:url": "https://trygojo.com/blog/speech-to-text-on-mac/",
+    "og:image": "https://trygojo.com/assets/og.jpg",
+    "og:image:alt": "Speech-to-text running in Gojo on a MacBook."
+  },
+  "twitter": {
+    "twitter:card": "summary_large_image",
+    "twitter:title": "Speech to text on Mac: built-in and local options",
+    "twitter:description": "Choose the right Mac speech-to-text workflow for quick writing, control, or transcript work.",
+    "twitter:image": "https://trygojo.com/assets/og.jpg"
+  },
+  "article": {
+    "published_time": "2026-09-08",
+    "modified_time": "2026-09-08",
+    "section": "Mac dictation",
+    "author": "Gojo",
+    "robots": "index,follow,max-image-preview:large"
+  },
+  "jsonLd": {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "headline": "Speech to text on Mac: built-in and local options",
+        "url": "https://trygojo.com/blog/speech-to-text-on-mac/",
+        "datePublished": "2026-09-08",
+        "dateModified": "2026-09-08",
+        "author": {
+          "@type": "Organization",
+          "name": "Gojo"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Gojo",
+          "url": "https://trygojo.com/"
+        },
+        "citation": [
+          "https://support.apple.com/guide/mac-help/mh40584/26/mac/26",
+          "https://trygojo.com/features/local-dictation/",
+          "https://trygojo.com/dictation-architecture.md"
+        ],
+        "mainEntityOfPage": "https://trygojo.com/blog/speech-to-text-on-mac/",
+        "description": "A practical guide to speech-to-text on Mac, including Apple Dictation, Voice Control, and Gojo local dictation."
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Does Mac have speech to text built in?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. macOS includes Dictation for text entry and Voice Control for hands-free Mac operation."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is Gojo speech to text or transcription?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Gojo is speech-to-text for the active field. It is not a transcript workspace for meeting archives."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can speech to text on Mac be private?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "It can be, but only when the selected workflow processes speech locally and does not store or send audio elsewhere. Check the exact setting or product documentation."
+            }
+          }
+        ]
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Gojo",
+            "item": "https://trygojo.com/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Blog",
+            "item": "https://trygojo.com/blog/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Speech to text on Mac",
+            "item": "https://trygojo.com/blog/speech-to-text-on-mac/"
+          }
+        ]
+      }
+    ]
+  },
+  "hero": {
+    "label": "September 8, 2026",
+    "title": "Speech to text on Mac: built-in and local options",
+    "summary": "Speech-to-text on Mac can mean quick inline writing, full voice control, or a transcript workspace. Pick the workflow before you pick the app.",
+    "meta": [
+      "Updated September 8, 2026",
+      "6 min read"
+    ],
+    "breadcrumb": [
+      {
+        "label": "Home",
+        "href": "/"
+      },
+      {
+        "label": "Blog",
+        "href": "/blog/"
+      }
+    ]
+  },
+  "blocks": [
+    {
+      "type": "answer",
+      "label": "Short answer",
+      "copy": "Mac speech-to-text is available through built-in Dictation, Voice Control, and third-party apps. Use Apple Dictation first for quick text entry. Use Gojo when you want local recognition and text inserted into the focused field. Use a transcript app when recordings and exports matter.",
+      "points": [
+        "Quick text entry: Apple Dictation.",
+        "Voice-driven Mac control: Voice Control.",
+        "Local speech-to-text in everyday apps: Gojo.",
+        "Audio files and meetings: transcript apps."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Choose the right speech-to-text workflow",
+      "id": "workflow"
+    },
+    {
+      "type": "table",
+      "head": [
+        "Need",
+        "Best fit",
+        "Why"
+      ],
+      "rows": [
+        [
+          "Speak into a message, note, document, or form",
+          "Apple Dictation or Gojo",
+          "The text lands where the cursor is"
+        ],
+        [
+          "Use the Mac without hands",
+          "Voice Control",
+          "It handles commands as well as dictation"
+        ],
+        [
+          "Turn recordings into transcripts",
+          "MacWhisper-style transcript app",
+          "The transcript becomes a file you can review and export"
+        ],
+        [
+          "Avoid cloud transcription for daily writing",
+          "Gojo or another documented local workflow",
+          "You can verify the recognition path before use"
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How Gojo handles speech to text",
+      "id": "gojo"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Gojo performs recognition with a downloaded local model and inserts the result into the current text field. That makes it useful for messages, notes, browser forms, and drafts where opening a separate transcript app would add friction. For the deeper privacy angle, read "
+        },
+        {
+          "t": "link",
+          "s": "voice-to-text on Mac without cloud processing",
+          "href": "/blog/voice-to-text-mac-without-cloud/"
+        },
+        {
+          "t": "text",
+          "s": "."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and method",
+      "id": "sources"
+    },
+    {
+      "type": "sourceFacts",
+      "items": [
+        "Apple Dictation and Voice Control source pages checked September 8, 2026.",
+        "Gojo feature and architecture pages checked September 8, 2026.",
+        "This guide compares workflow fit, not speech recognition accuracy."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Frequently asked questions",
+      "id": "faq"
+    },
+    {
+      "type": "faq",
+      "items": [
+        {
+          "q": "Does Mac have speech to text built in?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Yes. macOS includes Dictation for text entry and Voice Control for hands-free Mac operation."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "Is Gojo speech to text or transcription?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Gojo is speech-to-text for the active field. It is not a transcript workspace for meeting archives."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "Can speech to text on Mac be private?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "It can be, but only when the selected workflow processes speech locally and does not store or send audio elsewhere. Check the exact setting or product documentation."
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "type": "cta",
+      "label": "Want local speech-to-text in the apps you already use?",
+      "title": "Try Gojo for three days.",
+      "copy": "Dictate into the focused field and keep the rest of your Mac controls one hover away.",
+      "actions": [
+        {
+          "label": "Download for macOS",
+          "href": "https://downloads.trygojo.com/Gojo.dmg",
+          "primary": true
+        },
+        {
+          "label": "See local dictation",
+          "href": "/features/local-dictation/",
+          "primary": false
+        }
+      ],
+      "trust": "No account or card required. macOS 14+."
+    }
+  ]
+}

@@ -1,0 +1,283 @@
+{
+  "slug": "how-to-choose-a-macbook-notch-app",
+  "title": "How to choose a MacBook notch app",
+  "description": "A buyer's checklist for MacBook notch apps, including features, permissions, pricing, privacy, and when Gojo fits.",
+  "canonical": "https://trygojo.com/blog/how-to-choose-a-macbook-notch-app/",
+  "og": {
+    "og:title": "How to choose a MacBook notch app",
+    "og:description": "Compare notch apps by workflow value, permissions, and Dynamic Island-style features.",
+    "og:type": "article",
+    "og:url": "https://trygojo.com/blog/how-to-choose-a-macbook-notch-app/",
+    "og:image": "https://trygojo.com/assets/og.jpg",
+    "og:image:alt": "Gojo MacBook notch workspace."
+  },
+  "twitter": {
+    "twitter:card": "summary_large_image",
+    "twitter:title": "How to choose a MacBook notch app",
+    "twitter:description": "A checklist for choosing between Gojo, NotchNook, Boring Notch, Alcove, Droppy, and DynamicLake.",
+    "twitter:image": "https://trygojo.com/assets/og.jpg"
+  },
+  "article": {
+    "published_time": "2026-09-08",
+    "modified_time": "2026-09-08",
+    "section": "MacBook notch apps",
+    "author": "Gojo",
+    "robots": "index,follow,max-image-preview:large"
+  },
+  "jsonLd": {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "headline": "How to choose a MacBook notch app",
+        "url": "https://trygojo.com/blog/how-to-choose-a-macbook-notch-app/",
+        "datePublished": "2026-09-08",
+        "dateModified": "2026-09-08",
+        "author": {
+          "@type": "Organization",
+          "name": "Gojo"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Gojo",
+          "url": "https://trygojo.com/"
+        },
+        "citation": [
+          "https://trygojo.com/",
+          "https://github.com/TheBoredTeam/boring.notch",
+          "https://www.dynamiclake.com/",
+          "https://www.theodorehq.com/macdept/app/alcove"
+        ],
+        "mainEntityOfPage": "https://trygojo.com/blog/how-to-choose-a-macbook-notch-app/",
+        "description": "A buyer's checklist for MacBook notch apps, including features, permissions, pricing, privacy, and when Gojo fits."
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What should I look for in a MacBook notch app?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Look for useful repeated workflows, clear permissions, current compatibility, transparent pricing, and a privacy model that matches the features you enable."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is a notch app worth installing?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes, if it replaces daily menu hunting or app switching. No, if you only want an animation you will ignore after a week."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Which notch app should I try first?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Try Gojo if you want one workspace for dictation, clipboard, files, windows, media, and system glances. Try Boring Notch first if free and open-source matters more than product breadth."
+            }
+          }
+        ]
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Gojo",
+            "item": "https://trygojo.com/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Blog",
+            "item": "https://trygojo.com/blog/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "How to choose a MacBook notch app",
+            "item": "https://trygojo.com/blog/how-to-choose-a-macbook-notch-app/"
+          }
+        ]
+      }
+    ]
+  },
+  "hero": {
+    "label": "September 8, 2026",
+    "title": "How to choose a MacBook notch app",
+    "summary": "The notch is good real estate only when it saves a trip somewhere else. Use this checklist before installing a Dynamic Island-style Mac utility.",
+    "meta": [
+      "Updated September 8, 2026",
+      "6 min read"
+    ],
+    "breadcrumb": [
+      {
+        "label": "Home",
+        "href": "/"
+      },
+      {
+        "label": "Blog",
+        "href": "/blog/"
+      }
+    ]
+  },
+  "blocks": [
+    {
+      "type": "answer",
+      "label": "Short answer",
+      "copy": "Choose a MacBook notch app by the jobs it makes faster, the permissions it explains, the privacy model it documents, and the way it behaves when you are focused. Animations are a bonus. A notch app earns its spot when it replaces menu hunting, app switching, or repeated tiny workflows.",
+      "points": [
+        "Pick Gojo for an all-day utility workspace.",
+        "Pick Boring Notch if free and open-source matters most.",
+        "Pick Alcove or DynamicLake for a more Dynamic Island-style visual layer.",
+        "Pick a specialist if you only need file drops, media, or HUDs."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The notch app checklist",
+      "id": "checklist"
+    },
+    {
+      "type": "table",
+      "head": [
+        "Question",
+        "Why it matters",
+        "Gojo fit"
+      ],
+      "rows": [
+        [
+          "What job happens several times a day?",
+          "Rare actions do not need top-screen real estate",
+          "Dictation, clipboard, files, windows, media, and system glances"
+        ],
+        [
+          "What permissions does it need?",
+          "Notch apps often touch windows, media, calendar, camera, or files",
+          "Feature-specific macOS permissions"
+        ],
+        [
+          "Does it work without a physical notch?",
+          "External displays and desktop Macs may need a simulated surface",
+          "Designed around MacBook notch use"
+        ],
+        [
+          "What does it store?",
+          "Clipboard, files, calendar, and audio can be sensitive",
+          "Local-first posture, with feature caveats documented"
+        ],
+        [
+          "Is pricing current and clear?",
+          "Small Mac apps change plans often",
+          "Public pricing is also available at /pricing.md"
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Compare the main categories",
+      "id": "categories"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "NotchNook, Alcove, DynamicLake, Boring Notch, Droppy, and Gojo overlap visually, but they do not sell the same job. Some are closer to a Dynamic Island recreation. Some focus on file drops or HUDs. Gojo should be judged as a compact Mac productivity workspace. For the full comparison table, read "
+        },
+        {
+          "t": "link",
+          "s": "best macOS notch utilities",
+          "href": "/blog/best-macos-notch-utilities/"
+        },
+        {
+          "t": "text",
+          "s": "."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and method",
+      "id": "sources"
+    },
+    {
+      "type": "sourceFacts",
+      "items": [
+        "Gojo product, pricing, and feature pages checked September 8, 2026.",
+        "Boring Notch, DynamicLake, and Alcove source pages checked September 8, 2026 where accessible.",
+        "NotchNook and Droppy details can move across product pages, Gumroad, Setapp, and third-party directories, so verify pricing before purchase.",
+        "This checklist does not claim benchmark results or battery rankings."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Frequently asked questions",
+      "id": "faq"
+    },
+    {
+      "type": "faq",
+      "items": [
+        {
+          "q": "What should I look for in a MacBook notch app?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Look for useful repeated workflows, clear permissions, current compatibility, transparent pricing, and a privacy model that matches the features you enable."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "Is a notch app worth installing?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Yes, if it replaces daily menu hunting or app switching. No, if you only want an animation you will ignore after a week."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "Which notch app should I try first?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Try Gojo if you want one workspace for dictation, clipboard, files, windows, media, and system glances. Try Boring Notch first if free and open-source matters more than product breadth."
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "type": "cta",
+      "label": "Want the notch to do daily work?",
+      "title": "Try Gojo for three days.",
+      "copy": "Put dictation, clipboard, files, windows, media, and glanceable system tools in one MacBook notch workspace.",
+      "actions": [
+        {
+          "label": "Download for macOS",
+          "href": "https://downloads.trygojo.com/Gojo.dmg",
+          "primary": true
+        },
+        {
+          "label": "Compare notch apps",
+          "href": "/blog/best-macos-notch-utilities/",
+          "primary": false
+        }
+      ],
+      "trust": "No account or card required. macOS 14+."
+    }
+  ]
+}

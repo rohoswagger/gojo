@@ -1,11 +1,11 @@
 {
   "slug": "best-window-tiling-apps-mac",
-  "title": "Best window tiling apps for Mac in 2026",
-  "description": "Compare Mac window tiling with Apple's built-in tools, Rectangle, Moom, Magnet, BetterTouchTool, and Gojo by workflow and control depth.",
+  "title": "Best Mac window managers and tiling apps in 2026",
+  "description": "Compare Mac window managers and tiling apps: macOS, Rectangle, Magnet, Moom, Raycast, BetterTouchTool, and Gojo.",
   "canonical": "https://trygojo.com/blog/best-window-tiling-apps-mac/",
   "og": {
-    "og:title": "Best window tiling apps for Mac in 2026",
-    "og:description": "Choose a Mac window tiling tool by shortcuts, layouts, automation, and whether window control is your only job.",
+    "og:title": "Best Mac window managers and tiling apps in 2026",
+    "og:description": "Choose a Mac window manager by built-in tiling, shortcuts, saved layouts, automation, and whether window control is your only job.",
     "og:type": "article",
     "og:url": "https://trygojo.com/blog/best-window-tiling-apps-mac/",
     "og:image": "https://trygojo.com/assets/og.jpg",
@@ -13,8 +13,8 @@
   },
   "twitter": {
     "twitter:card": "summary_large_image",
-    "twitter:title": "Best window tiling apps for Mac in 2026",
-    "twitter:description": "Apple tiling, Rectangle, Moom, Magnet, BetterTouchTool, and Gojo compared by workflow.",
+    "twitter:title": "Best Mac window managers and tiling apps in 2026",
+    "twitter:description": "Mac window manager options compared: macOS, Rectangle, Magnet, Moom, Raycast, BetterTouchTool, and Gojo.",
     "twitter:image": "https://trygojo.com/assets/og.jpg"
   },
   "article": {
@@ -29,22 +29,31 @@
     "@graph": [
       {
         "@type": "BlogPosting",
-        "headline": "Best window tiling apps for Mac in 2026",
-        "description": "A practical comparison of built-in and third-party window tiling tools for Mac.",
+        "headline": "Best Mac window managers and tiling apps in 2026",
+        "description": "Compare Mac window managers and tiling apps: macOS, Rectangle, Magnet, Moom, Raycast, BetterTouchTool, and Gojo.",
         "url": "https://trygojo.com/blog/best-window-tiling-apps-mac/",
         "datePublished": "2026-09-08",
         "dateModified": "2026-09-08",
-        "author": { "@type": "Organization", "name": "Gojo" },
-        "publisher": { "@type": "Organization", "name": "Gojo", "url": "https://trygojo.com/" },
+        "author": {
+          "@type": "Organization",
+          "name": "Gojo"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Gojo",
+          "url": "https://trygojo.com/"
+        },
         "citation": [
           "https://support.apple.com/guide/mac-help/tile-windows-on-mac-mchlef287e5d/mac",
           "https://support.apple.com/guide/mac-help/mchl118087b0/mac",
           "https://rectangleapp.com/",
-          "https://manytricks.com/moom/",
           "https://magnet.crowdcafe.com/",
+          "https://manytricks.com/moom/",
+          "https://www.raycast.com/",
           "https://folivora.ai/",
           "https://trygojo.com/features/window-controls/"
-        ]
+        ],
+        "mainEntityOfPage": "https://trygojo.com/blog/best-window-tiling-apps-mac/"
       },
       {
         "@type": "FAQPage",
@@ -52,17 +61,26 @@
           {
             "@type": "Question",
             "name": "What is the best window tiling app for Mac?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Start with macOS built-in tiling. Choose Rectangle for free keyboard shortcuts and snap areas, Moom for saved and custom layouts, Magnet for straightforward shortcut-based snapping, BetterTouchTool for deep automation, or Gojo when window snapping is one part of a broader notch workflow." }
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Start with macOS built-in tiling. Choose Rectangle for free shortcuts and snap areas, Moom for custom layouts, BetterTouchTool for automation, or Gojo when snapping belongs in a broader notch workflow."
+            }
           },
           {
             "@type": "Question",
             "name": "Does macOS have window tiling built in?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Yes. Current macOS supports tiling by dragging to screen edges, Option-dragging, using the green window button, choosing Window menu layouts, and using keyboard shortcuts." }
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Current macOS supports edge dragging, Option-dragging, green-button layouts, Window menu commands, and keyboard shortcuts for common arrangements."
+            }
           },
           {
             "@type": "Question",
             "name": "Why do window tiling apps need Accessibility permission?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Third-party window managers commonly need macOS Accessibility access to inspect, move, resize, or focus windows belonging to other applications." }
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "They commonly need Accessibility access to inspect, focus, move, or resize windows that belong to other applications."
+            }
           }
         ]
       }
@@ -70,135 +88,404 @@
   },
   "hero": {
     "label": "September 8, 2026",
-    "title": "Best window tiling apps for Mac in 2026",
-    "summary": "macOS now handles common halves and quarters itself. Third-party tools still earn their place through faster shortcuts, repeatable layouts, custom positions, automation, or by putting window control beside other daily tools.",
-    "meta": ["Updated September 8, 2026", "9 min read", "Primary sources checked"],
+    "title": "Best Mac window managers and tiling apps in 2026",
+    "summary": "A Mac window manager should match how you move through work: built-in tiling for simple halves, Rectangle or Magnet for fast snapping, Moom for saved layouts, Raycast or BetterTouchTool for command workflows, and Gojo for window controls inside a broader notch workspace.",
+    "meta": [
+      "Updated September 8, 2026",
+      "9 min read",
+      "Primary sources checked"
+    ],
     "breadcrumb": [
-      { "label": "Home", "href": "/" },
-      { "label": "Blog", "href": "/blog/" }
+      {
+        "label": "Home",
+        "href": "/"
+      },
+      {
+        "label": "Blog",
+        "href": "/blog/"
+      }
     ]
   },
   "blocks": [
     {
       "type": "answer",
       "label": "Short answer",
-      "copy": "Use macOS built-in tiling for basic halves and quarters. Choose Rectangle for a free dedicated shortcut tool, Moom for reusable custom layouts, Magnet for simple snapping, BetterTouchTool for automation, or Gojo when window snapping belongs beside clipboard, files, dictation, media, and display controls in the MacBook notch.",
+      "copy": "Use macOS built-in tiling for basic halves and quarters. Choose Rectangle or Magnet for a dedicated Mac window manager, Moom for saved custom layouts, Raycast or BetterTouchTool for command and automation workflows, or Gojo when window controls belong beside clipboard, files, dictation, media, and display tools in the notch.",
       "points": [
+        "Primary keyword target: mac window manager.",
         "No extra app: macOS built-in tiling.",
         "Best free specialist: Rectangle.",
-        "Custom layouts: Moom.",
-        "Deep automation: BetterTouchTool.",
-        "Window snapping inside a broader Mac utility: Gojo."
+        "Simple paid snapping: Magnet.",
+        "Window control inside a broader Mac utility: Gojo."
       ]
     },
     {
       "type": "jumpNav",
       "label": "On this page",
       "items": [
-        { "label": "Comparison", "href": "#comparison" },
-        { "label": "Built-in tiling", "href": "#built-in" },
-        { "label": "Choose by workflow", "href": "#choices" },
-        { "label": "Permission guide", "href": "#permissions" },
-        { "label": "FAQ", "href": "#faq" }
+        {
+          "label": "Comparison",
+          "href": "#comparison"
+        },
+        {
+          "label": "Built-in tiling",
+          "href": "#built-in"
+        },
+        {
+          "label": "Choose by workflow",
+          "href": "#choices"
+        },
+        {
+          "label": "Permission guide",
+          "href": "#permissions"
+        },
+        {
+          "label": "FAQ",
+          "href": "#faq"
+        }
       ]
     },
-    { "type": "heading", "level": 2, "text": "Mac window tiling options compared", "id": "comparison" },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Mac window tiling options compared",
+      "id": "comparison"
+    },
     {
       "type": "table",
-      "head": ["Tool", "Best for", "Control model", "Main tradeoff"],
+      "head": [
+        "Tool",
+        "Best for",
+        "Control model",
+        "Main tradeoff"
+      ],
       "rows": [
-        ["macOS built-in tiling", "Common layouts without another app", "Drag, Option-drag, green button, menus, shortcuts", "Less customization and automation"],
-        ["Rectangle", "Free dedicated window snapping", "Keyboard shortcuts and snap areas", "Window management is the whole product"],
-        ["Moom", "Saved and custom layouts", "Palette, keyboard, mouse, and layout presets", "More setup than basic snapping"],
-        ["Magnet", "Straightforward shortcut snapping", "Shortcuts and screen-edge actions", "Fewer automation layers than power tools"],
-        ["BetterTouchTool", "Deep custom automation", "Triggers, actions, gestures, and custom snap areas", "Highest configuration burden"],
-        ["Gojo", "Quick snapping beside daily Mac controls", "Visual controls in the MacBook notch", "Less window-management depth than specialists"]
+        [
+          "macOS built-in tiling",
+          "Common layouts without another app",
+          "Drag, Option-drag, green button, menus, shortcuts",
+          "Less customization and automation"
+        ],
+        [
+          "Rectangle",
+          "Free dedicated Mac window manager",
+          "Keyboard shortcuts and snap areas",
+          "Window management is the whole product"
+        ],
+        [
+          "Magnet",
+          "Straightforward App Store snapping",
+          "Shortcuts, menu bar, and trigger areas",
+          "Less suited to complex saved layout systems"
+        ],
+        [
+          "Moom",
+          "Saved and custom layouts",
+          "Palette, keyboard, mouse, and layout presets",
+          "More setup than basic snapping"
+        ],
+        [
+          "Raycast",
+          "Command-driven window management",
+          "Keyboard launcher commands and extensions",
+          "Best if you already work from Raycast"
+        ],
+        [
+          "BetterTouchTool",
+          "Deep custom automation",
+          "Triggers, actions, gestures, and custom snap areas",
+          "Highest configuration burden"
+        ],
+        [
+          "Gojo",
+          "Quick snapping beside daily Mac controls",
+          "Visual controls in the MacBook notch",
+          "Less window-management depth than specialists"
+        ]
       ]
     },
-    { "type": "heading", "level": 2, "text": "Try macOS built-in tiling first", "id": "built-in" },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Try macOS built-in tiling first",
+      "id": "built-in"
+    },
     {
       "type": "paragraph",
-      "content": [{ "t": "text", "s": "Apple's current Mac guide documents five ways to tile windows: drag to an edge, hold Option while dragging, use the green button, choose layouts from the Window menu, or use keyboard shortcuts. Common halves, quarters, centering, filling, and multi-window arrangements no longer require a separate utility." }]
+      "content": [
+        {
+          "t": "text",
+          "s": "Apple's current Mac guide documents five ways to tile windows: drag to an edge, hold Option while dragging, use the green button, choose layouts from the Window menu, or use keyboard shortcuts. Common halves, quarters, centering, filling, and multi-window arrangements no longer require a separate utility."
+        }
+      ]
     },
     {
       "type": "list",
       "ordered": true,
       "items": [
-        [{ "t": "strong", "s": "Enable the behavior you want." }, { "t": "text", "s": " Open System Settings, choose Desktop & Dock, then review the Windows tiling options." }],
-        [{ "t": "strong", "s": "Drag to an edge or corner." }, { "t": "text", "s": " Release when the destination area highlights." }],
-        [{ "t": "strong", "s": "Use Option for faster placement." }, { "t": "text", "s": " Hold Option while dragging toward a highlighted area." }],
-        [{ "t": "strong", "s": "Use the green button for layouts." }, { "t": "text", "s": " Hover over it to choose Move & Resize or Fill & Arrange options." }]
+        [
+          {
+            "t": "strong",
+            "s": "Enable the behavior you want."
+          },
+          {
+            "t": "text",
+            "s": " Open System Settings, choose Desktop & Dock, then review the Windows tiling options."
+          }
+        ],
+        [
+          {
+            "t": "strong",
+            "s": "Drag to an edge or corner."
+          },
+          {
+            "t": "text",
+            "s": " Release when the destination area highlights."
+          }
+        ],
+        [
+          {
+            "t": "strong",
+            "s": "Use Option for faster placement."
+          },
+          {
+            "t": "text",
+            "s": " Hold Option while dragging toward a highlighted area."
+          }
+        ],
+        [
+          {
+            "t": "strong",
+            "s": "Use the green button for layouts."
+          },
+          {
+            "t": "text",
+            "s": " Hover over it to choose Move & Resize or Fill & Arrange options."
+          }
+        ]
       ]
     },
-    { "type": "heading", "level": 2, "text": "Choose by workflow", "id": "choices" },
-    { "type": "heading", "level": 3, "text": "Rectangle: the free specialist", "id": "rectangle" },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Choose by workflow",
+      "id": "choices"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Rectangle: the free specialist",
+      "id": "rectangle"
+    },
     {
       "type": "paragraph",
       "content": [
-        { "t": "text", "s": "Rectangle's official site describes a free open-source Mac app that moves and resizes windows with keyboard shortcuts or snap areas. It supports Intel and Apple silicon and remains the sensible first third-party choice when built-in tiling is not fast or configurable enough. Read " },
-        { "t": "link", "s": "Gojo vs Rectangle", "href": "/blog/gojo-vs-rectangle/" },
-        { "t": "text", "s": " for the narrower comparison." }
+        {
+          "t": "text",
+          "s": "Rectangle's official site describes a free open-source Mac app that moves and resizes windows with keyboard shortcuts or snap areas. It supports Intel and Apple silicon and remains the sensible first third-party choice when built-in tiling is not fast or configurable enough. Read "
+        },
+        {
+          "t": "link",
+          "s": "Gojo vs Rectangle",
+          "href": "/blog/gojo-vs-rectangle/"
+        },
+        {
+          "t": "text",
+          "s": " for the narrower comparison."
+        }
       ]
     },
-    { "type": "heading", "level": 3, "text": "Moom and Magnet: layouts or simplicity", "id": "moom-magnet" },
     {
-      "type": "paragraph",
-      "content": [{ "t": "text", "s": "Moom belongs on the shortlist when you want saved arrangements and custom layouts that restore a working setup. Magnet fits people who want familiar halves, thirds, quarters, and shortcuts without building an automation system. Verify current compatibility and pricing on each official page before buying." }]
+      "type": "heading",
+      "level": 3,
+      "text": "Moom and Magnet: layouts or simplicity",
+      "id": "moom-magnet"
     },
-    { "type": "heading", "level": 3, "text": "BetterTouchTool: automate beyond windows", "id": "bettertouchtool" },
-    {
-      "type": "paragraph",
-      "content": [{ "t": "text", "s": "BetterTouchTool makes sense when window placement is one action in a larger custom trigger system. It can connect gestures, keyboard input, app-specific conditions, and window actions. That power is useful when you enjoy configuration; it is unnecessary for a person who only wants left and right halves." }]
-    },
-    { "type": "heading", "level": 3, "text": "Gojo: window snapping as part of a Mac superapp", "id": "gojo" },
     {
       "type": "paragraph",
       "content": [
-        { "t": "text", "s": "Gojo lets you preview, focus, organize, and snap windows from the MacBook notch. It is deliberately less specialized than Rectangle or Moom. Its value is keeping window control beside local dictation, clipboard history, a file shelf, media, calendar, battery, camera, and display controls. See the " },
-        { "t": "link", "s": "window controls feature guide", "href": "/features/window-controls/" },
-        { "t": "text", "s": "." }
+        {
+          "t": "text",
+          "s": "Moom belongs on the shortlist when you want saved arrangements and custom layouts that restore a working setup. Magnet fits people who want familiar halves, thirds, quarters, and shortcuts without building an automation system. Verify current compatibility and pricing on each official page before buying."
+        }
       ]
     },
-    { "type": "heading", "level": 2, "text": "Why third-party window tools need Accessibility access", "id": "permissions" },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "BetterTouchTool: automate beyond windows",
+      "id": "bettertouchtool"
+    },
     {
       "type": "paragraph",
-      "content": [{ "t": "text", "s": "A third-party window manager must interact with windows owned by other apps. On macOS, that commonly requires Accessibility permission to inspect, focus, move, or resize those windows. Grant it only to software you trust, and remove access in System Settings when you stop using the app." }]
+      "content": [
+        {
+          "t": "text",
+          "s": "BetterTouchTool makes sense when window placement is one action in a larger custom trigger system. It can connect gestures, keyboard input, app-specific conditions, and window actions. That power is useful when you enjoy configuration; it is unnecessary for a person who only wants left and right halves."
+        }
+      ]
     },
-    { "type": "note", "content": [{ "t": "text", "s": "Some windows cannot be moved or resized normally because the app fixes their dimensions, uses a nonstandard window, or restricts system accessibility actions. A failed snap is not always a window manager bug." }] },
-    { "type": "heading", "level": 2, "text": "Sources and method", "id": "sources" },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Gojo: window snapping as part of a Mac superapp",
+      "id": "gojo"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Gojo lets you preview, focus, organize, and snap windows from the MacBook notch. It is deliberately less specialized than Rectangle or Moom. Its value is keeping window control beside local dictation, clipboard history, a file shelf, media, calendar, battery, camera, and display controls. See the "
+        },
+        {
+          "t": "link",
+          "s": "window controls feature guide",
+          "href": "/features/window-controls/"
+        },
+        {
+          "t": "text",
+          "s": "."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why third-party window tools need Accessibility access",
+      "id": "permissions"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "A third-party window manager must interact with windows owned by other apps. On macOS, that commonly requires Accessibility permission to inspect, focus, move, or resize those windows. Grant it only to software you trust, and remove access in System Settings when you stop using the app."
+        }
+      ]
+    },
+    {
+      "type": "note",
+      "content": [
+        {
+          "t": "text",
+          "s": "Some windows cannot be moved or resized normally because the app fixes their dimensions, uses a nonstandard window, or restricts system accessibility actions. A failed snap is not always a window manager bug."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and method",
+      "id": "sources"
+    },
     {
       "type": "sourceFacts",
       "items": [
+        "DataForSEO Google Ads keyword data for the United States showed `mac window manager` at 1,600 monthly searches, `best window manager mac` at 210, and `tile windows mac` at 260.",
+        "Google Search Console for trygojo.com showed early impressions for notch and window-adjacent queries in the 90 days ending September 7, 2026.",
         "Built-in tiling methods and settings checked against Apple Support on September 8, 2026.",
-        "Rectangle facts checked against rectangleapp.com on September 8, 2026.",
-        "Gojo window behavior checked against its public feature page and current application implementation.",
-        "Moom, Magnet, and BetterTouchTool workflow facts checked against their official product pages; verify current pricing and system requirements before buying.",
+        "Rectangle, Magnet, Moom, Raycast, BetterTouchTool, and Gojo claims checked against primary product sources on September 8, 2026.",
         "No speed ranking is claimed because the apps were not benchmarked with one repeatable task set."
       ]
     },
     {
       "type": "paragraph",
       "content": [
-        { "t": "link", "s": "Apple window tiling guide", "href": "https://support.apple.com/guide/mac-help/tile-windows-on-mac-mchlef287e5d/mac" },
-        { "t": "text", "s": " · " },
-        { "t": "link", "s": "Apple tiling settings", "href": "https://support.apple.com/guide/mac-help/mchl118087b0/mac" },
-        { "t": "text", "s": " · " },
-        { "t": "link", "s": "Rectangle official site", "href": "https://rectangleapp.com/" }
-        ,{ "t": "text", "s": " · " },
-        { "t": "link", "s": "Moom official site", "href": "https://manytricks.com/moom/" },
-        { "t": "text", "s": " · " },
-        { "t": "link", "s": "Magnet official site", "href": "https://magnet.crowdcafe.com/" },
-        { "t": "text", "s": " · " },
-        { "t": "link", "s": "BetterTouchTool official site", "href": "https://folivora.ai/" }
+        {
+          "t": "link",
+          "s": "Apple window tiling guide",
+          "href": "https://support.apple.com/guide/mac-help/tile-windows-on-mac-mchlef287e5d/mac"
+        },
+        {
+          "t": "text",
+          "s": " · "
+        },
+        {
+          "t": "link",
+          "s": "Apple tiling settings",
+          "href": "https://support.apple.com/guide/mac-help/mchl118087b0/mac"
+        },
+        {
+          "t": "text",
+          "s": " · "
+        },
+        {
+          "t": "link",
+          "s": "Rectangle official site",
+          "href": "https://rectangleapp.com/"
+        },
+        {
+          "t": "text",
+          "s": " · "
+        },
+        {
+          "t": "link",
+          "s": "Moom official site",
+          "href": "https://manytricks.com/moom/"
+        },
+        {
+          "t": "text",
+          "s": " · "
+        },
+        {
+          "t": "link",
+          "s": "Magnet official site",
+          "href": "https://magnet.crowdcafe.com/"
+        },
+        {
+          "t": "text",
+          "s": " · "
+        },
+        {
+          "t": "link",
+          "s": "BetterTouchTool official site",
+          "href": "https://folivora.ai/"
+        }
       ]
     },
-    { "type": "heading", "level": 2, "text": "Frequently asked questions", "id": "faq" },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Frequently asked questions",
+      "id": "faq"
+    },
     {
       "type": "faq",
       "items": [
-        { "q": "What is the best window tiling app for Mac?", "a": [[{ "t": "text", "s": "Start with macOS built-in tiling. Choose Rectangle for free shortcuts and snap areas, Moom for custom layouts, BetterTouchTool for automation, or Gojo when snapping belongs in a broader notch workflow." }]] },
-        { "q": "Does macOS have window tiling built in?", "a": [[{ "t": "text", "s": "Yes. Current macOS supports edge dragging, Option-dragging, green-button layouts, Window menu commands, and keyboard shortcuts for common arrangements." }]] },
-        { "q": "Why do window tiling apps need Accessibility permission?", "a": [[{ "t": "text", "s": "They commonly need Accessibility access to inspect, focus, move, or resize windows that belong to other applications." }]] }
+        {
+          "q": "What is the best window tiling app for Mac?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Start with macOS built-in tiling. Choose Rectangle for free shortcuts and snap areas, Moom for custom layouts, BetterTouchTool for automation, or Gojo when snapping belongs in a broader notch workflow."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "Does macOS have window tiling built in?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Yes. Current macOS supports edge dragging, Option-dragging, green-button layouts, Window menu commands, and keyboard shortcuts for common arrangements."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "Why do window tiling apps need Accessibility permission?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "They commonly need Accessibility access to inspect, focus, move, or resize windows that belong to other applications."
+              }
+            ]
+          ]
+        }
       ]
     },
     {
@@ -207,8 +494,16 @@
       "title": "Try Gojo for three days.",
       "copy": "Snap and focus windows from the notch, then reach dictation, clipboard, files, media, and display controls in the same place.",
       "actions": [
-        { "label": "Download for macOS", "href": "https://downloads.trygojo.com/Gojo.dmg", "primary": true },
-        { "label": "See window controls", "href": "/features/window-controls/", "primary": false }
+        {
+          "label": "Download for macOS",
+          "href": "https://downloads.trygojo.com/Gojo.dmg",
+          "primary": true
+        },
+        {
+          "label": "See window controls",
+          "href": "/features/window-controls/",
+          "primary": false
+        }
       ],
       "trust": "No account or card required · Signed and notarized · macOS 14+"
     },
@@ -218,9 +513,18 @@
       "title": "Keep building your Mac setup",
       "copy": null,
       "links": [
-        { "label": "Gojo vs Rectangle", "href": "/blog/gojo-vs-rectangle/" },
-        { "label": "Gojo window controls", "href": "/features/window-controls/" },
-        { "label": "Best macOS Accessibility apps", "href": "/blog/best-macos-accessibility-permission-apps/" }
+        {
+          "label": "Gojo vs Rectangle",
+          "href": "/blog/gojo-vs-rectangle/"
+        },
+        {
+          "label": "Gojo window controls",
+          "href": "/features/window-controls/"
+        },
+        {
+          "label": "Best macOS Accessibility apps",
+          "href": "/blog/best-macos-accessibility-permission-apps/"
+        }
       ]
     }
   ]

@@ -1,0 +1,322 @@
+{
+  "slug": "mac-dictation-privacy",
+  "title": "Mac dictation privacy: what to check before speaking",
+  "description": "A privacy checklist for Mac dictation, local speech recognition, cloud transcription, transcript storage, and app permissions.",
+  "canonical": "https://trygojo.com/blog/mac-dictation-privacy/",
+  "og": {
+    "og:title": "Mac dictation privacy: what to check before speaking",
+    "og:description": "Understand where audio, transcripts, corrections, and inserted text can go in a Mac dictation workflow.",
+    "og:type": "article",
+    "og:url": "https://trygojo.com/blog/mac-dictation-privacy/",
+    "og:image": "https://trygojo.com/assets/og.jpg",
+    "og:image:alt": "Private local dictation in Gojo."
+  },
+  "twitter": {
+    "twitter:card": "summary_large_image",
+    "twitter:title": "Mac dictation privacy: what to check before speaking",
+    "twitter:description": "A practical checklist for local and cloud dictation on Mac.",
+    "twitter:image": "https://trygojo.com/assets/og.jpg"
+  },
+  "article": {
+    "published_time": "2026-09-08",
+    "modified_time": "2026-09-08",
+    "section": "Mac privacy",
+    "author": "Gojo",
+    "robots": "index,follow,max-image-preview:large"
+  },
+  "jsonLd": {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "headline": "Mac dictation privacy: what to check before speaking",
+        "url": "https://trygojo.com/blog/mac-dictation-privacy/",
+        "datePublished": "2026-09-08",
+        "dateModified": "2026-09-08",
+        "author": {
+          "@type": "Organization",
+          "name": "Gojo"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Gojo",
+          "url": "https://trygojo.com/"
+        },
+        "citation": [
+          "https://support.apple.com/guide/mac-help/mh40584/26/mac/26",
+          "https://trygojo.com/features/local-dictation/",
+          "https://trygojo.com/dictation-architecture.md"
+        ],
+        "mainEntityOfPage": "https://trygojo.com/blog/mac-dictation-privacy/",
+        "description": "A privacy checklist for Mac dictation, local speech recognition, cloud transcription, transcript storage, and app permissions."
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is Mac dictation private?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "It depends on tool, setting, language, and workflow. Check the exact processing and storage path before dictating sensitive material."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does local dictation mean no data leaves my Mac?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Not automatically. Recognition may be local, while cleanup, sync, analytics, or the destination app can still send text elsewhere."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does Gojo dictation run locally?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Gojo uses a downloaded local model for dictation recognition and does not require an API key or cloud transcription service."
+            }
+          }
+        ]
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Gojo",
+            "item": "https://trygojo.com/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Blog",
+            "item": "https://trygojo.com/blog/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Mac dictation privacy",
+            "item": "https://trygojo.com/blog/mac-dictation-privacy/"
+          }
+        ]
+      }
+    ]
+  },
+  "hero": {
+    "label": "September 8, 2026",
+    "title": "Mac dictation privacy: what to check before speaking",
+    "summary": "Local recognition helps, but privacy depends on the whole path: microphone audio, model processing, transcript storage, cleanup, insertion, and the app receiving the text.",
+    "meta": [
+      "Updated September 8, 2026",
+      "6 min read"
+    ],
+    "breadcrumb": [
+      {
+        "label": "Home",
+        "href": "/"
+      },
+      {
+        "label": "Blog",
+        "href": "/blog/"
+      }
+    ]
+  },
+  "blocks": [
+    {
+      "type": "answer",
+      "label": "Short answer",
+      "copy": "Mac dictation is private only if the specific workflow keeps recognition local, avoids storing sensitive audio or transcripts, explains permissions, and makes optional cloud features obvious. Do not rely on a one-word privacy claim. Follow the audio and text from microphone to final app.",
+      "points": [
+        "Check processing location and the app's full data path.",
+        "Check transcript and history storage.",
+        "Check what the receiving app does with inserted text."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Follow the dictation path",
+      "id": "path"
+    },
+    {
+      "type": "table",
+      "head": [
+        "Step",
+        "Privacy question",
+        "What to verify"
+      ],
+      "rows": [
+        [
+          "Microphone",
+          "Who can record audio?",
+          "macOS microphone permission"
+        ],
+        [
+          "Recognition",
+          "Where is speech processed?",
+          "On-device model, Apple setting, or cloud provider"
+        ],
+        [
+          "Cleanup",
+          "Is text sent to an LLM?",
+          "Optional rewriting or polishing providers"
+        ],
+        [
+          "Storage",
+          "Is audio or transcript history saved?",
+          "Retention, deletion, and sync behavior"
+        ],
+        [
+          "Insertion",
+          "Where does final text go?",
+          "The destination app may sync it"
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where Gojo draws the line",
+      "id": "gojo"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Gojo's dictation feature uses a downloaded local model and inserts text into the active field. It does not require an API key or cloud transcription service for recognition. The final text still belongs to the destination app after insertion, so do not dictate confidential material into an app you would not type it into. Read "
+        },
+        {
+          "t": "link",
+          "s": "Gojo's dictation architecture",
+          "href": "/dictation-architecture.md"
+        },
+        {
+          "t": "text",
+          "s": " for implementation detail."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A quick privacy checklist",
+      "id": "checklist"
+    },
+    {
+      "type": "list",
+      "ordered": false,
+      "items": [
+        [
+          {
+            "t": "text",
+            "s": "Can the app work after setup with the network disabled?"
+          }
+        ],
+        [
+          {
+            "t": "text",
+            "s": "Does the app document local model behavior clearly?"
+          }
+        ],
+        [
+          {
+            "t": "text",
+            "s": "Can optional cloud cleanup be disabled?"
+          }
+        ],
+        [
+          {
+            "t": "text",
+            "s": "Does the app store audio clips, transcript history, or corrections?"
+          }
+        ],
+        [
+          {
+            "t": "text",
+            "s": "Does the app ask for permissions unrelated to the feature you use?"
+          }
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and method",
+      "id": "sources"
+    },
+    {
+      "type": "sourceFacts",
+      "items": [
+        "Apple Dictation processing guidance checked September 8, 2026.",
+        "Gojo local dictation and architecture pages checked September 8, 2026.",
+        "Privacy claims here are workflow checks, not a legal review of vendor policies."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Frequently asked questions",
+      "id": "faq"
+    },
+    {
+      "type": "faq",
+      "items": [
+        {
+          "q": "Is Mac dictation private?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "It depends on tool, setting, language, and workflow. Check the exact processing and storage path before dictating sensitive material."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "Does local dictation mean no data leaves my Mac?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Not automatically. Recognition may be local, while cleanup, sync, analytics, or the destination app can still send text elsewhere."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "Does Gojo dictation run locally?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Yes. Gojo uses a downloaded local model for dictation recognition and does not require an API key or cloud transcription service."
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "type": "cta",
+      "label": "Want a local dictation workflow?",
+      "title": "Try Gojo for three days.",
+      "copy": "Use local-model dictation in the apps where you already write, with the rest of your Mac controls nearby.",
+      "actions": [
+        {
+          "label": "Download for macOS",
+          "href": "https://downloads.trygojo.com/Gojo.dmg",
+          "primary": true
+        },
+        {
+          "label": "See local dictation",
+          "href": "/features/local-dictation/",
+          "primary": false
+        }
+      ],
+      "trust": "No account or card required. macOS 14+."
+    }
+  ]
+}

@@ -11,6 +11,14 @@ Platform: macOS 14 Sonoma and later, Apple silicon and Intel
 - Product home: https://trygojo.com/
 - Feature library: https://trygojo.com/features/
 - Blog: https://trygojo.com/blog/
+- How to choose a MacBook notch app: https://trygojo.com/blog/how-to-choose-a-macbook-notch-app/
+- Best MacBook notch apps: https://trygojo.com/blog/best-macbook-notch-apps/
+- How to see clipboard history on Mac: https://trygojo.com/blog/how-to-see-clipboard-history-on-mac/
+- Apple Dictation vs local Whisper: https://trygojo.com/blog/apple-dictation-vs-local-whisper/
+- Mac dictation privacy: https://trygojo.com/blog/mac-dictation-privacy/
+- Speech to text on Mac: https://trygojo.com/blog/speech-to-text-on-mac/
+- How to dictate on Mac: https://trygojo.com/blog/how-to-dictate-on-mac/
+- Best dictation apps for Mac: https://trygojo.com/blog/best-dictation-apps-for-mac/
 - Best local dictation apps for Mac: https://trygojo.com/blog/best-local-dictation-apps-mac/
 - Best private dictation apps for Mac: https://trygojo.com/blog/best-private-dictation-apps-mac/
 - Local voice dictation on Mac: https://trygojo.com/blog/local-voice-dictation-mac/
@@ -21,7 +29,7 @@ Platform: macOS 14 Sonoma and later, Apple silicon and Intel
 - Best clipboard managers for Mac: https://trygojo.com/blog/best-mac-clipboard-manager/
 - Best file shelf apps for Mac: https://trygojo.com/blog/best-file-shelf-apps-mac/
 - Best window management tools for Mac: https://trygojo.com/blog/best-window-management-tools-mac/
-- Best window tiling apps for Mac: https://trygojo.com/blog/best-window-tiling-apps-mac/
+- Best Mac window managers and tiling apps: https://trygojo.com/blog/best-window-tiling-apps-mac/
 - Best Mac notch apps for productivity: https://trygojo.com/blog/best-mac-notch-apps-for-productivity/
 - Best NotchNook alternatives: https://trygojo.com/blog/best-notchnook-alternatives/
 - Gojo vs Superwhisper: https://trygojo.com/blog/gojo-vs-superwhisper/
@@ -42,6 +50,7 @@ Platform: macOS 14 Sonoma and later, Apple silicon and Intel
 - Official Gojo releases are signed with a Developer ID certificate and notarized by Apple.
 - Gojo dictation uses explicit local model downloads, captured-field validation, and no cloud fallback in local mode.
 - The blog explains Mac dictation privacy boundaries, developer and writer workflows, clipboard, file shelves, window tools, and notch-app comparisons.
+- New exact-intent guides cover how to dictate on Mac, speech-to-text on Mac, clipboard history on Mac, best dictation apps, Apple Dictation vs local Whisper, and choosing a MacBook notch app.
 - Gojo uses a bundled XPC helper for Accessibility-trusted window operations.
 - Clipboard history is local to the Mac and skips password managers.
 - Updates are delivered through Sparkle from the appcast at https://updates.trygojo.com/appcast.xml.

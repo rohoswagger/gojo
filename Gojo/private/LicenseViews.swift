@@ -163,6 +163,10 @@ struct LicenseSettings: View {
                 }
             }
         }
+        .safeAreaInset(edge: .bottom) {
+            Link("Lost your license key?", destination: LicenseConfig.recoveryURL)
+                .padding(12)
+        }
         .formStyle(.grouped)
         .navigationTitle("License")
     }
@@ -287,6 +291,9 @@ struct OnboardingLicenseView: View {
                         Text("Already have a license?")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
+
+                        Link("Lost your license key?", destination: LicenseConfig.recoveryURL)
+                            .font(.footnote)
 
                         TextField("GOJO-XXXX-XXXX-XXXX-XXXX", text: $keyInput)
                             .textFieldStyle(.plain)

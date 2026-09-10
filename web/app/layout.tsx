@@ -8,7 +8,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://trygojo.com"),
   icons: {
-    icon: "/favicon.svg",
+    icon: [
+      { url: "/favicon.ico", type: "image/x-icon", sizes: "256x256" },
+      { url: "/favicon.svg", type: "image/svg+xml", sizes: "any" },
+    ],
+    shortcut: "/favicon.ico",
   },
 };
 

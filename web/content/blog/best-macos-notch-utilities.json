@@ -112,7 +112,8 @@
         "citation": [
           "https://github.com/rohoswagger/gojo",
           "https://github.com/rohoswagger/gojo/releases/latest"
-        ]
+        ],
+        "url": "https://trygojo.com/blog/best-macos-notch-utilities/"
       },
       {
         "@type": "BreadcrumbList",
@@ -173,7 +174,7 @@
   "hero": {
     "label": "July 1, 2026",
     "title": "Best macOS notch utilities: what to look for before installing one",
-    "summary": "The best notch utility is not just a decoration around the camera cutout. It should make a MacBook workflow faster while staying transparent about permissions, privacy, and what it changes on your system.",
+    "summary": "The best notch utility earns the space around the camera cutout. It should make a MacBook workflow faster while staying transparent about permissions, privacy, and what it changes on your system.",
     "meta": [
       "Updated July 1, 2026",
       "7 min read"
@@ -460,12 +461,12 @@
           "s": "."
         }
       ],
-    "links": [
-      {
-        "label": "Best NotchNook alternatives",
-        "href": "/blog/best-notchnook-alternatives/"
-      }
-    ]
+      "links": [
+        {
+          "label": "Best NotchNook alternatives",
+          "href": "/blog/best-notchnook-alternatives/"
+        }
+      ]
     }
   ]
 }

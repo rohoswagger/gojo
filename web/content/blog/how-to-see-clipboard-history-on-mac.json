@@ -1,0 +1,321 @@
+{
+  "slug": "how-to-see-clipboard-history-on-mac",
+  "title": "How to see clipboard history on Mac",
+  "description": "Learn what macOS does and does not save in clipboard history, plus how Gojo and dedicated clipboard managers handle copied text.",
+  "canonical": "https://trygojo.com/blog/how-to-see-clipboard-history-on-mac/",
+  "og": {
+    "og:title": "How to see clipboard history on Mac",
+    "og:description": "macOS shows the current clipboard item, but persistent clipboard history needs an app.",
+    "og:type": "article",
+    "og:url": "https://trygojo.com/blog/how-to-see-clipboard-history-on-mac/",
+    "og:image": "https://trygojo.com/assets/og.jpg",
+    "og:image:alt": "Gojo clipboard history in the MacBook notch."
+  },
+  "twitter": {
+    "twitter:card": "summary_large_image",
+    "twitter:title": "How to see clipboard history on Mac",
+    "twitter:description": "A simple guide to Mac clipboard history and privacy checks.",
+    "twitter:image": "https://trygojo.com/assets/og.jpg"
+  },
+  "article": {
+    "published_time": "2026-09-08",
+    "modified_time": "2026-09-08",
+    "section": "Mac clipboard",
+    "author": "Gojo",
+    "robots": "index,follow,max-image-preview:large"
+  },
+  "jsonLd": {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "headline": "How to see clipboard history on Mac",
+        "url": "https://trygojo.com/blog/how-to-see-clipboard-history-on-mac/",
+        "datePublished": "2026-09-08",
+        "dateModified": "2026-09-08",
+        "author": {
+          "@type": "Organization",
+          "name": "Gojo"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Gojo",
+          "url": "https://trygojo.com/"
+        },
+        "citation": [
+          "https://support.apple.com/guide/mac-help/view-the-contents-of-the-clipboard-mchlp1012/mac",
+          "https://trygojo.com/features/clipboard-history/",
+          "https://maccy.app/",
+          "https://www.raycast.com/core-features/clipboard-history"
+        ],
+        "mainEntityOfPage": "https://trygojo.com/blog/how-to-see-clipboard-history-on-mac/",
+        "description": "Learn what macOS does and does not save in clipboard history, plus how Gojo and dedicated clipboard managers handle copied text."
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Does Mac have clipboard history?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "macOS shows the current clipboard item, but a full searchable clipboard history requires a separate app."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How do I see clipboard history on Mac with Gojo?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Open the Gojo notch workspace and use clipboard history to search and reuse recent copied text."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is clipboard history safe?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "It can be useful, but it stores copied material. Check sensitive-app exclusions, retention, storage location, and sync behavior before using it with private data."
+            }
+          }
+        ]
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Gojo",
+            "item": "https://trygojo.com/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Blog",
+            "item": "https://trygojo.com/blog/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "How to see clipboard history on Mac",
+            "item": "https://trygojo.com/blog/how-to-see-clipboard-history-on-mac/"
+          }
+        ]
+      }
+    ]
+  },
+  "hero": {
+    "label": "September 8, 2026",
+    "title": "How to see clipboard history on Mac",
+    "summary": "macOS can show the current clipboard item, but a searchable history of previous copies needs a clipboard manager.",
+    "meta": [
+      "Updated September 8, 2026",
+      "5 min read"
+    ],
+    "breadcrumb": [
+      {
+        "label": "Home",
+        "href": "/"
+      },
+      {
+        "label": "Blog",
+        "href": "/blog/"
+      }
+    ]
+  },
+  "blocks": [
+    {
+      "type": "answer",
+      "label": "Short answer",
+      "copy": "On Mac, Finder can show the current clipboard item, but macOS does not include a full searchable history of everything you copied. To see older copied text, use a clipboard manager such as Gojo, Maccy, Paste, or Raycast and check its privacy and retention settings first.",
+      "points": [
+        "Current clipboard: Finder's Edit > Show Clipboard.",
+        "Older copies: use a clipboard manager.",
+        "Sensitive data: check exclusions and retention before enabling history."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Check the current clipboard in Finder",
+      "id": "current-clipboard"
+    },
+    {
+      "type": "list",
+      "ordered": true,
+      "items": [
+        [
+          {
+            "t": "text",
+            "s": "Open Finder."
+          }
+        ],
+        [
+          {
+            "t": "text",
+            "s": "Choose Edit from the menu bar."
+          }
+        ],
+        [
+          {
+            "t": "text",
+            "s": "Choose Show Clipboard."
+          }
+        ],
+        [
+          {
+            "t": "text",
+            "s": "Review the item currently saved to the clipboard."
+          }
+        ]
+      ]
+    },
+    {
+      "type": "note",
+      "content": [
+        {
+          "t": "text",
+          "s": "Show Clipboard is useful for checking what is copied now. It is not a searchable timeline of previous copies."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Use Gojo when clipboard history belongs beside other Mac controls",
+      "id": "gojo"
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        {
+          "t": "text",
+          "s": "Gojo keeps recent copied text searchable inside the MacBook notch workspace. It fits people who want clipboard history near files, windows, media, local dictation, and display controls. For a broader comparison, read "
+        },
+        {
+          "t": "link",
+          "s": "best clipboard managers for Mac",
+          "href": "/blog/best-mac-clipboard-manager/"
+        },
+        {
+          "t": "text",
+          "s": "."
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Privacy checks before enabling clipboard history",
+      "id": "privacy"
+    },
+    {
+      "type": "list",
+      "ordered": false,
+      "items": [
+        [
+          {
+            "t": "text",
+            "s": "Does the app ignore password managers and private clipboard content?"
+          }
+        ],
+        [
+          {
+            "t": "text",
+            "s": "Where is history stored: local disk, iCloud, the vendor's servers, or a mix?"
+          }
+        ],
+        [
+          {
+            "t": "text",
+            "s": "How long does history stay by default?"
+          }
+        ],
+        [
+          {
+            "t": "text",
+            "s": "Can you exclude apps that handle secrets, client data, or medical and financial information?"
+          }
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and method",
+      "id": "sources"
+    },
+    {
+      "type": "sourceFacts",
+      "items": [
+        "Apple clipboard guidance checked September 8, 2026.",
+        "Gojo clipboard feature details checked against the public feature page.",
+        "Maccy and Raycast references checked against official product pages for category context."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Frequently asked questions",
+      "id": "faq"
+    },
+    {
+      "type": "faq",
+      "items": [
+        {
+          "q": "Does Mac have clipboard history?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "macOS shows the current clipboard item, but a full searchable clipboard history requires a separate app."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "How do I see clipboard history on Mac with Gojo?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "Open the Gojo notch workspace and use clipboard history to search and reuse recent copied text."
+              }
+            ]
+          ]
+        },
+        {
+          "q": "Is clipboard history safe?",
+          "a": [
+            [
+              {
+                "t": "text",
+                "s": "It can be useful, but it stores copied material. Check sensitive-app exclusions, retention, storage location, and sync behavior before using it with private data."
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "type": "cta",
+      "label": "Want clipboard history without another window?",
+      "title": "Try Gojo for three days.",
+      "copy": "Search recent copied text from the notch, beside files, windows, media, display controls, and local dictation.",
+      "actions": [
+        {
+          "label": "Download for macOS",
+          "href": "https://downloads.trygojo.com/Gojo.dmg",
+          "primary": true
+        },
+        {
+          "label": "See clipboard history",
+          "href": "/features/clipboard-history/",
+          "primary": false
+        }
+      ],
+      "trust": "No account or card required. macOS 14+."
+    }
+  ]
+}

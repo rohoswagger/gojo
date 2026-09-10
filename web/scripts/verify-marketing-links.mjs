@@ -1,5 +1,8 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs"
+import { createHash } from "node:crypto"
 import { parse } from "node-html-parser"
+
+const VERCEL_FAVICON_SHA256 = "2b8ad2d33455a8f736fc3a8ebf8f0bdea8848ad4c0db48a2833bd0f9cd775932"
 
 const childRoutes = (section) =>
   readdirSync(`out/${section}`, { withFileTypes: true })
@@ -34,6 +37,17 @@ for (const [featureSlug, guideSlug] of guides) {
   if (!feature.includes(`/blog/${guideSlug}/`)) {
     throw new Error(`${featureSlug} does not link to ${guideSlug}`)
   }
+}
+
+const favicon = readFileSync("out/favicon.ico")
+const faviconHash = createHash("sha256").update(favicon).digest("hex")
+if (faviconHash === VERCEL_FAVICON_SHA256) {
+  throw new Error("favicon.ico is still the default Vercel triangle")
+}
+
+const home = readFileSync("out/index.html", "utf8")
+if (!home.includes('rel="icon" href="/favicon.ico"')) {
+  throw new Error("homepage does not advertise /favicon.ico")
 }
 
 console.log("marketing header and blog-link checks passed")

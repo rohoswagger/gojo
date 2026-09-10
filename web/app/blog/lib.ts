@@ -81,17 +81,26 @@ export type BlogPost = PostMeta & {
   blocks: Block[];
 };
 
-/** Summary card for one post, as shown on the /blog index. */
+/**
+ * Summary card for one post, as shown on the /blog index and reused as the
+ * article hero. `poster` holds the authored line breaks of the typographic
+ * cover; `topic` is the taxonomy the filter chips work on.
+ */
 export type PostCard = {
   slug: string;
+  topic: string;
   kicker: string | null;
-  date: string | null;
+  date: string;
+  dateISO: string;
+  readTime: string | null;
+  sourced: boolean;
+  poster: string[];
   title: string;
   summary: string;
 };
 
 export type BlogHub = PostMeta & {
-  hero: { label: string | null; title: string; summary: string | null };
+  hero: { title: string; summary: string | null };
   archive: { kicker: string | null; title: string | null };
   posts: PostCard[];
 };
@@ -149,4 +158,23 @@ export function loadPost(slug: string): BlogPost {
 export function loadHub(): BlogHub {
   const file = path.join(CONTENT_DIR, "_hub.json");
   return JSON.parse(readFileSync(file, "utf8"));
+}
+
+/** The card for one post, or undefined if the hub has not caught up with it. */
+export function findCard(slug: string): PostCard | undefined {
+  return loadHub().posts.find((post) => post.slug === slug);
+}
+
+/**
+ * Posts to read next: nearest in topic first, then the most recent of the
+ * rest, so a thin topic still fills the row.
+ */
+export function relatedCards(slug: string, limit = 3): PostCard[] {
+  const posts = loadHub().posts;
+  const current = posts.find((post) => post.slug === slug);
+  if (!current) return posts.slice(0, limit);
+  const rest = posts.filter((post) => post.slug !== slug);
+  const sameTopic = rest.filter((post) => post.topic === current.topic);
+  const others = rest.filter((post) => post.topic !== current.topic);
+  return [...sameTopic, ...others].slice(0, limit);
 }

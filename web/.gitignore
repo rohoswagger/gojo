@@ -42,3 +42,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Impeccable working files. The surface briefs are design documentation and
+# stay tracked; review captures and comps are build output.
+.impeccable/review/
+.impeccable/mocks/
+.impeccable/build/
+.impeccable/critique/

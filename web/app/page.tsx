@@ -1,11 +1,12 @@
 import type { Metadata } from "next"
 import Image from "next/image"
+import Link from "next/link"
 
 import { ClipboardList, FolderOpen, LayoutGrid, Mic, Music, Sunset } from "lucide-react";
 import { AutoplayVideo } from "@/components/autoplay-video"
 import { GojoFooter } from "@/components/gojo-footer"
 import { GojoHeader } from "@/components/gojo-header"
-import { GojoLogo } from "@/components/gojo-logo"
+import { FeatureShowcase, FeatureShowcaseCard, FeatureShowcaseMedia, FeatureShowcaseFloat, FeatureShowcaseCaption } from "@/components/feature-showcase"
 import { NightShiftComparison } from "@/components/night-shift-comparison"
 import {
   PricingTabsProvider,
@@ -163,270 +164,111 @@ export default function Home() {
         </main>
       </div>
 
-      <section className="utility-convergence" aria-labelledby="convergence-heading">
-        <div className="wrap convergence-layout">
-          <div className="convergence-copy">
-            <h2 id="convergence-heading">The apps this replaces.</h2>
-            <p>
-              
-                
-                These jobs usually mean a separate utility each, and a separate menu bar icon,
-                settings pane and set of shortcuts to go with it. Gojo does all of them from one
-                surface you already have.
-              
-              
-            </p>
-          </div>
-
-          <div
-            className="convergence-visual"
-            role="group"
-            aria-label="Gojo combines tools commonly handled by several separate Mac utilities"
-          >
-            <div className="utility-apps">
-              <a className="utility-app" href="https://theboring.name/" target="_blank" rel="noopener">
-                <Image src="/assets/utilities/boringnotch.png" width={64} height={64} loading="lazy" alt="" />
-                <span>Boring Notch</span>
-              </a>
-              <a
-                className="utility-app"
-                href="https://apps.apple.com/us/app/maccy/id1527619437?mt=12"
-                target="_blank"
-                rel="noopener"
-              >
-                <Image src="/assets/utilities/maccy.png" width={64} height={64} loading="lazy" alt="" />
-                <span>Maccy</span>
-              </a>
-              <a className="utility-app" href="https://justgetflux.com/" target="_blank" rel="noopener">
-                <Image src="/assets/utilities/flux.png" width={64} height={64} loading="lazy" alt="" />
-                <span>f.lux</span>
-              </a>
-              <a className="utility-app" href="https://rectangleapp.com/" target="_blank" rel="noopener">
-                <Image src="/assets/utilities/rectangle.png" width={64} height={64} loading="lazy" alt="" />
-                <span>Rectangle</span>
-              </a>
-              <a className="utility-app" href="https://dropoverapp.com/" target="_blank" rel="noopener">
-                <Image src="/assets/utilities/dropover.png" width={64} height={64} loading="lazy" alt="" />
-                <span>Dropover</span>
-              </a>
-            </div>
-            <div className="convergence-lines" aria-hidden="true">
-              <i></i>
-              <i></i>
-              <i></i>
-            </div>
-            <div className="gojo-core">
-              <GojoLogo />
-              <strong>Gojo</strong>
-              <span>One native workspace</span>
-            </div>
-          </div>
-          <p className="comparison-note">
-            Independent feature comparison. Gojo is not affiliated with or endorsed by the products
-            shown.
-          </p>
-        </div>
-      </section>
-
-      <section className="feature-acts" id="features" aria-labelledby="features-heading">
-        <div className="wrap">
-          <header className="acts-intro">
-            <h2 id="features-heading">The six tools.</h2>
-            <p>
-              
-                Everything below is the real app running in the notch. One scroll and you have seen
-                all of it.
-              
-            </p>
-          </header>
-        </div>
-
-        <article className="act act-flagship" aria-labelledby="act-dictation">
-          <div className="wrap act-inner">
-            <div className="act-copy">
-              <p className="act-index" aria-hidden="true">
-                <Mic className="act-icon" strokeWidth={1.75} aria-hidden="true" />Dictation
-              </p>
-              <h3 id="act-dictation">Dictation that never leaves your Mac.</h3>
-              <p>
-                Hold one shortcut and speak. The words appear wherever your cursor already is, in
-                Mail, Slack, a commit message or a search box.
-              </p>
-              <p className="act-note">
-                Speech recognition runs on a model you download once. No API key, no account, and no
-                audio ever leaves your Mac. It works on a plane.
-              </p>
-              <ul className="act-proof">
-                <li>
-                  Hold <kbd>⌃</kbd>
-                  <kbd>⌥</kbd> to talk, release to insert
-                </li>
-                <li>Choose your model, or swap it later</li>
-                <li>Runs offline, on-device, every time</li>
-              </ul>
-            </div>
-            <figure className="act-shot shot-inset">
+      <FeatureShowcase
+        id="features"
+        className="home-features"
+        aria-label="The six tools"
+        title="Six tools. One notch."
+        description="The everyday jobs you reach for separate apps to do, together in Gojo."
+        columns={2}
+      >
+        <FeatureShowcaseCard id="act-dictation">
+          <FeatureShowcaseMedia className="aspect-[8/5]">
+            <FeatureShowcaseFloat className="max-w-none">
               <Image
                 src="/screenshots/dictation-models.png"
                 width={460}
                 height={171}
-                alt="Gojo's voice model list: Parakeet Unified from FluidAudio, 614 MB, in use on this Mac, with Parakeet v3 available below it."
+                sizes="(max-width: 639px) 85vw, (max-width: 1279px) 42vw, 530px"
+                alt="Gojo’s downloaded dictation models, with Parakeet selected."
               />
-              <figcaption>
-                Models live on your Mac. You can see exactly which one is doing the work.
-              </figcaption>
-            </figure>
-          </div>
-        </article>
-
-        <div className="acts-paper">
-          <article className="act" aria-labelledby="act-media">
-            <div className="wrap act-inner">
-              <div className="act-copy">
-                <p className="act-index" aria-hidden="true">
-                  <Music className="act-icon" strokeWidth={1.75} aria-hidden="true" />Media
-                </p>
-                <h3 id="act-media">Your music, out of the way.</h3>
-                <p>
-                  
-                Artwork, title and a scrubber sit in the notch. Skip, shuffle and seek whatever is
-                playing without raising a window.
-              
-                </p>
-                <ul className="act-proof">
-                  <li>Follows your current media source</li>
-                  <li>Reorder the controls you actually use</li>
-                </ul>
-              </div>
-              <figure className="act-shot">
-                <Image
-                  src="/screenshots/media.png"
-                  width={654}
-                  height={196}
-                  loading="lazy"
-                  alt="The notch open on the media tab: album art, the track Sunset Linen by LoFi Serenity, a scrubber, and playback controls, with a Spotify badge on the artwork."
-                />
-              </figure>
-            </div>
-          </article>
-
-          <article className="act act-flip" aria-labelledby="act-clipboard">
-            <div className="wrap act-inner">
-              <div className="act-copy">
-                <p className="act-index" aria-hidden="true">
-                  <ClipboardList className="act-icon" strokeWidth={1.75} aria-hidden="true" />Clipboard
-                </p>
-                <h3 id="act-clipboard">Everything you have copied, kept.</h3>
-                <p>
-                  
-                Everything you copy is saved and searchable from the notch. Anything a supported
-                password manager marks as private is skipped.
-              
-                </p>
-                <ul className="act-proof">
-                  <li>Search without opening another app</li>
-                  <li>Passwords and secrets stay out of history</li>
-                </ul>
-              </div>
-              <figure className="act-shot">
-                <Image
-                  src="/screenshots/clipboard.png"
-                  width={694}
-                  height={197}
-                  loading="lazy"
-                  alt="The notch open on the clipboard tab: a search field above a list of recently copied text entries."
-                />
-              </figure>
-            </div>
-          </article>
-
-          <article className="act" aria-labelledby="act-windows">
-            <div className="wrap act-inner">
-              <div className="act-copy">
-                <p className="act-index" aria-hidden="true">
-                  <LayoutGrid className="act-icon" strokeWidth={1.75} aria-hidden="true" />Windows
-                </p>
-                <h3 id="act-windows">See a window before you switch to it.</h3>
-                <p>
-                  
-                A switcher that shows you the window before you land on it, and a snap grid with the
-                shortcut printed under every layout.
-              
-                </p>
-                <ul className="act-proof">
-                  <li>
-                    Replaces <kbd>⌘</kbd>
-                    <kbd>⇥</kbd> with per-window previews
-                  </li>
-                  <li>Halves, thirds, maximize, and zoom</li>
-                </ul>
-              </div>
-              <figure className="act-shot">
-                <Image
-                  src="/screenshots/windows.png"
-                  width={661}
-                  height={209}
-                  loading="lazy"
-                  alt="The notch open on the windows tab: a list of open apps, a live preview pane for Ghostty, and a grid of six snap layouts each labelled with its keyboard shortcut."
-                />
-              </figure>
-            </div>
-          </article>
-
-          <article className="act act-flip" aria-labelledby="act-shelf">
-            <div className="wrap act-inner">
-              <div className="act-copy">
-                <p className="act-index" aria-hidden="true">
-                  <FolderOpen className="act-icon" strokeWidth={1.75} aria-hidden="true" />Shelf
-                </p>
-                <h3 id="act-shelf">A place to set files down.</h3>
-                <p>
-                  
-                Drag files to the notch and they wait while you move between folders, desktops and apps.
-                Drag them back out when you get there, or send them straight to AirDrop.
-              
-                </p>
-                <ul className="act-proof">
-                  <li>Survives folder, Space, and app switches</li>
-                  <li>AirDrop target built into the shelf</li>
-                </ul>
-              </div>
-              <figure className="act-shot">
-                <Image
-                  src="/screenshots/shelf.png"
-                  width={649}
-                  height={196}
-                  loading="lazy"
-                  alt="The notch open on the shelf tab: an AirDrop drop target beside two staged files waiting to be dragged out."
-                />
-              </figure>
-            </div>
-          </article>
-
-          <article className="act act-settings" aria-labelledby="act-display">
-            <div className="wrap act-inner">
-              <div className="act-copy">
-                <p className="act-index" aria-hidden="true">
-                  <Sunset className="act-icon" strokeWidth={1.75} aria-hidden="true" />Night Shift
-                </p>
-                <h3 id="act-display">Warmer screen after dark.</h3>
-                <p>
-                  
-                Night Shift on your own schedule, from the notch instead of System Settings. Sunset
-                times are worked out on your Mac from a location you set once.
-              
-                </p>
-                <ul className="act-proof">
-                  <li>Starts with your Mac, if you want it to</li>
-                  <li>Location is used locally and never sent anywhere</li>
-                </ul>
-              </div>
+            </FeatureShowcaseFloat>
+          </FeatureShowcaseMedia>
+          <FeatureShowcaseCaption icon={<Mic />} title="Dictation that stays on your Mac.">
+            Hold a shortcut, speak, and release to insert your words. Download a local model once and dictate offline in any text field.
+          </FeatureShowcaseCaption>
+          <Link className="feature-comparison" href="/blog/local-voice-dictation-mac/">Compare with Apple Dictation <span aria-hidden="true">→</span></Link>
+        </FeatureShowcaseCard>
+        <FeatureShowcaseCard id="act-media">
+          <FeatureShowcaseMedia className="aspect-[8/5]">
+            <FeatureShowcaseFloat className="max-w-none">
+              <Image
+                src="/screenshots/media.png"
+                width={654}
+                height={196}
+                sizes="(max-width: 639px) 85vw, (max-width: 1279px) 42vw, 530px"
+                alt="Gojo’s media tab showing album artwork, a scrubber and playback controls."
+              />
+            </FeatureShowcaseFloat>
+          </FeatureShowcaseMedia>
+          <FeatureShowcaseCaption icon={<Music />} title="Your music, out of the way.">
+            Skip, shuffle and seek from the notch without bringing your music app forward. Artwork and playback controls follow what is playing.
+          </FeatureShowcaseCaption>
+          <Link className="feature-comparison" href="/alternatives/boring-notch/">Compare with Boring Notch <span aria-hidden="true">→</span></Link>
+        </FeatureShowcaseCard>
+        <FeatureShowcaseCard id="act-clipboard">
+          <FeatureShowcaseMedia className="aspect-[8/5]">
+            <FeatureShowcaseFloat className="max-w-none">
+              <Image
+                src="/screenshots/clipboard.png"
+                width={694}
+                height={197}
+                sizes="(max-width: 639px) 85vw, (max-width: 1279px) 42vw, 530px"
+                alt="Gojo’s searchable clipboard history."
+              />
+            </FeatureShowcaseFloat>
+          </FeatureShowcaseMedia>
+          <FeatureShowcaseCaption icon={<ClipboardList />} title="Find what you copied.">
+            Search your clipboard history from the notch. Gojo skips items that supported password managers mark as private.
+          </FeatureShowcaseCaption>
+          <Link className="feature-comparison" href="/alternatives/maccy/">Compare with Maccy <span aria-hidden="true">→</span></Link>
+        </FeatureShowcaseCard>
+        <FeatureShowcaseCard id="act-windows">
+          <FeatureShowcaseMedia className="aspect-[8/5]">
+            <FeatureShowcaseFloat className="max-w-none">
+              <Image
+                src="/screenshots/windows.png"
+                width={661}
+                height={209}
+                sizes="(max-width: 639px) 85vw, (max-width: 1279px) 42vw, 530px"
+                alt="Gojo’s window previews and keyboard-labelled snap layouts."
+              />
+            </FeatureShowcaseFloat>
+          </FeatureShowcaseMedia>
+          <FeatureShowcaseCaption icon={<LayoutGrid />} title="See it. Switch to it. Snap it.">
+            Preview a window before switching, then snap it into halves, thirds or a full-screen layout. Each layout shows its keyboard shortcut.
+          </FeatureShowcaseCaption>
+          <Link className="feature-comparison" href="/alternatives/rectangle/">Compare with Rectangle <span aria-hidden="true">→</span></Link>
+        </FeatureShowcaseCard>
+        <FeatureShowcaseCard id="act-shelf">
+          <FeatureShowcaseMedia className="aspect-[8/5]">
+            <FeatureShowcaseFloat className="max-w-none">
+              <Image
+                src="/screenshots/shelf.png"
+                width={649}
+                height={196}
+                sizes="(max-width: 639px) 85vw, (max-width: 1279px) 42vw, 530px"
+                alt="Gojo’s file shelf with staged files and an AirDrop target."
+              />
+            </FeatureShowcaseFloat>
+          </FeatureShowcaseMedia>
+          <FeatureShowcaseCaption icon={<FolderOpen />} title="A place to set files down.">
+            Drag files to the notch while you move between folders, desktops and apps. Drop them into their destination or send them with AirDrop.
+          </FeatureShowcaseCaption>
+          <Link className="feature-comparison" href="/blog/best-file-shelf-apps-mac/">Compare with Dropover <span aria-hidden="true">→</span></Link>
+        </FeatureShowcaseCard>
+        <FeatureShowcaseCard id="act-display">
+          <FeatureShowcaseMedia className="aspect-[8/5]">
+            <FeatureShowcaseFloat className="home-display-float max-w-[11rem] sm:max-w-[17rem]">
               <NightShiftComparison />
-            </div>
-          </article>
-        </div>
-      </section>
-
+            </FeatureShowcaseFloat>
+          </FeatureShowcaseMedia>
+          <FeatureShowcaseCaption icon={<Sunset />} title="Warmer screen after dark.">
+            Set your screen warmth from the notch and let it follow your schedule. Sunset times are calculated on your Mac using the location you choose.
+          </FeatureShowcaseCaption>
+          <Link className="feature-comparison" href="/alternatives/flux/">Compare with f.lux <span aria-hidden="true">→</span></Link>
+        </FeatureShowcaseCard>
+      </FeatureShowcase>
 
       <section className="customize-story" aria-labelledby="customize-heading">
         <div className="wrap customize-layout">

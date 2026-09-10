@@ -4,6 +4,7 @@
    Tailwind utilities still win where a component reaches for one. */
 @import "./skin.css" layer(components);
 @import "./marketing-heroes.css" layer(components);
+@import "./home-features.css" layer(components);
 
 @custom-variant dark (&:is(.dark *));
 

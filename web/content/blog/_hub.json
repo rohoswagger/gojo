@@ -329,294 +329,618 @@
     ]
   },
   "hero": {
-    "label": "Gojo Blog",
     "title": "Mac utility writing from inside the notch.",
-    "summary": "Short, practical writing on notch workflows, macOS permissions, alternatives, and the small interface details that make a Mac feel sharper."
+    "summary": "Short, practical notes on notch workflows, macOS permissions, local dictation, and the small interface details that make a Mac feel sharper."
   },
   "archive": {
-    "kicker": "Archive",
+    "kicker": null,
     "title": "Published notes"
   },
   "posts": [
     {
       "slug": "how-to-dictate-on-mac",
+      "topic": "Dictation",
       "kicker": "Dictation",
-      "date": "September 8, 2026",
+      "date": "Sep 8, 2026",
+      "dateISO": "2026-09-08",
+      "readTime": "6 min read",
+      "sourced": true,
+      "poster": [
+        "Three ways to talk.",
+        "One *Mac*."
+      ],
       "title": "How to dictate on Mac in 2026",
       "summary": "Set up Apple Dictation, understand Voice Control, and use Gojo for local push-to-talk dictation."
     },
     {
       "slug": "best-dictation-apps-for-mac",
+      "topic": "Dictation",
       "kicker": "Roundup",
-      "date": "September 8, 2026",
+      "date": "Sep 8, 2026",
+      "dateISO": "2026-09-08",
+      "readTime": "7 min read",
+      "sourced": true,
+      "poster": [
+        "Five apps.",
+        "Five different *jobs*."
+      ],
       "title": "Best dictation apps for Mac in 2026",
       "summary": "Compare Apple Dictation, Voice Control, Gojo, MacWhisper, and Superwhisper for Mac dictation workflows."
     },
     {
       "slug": "speech-to-text-on-mac",
+      "topic": "Dictation",
       "kicker": "Dictation",
-      "date": "September 8, 2026",
+      "date": "Sep 8, 2026",
+      "dateISO": "2026-09-08",
+      "readTime": "6 min read",
+      "sourced": false,
+      "poster": [
+        "Pick the workflow.",
+        "Then pick the *app*."
+      ],
       "title": "Speech to text on Mac: built-in and local options",
       "summary": "Compare Apple Dictation, Voice Control, Gojo, and transcript apps by workflow and privacy."
     },
     {
       "slug": "how-to-see-clipboard-history-on-mac",
+      "topic": "Clipboard",
       "kicker": "Clipboard",
-      "date": "September 8, 2026",
+      "date": "Sep 8, 2026",
+      "dateISO": "2026-09-08",
+      "readTime": "5 min read",
+      "sourced": false,
+      "poster": [
+        "macOS keeps one copy.",
+        "You wanted *yesterday's*."
+      ],
       "title": "How to see clipboard history on Mac",
       "summary": "macOS keeps only the current clipboard item by default; use Gojo or a clipboard manager for history."
     },
     {
       "slug": "mac-dictation-privacy",
+      "topic": "Privacy",
       "kicker": "Privacy",
-      "date": "September 8, 2026",
+      "date": "Sep 8, 2026",
+      "dateISO": "2026-09-08",
+      "readTime": "6 min read",
+      "sourced": false,
+      "poster": [
+        "Local model.",
+        "Six places your",
+        "words still *go*."
+      ],
       "title": "Mac dictation privacy: what to check before you speak",
       "summary": "Check capture, recognition, cleanup, storage, sync, and insertion before trusting dictation privacy claims."
     },
     {
       "slug": "apple-dictation-vs-local-whisper",
+      "topic": "Dictation",
       "kicker": "Comparison",
-      "date": "September 8, 2026",
+      "date": "Sep 8, 2026",
+      "dateISO": "2026-09-08",
+      "readTime": "7 min read",
+      "sourced": false,
+      "poster": [
+        "Zero setup.",
+        "Or total *transparency*."
+      ],
       "title": "Apple Dictation vs local Whisper on Mac",
       "summary": "Compare Apple's built-in option with local model workflows for privacy, setup, and control."
     },
     {
       "slug": "how-to-choose-a-macbook-notch-app",
+      "topic": "Notch",
       "kicker": "Notch apps",
-      "date": "September 8, 2026",
+      "date": "Sep 8, 2026",
+      "dateISO": "2026-09-08",
+      "readTime": "6 min read",
+      "sourced": false,
+      "poster": [
+        "The notch is real estate.",
+        "Make it pay *rent*."
+      ],
       "title": "How to choose a MacBook notch app",
       "summary": "Pick a notch app by workflow value, permissions, privacy, price, and daily speed."
     },
     {
       "slug": "best-macbook-notch-apps",
+      "topic": "Notch",
       "kicker": "Roundup",
-      "date": "2026-09-08",
+      "date": "Sep 8, 2026",
+      "dateISO": "2026-09-08",
+      "readTime": "8 min read",
+      "sourced": false,
+      "poster": [
+        "Earn the black strip.",
+        "Ask for no extra",
+        "*permissions*."
+      ],
       "title": "Best MacBook notch apps in 2026",
       "summary": "Compare Gojo, NotchNook, Boring Notch, Alcove, and DynamicLake by workflow, customization, and permission fit."
     },
     {
       "slug": "best-notchnook-alternatives",
+      "topic": "Notch",
       "kicker": "Roundup",
-      "date": "September 8, 2026",
+      "date": "Sep 8, 2026",
+      "dateISO": "2026-09-08",
+      "readTime": "8 min read",
+      "sourced": false,
+      "poster": [
+        "One notch.",
+        "Four different *answers*."
+      ],
       "title": "Best NotchNook alternatives for Mac in 2026",
       "summary": "Compare Gojo, Droppy, Boring Notch, Alcove, and DynamicLake by workflow, breadth, source availability, and visual style."
     },
     {
       "slug": "best-window-tiling-apps-mac",
+      "topic": "Windows",
       "kicker": "Guide",
-      "date": "September 8, 2026",
+      "date": "Sep 8, 2026",
+      "dateISO": "2026-09-08",
+      "readTime": "9 min read",
+      "sourced": true,
+      "poster": [
+        "Six window managers.",
+        "One that fits how",
+        "you *work*."
+      ],
       "title": "Best Mac window managers and tiling apps in 2026",
       "summary": "Compare macOS, Rectangle, Magnet, Moom, Raycast, BetterTouchTool, and Gojo by window workflow."
     },
     {
-      "slug": "best-private-dictation-apps-mac",
-      "kicker": "Roundup",
-      "date": "September 3, 2026",
-      "title": "Best private dictation apps for Mac in 2026",
-      "summary": "Compare five Mac dictation tools by what stays local, where the finished text goes, and which workflow each one handles best."
-    },
-    {
-      "slug": "local-voice-dictation-mac",
+      "slug": "best-local-dictation-apps-mac",
+      "topic": "Dictation",
       "kicker": "Guide",
-      "date": "September 3, 2026",
-      "title": "Local voice dictation on Mac: what actually stays private",
-      "summary": "Trace microphone audio through recognition, cleanup, storage, and insertion, then run a practical offline test."
+      "date": "Sep 8, 2026",
+      "dateISO": "2026-09-08",
+      "readTime": "8 min read",
+      "sourced": true,
+      "poster": [
+        "Where should the",
+        "words *appear*?",
+        "Answer that first."
+      ],
+      "title": "Best local dictation apps for Mac in 2026",
+      "summary": "Compare Apple Dictation, Voice Control, Gojo, and MacWhisper by workflow, offline behavior, and where speech is processed."
     },
     {
       "slug": "best-mac-dictation-for-developers",
+      "topic": "Dictation",
       "kicker": "Use case",
-      "date": "September 4, 2026",
+      "date": "Sep 4, 2026",
+      "dateISO": "2026-09-04",
+      "readTime": "9 min read",
+      "sourced": false,
+      "poster": [
+        "Voice for the prose.",
+        "Fingers for the *symbols*."
+      ],
       "title": "Best voice dictation for developers on Mac in 2026",
       "summary": "A developer-specific test for code symbols, terminals, secrets, correction, and local insertion."
     },
     {
       "slug": "best-mac-dictation-for-writers",
+      "topic": "Dictation",
       "kicker": "Use case",
-      "date": "September 4, 2026",
+      "date": "Sep 4, 2026",
+      "dateISO": "2026-09-04",
+      "readTime": "10 min read",
+      "sourced": false,
+      "poster": [
+        "A transcript is not",
+        "a *draft*."
+      ],
       "title": "Best Mac dictation apps for writers in 2026",
       "summary": "Compare writing workflows by draft quality, punctuation, names, privacy, and where the text lands."
     },
     {
       "slug": "voice-to-text-mac-without-cloud",
+      "topic": "Privacy",
       "kicker": "Guide",
-      "date": "September 4, 2026",
+      "date": "Sep 4, 2026",
+      "dateISO": "2026-09-04",
+      "readTime": "8 min read",
+      "sourced": false,
+      "poster": [
+        "Turn off the network.",
+        "Then say a *sentence*."
+      ],
       "title": "Voice-to-text on Mac without cloud processing",
       "summary": "Trace audio, recognition, cleanup, storage, and insertion, then test the exact workflow offline."
     },
     {
       "slug": "droppy-alternatives-private-dictation",
+      "topic": "Dictation",
       "kicker": "Alternatives",
-      "date": "September 4, 2026",
+      "date": "Sep 4, 2026",
+      "dateISO": "2026-09-04",
+      "readTime": "9 min read",
+      "sourced": false,
+      "poster": [
+        "Droppy is already local.",
+        "Switch for the *endpoint*."
+      ],
       "title": "Droppy alternatives for private Mac dictation in 2026",
       "summary": "Choose a switch by endpoint: direct insertion, configurable modes, saved transcripts, or voice notes."
     },
     {
       "slug": "best-mac-clipboard-manager",
+      "topic": "Clipboard",
       "kicker": "Roundup",
-      "date": "September 4, 2026",
+      "date": "Sep 4, 2026",
+      "dateISO": "2026-09-04",
+      "readTime": "9 min read",
+      "sourced": false,
+      "poster": [
+        "Four clipboards.",
+        "Four different *habits*."
+      ],
       "title": "Best clipboard managers for Mac in 2026",
       "summary": "Compare Gojo, Maccy, Paste, and Raycast by local storage, sensitive copies, search, and media support."
     },
     {
       "slug": "best-file-shelf-apps-mac",
+      "topic": "File shelf",
       "kicker": "Roundup",
-      "date": "September 4, 2026",
+      "date": "Sep 4, 2026",
+      "dateISO": "2026-09-04",
+      "readTime": "8 min read",
+      "sourced": true,
+      "poster": [
+        "Files need a waypoint.",
+        "Not another *folder*."
+      ],
       "title": "Best file shelf apps for Mac in 2026",
       "summary": "Compare notch shelves and dedicated drag bridges for staging files between folders and apps."
     },
     {
       "slug": "best-window-management-tools-mac",
+      "topic": "Windows",
       "kicker": "Roundup",
-      "date": "September 4, 2026",
+      "date": "Sep 4, 2026",
+      "dateISO": "2026-09-04",
+      "readTime": "10 min read",
+      "sourced": false,
+      "poster": [
+        "Five tools.",
+        "Five starting *points*."
+      ],
       "title": "Best window management tools for Mac in 2026",
       "summary": "Choose dedicated snapping, command-driven actions, automation, or window controls inside a broader workspace."
     },
     {
       "slug": "best-mac-notch-apps-for-productivity",
+      "topic": "Notch",
       "kicker": "Roundup",
-      "date": "September 4, 2026",
+      "date": "Sep 4, 2026",
+      "dateISO": "2026-09-04",
+      "readTime": "11 min read",
+      "sourced": false,
+      "poster": [
+        "Not feature counts.",
+        "Actual *handoffs*."
+      ],
       "title": "Best Mac notch apps for productivity in 2026",
       "summary": "A day-in-the-life comparison of notch apps by the work they remove from your routine."
     },
     {
       "slug": "gojo-vs-superwhisper",
+      "topic": "Dictation",
       "kicker": "Comparison",
-      "date": "September 4, 2026",
+      "date": "Sep 4, 2026",
+      "dateISO": "2026-09-04",
+      "readTime": "8 min read",
+      "sourced": false,
+      "poster": [
+        "Speak, insert.",
+        "Or speak, then *decide*."
+      ],
       "title": "Gojo vs Superwhisper: local Mac dictation compared",
       "summary": "Compare the captured-field workflow with configurable voice and language-model stages."
     },
     {
       "slug": "gojo-vs-macwhisper",
+      "topic": "Dictation",
       "kicker": "Comparison",
-      "date": "September 4, 2026",
+      "date": "Sep 4, 2026",
+      "dateISO": "2026-09-04",
+      "readTime": "8 min read",
+      "sourced": false,
+      "poster": [
+        "Text in this field.",
+        "Or a transcript for *later*."
+      ],
       "title": "Gojo vs MacWhisper: direct dictation or transcript work?",
       "summary": "Choose between text arriving at your cursor and a specialist workflow for recordings and transcripts."
     },
     {
       "slug": "gojo-vs-apple-dictation",
+      "topic": "Dictation",
       "kicker": "Comparison",
-      "date": "September 4, 2026",
+      "date": "Sep 4, 2026",
+      "dateISO": "2026-09-04",
+      "readTime": "7 min read",
+      "sourced": false,
+      "poster": [
+        "Already installed.",
+        "Or explicitly *local*."
+      ],
       "title": "Gojo vs Apple Dictation: which Mac option?",
       "summary": "Compare Apple's built-in baseline with explicit local models, target validation, and a broader notch workspace."
     },
     {
       "slug": "gojo-vs-yoink",
+      "topic": "File shelf",
       "kicker": "Comparison",
-      "date": "September 4, 2026",
+      "date": "Sep 4, 2026",
+      "dateISO": "2026-09-04",
+      "readTime": "7 min read",
+      "sourced": false,
+      "poster": [
+        "One job, done deep.",
+        "Or one of *five*."
+      ],
       "title": "Gojo vs Yoink: Mac file shelf comparison",
       "summary": "Compare a full daily utility surface with a focused drag-and-drop bridge."
     },
     {
-      "slug": "best-macos-notch-utilities",
-      "kicker": "Guide",
-      "date": "July 1, 2026",
-      "title": "Best macOS notch utilities: what to look for before installing one",
-      "summary": "Music controls, window snapping, clipboard history, file shelves, and the permissions worth checking first."
-    },
-    {
-      "slug": "best-macos-accessibility-permission-apps",
+      "slug": "best-private-dictation-apps-mac",
+      "topic": "Privacy",
       "kicker": "Roundup",
-      "date": "July 2, 2026",
-      "title": "Best macOS Accessibility permission apps: Gojo, Rectangle, Raycast, Maccy, and more",
-      "summary": "A practical hub for Mac utilities that ask for deeper system access, from window tools to launchers and notch surfaces."
+      "date": "Sep 3, 2026",
+      "dateISO": "2026-09-03",
+      "readTime": "10 min read",
+      "sourced": false,
+      "poster": [
+        "“Local” is a word.",
+        "*Offline* is a test."
+      ],
+      "title": "Best private dictation apps for Mac in 2026",
+      "summary": "Compare five Mac dictation tools by what stays local, where the finished text goes, and which workflow each one handles best."
     },
     {
-      "slug": "gojo-vs-rectangle",
-      "kicker": "Comparison",
-      "date": "July 3, 2026",
-      "title": "Gojo vs Rectangle: which Mac window tool fits your workflow?",
-      "summary": "Rectangle is a focused window snapping utility. Gojo is a broader MacBook notch workspace that includes window snapping alongside media, clipboard, file, calendar, battery, webcam, and display controls."
-    },
-    {
-      "slug": "gojo-vs-flux",
-      "kicker": "Comparison",
-      "date": "July 4, 2026",
-      "title": "Gojo vs f.lux: MacBook notch controls or adaptive display lighting?",
-      "summary": "f.lux is for automatic display warmth by time of day. Gojo is a MacBook notch utility that puts Night Shift-style access beside everyday controls."
-    },
-    {
-      "slug": "gojo-vs-boring-notch",
-      "kicker": "Comparison",
-      "date": "July 5, 2026",
-      "title": "Gojo vs Boring Notch: which MacBook notch utility fits your workflow?",
-      "summary": "Boring Notch emphasizes a dynamic notch for music controls and visual feedback. Gojo is a utility-first notch workspace for media, windows, clipboard, files, calendar, battery, webcam, and display controls."
-    },
-    {
-      "slug": "gojo-vs-alttab",
-      "kicker": "Comparison",
-      "date": "July 6, 2026",
-      "title": "Gojo vs AltTab: Mac window switching or a notch workspace?",
-      "summary": "AltTab is a dedicated macOS window switcher. Gojo is not a window switcher replacement; it is a notch workspace for controls that surround window-heavy work."
-    },
-    {
-      "slug": "gojo-vs-maccy",
-      "kicker": "Comparison",
-      "date": "July 7, 2026",
-      "title": "Gojo vs Maccy: clipboard history or a broader Mac utility?",
-      "summary": "Maccy is a dedicated keyboard-first clipboard manager. Gojo includes clipboard history as one part of a broader notch workspace."
-    },
-    {
-      "slug": "gojo-vs-raycast",
-      "kicker": "Comparison",
-      "date": "July 8, 2026",
-      "title": "Gojo vs Raycast: MacBook notch controls or a keyboard-first launcher?",
-      "summary": "Raycast is a keyboard-first command interface and extension hub. Gojo is a hoverable notch surface for controls you want to see and touch quickly."
-    },
-    {
-      "slug": "gojo-vs-bettertouchtool",
-      "kicker": "Comparison",
-      "date": "July 9, 2026",
-      "title": "Gojo vs BetterTouchTool: notch utility or deep Mac automation?",
-      "summary": "BetterTouchTool is a deep customization and automation workbench. Gojo is a focused notch utility for everyday controls without building your own trigger system."
-    },
-    {
-      "slug": "gojo-vs-karabiner-elements",
-      "kicker": "Comparison",
-      "date": "July 10, 2026",
-      "title": "Gojo vs Karabiner-Elements: MacBook notch utility or keyboard remapper?",
-      "summary": "Karabiner-Elements customizes keyboards. Gojo does not compete on low-level key remapping; it gives MacBook users a notch surface for everyday controls."
-    },
-    {
-      "slug": "gojo-vs-droppy",
-      "kicker": "Comparison",
-      "date": "July 11, 2026",
-      "title": "Gojo vs Droppy: local dictation or utility breadth?",
-      "summary": "Gojo leads with local dictation into the active field. Droppy leads with a larger catalog of optional utilities."
-    },
-    {
-      "slug": "gojo-vs-notchnook",
-      "kicker": "Comparison",
-      "date": "July 10, 2026",
-      "title": "Gojo vs NotchNook: focused Mac controls or a widget-heavy notch?",
-      "summary": "NotchNook is a customizable utility center with widgets and live actions. Gojo keeps five daily Mac controls close and quiet."
-    },
-    {
-      "slug": "gojo-vs-alcove",
-      "kicker": "Comparison",
-      "date": "July 11, 2026",
-      "title": "Gojo vs Alcove: daily Mac tools or Dynamic Island polish?",
-      "summary": "Alcove emphasizes polished live activities, gestures, and HUDs. Gojo emphasizes a compact set of daily Mac tools."
-    },
-    {
-      "slug": "gojo-vs-dynamiclake",
-      "kicker": "Comparison",
-      "date": "July 12, 2026",
-      "title": "Gojo vs DynamicLake: focused controls or a full Dynamic Island?",
-      "summary": "DynamicLake builds a broad live-activity layer for macOS. Gojo keeps a smaller daily workflow one hover away."
+      "slug": "local-voice-dictation-mac",
+      "topic": "Privacy",
+      "kicker": "Guide",
+      "date": "Sep 3, 2026",
+      "dateISO": "2026-09-03",
+      "readTime": "8 min read",
+      "sourced": false,
+      "poster": [
+        "A mic badge is not",
+        "a *promise*."
+      ],
+      "title": "Local voice dictation on Mac: what actually stays private",
+      "summary": "Trace microphone audio through recognition, cleanup, storage, and insertion, then run a practical offline test."
     },
     {
       "slug": "best-droppy-alternatives",
+      "topic": "Notch",
       "kicker": "Roundup",
-      "date": "July 13, 2026",
+      "date": "Jul 13, 2026",
+      "dateISO": "2026-07-13",
+      "readTime": "8 min read",
+      "sourced": false,
+      "poster": [
+        "Focus, widgets, polish,",
+        "activities, or *free*."
+      ],
       "title": "5 best Droppy alternatives for Mac in 2026",
       "summary": "Compare Gojo, NotchNook, Alcove, DynamicLake, and Boring Notch by focus, customization, polish, breadth, and price."
     },
     {
-      "slug": "best-local-dictation-apps-mac",
+      "slug": "gojo-vs-dynamiclake",
+      "topic": "Notch",
+      "kicker": "Comparison",
+      "date": "Jul 12, 2026",
+      "dateISO": "2026-07-12",
+      "readTime": "6 min read",
+      "sourced": false,
+      "poster": [
+        "A whole Dynamic *Island*.",
+        "Or one hover."
+      ],
+      "title": "Gojo vs DynamicLake: focused controls or a full Dynamic Island?",
+      "summary": "DynamicLake builds a broad live-activity layer for macOS. Gojo keeps a smaller daily workflow one hover away."
+    },
+    {
+      "slug": "gojo-vs-droppy",
+      "topic": "Notch",
+      "kicker": "Comparison",
+      "date": "Jul 11, 2026",
+      "dateISO": "2026-07-11",
+      "readTime": "8 min read",
+      "sourced": false,
+      "poster": [
+        "Breadth of *options*.",
+        "Or dictation that lands."
+      ],
+      "title": "Gojo vs Droppy: local dictation or utility breadth?",
+      "summary": "Gojo leads with local dictation into the active field. Droppy leads with a larger catalog of optional utilities."
+    },
+    {
+      "slug": "gojo-vs-alcove",
+      "topic": "Notch",
+      "kicker": "Comparison",
+      "date": "Jul 11, 2026",
+      "dateISO": "2026-07-11",
+      "readTime": "5 min read",
+      "sourced": false,
+      "poster": [
+        "Live activities.",
+        "Or daily *tools*."
+      ],
+      "title": "Gojo vs Alcove: daily Mac tools or Dynamic Island polish?",
+      "summary": "Alcove emphasizes polished live activities, gestures, and HUDs. Gojo emphasizes a compact set of daily Mac tools."
+    },
+    {
+      "slug": "gojo-vs-karabiner-elements",
+      "topic": "Notch",
+      "kicker": "Comparison",
+      "date": "Jul 10, 2026",
+      "dateISO": "2026-07-10",
+      "readTime": "6 min read",
+      "sourced": false,
+      "poster": [
+        "Remap the keyboard.",
+        "Or skip the *keyboard*."
+      ],
+      "title": "Gojo vs Karabiner-Elements: MacBook notch utility or keyboard remapper?",
+      "summary": "Karabiner-Elements customizes keyboards. Gojo does not compete on low-level key remapping; it gives MacBook users a notch surface for everyday controls."
+    },
+    {
+      "slug": "gojo-vs-notchnook",
+      "topic": "Notch",
+      "kicker": "Comparison",
+      "date": "Jul 10, 2026",
+      "dateISO": "2026-07-10",
+      "readTime": "6 min read",
+      "sourced": false,
+      "poster": [
+        "A widget *center*.",
+        "Or five controls, close."
+      ],
+      "title": "Gojo vs NotchNook: focused Mac controls or a widget-heavy notch?",
+      "summary": "NotchNook is a customizable utility center with widgets and live actions. Gojo keeps five daily Mac controls close and quiet."
+    },
+    {
+      "slug": "gojo-vs-bettertouchtool",
+      "topic": "Notch",
+      "kicker": "Comparison",
+      "date": "Jul 9, 2026",
+      "dateISO": "2026-07-09",
+      "readTime": "6 min read",
+      "sourced": false,
+      "poster": [
+        "Build your own system.",
+        "Or use one already *built*."
+      ],
+      "title": "Gojo vs BetterTouchTool: notch utility or deep Mac automation?",
+      "summary": "BetterTouchTool is a deep customization and automation workbench. Gojo is a focused notch utility for everyday controls without building your own trigger system."
+    },
+    {
+      "slug": "gojo-vs-raycast",
+      "topic": "Notch",
+      "kicker": "Comparison",
+      "date": "Jul 8, 2026",
+      "dateISO": "2026-07-08",
+      "readTime": "6 min read",
+      "sourced": false,
+      "poster": [
+        "Type a command.",
+        "Or *reach* for one."
+      ],
+      "title": "Gojo vs Raycast: MacBook notch controls or a keyboard-first launcher?",
+      "summary": "Raycast is a keyboard-first command interface and extension hub. Gojo is a hoverable notch surface for controls you want to see and touch quickly."
+    },
+    {
+      "slug": "gojo-vs-maccy",
+      "topic": "Clipboard",
+      "kicker": "Comparison",
+      "date": "Jul 7, 2026",
+      "dateISO": "2026-07-07",
+      "readTime": "6 min read",
+      "sourced": false,
+      "poster": [
+        "One clipboard.",
+        "Two *scopes*."
+      ],
+      "title": "Gojo vs Maccy: clipboard history or a broader Mac utility?",
+      "summary": "Maccy is a dedicated keyboard-first clipboard manager. Gojo includes clipboard history as one part of a broader notch workspace."
+    },
+    {
+      "slug": "gojo-vs-alttab",
+      "topic": "Windows",
+      "kicker": "Comparison",
+      "date": "Jul 6, 2026",
+      "dateISO": "2026-07-06",
+      "readTime": "6 min read",
+      "sourced": false,
+      "poster": [
+        "Switch windows.",
+        "Or control what",
+        "*surrounds* them."
+      ],
+      "title": "Gojo vs AltTab: Mac window switching or a notch workspace?",
+      "summary": "AltTab is a dedicated macOS window switcher. Gojo is not a window switcher replacement; it is a notch workspace for controls that surround window-heavy work."
+    },
+    {
+      "slug": "gojo-vs-boring-notch",
+      "topic": "Notch",
+      "kicker": "Comparison",
+      "date": "Jul 5, 2026",
+      "dateISO": "2026-07-05",
+      "readTime": "6 min read",
+      "sourced": false,
+      "poster": [
+        "Music, with *feedback*.",
+        "Or five tools, quiet."
+      ],
+      "title": "Gojo vs Boring Notch: which MacBook notch utility fits your workflow?",
+      "summary": "Boring Notch emphasizes a dynamic notch for music controls and visual feedback. Gojo is a utility-first notch workspace for media, windows, clipboard, files, calendar, battery, webcam, and display controls."
+    },
+    {
+      "slug": "gojo-vs-flux",
+      "topic": "Notch",
+      "kicker": "Comparison",
+      "date": "Jul 4, 2026",
+      "dateISO": "2026-07-04",
+      "readTime": "6 min read",
+      "sourced": false,
+      "poster": [
+        "Warmth on a *schedule*.",
+        "Or warmth on demand."
+      ],
+      "title": "Gojo vs f.lux: MacBook notch controls or adaptive display lighting?",
+      "summary": "f.lux is for automatic display warmth by time of day. Gojo is a MacBook notch utility that puts Night Shift-style access beside everyday controls."
+    },
+    {
+      "slug": "gojo-vs-rectangle",
+      "topic": "Windows",
+      "kicker": "Comparison",
+      "date": "Jul 3, 2026",
+      "dateISO": "2026-07-03",
+      "readTime": "6 min read",
+      "sourced": false,
+      "poster": [
+        "Snapping only.",
+        "Or snapping plus *seven*."
+      ],
+      "title": "Gojo vs Rectangle: which Mac window tool fits your workflow?",
+      "summary": "Rectangle is a focused window snapping utility. Gojo is a broader MacBook notch workspace that includes window snapping alongside media, clipboard, file, calendar, battery, webcam, and display controls."
+    },
+    {
+      "slug": "best-macos-accessibility-permission-apps",
+      "topic": "Privacy",
+      "kicker": "Roundup",
+      "date": "Jul 2, 2026",
+      "dateISO": "2026-07-02",
+      "readTime": "9 min read",
+      "sourced": false,
+      "poster": [
+        "Eight apps.",
+        "One *permission*."
+      ],
+      "title": "Best macOS Accessibility permission apps: Gojo, Rectangle, Raycast, Maccy, and more",
+      "summary": "A practical hub for Mac utilities that ask for deeper system access, from window tools to launchers and notch surfaces."
+    },
+    {
+      "slug": "best-macos-notch-utilities",
+      "topic": "Notch",
       "kicker": "Guide",
-      "date": "September 8, 2026",
-      "title": "Best local dictation apps for Mac in 2026",
-      "summary": "Compare Apple Dictation, Voice Control, Gojo, and MacWhisper by workflow, offline behavior, and where speech is processed."
+      "date": "Jul 1, 2026",
+      "dateISO": "2026-07-01",
+      "readTime": "7 min read",
+      "sourced": false,
+      "poster": [
+        "Before you install,",
+        "read the *permissions*."
+      ],
+      "title": "Best macOS notch utilities: what to look for before installing one",
+      "summary": "Music controls, window snapping, clipboard history, file shelves, and the permissions worth checking first."
     }
   ]
 }

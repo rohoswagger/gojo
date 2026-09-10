@@ -17,9 +17,14 @@ export function getHeaderLinks(home = false): HeaderLink[] {
   }))
 }
 
-export function siteHeaderHtml(): string {
+export function siteHeaderHtml(active?: string): string {
   const links = getHeaderLinks()
-    .map((link) => `<a class="ghost-link" href="${link.href}">${link.label}</a>`)
+    .map((link) => {
+      const current = active !== undefined && link.href === active
+      const cls = current ? "ghost-link is-current" : "ghost-link"
+      const aria = current ? ' aria-current="page"' : ""
+      return `<a class="${cls}" href="${link.href}"${aria}>${link.label}</a>`
+    })
     .join("")
-  return `<header class="site-header site-header-overlay"><a class="brand" href="/" aria-label="Gojo home"><svg viewBox="0 0 256 172.29" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="${GOJO_LOGO_PATH}"/></svg>Gojo</a><nav class="nav" aria-label="Site">${links}</nav><a class="btn btn-primary nav-cta" href="${DOWNLOAD_LINK.href}">${DOWNLOAD_LINK.label}</a></header>`
+  return `<header class="site-header site-header-overlay"><a class="brand" href="/" aria-label="Gojo home"><svg viewBox="0 0 256 172.29" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="${GOJO_LOGO_PATH}"/></svg>Gojo</a><nav class="nav" aria-label="Primary">${links}</nav><a class="btn btn-primary nav-cta" href="${DOWNLOAD_LINK.href}">${DOWNLOAD_LINK.label}<span class="nav-cta-arrow" aria-hidden="true">&rarr;</span></a></header>`
 }

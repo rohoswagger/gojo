@@ -119,21 +119,26 @@ body {
 
 /* --- Header ------------------------------------------------------------- */
 
+/* A floating bar rather than a full-bleed one: it sits *on* the page ground,
+   which is what lets a tinted surface (the blog's paper) read as a surface
+   instead of as a band under the chrome. Elevation is declared once, as a
+   hairline — no shadow under the border. */
 .site-header {
   position: sticky;
-  top: 0;
+  top: clamp(0.5rem, 1.2vw, 0.875rem);
   z-index: 50;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
-  gap: 1.5rem;
-  height: 4rem;
-  /* Full-bleed bar, content centred on the page measure: the rule underneath
-     runs edge to edge the way it does on onyx.app. */
-  padding-inline: max(var(--gutter), calc((100% - var(--page)) / 2));
-  border-bottom: 1px solid var(--rule);
-  background: color-mix(in srgb, var(--surface) 78%, transparent);
-  backdrop-filter: saturate(180%) blur(16px);
+  gap: 1rem;
+  width: min(calc(100% - 2 * var(--gutter)), var(--page));
+  min-height: 3.5rem;
+  margin: clamp(0.5rem, 1.2vw, 0.875rem) auto 0;
+  padding: 0.5rem 0.5rem 0.5rem 1.125rem;
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface) 93%, transparent);
+  backdrop-filter: saturate(180%) blur(18px);
   -webkit-backdrop-filter: saturate(180%) blur(16px);
 }
 
@@ -141,6 +146,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  justify-self: start;
   font-family: var(--display);
   font-size: 1.0625rem;
   font-weight: 600;
@@ -157,7 +163,8 @@ body {
 .nav {
   display: flex;
   align-items: center;
-  gap: 1.75rem;
+  justify-content: center;
+  gap: 0.125rem;
   font-size: 0.9375rem;
 }
 
@@ -172,13 +179,60 @@ body {
   color: var(--ink-1);
 }
 
-@media (max-width: 640px) {
+/* Nav links are the one place pills belong: small controls. The current
+   section takes the filled one, so wayfinding survives a screenshot. */
+.site-header .ghost-link {
+  padding: 0.4375rem 0.75rem;
+  border-radius: 10px;
+  transition:
+    color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.site-header .ghost-link:hover {
+  background: var(--surface-3);
+}
+
+.site-header .ghost-link.is-current {
+  background: var(--surface-3);
+  color: var(--ink-1);
+  font-weight: 500;
+}
+
+.site-header .nav-cta {
+  justify-self: end;
+  padding: 0.5625rem 0.9375rem;
+  border-radius: 10px;
+  font-size: 0.875rem;
+}
+
+.nav-cta-arrow {
+  display: inline-block;
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.site-header .nav-cta:hover .nav-cta-arrow {
+  transform: translateX(3px);
+}
+
+/* Under ~40rem the three columns stop fitting on one line, so the bar becomes
+   two rows: identity and action stay together, the nav sits beneath them. */
+@media (max-width: 40rem) {
+  .site-header {
+    grid-template-columns: 1fr auto;
+    row-gap: 0.5rem;
+    padding: 0.5rem 0.5rem 0.5625rem 0.875rem;
+    border-radius: 18px;
+  }
   .site-header .nav {
-    gap: 1rem;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: flex-start;
+    gap: 0.125rem;
     font-size: 0.875rem;
   }
-  .site-header .nav a:first-child {
-    display: none;
+  .site-header .ghost-link {
+    padding: 0.375rem 0.625rem;
   }
 }
 

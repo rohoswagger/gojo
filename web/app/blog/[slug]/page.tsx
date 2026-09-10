@@ -3,9 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ArticleBlocks } from "@/components/blog/blocks";
+import { PostCardLink } from "@/components/blog/post-card";
+import { Poster } from "@/components/blog/poster";
 import { GojoFooter } from "@/components/gojo-footer";
 import { GojoHeader } from "@/components/gojo-header";
-import { POST_SLUGS, loadPost } from "../lib";
+import { POST_SLUGS, findCard, loadPost, relatedCards } from "../lib";
 
 export function generateStaticParams() {
   return POST_SLUGS.map((slug) => ({ slug }));
@@ -70,16 +72,18 @@ export default async function BlogPostPage({ params }: Params) {
   }
   const post = loadPost(slug);
   const { hero } = post;
+  const card = findCard(slug);
+  const related = relatedCards(slug);
 
   return (
-    <div className="article-shell">
+    <div className="article-shell blog-paper">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(post.jsonLd) }}
       />
 
       <div className="article-top">
-        <GojoHeader />
+        <GojoHeader active="/blog/" />
 
         <section className="article-hero">
           <div className="wrap">
@@ -92,17 +96,26 @@ export default async function BlogPostPage({ params }: Params) {
               ))}
             </nav>
 
-            {hero.label ? <p className="article-label">{hero.label}</p> : null}
             <h1>{hero.title}</h1>
-            {hero.summary ? <p className="article-summary">{hero.summary}</p> : null}
+            {hero.summary ? (
+              <p className="article-summary">{hero.summary}</p>
+            ) : null}
 
             <div className="article-meta">
+              {card ? <span className="article-topic">{card.topic}</span> : null}
               {hero.meta.map((item) => (
                 <span key={item}>{item}</span>
               ))}
               <Link href="/blog/">All posts</Link>
             </div>
           </div>
+
+          {/* The poster from the card you clicked, as the article's masthead. */}
+          {card ? (
+            <div className="article-poster">
+              <Poster lines={card.poster} />
+            </div>
+          ) : null}
         </section>
       </div>
 
@@ -110,6 +123,19 @@ export default async function BlogPostPage({ params }: Params) {
         <article className="article-body article-reader">
           <ArticleBlocks blocks={post.blocks} />
         </article>
+
+        {related.length > 0 ? (
+          <aside className="article-more" aria-labelledby="article-more-heading">
+            <h2 id="article-more-heading">Continue reading</h2>
+            <ol className="blog-posts">
+              {related.map((item) => (
+                <li key={item.slug}>
+                  <PostCardLink post={item} />
+                </li>
+              ))}
+            </ol>
+          </aside>
+        ) : null}
       </main>
 
       <GojoFooter />

@@ -1,0 +1,547 @@
+/* ===========================================================================
+   Blog paper
+   ---------------------------------------------------------------------------
+   The blog's own visual world: /blog and /blog/*. Everything here hangs off
+   `.blog-paper`, which does two things.
+
+   1. It repaints the shared tokens from app/skin.css — --surface tiers, rules,
+      the display face, the ink floor. Every rule in skin.css reads those
+      through var(), so the existing article typography, tables, answer boxes
+      and FAQ inherit the paper world without being restated. /features/* and
+      /alternatives/* never see the class and are untouched.
+   2. It carries the parts that are genuinely new: the poster tiles, the topic
+      filter, and the editorial hero.
+
+   The ink tiers stay as alpha on black. Composited on a warm ground they land
+   on warm grays for free, which is what the tinted-secondary-text rule wants;
+   --ink-3 is deepened to 0.6 because 0.55 on this cream sits at 4.5:1 exactly.
+   =========================================================================== */
+
+.blog-paper {
+  /* Ground, tiles, rules. */
+  --surface: #f8f6f0;
+  --surface-2: #f2efe6;
+  --surface-3: #ebe7db;
+  --rule: #e2dccd;
+  --rule-soft: #ece7da;
+  --ink-3: rgba(0, 0, 0, 0.6);
+  --ink-4: rgba(0, 0, 0, 0.5);
+
+  /* The paper world has its own voice: one tight grotesque for everything,
+     with a serif italic reserved for the emphasised word in a poster. */
+  --display: var(--font-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --body: var(--font-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --editorial: var(--font-editorial), ui-serif, "New York", Georgia, serif;
+
+  --paper-tile: #efebe0;
+  --paper-tile-hover: #e9e4d6;
+
+  min-height: 100dvh;
+  background: var(--surface);
+  color: var(--ink-2);
+}
+
+/* The ground has to survive overscroll and the area under a short page, both
+   of which are painted by the body, not by this element. */
+body:has(.blog-paper) {
+  background: #f8f6f0;
+}
+
+/* --- Browser surfaces ---------------------------------------------------- */
+
+/* The parts nobody draws still belong to the palette. */
+.blog-paper ::selection {
+  background: color-mix(in srgb, var(--gojo-accent) 20%, transparent);
+  color: var(--ink-1);
+}
+
+.blog-paper {
+  caret-color: var(--gojo-accent);
+  scrollbar-color: #cfc8b6 var(--surface);
+}
+
+.blog-paper :focus-visible {
+  outline: 2px solid var(--gojo-accent);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+.blog-paper a {
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: from-font;
+}
+
+/* --- Index hero ---------------------------------------------------------- */
+
+.blog-paper .blog-hero {
+  padding-block: clamp(3.5rem, 8vw, 7rem) 0;
+  border-bottom: 0;
+}
+
+/* The one place the type scale is allowed to shout. Tracking bottoms out at
+   -0.04em and the size stops short of 6rem. */
+.blog-paper .blog-hero h1 {
+  max-width: 18ch;
+  font-family: var(--display);
+  font-size: clamp(2.5rem, 7.4vw, 5.5rem);
+  line-height: 0.97;
+  letter-spacing: -0.04em;
+  font-weight: 700;
+  color: var(--ink-1);
+  text-wrap: balance;
+}
+
+.blog-paper .blog-hero .blog-lede {
+  max-width: 46ch;
+  margin: clamp(1.25rem, 2.4vw, 1.75rem) 0 0;
+  font-size: clamp(1rem, 1.25vw, 1.125rem);
+  line-height: 1.6;
+  letter-spacing: -0.011em;
+  color: var(--ink-3);
+  text-wrap: pretty;
+}
+
+/* --- Topic filter -------------------------------------------------------- */
+
+.topic-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.topic-chip {
+  appearance: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4375rem;
+  padding: 0.5rem 0.9375rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: color-mix(in srgb, #fff 55%, var(--surface));
+  font: inherit;
+  font-size: 0.9375rem;
+  letter-spacing: -0.011em;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition:
+    background-color 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.topic-chip:hover {
+  border-color: var(--ink-4);
+  color: var(--ink-1);
+}
+
+.topic-chip[aria-pressed="true"] {
+  border-color: var(--ink-1);
+  background: var(--ink-1);
+  color: var(--surface);
+}
+
+/* The count rides inside the chip so the taxonomy is legible before a click. */
+.topic-chip-count {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-4);
+  transition: color 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.topic-chip:hover .topic-chip-count {
+  color: var(--ink-3);
+}
+
+.topic-chip[aria-pressed="true"] .topic-chip-count {
+  color: color-mix(in srgb, var(--surface) 62%, transparent);
+}
+
+/* --- Archive ------------------------------------------------------------- */
+
+.blog-paper .blog-archive {
+  padding-block: clamp(2rem, 3.6vw, 2.75rem) clamp(4rem, 8vw, 7rem);
+}
+
+.archive-count {
+  margin: clamp(1.5rem, 3vw, 2.25rem) 0 0;
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  color: var(--ink-3);
+}
+
+.blog-paper .blog-posts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+  gap: clamp(2.25rem, 4vw, 3.25rem) clamp(1.5rem, 2.4vw, 2rem);
+  margin: clamp(1.25rem, 2.4vw, 1.75rem) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* --- Post card ----------------------------------------------------------- */
+
+/* No card container: the poster tile is the only filled surface, and the text
+   below it sits on the page ground. One fewer box, one fewer border. */
+.blog-paper .blog-post-card {
+  display: grid;
+  grid-template-rows: auto auto auto 1fr auto;
+  gap: 0;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  overflow: visible;
+}
+
+.poster {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  aspect-ratio: 8 / 5;
+  margin-bottom: 1.25rem;
+  padding: clamp(1.25rem, 6cqi, 2rem);
+  border-radius: 14px;
+  background: var(--paper-tile);
+  transition: background-color 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Poster type scales with the card, not the viewport: a container query unit
+   keeps the hook optically identical in a 3-up grid and a 1-up mobile column. */
+.poster-lines {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(1.125rem, 8.6cqi, 2.125rem);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  font-weight: 700;
+  color: var(--ink-1);
+  text-wrap: nowrap;
+}
+
+.poster-lines > span {
+  display: block;
+}
+
+/* The serif italic runs one notch larger to match the grotesque's x-height. */
+.poster-em {
+  font-family: var(--editorial);
+  font-size: 1.08em;
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: -0.01em;
+}
+
+/* Drawn at full length and scaled down, so the hover grow is a transform
+   rather than a width animation. */
+.poster-rule {
+  width: 4.5rem;
+  height: 3px;
+  margin-top: clamp(0.625rem, 3cqi, 0.9375rem);
+  border-radius: 2px;
+  background: var(--gojo-accent);
+  transform: scaleX(0.5);
+  transform-origin: left center;
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.blog-paper .blog-post-card:hover .poster {
+  background: var(--paper-tile-hover);
+}
+
+.blog-paper .blog-post-card:hover .poster-rule {
+  transform: scaleX(1);
+}
+
+/* Words are tracked caps, numerals are mono: mono earns its place on data. */
+.blog-paper .blog-card-topline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 0.6875rem;
+}
+
+.card-topic {
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gojo-accent);
+}
+
+.card-dot {
+  color: var(--ink-4);
+}
+
+.card-date {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+
+.blog-paper .blog-post-card h3 {
+  margin: 0;
+  padding: 0.5rem 0 0;
+  font-family: var(--display);
+  font-size: 1.1875rem;
+  line-height: 1.24;
+  letter-spacing: -0.024em;
+  font-weight: 600;
+  color: var(--ink-1);
+  text-wrap: pretty;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.16em;
+  transition: text-decoration-color 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.blog-paper .blog-post-card:hover h3 {
+  text-decoration-color: var(--ink-4);
+}
+
+.blog-paper .blog-card-summary {
+  padding: 0.5rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  letter-spacing: -0.008em;
+  color: var(--ink-3);
+  text-wrap: pretty;
+}
+
+.blog-paper .blog-post-action {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 0;
+  border: 0;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+
+/* Not every post carries verified primary sources; the ones that do say so. */
+.card-sourced {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  font-family: var(--body);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--gojo-accent);
+}
+
+.card-sourced svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+/* --- The authored moment: posters resolve into place --------------------- */
+
+/* Runs on load and again on every filter change (the grid is keyed by topic,
+   so React remounts it and the animation replays). Blur is part of it: the
+   hook comes into focus rather than merely fading. */
+@keyframes poster-resolve {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+    filter: blur(7px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+.blog-paper .blog-posts > li {
+  animation: poster-resolve 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 34ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blog-paper .blog-posts > li {
+    animation: none;
+  }
+  .poster,
+  .poster-rule,
+  .topic-chip,
+  .nav-cta-arrow {
+    transition: none;
+  }
+}
+
+/* --- Empty state --------------------------------------------------------- */
+
+.archive-empty {
+  grid-column: 1 / -1;
+  padding: clamp(2.5rem, 6vw, 4rem);
+  border: 1px dashed var(--rule);
+  border-radius: 14px;
+  text-align: center;
+}
+
+.archive-empty p {
+  margin: 0 0 1rem;
+  font-family: var(--display);
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
+  color: var(--ink-1);
+}
+
+.archive-empty button {
+  appearance: none;
+  padding: 0.5rem 0.9375rem;
+  border: 1px solid var(--ink-1);
+  border-radius: 999px;
+  background: var(--ink-1);
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--surface);
+  cursor: pointer;
+}
+
+/* --- Article pages ------------------------------------------------------- */
+
+/* The band under the chrome is gone with the full-bleed header; the hero now
+   ends on the ground it started on. */
+.blog-paper .article-top {
+  border-bottom: 0;
+}
+
+.blog-paper .article-hero {
+  padding-block: clamp(2.5rem, 5.5vw, 4.5rem) clamp(2rem, 4vw, 3rem);
+}
+
+/* Hero copy keeps skin.css's centred reading measure so the h1, the lede and
+   the prose below all hang off one left edge. */
+.blog-paper .article-hero h1 {
+  max-width: 24ch;
+  font-family: var(--display);
+  font-size: clamp(2rem, 4.4vw, 3.375rem);
+  line-height: 1.02;
+  letter-spacing: -0.038em;
+  font-weight: 700;
+}
+
+.blog-paper .article-summary {
+  max-width: 52ch;
+  letter-spacing: -0.011em;
+}
+
+.blog-paper .breadcrumb {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.01em;
+}
+
+/* The date, topic and reading time are all measurement, so all mono. */
+.blog-paper .article-meta {
+  gap: 0.5rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.blog-paper .article-meta .article-topic {
+  font-family: var(--body);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gojo-accent);
+}
+
+.blog-paper .article-meta a {
+  font-family: var(--body);
+  font-size: 0.8125rem;
+  color: var(--gojo-accent);
+}
+
+/* The poster becomes a cover band under the hero: page-wide, so it reads as
+   the article's masthead rather than as a card that wandered up the page. */
+.article-poster {
+  max-width: var(--page);
+  margin: clamp(1.75rem, 3.5vw, 2.75rem) auto 0;
+  padding-inline: var(--gutter);
+}
+
+.article-poster .poster {
+  aspect-ratio: 4 / 3;
+  margin-bottom: 0;
+  padding: clamp(1.5rem, 6cqi, 3rem);
+  border-radius: 18px;
+}
+
+.article-poster .poster-lines {
+  font-size: clamp(1.375rem, 8cqi, 2.25rem);
+}
+
+.article-poster .poster-rule {
+  width: 2.5rem;
+  transform: none;
+}
+
+@media (min-width: 48rem) {
+  .article-poster .poster {
+    aspect-ratio: 32 / 7;
+  }
+  .article-poster .poster-lines {
+    font-size: clamp(1.5rem, 4.6cqi, 3.5rem);
+  }
+  .article-poster .poster-rule {
+    width: 3.25rem;
+    height: 4px;
+    transform: none;
+  }
+}
+
+/* Prose keeps skin.css's rules; only the reading measure is restated, because
+   the hero above it is now page-wide rather than measure-wide. */
+.blog-paper .article-main {
+  padding-block: clamp(2rem, 4vw, 3rem) clamp(3.5rem, 7vw, 5.5rem);
+}
+
+.blog-paper .article-body h2,
+.blog-paper .article-body h3 {
+  font-family: var(--display);
+  letter-spacing: -0.03em;
+  font-weight: 700;
+}
+
+.blog-paper .article-body > p {
+  letter-spacing: -0.009em;
+}
+
+/* Continue reading, at the foot of a post. */
+.article-more {
+  max-width: var(--page);
+  margin-inline: auto;
+  padding: clamp(2.5rem, 5vw, 3.5rem) var(--gutter) 0;
+  border-top: 1px solid var(--rule);
+}
+
+.article-more h2 {
+  margin: 0 0 clamp(1.25rem, 2.4vw, 1.75rem);
+  font-family: var(--display);
+  font-size: clamp(1.5rem, 2.6vw, 2rem);
+  line-height: 1.1;
+  letter-spacing: -0.032em;
+  font-weight: 700;
+  color: var(--ink-1);
+}

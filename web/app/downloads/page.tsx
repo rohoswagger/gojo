@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { GojoFooter } from "@/components/gojo-footer";
 import { GojoHeader } from "@/components/gojo-header";
+import { TrackedLink } from "@/components/tracked-link";
 
 const DMG = "https://downloads.trygojo.com/Gojo.dmg";
 const VERSION = "1.4.0";
@@ -87,9 +88,14 @@ export default function DownloadsPage() {
               card.
             </p>
 
-            <a className="btn btn-primary download-btn" href={DMG}>
+            <TrackedLink
+              className="btn btn-primary download-btn"
+              href={DMG}
+              eventName="download_started"
+              eventProperties={{ source: "download_page", app_version: VERSION }}
+            >
               Download for macOS
-            </a>
+            </TrackedLink>
 
             <p className="download-spec">
               Version {VERSION} <span aria-hidden="true">&middot;</span> {SIZE}{" "}

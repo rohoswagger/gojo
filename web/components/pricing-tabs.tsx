@@ -1,5 +1,6 @@
 "use client"
 
+import posthog from "posthog-js"
 import * as React from "react"
 
 /**
@@ -47,6 +48,16 @@ function PricingTabsProvider({
       const tab = tabs[index]
       if (!tab) return
       setActiveId(tab.id)
+      if (
+        process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN &&
+        process.env.NEXT_PUBLIC_POSTHOG_HOST
+      ) {
+        posthog.capture("pricing_plan_selected", {
+          plan_name: tab.name.toLowerCase().replace("-", "_"),
+          device_count: Number.parseInt(tab.device, 10),
+          input_method: moveFocus ? "keyboard" : "pointer",
+        })
+      }
       if (moveFocus) tabRefs.current[index]?.focus()
     },
     [tabs]

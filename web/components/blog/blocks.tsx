@@ -2,6 +2,7 @@ import * as React from "react"
 import Link from "next/link"
 
 import type { Block, Inline } from "@/app/blog/lib"
+import { TrackedLink } from "@/components/tracked-link"
 
 /** Internal routes go through next/link; anything else stays a plain anchor. */
 function Anchor({
@@ -119,15 +120,31 @@ function ArticleCta({ block }: { block: Extract<Block, { type: "cta" }> }) {
       <h2>{block.title}</h2>
       {block.copy ? <p>{block.copy}</p> : null}
       <div className="article-cta-actions">
-        {block.actions.map((action) => (
-          <Anchor
-            key={action.href}
-            href={action.href}
-            className={action.primary ? "btn btn-primary" : "article-cta-link"}
-          >
-            {action.label}
-          </Anchor>
-        ))}
+        {block.actions.map((action) =>
+          action.primary ? (
+            <TrackedLink
+              key={action.href}
+              href={action.href}
+              className="btn btn-primary"
+              eventName="article_cta_clicked"
+              eventProperties={{
+                destination_type: action.href.includes("Gojo.dmg")
+                  ? "download"
+                  : action.href.includes("stripe.com")
+                    ? "checkout"
+                    : action.href.startsWith("/")
+                      ? "internal"
+                      : "external",
+              }}
+            >
+              {action.label}
+            </TrackedLink>
+          ) : (
+            <Anchor key={action.href} href={action.href} className="article-cta-link">
+              {action.label}
+            </Anchor>
+          )
+        )}
       </div>
       {block.trust ? <p className="article-cta-trust">{block.trust}</p> : null}
     </section>

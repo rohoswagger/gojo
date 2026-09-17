@@ -1,0 +1,27 @@
+[
+  {
+    "event_name": "download_started",
+    "event_description": "A visitor clicked a link to download the Gojo macOS disk image.",
+    "file": "components/tracked-link.tsx"
+  },
+  {
+    "event_name": "checkout_started",
+    "event_description": "A visitor clicked a Stripe purchase link for a selected plan.",
+    "file": "components/tracked-link.tsx"
+  },
+  {
+    "event_name": "pricing_plan_selected",
+    "event_description": "A visitor switched between the Personal and Multi-Mac pricing options.",
+    "file": "components/pricing-tabs.tsx"
+  },
+  {
+    "event_name": "article_cta_clicked",
+    "event_description": "A visitor clicked a primary call to action within a blog article.",
+    "file": "components/blog/blocks.tsx"
+  },
+  {
+    "event_name": "feature_comparison_clicked",
+    "event_description": "A visitor opened a feature or competitor comparison from the home page.",
+    "file": "app/page.tsx"
+  }
+]

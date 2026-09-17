@@ -1,6 +1,5 @@
 import type { Metadata } from "next"
 import Image from "next/image"
-import Link from "next/link"
 
 import { ClipboardList, FolderOpen, LayoutGrid, Mic, Music, Sunset } from "lucide-react";
 import { AutoplayVideo } from "@/components/autoplay-video"
@@ -8,6 +7,7 @@ import { GojoFooter } from "@/components/gojo-footer"
 import { GojoHeader } from "@/components/gojo-header"
 import { FeatureShowcase, FeatureShowcaseCard, FeatureShowcaseMedia, FeatureShowcaseFloat, FeatureShowcaseCaption } from "@/components/feature-showcase"
 import { NightShiftComparison } from "@/components/night-shift-comparison"
+import { TrackedLink } from "@/components/tracked-link"
 import {
   PricingTabsProvider,
   PricingTabList,
@@ -145,7 +145,12 @@ export default function Home() {
           </div>
 
           <div className="cta">
-            <a className="btn btn-primary" href="https://downloads.trygojo.com/Gojo.dmg">
+            <TrackedLink
+              className="btn btn-primary"
+              href="https://downloads.trygojo.com/Gojo.dmg"
+              eventName="download_started"
+              eventProperties={{ source: "homepage_hero", app_version: "1.4.0" }}
+            >
               <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                 <path
                   d="M8 1v9m0 0L4.5 6.5M8 10l3.5-3.5M2 13h12"
@@ -156,7 +161,7 @@ export default function Home() {
                 />
               </svg>
               Try it free for 3 days
-            </a>
+            </TrackedLink>
           </div>
           <p className="meta">
             No card, no account &middot; Dictation runs on device &middot; macOS 14 or later
@@ -187,7 +192,7 @@ export default function Home() {
           <FeatureShowcaseCaption icon={<Mic />} title="Dictation that stays on your Mac.">
             Hold a shortcut, speak, and release to insert your words. Download a local model once and dictate offline in any text field.
           </FeatureShowcaseCaption>
-          <Link className="feature-comparison" href="/blog/local-voice-dictation-mac/">Compare with Apple Dictation <span aria-hidden="true">→</span></Link>
+          <TrackedLink className="feature-comparison" href="/blog/local-voice-dictation-mac/" eventName="feature_comparison_clicked" eventProperties={{ feature: "dictation", comparison_type: "native_feature" }}>Compare with Apple Dictation <span aria-hidden="true">→</span></TrackedLink>
         </FeatureShowcaseCard>
         <FeatureShowcaseCard id="act-media">
           <FeatureShowcaseMedia className="aspect-[8/5]">
@@ -204,7 +209,7 @@ export default function Home() {
           <FeatureShowcaseCaption icon={<Music />} title="Your music, out of the way.">
             Skip, shuffle and seek from the notch without bringing your music app forward. Artwork and playback controls follow what is playing.
           </FeatureShowcaseCaption>
-          <Link className="feature-comparison" href="/alternatives/boring-notch/">Compare with Boring Notch <span aria-hidden="true">→</span></Link>
+          <TrackedLink className="feature-comparison" href="/alternatives/boring-notch/" eventName="feature_comparison_clicked" eventProperties={{ feature: "media", comparison_type: "competitor" }}>Compare with Boring Notch <span aria-hidden="true">→</span></TrackedLink>
         </FeatureShowcaseCard>
         <FeatureShowcaseCard id="act-clipboard">
           <FeatureShowcaseMedia className="aspect-[8/5]">
@@ -221,7 +226,7 @@ export default function Home() {
           <FeatureShowcaseCaption icon={<ClipboardList />} title="Find what you copied.">
             Search your clipboard history from the notch. Gojo skips items that supported password managers mark as private.
           </FeatureShowcaseCaption>
-          <Link className="feature-comparison" href="/alternatives/maccy/">Compare with Maccy <span aria-hidden="true">→</span></Link>
+          <TrackedLink className="feature-comparison" href="/alternatives/maccy/" eventName="feature_comparison_clicked" eventProperties={{ feature: "clipboard", comparison_type: "competitor" }}>Compare with Maccy <span aria-hidden="true">→</span></TrackedLink>
         </FeatureShowcaseCard>
         <FeatureShowcaseCard id="act-windows">
           <FeatureShowcaseMedia className="aspect-[8/5]">
@@ -238,7 +243,7 @@ export default function Home() {
           <FeatureShowcaseCaption icon={<LayoutGrid />} title="See it. Switch to it. Snap it.">
             Preview a window before switching, then snap it into halves, thirds or a full-screen layout. Each layout shows its keyboard shortcut.
           </FeatureShowcaseCaption>
-          <Link className="feature-comparison" href="/alternatives/rectangle/">Compare with Rectangle <span aria-hidden="true">→</span></Link>
+          <TrackedLink className="feature-comparison" href="/alternatives/rectangle/" eventName="feature_comparison_clicked" eventProperties={{ feature: "windows", comparison_type: "competitor" }}>Compare with Rectangle <span aria-hidden="true">→</span></TrackedLink>
         </FeatureShowcaseCard>
         <FeatureShowcaseCard id="act-shelf">
           <FeatureShowcaseMedia className="aspect-[8/5]">
@@ -255,7 +260,7 @@ export default function Home() {
           <FeatureShowcaseCaption icon={<FolderOpen />} title="A place to set files down.">
             Drag files to the notch while you move between folders, desktops and apps. Drop them into their destination or send them with AirDrop.
           </FeatureShowcaseCaption>
-          <Link className="feature-comparison" href="/blog/best-file-shelf-apps-mac/">Compare with Dropover <span aria-hidden="true">→</span></Link>
+          <TrackedLink className="feature-comparison" href="/blog/best-file-shelf-apps-mac/" eventName="feature_comparison_clicked" eventProperties={{ feature: "file_shelf", comparison_type: "competitor" }}>Compare with Dropover <span aria-hidden="true">→</span></TrackedLink>
         </FeatureShowcaseCard>
         <FeatureShowcaseCard id="act-display">
           <FeatureShowcaseMedia className="aspect-[8/5]">
@@ -266,7 +271,7 @@ export default function Home() {
           <FeatureShowcaseCaption icon={<Sunset />} title="Warmer screen after dark.">
             Set your screen warmth from the notch and let it follow your schedule. Sunset times are calculated on your Mac using the location you choose.
           </FeatureShowcaseCaption>
-          <Link className="feature-comparison" href="/alternatives/flux/">Compare with f.lux <span aria-hidden="true">→</span></Link>
+          <TrackedLink className="feature-comparison" href="/alternatives/flux/" eventName="feature_comparison_clicked" eventProperties={{ feature: "display", comparison_type: "competitor" }}>Compare with f.lux <span aria-hidden="true">→</span></TrackedLink>
         </FeatureShowcaseCard>
       </FeatureShowcase>
 
@@ -330,9 +335,9 @@ export default function Home() {
                   <p className="plan-copy">
                     Stay flexible with full access on one Mac. Cancel anytime.
                   </p>
-                  <a className="btn btn-monthly" href="https://buy.stripe.com/5kQfZhgUU2gI59o4FMeAg05">
+                  <TrackedLink className="btn btn-monthly" href="https://buy.stripe.com/5kQfZhgUU2gI59o4FMeAg05" eventName="checkout_started" eventProperties={{ billing_period: "monthly", license_scope: "personal", price_usd: 2.99 }}>
                     Choose subscription
-                  </a>
+                  </TrackedLink>
                 </div>
 
                 <div className="plan plan-lifetime">
@@ -353,9 +358,9 @@ export default function Home() {
                   <p className="plan-copy">
                     Pay once and keep Gojo on one Mac, including future updates.
                   </p>
-                  <a className="btn btn-buy" href="https://buy.stripe.com/fZu5kD3446wY31gb4aeAg04">
+                  <TrackedLink className="btn btn-buy" href="https://buy.stripe.com/fZu5kD3446wY31gb4aeAg04" eventName="checkout_started" eventProperties={{ billing_period: "lifetime", license_scope: "personal", price_usd: 9.99 }}>
                     Get lifetime access
-                  </a>
+                  </TrackedLink>
                 </div>
               </PricingPanel>
 
@@ -374,9 +379,9 @@ export default function Home() {
                   <p className="plan-copy">
                     Stay flexible across up to three Macs. Cancel anytime.
                   </p>
-                  <a className="btn btn-monthly" href="https://buy.stripe.com/5kQcN5gUU7B245kgoueAg03">
+                  <TrackedLink className="btn btn-monthly" href="https://buy.stripe.com/5kQcN5gUU7B245kgoueAg03" eventName="checkout_started" eventProperties={{ billing_period: "monthly", license_scope: "multi_mac", price_usd: 4.99 }}>
                     Choose subscription
-                  </a>
+                  </TrackedLink>
                 </div>
 
                 <div className="plan plan-lifetime">
@@ -397,9 +402,9 @@ export default function Home() {
                   <p className="plan-copy">
                     Pay once. Keep every feature and future update on up to three Macs.
                   </p>
-                  <a className="btn btn-buy" href="https://buy.stripe.com/9B64gzfQQ7B26ds1tAeAg02">
+                  <TrackedLink className="btn btn-buy" href="https://buy.stripe.com/9B64gzfQQ7B26ds1tAeAg02" eventName="checkout_started" eventProperties={{ billing_period: "lifetime", license_scope: "multi_mac", price_usd: 19.99 }}>
                     Get lifetime access
-                  </a>
+                  </TrackedLink>
                 </div>
               </PricingPanel>
             </PricingPanels>

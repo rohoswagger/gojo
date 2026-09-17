@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { Section } from "@/components/section";
 import { GojoFooter } from "@/components/gojo-footer";
 import { GojoHeader } from "@/components/gojo-header";
+import { TrackedLink } from "@/components/tracked-link";
 import { Versus } from "@/components/versus";
 import { Check } from "lucide-react";
 import { ComparisonTable } from "@/components/comparison-table";
@@ -183,9 +184,14 @@ export default async function AlternativePage({ params }: Params) {
               <p>Every feature unlocked. No account, no card.</p>
             </div>
             <div className="alt-detail-cta-actions">
-              <a className="btn btn-primary" href="https://downloads.trygojo.com/Gojo.dmg">
+              <TrackedLink
+                className="btn btn-primary"
+                href="https://downloads.trygojo.com/Gojo.dmg"
+                eventName="download_started"
+                eventProperties={{ source: "comparison_page", comparison_slug: alternative.slug }}
+              >
                 Download for macOS
-              </a>
+              </TrackedLink>
               <Link className="btn btn-ghost" href="/#buy">
                 See pricing
               </Link>

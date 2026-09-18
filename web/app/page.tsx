@@ -144,7 +144,11 @@ export default function Home() {
           </div>
 
           <div className="cta">
-            <a className="btn btn-primary" href="https://downloads.trygojo.com/Gojo.dmg">
+            <a
+              className="btn btn-primary"
+              data-funnel-event="download_cta_clicked"
+              href="https://downloads.trygojo.com/Gojo.dmg"
+            >
               <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                 <path
                   d="M8 1v9m0 0L4.5 6.5M8 10l3.5-3.5M2 13h12"
@@ -488,7 +492,12 @@ export default function Home() {
                   <p className="plan-copy">
                     Stay flexible with full access on one Mac. Cancel anytime.
                   </p>
-                  <a className="btn btn-monthly" href="https://buy.stripe.com/5kQfZhgUU2gI59o4FMeAg05">
+                  <a
+                    className="btn btn-monthly"
+                    data-funnel-event="pricing_cta_clicked"
+                    data-funnel-plan="personal_monthly"
+                    href="https://buy.stripe.com/5kQfZhgUU2gI59o4FMeAg05"
+                  >
                     Choose subscription
                   </a>
                 </div>
@@ -511,7 +520,12 @@ export default function Home() {
                   <p className="plan-copy">
                     Pay once and keep Gojo on one Mac, including future updates.
                   </p>
-                  <a className="btn btn-buy" href="https://buy.stripe.com/fZu5kD3446wY31gb4aeAg04">
+                  <a
+                    className="btn btn-buy"
+                    data-funnel-event="pricing_cta_clicked"
+                    data-funnel-plan="personal_lifetime"
+                    href="https://buy.stripe.com/fZu5kD3446wY31gb4aeAg04"
+                  >
                     Get lifetime access
                   </a>
                 </div>
@@ -532,7 +546,12 @@ export default function Home() {
                   <p className="plan-copy">
                     Stay flexible across up to three Macs. Cancel anytime.
                   </p>
-                  <a className="btn btn-monthly" href="https://buy.stripe.com/5kQcN5gUU7B245kgoueAg03">
+                  <a
+                    className="btn btn-monthly"
+                    data-funnel-event="pricing_cta_clicked"
+                    data-funnel-plan="multi_monthly"
+                    href="https://buy.stripe.com/5kQcN5gUU7B245kgoueAg03"
+                  >
                     Choose subscription
                   </a>
                 </div>
@@ -555,7 +574,12 @@ export default function Home() {
                   <p className="plan-copy">
                     Pay once. Keep every feature and future update on up to three Macs.
                   </p>
-                  <a className="btn btn-buy" href="https://buy.stripe.com/9B64gzfQQ7B26ds1tAeAg02">
+                  <a
+                    className="btn btn-buy"
+                    data-funnel-event="pricing_cta_clicked"
+                    data-funnel-plan="multi_lifetime"
+                    href="https://buy.stripe.com/9B64gzfQQ7B26ds1tAeAg02"
+                  >
                     Get lifetime access
                   </a>
                 </div>

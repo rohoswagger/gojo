@@ -34,6 +34,8 @@ export function GojoFooter() {
         { href: "/#buy", label: "Pricing" },
         { href: "/blog/", label: "Blog" },
         { href: "/downloads/", label: "Download for macOS" },
+        { href: "/privacy/", label: "Privacy" },
+        { href: "/terms/", label: "Terms" },
         { href: "https://license.trygojo.com/forgot-license", label: "Lost your license key?" },
         { href: "https://github.com/rohoswagger/gojo", label: "GitHub" },
       ],

@@ -28,6 +28,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const paths = [
     "/",
     "/downloads/",
+    "/privacy/",
+    "/terms/",
     "/blog/",
     ...BLOG_SLUGS.map((s) => `/blog/${s}/`),
     "/alternatives/",

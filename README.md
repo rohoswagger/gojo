@@ -26,19 +26,19 @@ Gojo expands the dead space around your MacBook's notch into a focused, tab-driv
 
 Stage strip of on-screen apps with real app icons, a live monitor preview, and six snap actions (left / right / top / bottom halves, fill, zoom). Cross-app: click any window, snap it. Every chip surfaces its keyboard shortcut underneath.
 
-<p align="center"><img src="./docs/screenshots/windows-tab.png" alt="Windows tab" width="640"></p>
+<p align="center"><img src="./web/public/screenshots/windows-tab.png" alt="Windows tab" width="640"></p>
 
 ### Music
 
 Now-playing surface that follows whatever's playing — Apple Music, Spotify, browser audio. Scrubs, switches, and renders artwork in the notch's album-art slot.
 
-<p align="center"><img src="./docs/screenshots/music.png" alt="Music tab" width="640"></p>
+<p align="center"><img src="./web/public/screenshots/music.png" alt="Music tab" width="640"></p>
 
 ### Clipboard history
 
 Recent clipboard items, browsable from the notch. Pin entries, search, paste back into the focused app. Automatically excludes password managers.
 
-<!-- <p align="center"><img src="./docs/screenshots/clipboard.png" alt="Clipboard tab" width="640"></p> -->
+<!-- <p align="center"><img src="./web/public/screenshots/clipboard.png" alt="Clipboard tab" width="640"></p> -->
 
 ### Dictation
 
@@ -52,7 +52,7 @@ Gojo refuses password fields and cancels insertion if you move to another field 
 
 Drop files into the notch from anywhere; pick them up later from any other app. Lightweight staging without a Finder tab open.
 
-<!-- <p align="center"><img src="./docs/screenshots/shelf.png" alt="Shelf tab" width="640"></p> -->
+<!-- <p align="center"><img src="./web/public/screenshots/shelf.png" alt="Shelf tab" width="640"></p> -->
 
 ### Night shift
 
@@ -66,7 +66,7 @@ Next-up events and reminders glanceable when the notch opens. Per-calendar and p
 
 Quick selfie view for camera-positioning before a call.
 
-<!-- <p align="center"><img src="./docs/screenshots/webcam.png" alt="Webcam mirror" width="640"></p> -->
+<!-- <p align="center"><img src="./web/public/screenshots/webcam.png" alt="Webcam mirror" width="640"></p> -->
 
 ### Battery
 

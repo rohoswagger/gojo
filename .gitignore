@@ -71,6 +71,7 @@ AuthKey_*.p8
 # Local tooling / ephemeral
 .worktrees/
 .playwright-mcp/
+marketing/heartbeat/
 /*.png
 .impeccable/review/
 

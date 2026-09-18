@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build && node scripts/verify-marketing-links.mjs",
+    "build": "next build && node scripts/verify-marketing-links.mjs && node scripts/verify-funnel-analytics.mjs",
     "verify:marketing": "node scripts/verify-marketing-links.mjs",
+    "verify:funnel-analytics": "node scripts/verify-funnel-analytics.mjs",
     "start": "next start",
     "lint": "eslint"
   },

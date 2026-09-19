@@ -110,12 +110,51 @@ const pricingTabs = [
   { id: "pricing-tab-multi", controls: "pricing-panel-multi", name: "Multi-Mac", device: "3 Macs" },
 ]
 
+const faqItems = [
+  {
+    question: "What is Gojo?",
+    answer:
+      "Gojo is a native macOS 14+ app that turns the MacBook notch into a workspace for dictation, window controls, clipboard history, a file shelf, media controls, and display tools.",
+  },
+  {
+    question: "Does Gojo keep dictation on my Mac?",
+    answer:
+      "Gojo's on-device dictation options process audio locally on your Mac and type into the text field you are already using. Optional connected services are separate features you choose to enable.",
+  },
+  {
+    question: "Does Gojo work on more than one Mac?",
+    answer: "Yes. Personal plans cover one Mac. Multi-Mac plans cover up to three Macs.",
+  },
+  {
+    question: "Is there a free trial?",
+    answer: "Yes. You can try Gojo for three days without a card.",
+  },
+  {
+    question: "Can I buy Gojo once instead of subscribing?",
+    answer:
+      "Yes. Gojo offers both monthly subscriptions and one-time lifetime plans for Personal and Multi-Mac access.",
+  },
+]
+
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqItems.map(({ question, answer }) => ({
+    "@type": "Question",
+    name: question,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: answer,
+    },
+  })),
+}
+
 export default function Home() {
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify([jsonLd, faqJsonLd]) }}
       />
 
       <div className="shell hero-shell">
@@ -586,6 +625,26 @@ export default function Home() {
               </PricingPanel>
             </PricingPanels>
           </PricingTabsProvider>
+        </div>
+      </section>
+
+      <section className="content-band" aria-labelledby="faq-heading">
+        <div className="wrap">
+          <p className="eyebrow">Questions, answered</p>
+          <h2 id="faq-heading">The details before you download.</h2>
+          <p className="section-lede">
+            Gojo is designed to be useful without becoming another app you have to manage.
+          </p>
+          <div className="mt-8 divide-y border-y border-(--rule)">
+            {faqItems.map((item) => (
+              <details key={item.question} className="group py-5">
+                <summary className="cursor-pointer pr-8 font-medium text-(--ink-1)">
+                  {item.question}
+                </summary>
+                <p className="mt-3 max-w-3xl text-(--ink-2)">{item.answer}</p>
+              </details>
+            ))}
+          </div>
         </div>
       </section>
 

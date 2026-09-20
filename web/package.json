@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build && node --test scripts/verify-www-canonical-redirect.test.mjs && node scripts/verify-marketing-links.mjs && node scripts/verify-funnel-analytics.mjs && node scripts/verify-legal-pages.mjs",
+    "build": "next build && node --test scripts/verify-www-canonical-redirect.test.mjs && node scripts/verify-marketing-links.mjs && node scripts/verify-funnel-analytics.mjs && node scripts/verify-legal-pages.mjs && node scripts/verify-homepage-faq.mjs",
     "verify:canonical-host": "node --test scripts/verify-www-canonical-redirect.test.mjs",
     "verify:marketing": "node scripts/verify-marketing-links.mjs",
     "verify:funnel-analytics": "node scripts/verify-funnel-analytics.mjs",
     "verify:legal-pages": "node scripts/verify-legal-pages.mjs",
+    "verify:homepage-faq": "node scripts/verify-homepage-faq.mjs",
     "start": "next start",
     "lint": "eslint"
   },

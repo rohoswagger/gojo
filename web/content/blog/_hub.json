@@ -82,7 +82,7 @@
         "@type": "ItemList",
         "@id": "https://trygojo.com/blog/#posts",
         "name": "Gojo blog posts",
-        "numberOfItems": 32,
+        "numberOfItems": 33,
         "itemListElement": [
           {
             "@type": "ListItem",
@@ -275,6 +275,12 @@
             "position": 32,
             "url": "https://trygojo.com/blog/best-local-dictation-apps-mac/",
             "name": "Best local dictation apps for Mac in 2026"
+          },
+          {
+            "@type": "ListItem",
+            "position": 33,
+            "url": "https://trygojo.com/blog/best-productivity-apps-mac/",
+            "name": "Best productivity apps for Mac in 2026"
           }
         ]
       }
@@ -290,6 +296,13 @@
     "title": "Published notes"
   },
   "posts": [
+    {
+      "slug": "best-productivity-apps-mac",
+      "kicker": "Roundup",
+      "date": "September 20, 2026",
+      "title": "Best productivity apps for Mac in 2026",
+      "summary": "A lean Mac productivity shortlist for keyboard commands, windows, clipboard history, file staging, and daily controls."
+    },
     {
       "slug": "best-notchnook-alternatives",
       "kicker": "Roundup",

@@ -99,6 +99,7 @@ export type BlogHub = PostMeta & {
 const CONTENT_DIR = path.join(process.cwd(), "content", "blog");
 
 export const POST_SLUGS = [
+  "best-productivity-apps-mac",
   "best-mac-clipboard-manager",
   "best-mac-dictation-for-developers",
   "best-mac-dictation-for-writers",

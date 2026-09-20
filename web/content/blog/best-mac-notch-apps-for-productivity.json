@@ -18,8 +18,8 @@
     "twitter:image": "https://trygojo.com/assets/og.jpg"
   },
   "article": {
-    "published_time": "2026-09-04",
-    "modified_time": "2026-09-04",
+    "published_time": "2026-08-19",
+    "modified_time": "2026-08-19",
     "section": "macOS utilities",
     "author": "Gojo",
     "robots": "index,follow,max-image-preview:large"
@@ -31,8 +31,8 @@
         "@type": "BlogPosting",
         "headline": "Best Mac notch apps for productivity in 2026",
         "url": "https://trygojo.com/blog/best-mac-notch-apps-for-productivity/",
-        "datePublished": "2026-09-04",
-        "dateModified": "2026-09-04",
+        "datePublished": "2026-08-19",
+        "dateModified": "2026-08-19",
         "author": {
           "@type": "Organization",
           "name": "Gojo",
@@ -113,10 +113,10 @@
     ]
   },
   "hero": {
-    "label": "September 4, 2026",
+    "label": "August 19, 2026",
     "title": "Best Mac notch apps for productivity in 2026",
     "summary": "The best notch app is the one that helps during a real workday. This comparison follows the handoffs between writing, calls, files, windows, music, and system checks instead of ranking animation or feature count alone.",
-    "meta": ["Checked September 4, 2026", "11 min read"],
+    "meta": ["Checked August 19, 2026", "11 min read"],
     "breadcrumb": [
       { "label": "Home", "href": "/" },
       { "label": "Blog", "href": "/blog/" }
@@ -140,7 +140,7 @@
       "content": [
         {
           "t": "text",
-          "s": "Disclosure: Gojo publishes this category guide. We checked first-party pages and repositories on September 4, 2026. The recommendations describe product emphasis and published capabilities. They are not independent usability scores. Current prices, requirements, and supported features can change."
+          "s": "Disclosure: Gojo publishes this category guide. We checked first-party pages and repositories on August 19, 2026. The recommendations describe product emphasis and published capabilities. They are not independent usability scores. Current prices, requirements, and supported features can change."
         }
       ]
     },
@@ -166,7 +166,7 @@
         "Day-in-the-life strength",
         "Key workflows",
         "Notchless and displays",
-        "Price checked September 4, 2026"
+        "Price checked August 19, 2026"
       ],
       "rows": [
         [
@@ -368,7 +368,7 @@
     {
       "type": "paragraph",
       "content": [
-        { "t": "text", "s": "Primary sources checked September 4, 2026: " },
+        { "t": "text", "s": "Primary sources checked August 19, 2026: " },
         {
           "t": "link",
           "s": "Gojo product materials",

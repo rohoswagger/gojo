@@ -18,8 +18,8 @@
     "twitter:image": "https://trygojo.com/assets/og.jpg"
   },
   "article": {
-    "published_time": "2026-09-04",
-    "modified_time": "2026-09-04",
+    "published_time": "2026-08-28",
+    "modified_time": "2026-08-28",
     "section": "macOS utilities",
     "author": "Gojo",
     "robots": "index,follow,max-image-preview:large"
@@ -31,8 +31,8 @@
         "@type": "BlogPosting",
         "headline": "Best window management tools for Mac in 2026",
         "url": "https://trygojo.com/blog/best-window-management-tools-mac/",
-        "datePublished": "2026-09-04",
-        "dateModified": "2026-09-04",
+        "datePublished": "2026-08-28",
+        "dateModified": "2026-08-28",
         "author": {
           "@type": "Organization",
           "name": "Gojo",
@@ -107,10 +107,10 @@
     ]
   },
   "hero": {
-    "label": "September 4, 2026",
+    "label": "August 28, 2026",
     "title": "Best window management tools for Mac in 2026",
     "summary": "Rectangle, Magnet, BetterTouchTool, Raycast, and Gojo all help organize Mac windows, but they begin from different places: dedicated snapping, custom input, command search, or an integrated notch workspace.",
-    "meta": ["Checked September 4, 2026", "10 min read"],
+    "meta": ["Checked August 28, 2026", "10 min read"],
     "breadcrumb": [
       { "label": "Home", "href": "/" },
       { "label": "Blog", "href": "/blog/" }
@@ -133,7 +133,7 @@
       "content": [
         {
           "t": "text",
-          "s": "Disclosure: Gojo publishes this comparison. Official product pages and documentation were checked on September 4, 2026. A window manager may require Accessibility permission for its actions. Pricing, supported layouts, and permission behavior can change by release or region."
+          "s": "Disclosure: Gojo publishes this comparison. Official product pages and documentation were checked on August 28, 2026. A window manager may require Accessibility permission for its actions. Pricing, supported layouts, and permission behavior can change by release or region."
         }
       ]
     },
@@ -159,7 +159,7 @@
         "Best for",
         "Window controls",
         "Keyboard and permissions",
-        "Price or scope checked September 4, 2026"
+        "Price or scope checked August 28, 2026"
       ],
       "rows": [
         [
@@ -333,7 +333,7 @@
     {
       "type": "paragraph",
       "content": [
-        { "t": "text", "s": "Primary sources checked September 4, 2026: " },
+        { "t": "text", "s": "Primary sources checked August 28, 2026: " },
         {
           "t": "link",
           "s": "Gojo product materials",

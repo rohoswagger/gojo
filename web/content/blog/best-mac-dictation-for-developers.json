@@ -18,8 +18,8 @@
     "twitter:image": "https://trygojo.com/assets/og.jpg"
   },
   "article": {
-    "published_time": "2026-09-04",
-    "modified_time": "2026-09-04",
+    "published_time": "2026-08-15",
+    "modified_time": "2026-08-15",
     "section": "Mac dictation",
     "author": "Gojo",
     "robots": "index,follow,max-image-preview:large"
@@ -31,8 +31,8 @@
         "@type": "BlogPosting",
         "headline": "Best voice dictation for developers on Mac in 2026",
         "url": "https://trygojo.com/blog/best-mac-dictation-for-developers/",
-        "datePublished": "2026-09-04",
-        "dateModified": "2026-09-04",
+        "datePublished": "2026-08-15",
+        "dateModified": "2026-08-15",
         "author": {
           "@type": "Organization",
           "name": "Gojo",
@@ -84,13 +84,22 @@
     ]
   },
   "hero": {
-    "label": "September 4, 2026",
+    "label": "August 15, 2026",
     "title": "Best voice dictation for developers on Mac in 2026",
     "summary": "Voice works well for the words around code. For the code itself, symbols, target focus, and execution make the last review non-negotiable.",
-    "meta": ["Checked September 4, 2026", "9 min read"],
+    "meta": [
+      "Checked August 15, 2026",
+      "9 min read"
+    ],
     "breadcrumb": [
-      { "label": "Home", "href": "/" },
-      { "label": "Blog", "href": "/blog/" }
+      {
+        "label": "Home",
+        "href": "/"
+      },
+      {
+        "label": "Blog",
+        "href": "/blog/"
+      }
     ]
   },
   "blocks": [
@@ -110,7 +119,7 @@
       "content": [
         {
           "t": "text",
-          "s": "Disclosure: Gojo publishes this comparison. Official product documentation was observed on September 4, 2026. This is workflow guidance, not a claim that speech recognition makes code or shell commands safe to execute."
+          "s": "Disclosure: Gojo publishes this comparison. Official product documentation was observed on August 15, 2026. This is workflow guidance, not a claim that speech recognition makes code or shell commands safe to execute."
         }
       ]
     },
@@ -264,7 +273,11 @@
     },
     {
       "type": "table",
-      "head": ["Task", "Recommended route", "Reason"],
+      "head": [
+        "Task",
+        "Recommended route",
+        "Reason"
+      ],
       "rows": [
         [
           "Write an issue, documentation section, or AI prompt with local transcription",
@@ -343,7 +356,11 @@
       "title": "Dictate the explanation, then review the exact command",
       "copy": "Gojo is built for local push-to-talk text in the active Mac field. Use it for the prose around your work, and keep execution deliberate.",
       "actions": [
-        { "label": "Download Gojo", "href": "/downloads/", "primary": true },
+        {
+          "label": "Download Gojo",
+          "href": "/downloads/",
+          "primary": true
+        },
         {
           "label": "Read the dictation architecture",
           "href": "/dictation-architecture.md",

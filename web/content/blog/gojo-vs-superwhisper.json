@@ -18,8 +18,8 @@
     "twitter:image": "https://trygojo.com/assets/og.jpg"
   },
   "article": {
-    "published_time": "2026-09-04",
-    "modified_time": "2026-09-04",
+    "published_time": "2026-09-08",
+    "modified_time": "2026-09-08",
     "section": "Mac dictation",
     "author": "Gojo",
     "robots": "index,follow,max-image-preview:large"
@@ -34,8 +34,8 @@
         "headline": "Gojo vs Superwhisper: local Mac dictation compared",
         "description": "Gojo favors a focused local dictation path into the captured text field. Superwhisper offers independently configurable voice and language-model stages.",
         "image": ["https://trygojo.com/assets/og.jpg"],
-        "datePublished": "2026-09-04",
-        "dateModified": "2026-09-04",
+        "datePublished": "2026-09-08",
+        "dateModified": "2026-09-08",
         "inLanguage": "en-US",
         "articleSection": "Mac dictation",
         "author": {
@@ -123,10 +123,10 @@
     ]
   },
   "hero": {
-    "label": "September 4, 2026",
+    "label": "September 8, 2026",
     "title": "Gojo vs Superwhisper: local Mac dictation compared",
     "summary": "Gojo keeps the path narrow: speak, transcribe on the Mac, and return final text to the field you started in. Superwhisper gives you more control over what happens after transcription.",
-    "meta": ["Checked September 4, 2026", "8 min read"],
+    "meta": ["Checked September 8, 2026", "8 min read"],
     "breadcrumb": [
       { "label": "Home", "href": "/" },
       { "label": "Blog", "href": "/blog/" }
@@ -148,7 +148,7 @@
       "content": [
         {
           "t": "text",
-          "s": "Disclosure: Gojo publishes this comparison. We reviewed Gojo's public dictation architecture and Superwhisper's official security documentation on September 4, 2026. Features and model choices can change."
+          "s": "Disclosure: Gojo publishes this comparison. We reviewed Gojo's public dictation architecture and Superwhisper's official security documentation on September 8, 2026. Features and model choices can change."
         }
       ]
     },
@@ -307,7 +307,7 @@
     {
       "type": "paragraph",
       "content": [
-        { "t": "text", "s": "Official sources checked September 4, 2026: " },
+        { "t": "text", "s": "Official sources checked September 8, 2026: " },
         {
           "t": "link",
           "s": "Gojo local dictation architecture",

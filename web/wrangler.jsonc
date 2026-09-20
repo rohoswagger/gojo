@@ -7,7 +7,11 @@
   "main": "worker.mjs",
   "assets": {
     "directory": "./out",
-    "not_found_handling": "404-page"
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    // Static assets are otherwise served before the Worker, which would skip
+    // the canonical-host redirect for every existing page.
+    "run_worker_first": true
   },
   // Cloudflare manages the DNS records for these. `public/_redirects` keeps
   // serving /appcast.xml -> updates.trygojo.com, which installs <=1.3.0 still

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { readFile } from "node:fs/promises"
 import test from "node:test"
 import worker from "../worker.mjs"
 
@@ -27,4 +28,11 @@ test("serves apex requests through the static-assets binding", async () => {
 
   assert.equal(response.status, 200)
   assert.equal(await response.text(), "asset response")
+})
+
+test("runs the worker before static assets so existing www pages redirect", async () => {
+  const config = await readFile(new URL("../wrangler.jsonc", import.meta.url), "utf8")
+
+  assert.match(config, /"binding"\s*:\s*"ASSETS"/)
+  assert.match(config, /"run_worker_first"\s*:\s*true/)
 })

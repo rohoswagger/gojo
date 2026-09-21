@@ -32,7 +32,7 @@ Before opening:
 
 ## Screenshots / recording
 
-<!-- For UI changes, drag images or video here. -->
+<!-- Required for every PR. Follow .agents/skills/pr-web-screenshots/SKILL.md and attach branch-built web UI evidence here. -->
 
 ## Checklist
 

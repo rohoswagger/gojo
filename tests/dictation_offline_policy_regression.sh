@@ -59,7 +59,7 @@ require_match \
 
 require_match \
   Gojo/Dictation/ParakeetUnifiedDictationTranscriber.swift \
-  'private\s+func\s+loadManager\(\)\s+async\s+throws\s+->\s+UnifiedAsrManager.*?resolvePinnedModelFolder\(\s*allowDownload:\s*DictationModelRequest\.transcription\.allowsDownload\s*\).*?manager\.loadModels\(from:\s*modelFolder\)' \
+  'private\s+func\s+loadManager\(\)\s+async\s+throws\s+->\s+StreamingUnifiedAsrManager.*?resolvePinnedModelFolder\(\s*allowDownload:\s*DictationModelRequest\.transcription\.allowsDownload\s*\).*?manager\.loadModels\(from:\s*modelFolder\)' \
   "Parakeet Unified transcription loads must use the no-download request policy"
 
 require_order \

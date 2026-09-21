@@ -1,16 +1,24 @@
 @preconcurrency import ArgmaxCore
+@preconcurrency import AVFoundation
 @preconcurrency import FluidAudio
 import CryptoKit
 import Foundation
 
-actor ParakeetUnifiedDictationTranscriber: LocalDictationTranscribing {
-    private var manager: UnifiedAsrManager?
+actor ParakeetUnifiedDictationTranscriber: LocalDictationTranscribing, DictationStreamingTranscribing {
+    private struct StreamingSession {
+        let id: UUID
+        let continuation: AsyncStream<(samples: [Float], sampleRate: Double)>.Continuation
+        let consumeTask: Task<Void, Never>
+    }
+
+    private var manager: StreamingUnifiedAsrManager?
     private var validatedModelFolder: URL?
-    private var loadTask: (generation: UInt, task: Task<UnifiedAsrManager, Error>)?
+    private var loadTask: (generation: UInt, task: Task<StreamingUnifiedAsrManager, Error>)?
     private var loadGeneration: UInt = 0
     private var transcriptionTask: (generation: UInt, task: Task<String, Error>)?
     private var activeTranscriptionGeneration: UInt?
     private var transcriptionGeneration: UInt = 0
+    private var streamingSession: StreamingSession?
 
     init() {
         ModelHub.offlineMode = true
@@ -50,6 +58,9 @@ actor ParakeetUnifiedDictationTranscriber: LocalDictationTranscribing {
         guard activeTranscriptionGeneration == nil else {
             throw ParakeetDictationError.transcriptionAlreadyRunning
         }
+        guard streamingSession == nil else {
+            throw ParakeetDictationError.transcriptionAlreadyRunning
+        }
         guard isModelInstalled() else {
             throw WhisperKitDictationError.modelNotInstalled
         }
@@ -70,7 +81,11 @@ actor ParakeetUnifiedDictationTranscriber: LocalDictationTranscribing {
         try Task.checkCancellation()
         guard activeTranscriptionGeneration == generation else { throw CancellationError() }
         let task = Task<String, Error> {
-            try await manager.transcribe(audio.samples)
+            try await manager.reset()
+            try await manager.appendAudio(
+                Self.pcmBuffer(from: audio.samples, sampleRate: DictationAudio.transcriptionSampleRate)
+            )
+            return try await manager.finish()
         }
         transcriptionTask = (generation, task)
         return try await task.value
@@ -81,6 +96,7 @@ actor ParakeetUnifiedDictationTranscriber: LocalDictationTranscribing {
     }
 
     func cancelTranscription() async {
+        await cancelStreamingSession()
         transcriptionGeneration &+= 1
         let cancelledGeneration = activeTranscriptionGeneration
         let cancelledTranscription = transcriptionTask
@@ -94,6 +110,65 @@ actor ParakeetUnifiedDictationTranscriber: LocalDictationTranscribing {
         if transcriptionTask?.generation == cancelledTranscription?.generation {
             transcriptionTask = nil
         }
+    }
+
+    func beginStreamingSession() async -> (@Sendable ([Float], Double) -> Void)? {
+        guard activeTranscriptionGeneration == nil else { return nil }
+        if streamingSession != nil {
+            await cancelStreamingSession()
+        }
+        guard let manager else {
+            Task { await self.prepare() }
+            return nil
+        }
+        do {
+            try await manager.reset()
+        } catch {
+            return nil
+        }
+
+        let (stream, continuation) = AsyncStream<(samples: [Float], sampleRate: Double)>.makeStream()
+        let id = UUID()
+        let consumeTask = Task { [weak self] in
+            for await chunk in stream {
+                await self?.consumeStreamChunk(chunk.samples, sampleRate: chunk.sampleRate, sessionID: id)
+            }
+        }
+        streamingSession = StreamingSession(id: id, continuation: continuation, consumeTask: consumeTask)
+        return { samples, sampleRate in
+            continuation.yield((samples, sampleRate))
+        }
+    }
+
+    private func consumeStreamChunk(_ samples: [Float], sampleRate: Double, sessionID: UUID) async {
+        guard streamingSession?.id == sessionID, let manager else { return }
+        guard let buffer = try? Self.pcmBuffer(from: samples, sampleRate: sampleRate) else { return }
+        try? await manager.appendAudio(buffer)
+        try? await manager.processBufferedAudio()
+    }
+
+    func finishStreamingSession() async throws -> String {
+        guard let session = streamingSession else {
+            throw ParakeetDictationError.streamingSessionUnavailable
+        }
+        // Drain queued chunks before the session guard in consumeStreamChunk
+        // goes nil, or the utterance tail never reaches the model.
+        session.continuation.finish()
+        await session.consumeTask.value
+        streamingSession = nil
+        guard let manager else {
+            throw ParakeetDictationError.streamingSessionUnavailable
+        }
+        return try await manager.finish()
+    }
+
+    func cancelStreamingSession() async {
+        guard let session = streamingSession else { return }
+        streamingSession = nil
+        session.continuation.finish()
+        session.consumeTask.cancel()
+        _ = await session.consumeTask.value
+        try? await manager?.reset()
     }
 
     func unload() async {
@@ -111,17 +186,17 @@ actor ParakeetUnifiedDictationTranscriber: LocalDictationTranscribing {
         manager = nil
     }
 
-    private func loadManager() async throws -> UnifiedAsrManager {
+    private func loadManager() async throws -> StreamingUnifiedAsrManager {
         if let manager { return manager }
         if let loadTask { return try await loadTask.task.value }
 
         loadGeneration &+= 1
         let generation = loadGeneration
-        let task = Task<UnifiedAsrManager, Error> {
+        let task = Task<StreamingUnifiedAsrManager, Error> {
             let modelFolder = try await Self.resolvePinnedModelFolder(
                 allowDownload: DictationModelRequest.transcription.allowsDownload
             )
-            let manager = UnifiedAsrManager(encoderPrecision: .int8)
+            let manager = StreamingUnifiedAsrManager(encoderPrecision: .int8)
             try await manager.loadModels(from: modelFolder)
             return manager
         }
@@ -148,11 +223,11 @@ actor ParakeetUnifiedDictationTranscriber: LocalDictationTranscribing {
     private static let repository = "FluidInference/parakeet-unified-en-0.6b-coreml"
     private static let revision = "4252711f6f060f9a2f91e5f081a806d7f45eebd8"
     private static let cachedModelFolderKey =
-        "gojo.dictation.modelFolder.parakeet-unified-en-0.6b.\(revision)"
-    private static let maximumModelBytes: UInt64 = 614_080_920
+        "gojo.dictation.modelFolder.parakeet-unified-en-0.6b.\(revision).streaming"
+    private static let maximumModelBytes: UInt64 = 609_439_216
 
     private static let downloadPatterns = [
-        "parakeet_unified_encoder_int8.mlmodelc/*",
+        "parakeet_unified_encoder_streaming_70_13_13_int8.mlmodelc/*",
         "parakeet_unified_decoder.mlmodelc/*",
         "parakeet_unified_joint_decision_single_step.mlmodelc/*",
         "vocab.json",
@@ -165,10 +240,10 @@ actor ParakeetUnifiedDictationTranscriber: LocalDictationTranscribing {
         "parakeet_unified_decoder.mlmodelc/coremldata.bin": "ce99c4488840fc463d59f8d4d6d2a9e8ceae8138ead51e3c265dde4d2ba4a0e9",
         "parakeet_unified_decoder.mlmodelc/model.mil": "6e60965b89c93943aa2be2d991c2461108145851fde05e1d048223a32d4cb20d",
         "parakeet_unified_decoder.mlmodelc/weights/weight.bin": "96f990461a5986d5e7309ad1a0f36084fbf0f4b28aec35948f8b8d0dcbf8599e",
-        "parakeet_unified_encoder_int8.mlmodelc/analytics/coremldata.bin": "57e116a9d5765e39c0cdf754137ab744ddae34d9c6d68a5fdcad6600ae3a7b6b",
-        "parakeet_unified_encoder_int8.mlmodelc/coremldata.bin": "54f533d30343d5e62b324a0691e4c262a6768b07b6e88e7aa14c617a2baba8a3",
-        "parakeet_unified_encoder_int8.mlmodelc/model.mil": "c1c5d71c6cbf4d35bba08458746bde3640da7b1b444e1229a269393a58222c10",
-        "parakeet_unified_encoder_int8.mlmodelc/weights/weight.bin": "f984b81590a4deae041ae20fbab8981c2d2a5b528b2ac81fae81c432633535c6",
+        "parakeet_unified_encoder_streaming_70_13_13_int8.mlmodelc/analytics/coremldata.bin": "ffbbab2cbdc941dd88fc41c41d3f7ac61cc31475a17a1cb06ed7f3b0b25c611b",
+        "parakeet_unified_encoder_streaming_70_13_13_int8.mlmodelc/coremldata.bin": "e1ffdae252dcc276ff2964ee2259a63d9c519b8413302609300d692f6a79b824",
+        "parakeet_unified_encoder_streaming_70_13_13_int8.mlmodelc/model.mil": "64a4bdf20760025c8df072872b9aa71fdbce938f469c976fda690354424cc93c",
+        "parakeet_unified_encoder_streaming_70_13_13_int8.mlmodelc/weights/weight.bin": "259e5818cf4acee1155409a048ec408eecd8cfc27ade04ba18bca243398cc9b6",
         "parakeet_unified_joint_decision_single_step.mlmodelc/analytics/coremldata.bin": "163877ad14af97ec4107cd854fd1c6d336ee5d40ad25a657cc764fb763f452f5",
         "parakeet_unified_joint_decision_single_step.mlmodelc/coremldata.bin": "68a081570a48b52ec9379e153bd56748a5408a50be16767601563f231eaeff03",
         "parakeet_unified_joint_decision_single_step.mlmodelc/model.mil": "03c21096090bcd0b71c896c5ae0eb815db31a91c6676f572a7868eee4299abe3",
@@ -211,6 +286,7 @@ actor ParakeetUnifiedDictationTranscriber: LocalDictationTranscribing {
             throw WhisperKitDictationError.modelRemovalFailed
         }
         let topLevelItems = [
+            "parakeet_unified_encoder_streaming_70_13_13_int8.mlmodelc",
             "parakeet_unified_encoder_int8.mlmodelc",
             "parakeet_unified_decoder.mlmodelc",
             "parakeet_unified_joint_decision_single_step.mlmodelc",
@@ -231,6 +307,11 @@ actor ParakeetUnifiedDictationTranscriber: LocalDictationTranscribing {
     private static func resolvePinnedModelFolder(allowDownload: Bool) async throws -> URL {
         if let cachedURL = cachedModelFolder() {
             if (try? validateModel(at: cachedURL)) == true {
+                // Reclaims disk space from the pre-streaming offline encoder,
+                // which the streaming model no longer needs.
+                try? FileManager.default.removeItem(
+                    at: cachedURL.appendingPathComponent("parakeet_unified_encoder_int8.mlmodelc")
+                )
                 return cachedURL
             }
             clearCachedModelFolder()
@@ -251,6 +332,9 @@ actor ParakeetUnifiedDictationTranscriber: LocalDictationTranscribing {
             throw WhisperKitDictationError.modelUnavailable(repository)
         }
         _ = try validateModel(at: snapshot)
+        try? FileManager.default.removeItem(
+            at: snapshot.appendingPathComponent("parakeet_unified_encoder_int8.mlmodelc")
+        )
         UserDefaults.standard.set(snapshot.path, forKey: cachedModelFolderKey)
         return snapshot
     }
@@ -281,12 +365,34 @@ actor ParakeetUnifiedDictationTranscriber: LocalDictationTranscribing {
         }
         return hasher.finalize().map { String(format: "%02x", $0) }.joined()
     }
+
+    private static func pcmBuffer(from samples: [Float], sampleRate: Double) throws -> AVAudioPCMBuffer {
+        guard let format = AVAudioFormat(
+            commonFormat: .pcmFormatFloat32,
+            sampleRate: sampleRate,
+            channels: 1,
+            interleaved: false
+        ), let buffer = AVAudioPCMBuffer(
+            pcmFormat: format,
+            frameCapacity: AVAudioFrameCount(samples.count)
+        ) else {
+            throw ParakeetDictationError.invalidSampleRate(sampleRate)
+        }
+        buffer.frameLength = buffer.frameCapacity
+        if let destination = buffer.floatChannelData?[0], !samples.isEmpty {
+            samples.withUnsafeBufferPointer { source in
+                destination.update(from: source.baseAddress!, count: samples.count)
+            }
+        }
+        return buffer
+    }
 }
 
 enum ParakeetDictationError: LocalizedError {
     case integrityFailed(String)
     case invalidSampleRate(Double)
     case transcriptionAlreadyRunning
+    case streamingSessionUnavailable
 
     var errorDescription: String? {
         switch self {
@@ -296,6 +402,8 @@ enum ParakeetDictationError: LocalizedError {
             return "The local speech model expected 16 kHz audio but received \(Int(sampleRate)) Hz."
         case .transcriptionAlreadyRunning:
             return "A local transcription is already running."
+        case .streamingSessionUnavailable:
+            return "No live transcription session is active."
         }
     }
 }

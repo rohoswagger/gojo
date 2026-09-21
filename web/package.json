@@ -4,8 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build && node --test scripts/verify-www-canonical-redirect.test.mjs && node scripts/verify-marketing-links.mjs && node scripts/verify-funnel-analytics.mjs && node scripts/verify-legal-pages.mjs && node scripts/verify-homepage-faq.mjs && node scripts/verify-sitemap-dates.mjs",
+    "build": "next build && node --test scripts/verify-www-canonical-redirect.test.mjs && node scripts/verify-marketing-links.mjs && node scripts/verify-funnel-analytics.mjs && node scripts/verify-legal-pages.mjs && node scripts/verify-homepage-faq.mjs && node scripts/verify-sitemap-dates.mjs && node scripts/verify-design-system.mjs && node scripts/verify-press-kit.mjs",
     "verify:canonical-host": "node --test scripts/verify-www-canonical-redirect.test.mjs",
+    "verify:design-system": "node scripts/verify-design-system.mjs",
+    "verify:press-kit": "node scripts/verify-press-kit.mjs",
     "verify:sitemap-dates": "node scripts/verify-sitemap-dates.mjs",
     "verify:window-manager-intent": "node scripts/verify-window-manager-intent.mjs",
     "verify:marketing": "node scripts/verify-marketing-links.mjs",

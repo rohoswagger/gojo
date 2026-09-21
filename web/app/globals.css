@@ -1,9 +1,11 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./design-tokens.css";
 /* The site skin (replaces public/site.css). Layered as `components` so
    Tailwind utilities still win where a component reaches for one. */
 @import "./skin.css" layer(components);
 @import "./marketing-heroes.css" layer(components);
+@import "./press.css" layer(components);
 
 @custom-variant dark (&:is(.dark *));
 
@@ -12,9 +14,12 @@
      separate cards, table heads and answer boxes from the page ground. */
   --background: #ffffff;
   --foreground: oklch(0.18 0 0);
-  --font-display: var(--font-body);
-  --font-body: ui-sans-serif, system-ui, sans-serif;
-  --font-mono-face: ui-monospace, SFMono-Regular, monospace;
+  /* Tailwind/swagui aliases consume the canonical roles in design-tokens.css.
+     Generic UI headings stay on the interface face; marketing heroes opt into
+     --font-marketing-display explicitly. */
+  --font-display: var(--font-interface);
+  --font-body: var(--font-interface);
+  --font-mono-face: var(--font-technical);
   --display-tracking: -0.03em;
   --squircle-factor: 1.4;
   --radius: calc(0.625rem * var(--squircle-factor));

@@ -1,0 +1,98 @@
+import assert from "node:assert/strict"
+import { readFileSync, readdirSync } from "node:fs"
+import { resolve } from "node:path"
+
+const read = (path) => readFileSync(resolve(path), "utf8")
+const globals = read("app/globals.css")
+const tokens = read("app/design-tokens.css")
+const pressCss = read("app/press.css")
+const design = read("DESIGN.md")
+
+assert.ok(
+  globals.indexOf('@import "./design-tokens.css"') < globals.indexOf('@import "./skin.css"'),
+  "Design tokens must load before component styles"
+)
+assert.doesNotMatch(
+  globals,
+  /--font-(?:display|body|mono-face):\s*(?:ui-|system-ui|SF)/,
+  "globals.css must alias canonical font roles instead of defining a second font system"
+)
+
+const requiredTokens = [
+  "--surface",
+  "--ink-1",
+  "--gojo-accent",
+  "--gojo-warm-ink",
+  "--gojo-warm-muted",
+  "--gojo-warm-accent",
+  "--font-marketing-display",
+  "--font-interface",
+  "--font-technical",
+  "--display",
+  "--body",
+  "--mono",
+  "--step-display",
+  "--gutter",
+  "--measure",
+  "--page",
+  "--radius-card",
+  "--radius-panel",
+]
+for (const token of requiredTokens) {
+  assert.ok(tokens.includes(`${token}:`), `Missing canonical design token: ${token}`)
+}
+
+for (const heading of [
+  "## Overview",
+  "## Colors",
+  "## Typography",
+  "## Layout",
+  "## Shapes",
+  "## Components",
+  "## Do's and Don'ts",
+]) {
+  assert.ok(design.includes(heading), `DESIGN.md is missing ${heading}`)
+}
+
+assert.ok(design.includes("app/design-tokens.css"), "DESIGN.md must name the runtime token source")
+assert.ok(design.includes("var(--font-marketing-display)"), "DESIGN.md must define marketing-display usage")
+assert.ok(design.includes("var(--font-interface)"), "DESIGN.md must define interface-font usage")
+assert.ok(design.includes("var(--font-technical)"), "DESIGN.md must define technical-font usage")
+assert.ok(
+  design.includes("`--display`, `--body`, and `--mono` are compatibility aliases"),
+  "DESIGN.md must explain the legacy aliases"
+)
+assert.ok(
+  design.includes("separate rounded display font") && design.includes("That is not the body font"),
+  "DESIGN.md must preserve the landing page's separate display-font role"
+)
+
+const pressHeroRule = pressCss.match(/\.press-hero h1\s*\{[^}]*\}/s)?.[0] ?? ""
+for (const expected of [
+  "font-family: var(--display)",
+  "font-size: var(--step-display)",
+  "font-weight: 550",
+  "letter-spacing: -0.035em",
+  "line-height: 1.06",
+  "max-width: 16ch",
+]) {
+  assert.ok(pressHeroRule.includes(expected), `Press hero must match landing typography: ${expected}`)
+}
+const pressLedeRule = pressCss.match(/\.press-lede\s*\{[^}]*\}/s)?.[0] ?? ""
+assert.ok(pressLedeRule.includes("font-size: var(--step-lede)"))
+
+const cssFiles = readdirSync(resolve("app"))
+  .filter((name) => name.endsWith(".css") && name !== "design-tokens.css")
+for (const file of cssFiles) {
+  const css = read(`app/${file}`)
+  const declarations = [...css.matchAll(/font-family:\s*([^;]+);/g)].map((match) => match[1].trim())
+  for (const declaration of declarations) {
+    assert.match(
+      declaration,
+      /^var\(--(?:display|body|mono|font-display|font-body|font-mono-face)\)$/,
+      `${file} bypasses the shared font tokens: ${declaration}`
+    )
+  }
+}
+
+console.log("design system contract passed")

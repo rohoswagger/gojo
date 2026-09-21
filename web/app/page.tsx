@@ -17,7 +17,7 @@ import {
 // ---------------------------------------------------------------------------
 // Metadata + JSON-LD, reproduced verbatim from the old docs/index.html head.
 // The one deliberate change is `softwareVersion`: the source has a stale
-// "1.0.0"; the app now ships 1.4.0, so the JSON-LD reflects that.
+// "1.0.0"; the app now ships 1.5.1, so the JSON-LD reflects that.
 // ---------------------------------------------------------------------------
 
 export const metadata: Metadata = {
@@ -60,7 +60,7 @@ const jsonLd = {
   description:
     "Gojo is a MacBook productivity hub for private on-device dictation, window management, clipboard history, file staging, media, and system controls.",
   url: "https://trygojo.com/",
-  softwareVersion: "1.4.0",
+  softwareVersion: "1.5.1",
   featureList: [
     "Private on-device voice dictation",
     "Window snapping and management",

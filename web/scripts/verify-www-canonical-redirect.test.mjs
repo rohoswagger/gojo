@@ -20,6 +20,32 @@ test("redirects www requests to the canonical host without changing path or quer
   )
 })
 
+test("redirects legacy notch guides to the strongest current result without a chain", async () => {
+  for (const legacyPath of [
+    "/blog/how-to-choose-a-macbook-notch-app/",
+    "/blog/best-macbook-notch-apps/",
+  ]) {
+    for (const host of ["trygojo.com", "www.trygojo.com"]) {
+      const response = await worker.fetch(
+        new Request(`https://${host}${legacyPath}?source=google`),
+        { ASSETS: assets },
+      )
+
+      assert.equal(response.status, 301)
+      assert.equal(
+        response.headers.get("location"),
+        "https://trygojo.com/blog/best-mac-notch-apps-for-productivity/?source=google",
+      )
+
+      const targetResponse = await worker.fetch(
+        new Request(response.headers.get("location")),
+        { ASSETS: assets },
+      )
+      assert.equal(targetResponse.status, 200)
+    }
+  }
+})
+
 test("serves apex requests through the static-assets binding", async () => {
   const response = await worker.fetch(
     new Request("https://trygojo.com/features/window-controls/"),

@@ -1,6 +1,6 @@
 import Foundation
 
-actor LocalDictationTranscriber: LocalDictationTranscribing {
+actor LocalDictationTranscriber: LocalDictationTranscribing, DictationStreamingTranscribing {
     private var selectedModel: DictationModelID
     private let whisper: WhisperKitDictationTranscriber
     private let parakeet = ParakeetUnifiedDictationTranscriber()
@@ -98,6 +98,19 @@ actor LocalDictationTranscriber: LocalDictationTranscribing {
         case .parakeetV3Multilingual:
             await parakeetV3.cancelTranscription()
         }
+    }
+
+    func beginStreamingSession() async -> (@Sendable ([Float], Double) -> Void)? {
+        guard selectedModel == .parakeetUnifiedEnglish else { return nil }
+        return await parakeet.beginStreamingSession()
+    }
+
+    func finishStreamingSession() async throws -> String {
+        try await parakeet.finishStreamingSession()
+    }
+
+    func cancelStreamingSession() async {
+        await parakeet.cancelStreamingSession()
     }
 
     private func unload(model: DictationModelID) async {

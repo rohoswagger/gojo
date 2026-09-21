@@ -41,6 +41,7 @@ where TargetProvider: DictationTargetCapturing,
     private var captureWatchdog: Task<Void, Never>?
     private var sessionID = UUID()
     private var startupReleaseSessionID: UUID?
+    private var streamingSessionID: UUID?
 
     init(
         targetProvider: TargetProvider,
@@ -186,6 +187,17 @@ where TargetProvider: DictationTargetCapturing,
 
             try Task.checkCancellation()
             guard isCurrent(expectedSession, state: .requestingPermission) else { return }
+            // Deliberately does not wait for a pending pipeline cleanup: a
+            // lagging cancelTranscription from a replaced session may tear this
+            // streaming session down, which only costs the latency win — the
+            // finish call fails and transcription falls back to the batch path.
+            if let streamingTranscriber = transcriber as? any DictationStreamingTranscribing,
+               let consumer = await streamingTranscriber.beginStreamingSession() {
+                await audioCapture.setStreamConsumer(consumer)
+                streamingSessionID = expectedSession
+            }
+            try Task.checkCancellation()
+            guard isCurrent(expectedSession, state: .requestingPermission) else { return }
             try await audioCapture.startCapture()
             #if DEBUG
             let audioMilliseconds = Int(
@@ -221,6 +233,13 @@ where TargetProvider: DictationTargetCapturing,
         } catch is CancellationError {
             return
         } catch {
+            if streamingSessionID == expectedSession {
+                streamingSessionID = nil
+                await audioCapture.setStreamConsumer(nil)
+                if let streamingTranscriber = transcriber as? any DictationStreamingTranscribing {
+                    await streamingTranscriber.cancelStreamingSession()
+                }
+            }
             guard isCurrent(expectedSession, state: .requestingPermission) else { return }
             transition(.failed(.captureFailed(Self.userFacingDetail(for: error))))
             operation = nil
@@ -229,12 +248,17 @@ where TargetProvider: DictationTargetCapturing,
 
     private func finishCapture(sessionID expectedSession: UUID) async {
         var stage = PipelineStage.capture
+        let wasStreaming = streamingSessionID == expectedSession
+        if wasStreaming { streamingSessionID = nil }
         do {
             let audio = try await audioCapture.stopCapture()
             try Task.checkCancellation()
             guard isCurrent(expectedSession, state: .transcribing) else { return }
 
             guard audioPolicy.shouldTranscribe(audio) else {
+                if wasStreaming, let streamingTranscriber = transcriber as? any DictationStreamingTranscribing {
+                    await streamingTranscriber.cancelStreamingSession()
+                }
                 target = nil
                 transition(.audioTooShort)
                 operation = nil
@@ -250,7 +274,29 @@ where TargetProvider: DictationTargetCapturing,
             #if DEBUG
             let transcriptionStart = ProcessInfo.processInfo.systemUptime
             #endif
-            let rawTranscript = try await transcriber.transcribe(audio)
+            let rawTranscript: String
+            if wasStreaming, let streamingTranscriber = transcriber as? any DictationStreamingTranscribing {
+                // The accumulator still holds the full utterance, so a failed or empty
+                // streamed transcript falls back to the batch path instead of failing
+                // the session.
+                var streamedTranscript: String?
+                do {
+                    streamedTranscript = try await streamingTranscriber.finishStreamingSession()
+                } catch is CancellationError {
+                    throw CancellationError()
+                } catch {
+                    streamedTranscript = nil
+                }
+                try Task.checkCancellation()
+                guard isCurrent(expectedSession, state: .transcribing) else { return }
+                if let streamedTranscript, !streamedTranscript.isEmpty {
+                    rawTranscript = streamedTranscript
+                } else {
+                    rawTranscript = try await transcriber.transcribe(audio)
+                }
+            } else {
+                rawTranscript = try await transcriber.transcribe(audio)
+            }
             #if DEBUG
             dictationControllerLatencyLogger.notice(
                 "stage=transcription ms=\(Int(((ProcessInfo.processInfo.systemUptime - transcriptionStart) * 1_000).rounded()), privacy: .public)"
@@ -355,6 +401,7 @@ where TargetProvider: DictationTargetCapturing,
     private func invalidateSessionAndScheduleCleanup() {
         sessionID = UUID()
         startupReleaseSessionID = nil
+        streamingSessionID = nil
         target = nil
         captureWatchdog?.cancel()
         captureWatchdog = nil
@@ -369,6 +416,7 @@ where TargetProvider: DictationTargetCapturing,
         let previousAudioCleanup = audioCleanupTask
         audioCleanupTask = Task { [audioCapture] in
             await previousAudioCleanup?.value
+            await audioCapture.setStreamConsumer(nil)
             await audioCapture.cancelCapture()
         }
         let previousCleanup = cleanupTask

@@ -5,6 +5,7 @@ import { resolve } from "node:path"
 const read = (path) => readFileSync(resolve(path), "utf8")
 const globals = read("app/globals.css")
 const tokens = read("app/design-tokens.css")
+const pressCss = read("app/press.css")
 const design = read("DESIGN.md")
 
 assert.ok(
@@ -49,6 +50,24 @@ assert.ok(design.includes("app/design-tokens.css"), "DESIGN.md must name the run
 assert.ok(design.includes("var(--display)"), "DESIGN.md must define display-font usage")
 assert.ok(design.includes("var(--body)"), "DESIGN.md must define body-font usage")
 assert.ok(design.includes("var(--mono)"), "DESIGN.md must define label-font usage")
+assert.ok(
+  design.includes("separate rounded display font") && design.includes("That is not the body font"),
+  "DESIGN.md must preserve the landing page's separate display-font role"
+)
+
+const pressHeroRule = pressCss.match(/\.press-hero h1\s*\{[^}]*\}/s)?.[0] ?? ""
+for (const expected of [
+  "font-family: var(--display)",
+  "font-size: var(--step-display)",
+  "font-weight: 550",
+  "letter-spacing: -0.035em",
+  "line-height: 1.06",
+  "max-width: 16ch",
+]) {
+  assert.ok(pressHeroRule.includes(expected), `Press hero must match landing typography: ${expected}`)
+}
+const pressLedeRule = pressCss.match(/\.press-lede\s*\{[^}]*\}/s)?.[0] ?? ""
+assert.ok(pressLedeRule.includes("font-size: var(--step-lede)"))
 
 const cssFiles = readdirSync(resolve("app"))
   .filter((name) => name.endsWith(".css") && name !== "design-tokens.css")

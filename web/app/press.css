@@ -88,14 +88,14 @@
 }
 
 .press-hero h1 {
-  max-width: 10ch;
+  max-width: 16ch;
   margin: 0;
   color: #fff;
   font-family: var(--display);
-  font-size: clamp(3.3rem, 6.5vw, 6rem);
+  font-size: var(--step-display);
   font-weight: 550;
-  letter-spacing: -0.045em;
-  line-height: 0.94;
+  letter-spacing: -0.035em;
+  line-height: 1.06;
   text-wrap: balance;
   text-shadow: 0 2px 42px rgba(0, 0, 0, 0.5);
 }
@@ -104,7 +104,7 @@
   max-width: 35rem;
   margin: 1.5rem 0 0;
   color: rgba(255, 255, 255, 0.82);
-  font-size: clamp(1.05rem, 1.6vw, 1.25rem);
+  font-size: var(--step-lede);
   line-height: 1.6;
   text-wrap: pretty;
   text-shadow: 0 1px 24px rgba(0, 0, 0, 0.68);
@@ -276,13 +276,13 @@
 
 .press-section-heading h2,
 .press-pricing h2 {
-  max-width: 13ch;
+  max-width: 16ch;
   margin: 0;
   font-family: var(--display);
-  font-size: clamp(2.5rem, 5vw, 4.75rem);
+  font-size: var(--step-h2);
   font-weight: 550;
-  letter-spacing: -0.045em;
-  line-height: 0.98;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
   text-wrap: balance;
 }
 
@@ -341,7 +341,7 @@
 }
 
 .press-review .press-section-heading h2 {
-  max-width: 11ch;
+  max-width: 16ch;
 }
 
 .press-review .press-section-heading > p:last-child {
@@ -552,10 +552,6 @@
   .press-hero {
     width: min(calc(100% - 2.25rem), 72rem);
     padding-top: 3rem;
-  }
-
-  .press-hero h1 {
-    font-size: clamp(3rem, 15vw, 4.2rem);
   }
 
   .press-demo {

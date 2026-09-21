@@ -97,7 +97,7 @@ components:
 
 Gojo uses one system across the homepage, feature pages, comparisons, downloads, legal pages, and press materials. The visual language pairs a focused sunset hero with quiet editorial reading surfaces. Product UI is evidence, not decoration.
 
-`app/design-tokens.css` is the runtime source of truth. This file describes how agents and contributors apply those tokens. Do not introduce a page-local font stack, content width, or brand palette.
+The landing and high-emphasis marketing headings deliberately use a separate rounded display font. That is not the body font: reading copy, navigation, controls, and quieter utility pages stay on the native sans-serif stack. `app/design-tokens.css` is the runtime source of truth. This file describes how agents and contributors apply those roles. Do not introduce a page-local font stack, content width, or brand palette.
 
 ## Colors
 

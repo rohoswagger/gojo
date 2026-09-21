@@ -38,6 +38,8 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
     private var context: CaptureContext?
     private var preparedContext: CaptureContext?
     private let levelObserver: LevelObserver
+    private var livenessWatchdog: Task<Void, Never>?
+    private var configurationChangeObserver: (any NSObjectProtocol)?
 
     init(levelObserver: @escaping LevelObserver = { _ in }) {
         self.levelObserver = levelObserver
@@ -61,6 +63,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
     }
 
     func prepareForCaptureIfAuthorized() async {
+        observeConfigurationChangesIfNeeded()
         guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized,
               context == nil,
               preparedContext == nil else { return }
@@ -76,6 +79,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
     }
 
     func startCapture() async throws {
+        observeConfigurationChangesIfNeeded()
         guard context == nil else { throw AVAudioEngineCaptureError.alreadyCapturing }
         let startTime = ProcessInfo.processInfo.systemUptime
 
@@ -98,6 +102,28 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
             captureContext.engine.stop()
             let freshContext = try makeCaptureContext()
             try startPreparedCaptureContext(freshContext, startTime: startTime)
+        }
+    }
+
+    func discardPreparedCapture() {
+        guard let preparedContext else { return }
+        self.preparedContext = nil
+        preparedContext.inputNode.removeTap(onBus: 0)
+        preparedContext.engine.stop()
+    }
+
+    private func observeConfigurationChangesIfNeeded() {
+        guard configurationChangeObserver == nil else { return }
+        configurationChangeObserver = NotificationCenter.default.addObserver(
+            forName: .AVAudioEngineConfigurationChange,
+            object: nil,
+            queue: nil
+        ) { [weak self] _ in
+            Task { [weak self] in
+                guard let self else { return }
+                await self.discardPreparedCapture()
+                await self.prepareForCaptureIfAuthorized()
+            }
         }
     }
 
@@ -177,12 +203,49 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
             #endif
             context = captureContext
             levelObserver(0)
+            startLivenessWatchdog(for: captureContext)
         } catch {
             let inputNode = captureContext.inputNode
             let engine = captureContext.engine
             inputNode.removeTap(onBus: 0)
             engine.stop()
             throw error
+        }
+    }
+
+    /// After sleep/wake a stale engine can start successfully yet deliver no
+    /// input buffers, so a silent tap after 700ms triggers one rebuild
+    /// against the current audio device.
+    private func startLivenessWatchdog(for captureContext: CaptureContext) {
+        livenessWatchdog?.cancel()
+        let engineID = ObjectIdentifier(captureContext.engine)
+        livenessWatchdog = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(700))
+            guard !Task.isCancelled else { return }
+            await self?.rebuildCaptureIfSilent(engineID: engineID)
+        }
+    }
+
+    private func rebuildCaptureIfSilent(engineID: ObjectIdentifier) {
+        guard let context,
+              ObjectIdentifier(context.engine) == engineID,
+              !context.accumulator.hasReceivedAudio() else { return }
+        self.context = nil
+        context.inputNode.removeTap(onBus: 0)
+        context.engine.stop()
+        do {
+            let freshContext = try makeCaptureContext()
+            try freshContext.engine.start()
+            self.context = freshContext
+            #if DEBUG
+            dictationAudioLatencyLogger.notice("stage=audioLivenessRebuild")
+            #endif
+        } catch {
+            #if DEBUG
+            dictationAudioLatencyLogger.debug(
+                "stage=audioLivenessRebuildFailed error=\(String(describing: error), privacy: .public)"
+            )
+            #endif
         }
     }
 
@@ -208,6 +271,8 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
     }
 
     private func stopActiveCapture(_ context: CaptureContext) {
+        livenessWatchdog?.cancel()
+        livenessWatchdog = nil
         self.context = nil
         context.inputNode.removeTap(onBus: 0)
         context.engine.stop()
@@ -363,6 +428,7 @@ private final class LockedMonoSampleAccumulator: @unchecked Sendable {
     private let levelObserver: AVAudioEngineCaptureService.LevelObserver
     private var samples: [Float] = []
     private var meter = DictationAudioLevelMeter()
+    private var receivedFirstBuffer = false
 
     init(
         channelCount: Int,
@@ -397,6 +463,7 @@ private final class LockedMonoSampleAccumulator: @unchecked Sendable {
 
         lock.lock()
         samples.append(contentsOf: mono)
+        receivedFirstBuffer = true
         let level = meter.consume(
             sumOfSquares: sumOfSquares,
             peak: peak,
@@ -405,6 +472,12 @@ private final class LockedMonoSampleAccumulator: @unchecked Sendable {
         )
         lock.unlock()
         if let level { levelObserver(level) }
+    }
+
+    func hasReceivedAudio() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return receivedFirstBuffer
     }
 
     func drain() -> [Float] {

@@ -4,16 +4,16 @@ import { GojoFooter } from "@/components/gojo-footer";
 import { GojoHeader } from "@/components/gojo-header";
 
 const DMG = "https://downloads.trygojo.com/Gojo.dmg";
-const VERSION = "1.4.0";
-const SIZE = "11 MB";
+const VERSION = "1.5.1";
+const SIZE = "17 MB";
 const MIN_OS = "macOS 14 or later";
 // Printed by scripts/release.sh and verified against the published artifact.
 const SHA256 =
-  "9deae91029a1cb07014ed83af3234d184bd4d338e4055e6d0323f53aeb4df58b";
+  "510c5e9d8c3732a1cd8c91925d2c4a15d586d51e5468a985632bd2ada1a3b814";
 
 const TITLE = "Download Gojo for Mac";
 const DESCRIPTION =
-  "Download Gojo for macOS. Signed and notarized, version 1.4.0, with a full three day trial that needs no account and no card.";
+  "Download Gojo for macOS. Signed and notarized, version 1.5.1, with a full three day trial that needs no account and no card.";
 
 export const metadata: Metadata = {
   title: `${TITLE} | Gojo`,

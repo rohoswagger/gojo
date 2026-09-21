@@ -28,6 +28,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const paths = [
     "/",
     "/downloads/",
+    "/press/",
     "/privacy/",
     "/terms/",
     "/blog/",

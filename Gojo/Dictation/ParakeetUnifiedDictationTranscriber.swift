@@ -19,6 +19,7 @@ actor ParakeetUnifiedDictationTranscriber: LocalDictationTranscribing, Dictation
     private var activeTranscriptionGeneration: UInt?
     private var transcriptionGeneration: UInt = 0
     private var streamingSession: StreamingSession?
+    private var streamingSessionError: Error?
 
     init() {
         ModelHub.offlineMode = true
@@ -129,6 +130,7 @@ actor ParakeetUnifiedDictationTranscriber: LocalDictationTranscribing, Dictation
 
         let (stream, continuation) = AsyncStream<(samples: [Float], sampleRate: Double)>.makeStream()
         let id = UUID()
+        streamingSessionError = nil
         let consumeTask = Task { [weak self] in
             for await chunk in stream {
                 await self?.consumeStreamChunk(chunk.samples, sampleRate: chunk.sampleRate, sessionID: id)
@@ -141,10 +143,20 @@ actor ParakeetUnifiedDictationTranscriber: LocalDictationTranscribing, Dictation
     }
 
     private func consumeStreamChunk(_ samples: [Float], sampleRate: Double, sessionID: UUID) async {
-        guard streamingSession?.id == sessionID, let manager else { return }
-        guard let buffer = try? Self.pcmBuffer(from: samples, sampleRate: sampleRate) else { return }
-        try? await manager.appendAudio(buffer)
-        try? await manager.processBufferedAudio()
+        guard streamingSession?.id == sessionID, streamingSessionError == nil, let manager else { return }
+        do {
+            let buffer = try Self.pcmBuffer(from: samples, sampleRate: sampleRate)
+            try await manager.appendAudio(buffer)
+            try await manager.processBufferedAudio()
+        } catch {
+            // The windower marks audio consumed before decoding it, so a failed
+            // chunk is unrecoverable mid-stream: a transcript finished past it
+            // would silently omit that audio. Poison the session instead so
+            // finish throws and the controller batch-transcribes the full take.
+            if streamingSession?.id == sessionID {
+                streamingSessionError = error
+            }
+        }
     }
 
     func finishStreamingSession() async throws -> String {
@@ -155,7 +167,15 @@ actor ParakeetUnifiedDictationTranscriber: LocalDictationTranscribing, Dictation
         // goes nil, or the utterance tail never reaches the model.
         session.continuation.finish()
         await session.consumeTask.value
+        guard streamingSession?.id == session.id else {
+            throw ParakeetDictationError.streamingSessionUnavailable
+        }
         streamingSession = nil
+        if let error = streamingSessionError {
+            streamingSessionError = nil
+            try? await manager?.reset()
+            throw error
+        }
         guard let manager else {
             throw ParakeetDictationError.streamingSessionUnavailable
         }
@@ -165,10 +185,16 @@ actor ParakeetUnifiedDictationTranscriber: LocalDictationTranscribing, Dictation
     func cancelStreamingSession() async {
         guard let session = streamingSession else { return }
         streamingSession = nil
+        streamingSessionError = nil
         session.continuation.finish()
         session.consumeTask.cancel()
         _ = await session.consumeTask.value
-        try? await manager?.reset()
+        // A replacement session can begin while the consume task drains; it has
+        // already reset the manager itself, and resetting again here would wipe
+        // the audio prefix it has appended since.
+        if streamingSession == nil {
+            try? await manager?.reset()
+        }
     }
 
     func unload() async {

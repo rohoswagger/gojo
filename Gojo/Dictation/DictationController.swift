@@ -41,7 +41,7 @@ where TargetProvider: DictationTargetCapturing,
     private var captureWatchdog: Task<Void, Never>?
     private var sessionID = UUID()
     private var startupReleaseSessionID: UUID?
-    private var streamingSessionActive = false
+    private var streamingSessionID: UUID?
 
     init(
         targetProvider: TargetProvider,
@@ -194,8 +194,10 @@ where TargetProvider: DictationTargetCapturing,
             if let streamingTranscriber = transcriber as? any DictationStreamingTranscribing,
                let consumer = await streamingTranscriber.beginStreamingSession() {
                 await audioCapture.setStreamConsumer(consumer)
-                streamingSessionActive = true
+                streamingSessionID = expectedSession
             }
+            try Task.checkCancellation()
+            guard isCurrent(expectedSession, state: .requestingPermission) else { return }
             try await audioCapture.startCapture()
             #if DEBUG
             let audioMilliseconds = Int(
@@ -231,6 +233,13 @@ where TargetProvider: DictationTargetCapturing,
         } catch is CancellationError {
             return
         } catch {
+            if streamingSessionID == expectedSession {
+                streamingSessionID = nil
+                await audioCapture.setStreamConsumer(nil)
+                if let streamingTranscriber = transcriber as? any DictationStreamingTranscribing {
+                    await streamingTranscriber.cancelStreamingSession()
+                }
+            }
             guard isCurrent(expectedSession, state: .requestingPermission) else { return }
             transition(.failed(.captureFailed(Self.userFacingDetail(for: error))))
             operation = nil
@@ -239,8 +248,8 @@ where TargetProvider: DictationTargetCapturing,
 
     private func finishCapture(sessionID expectedSession: UUID) async {
         var stage = PipelineStage.capture
-        let wasStreaming = streamingSessionActive
-        streamingSessionActive = false
+        let wasStreaming = streamingSessionID == expectedSession
+        if wasStreaming { streamingSessionID = nil }
         do {
             let audio = try await audioCapture.stopCapture()
             try Task.checkCancellation()
@@ -392,7 +401,7 @@ where TargetProvider: DictationTargetCapturing,
     private func invalidateSessionAndScheduleCleanup() {
         sessionID = UUID()
         startupReleaseSessionID = nil
-        streamingSessionActive = false
+        streamingSessionID = nil
         target = nil
         captureWatchdog?.cancel()
         captureWatchdog = nil

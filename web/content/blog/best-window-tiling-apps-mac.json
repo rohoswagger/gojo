@@ -1,11 +1,11 @@
 {
   "slug": "best-window-tiling-apps-mac",
-  "title": "Best window tiling apps for Mac in 2026",
-  "description": "Compare Mac window tiling with Apple's built-in tools, Rectangle, Moom, Magnet, BetterTouchTool, and Gojo by workflow and control depth.",
+  "title": "Best Mac window manager apps: tiling tools compared (2026)",
+  "description": "Compare Mac window manager and tiling apps with Apple's built-in tools, Rectangle, Moom, Magnet, BetterTouchTool, and Gojo by workflow and control depth.",
   "canonical": "https://trygojo.com/blog/best-window-tiling-apps-mac/",
   "og": {
-    "og:title": "Best window tiling apps for Mac in 2026",
-    "og:description": "Choose a Mac window tiling tool by shortcuts, layouts, automation, and whether window control is your only job.",
+    "og:title": "Best Mac window manager apps: tiling tools compared (2026)",
+    "og:description": "Choose a Mac window manager or tiling tool by shortcuts, layouts, automation, and whether window control is your only job.",
     "og:type": "article",
     "og:url": "https://trygojo.com/blog/best-window-tiling-apps-mac/",
     "og:image": "https://trygojo.com/assets/og.jpg",
@@ -13,13 +13,13 @@
   },
   "twitter": {
     "twitter:card": "summary_large_image",
-    "twitter:title": "Best window tiling apps for Mac in 2026",
-    "twitter:description": "Apple tiling, Rectangle, Moom, Magnet, BetterTouchTool, and Gojo compared by workflow.",
+    "twitter:title": "Best Mac window manager apps: tiling tools compared (2026)",
+    "twitter:description": "Apple tiling and Mac window manager apps compared by workflow.",
     "twitter:image": "https://trygojo.com/assets/og.jpg"
   },
   "article": {
     "published_time": "2026-09-08",
-    "modified_time": "2026-09-08",
+    "modified_time": "2026-09-21",
     "section": "Mac apps",
     "author": "Gojo",
     "robots": "index,follow,max-image-preview:large"
@@ -29,11 +29,11 @@
     "@graph": [
       {
         "@type": "BlogPosting",
-        "headline": "Best window tiling apps for Mac in 2026",
-        "description": "A practical comparison of built-in and third-party window tiling tools for Mac.",
+        "headline": "Best Mac window manager apps: tiling tools compared (2026)",
+        "description": "A practical comparison of built-in and third-party Mac window manager and tiling tools.",
         "url": "https://trygojo.com/blog/best-window-tiling-apps-mac/",
         "datePublished": "2026-09-08",
-        "dateModified": "2026-09-08",
+        "dateModified": "2026-09-21",
         "author": { "@type": "Organization", "name": "Gojo" },
         "publisher": { "@type": "Organization", "name": "Gojo", "url": "https://trygojo.com/" },
         "citation": [
@@ -70,9 +70,9 @@
   },
   "hero": {
     "label": "September 8, 2026",
-    "title": "Best window tiling apps for Mac in 2026",
+    "title": "Best Mac window manager apps: tiling tools compared (2026)",
     "summary": "macOS now handles common halves and quarters itself. Third-party tools still earn their place through faster shortcuts, repeatable layouts, custom positions, automation, or by putting window control beside other daily tools.",
-    "meta": ["Updated September 8, 2026", "9 min read", "Primary sources checked"],
+    "meta": ["Updated September 21, 2026", "9 min read", "Primary sources checked"],
     "breadcrumb": [
       { "label": "Home", "href": "/" },
       { "label": "Blog", "href": "/blog/" }

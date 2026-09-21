@@ -14,8 +14,13 @@ assert.equal(releaseVersions.size, 1, "All app targets must share one release ve
 const [releaseVersion] = releaseVersions
 
 const pressHtml = read("out/press/index.html")
+const pressCss = read("app/press.css")
 const press = parse(pressHtml)
 const pressText = compact(press.textContent)
+const pressPage = press.querySelector('.press-page[data-gojo-editorial="warm"]')
+assert.ok(pressPage, "Press kit must use Gojo's warm editorial page treatment")
+assert.ok(pressPage.querySelector(".press-hero"), "Press kit must use the shared editorial hero structure")
+assert.ok(pressPage.querySelector(".press-content"), "Press kit must use the shared editorial content surface")
 const homepageText = compact(parse(read("out/index.html")).textContent)
 const downloadText = compact(parse(read("out/downloads/index.html")).textContent)
 
@@ -32,7 +37,8 @@ for (const expected of [
   "Gojo reviewer kit",
   `Version ${releaseVersion}`,
   "macOS 14 or later",
-  "Three-day trial, no account or card",
+  "Three days",
+  "No account or card",
   "On-device dictation",
   "global dictation shortcut",
   "inserting dictated text into other apps",
@@ -55,6 +61,12 @@ for (const href of [
   assert.ok(links.has(href), `Rendered press kit is missing link: ${href}`)
 }
 assert.equal(links.get("/assets/og.jpg")?.getAttribute("download"), "gojo-product-preview.jpg")
+assert.match(pressCss, /\.press-demo video\s*\{[^}]*aspect-ratio:\s*1240\s*\/\s*400/s)
+assert.doesNotMatch(
+  pressCss.match(/\.press-demo video\s*\{[^}]*\}/s)?.[0] ?? "",
+  /object-fit:\s*cover/,
+  "Press demo must not crop the shipping product UI"
+)
 
 for (const asset of ["out/assets/demo.mp4", "out/assets/demo-poster.jpg", "out/assets/og.jpg"]) {
   assert.ok(existsSync(resolve(asset)), `Built press asset is missing: ${asset}`)

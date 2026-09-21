@@ -1,0 +1,56 @@
+/* Gojo's canonical runtime design tokens.
+   DESIGN.md explains when to use them; page and component styles consume them. */
+:root {
+  /* Neutral surfaces and readable ink tiers. */
+  --surface: #ffffff;
+  --surface-2: #fafafa;
+  --surface-3: #f4f4f5;
+  --ink-1: rgba(0, 0, 0, 0.9);
+  --ink-2: rgba(0, 0, 0, 0.75);
+  --ink-3: rgba(0, 0, 0, 0.55);
+  --ink-4: rgba(0, 0, 0, 0.45);
+  --rule: #e6e6e6;
+  --rule-soft: #f0f0f0;
+
+  /* Brand and semantic colors. */
+  --gojo-accent: #4a46cf;
+  --gojo-accent-soft: #f0f0fb;
+  --gojo-accent-quiet: #5f5d86;
+  --ok: #1a7f4b;
+  --no: #b3372c;
+
+  /* Warm editorial palette used by features, comparisons, and press. */
+  --gojo-warm-ink: #2b1b12;
+  --gojo-warm-muted: #6b5245;
+  --gojo-warm-accent: #b9472d;
+  --gojo-warm-rule: rgba(111, 48, 25, 0.16);
+  --gojo-warm-surface: #fdf6ee;
+  --gojo-warm-surface-soft: #fffaf7;
+  --gojo-warm-highlight: #ffaf89;
+  --gojo-warm-panel: #29140f;
+
+  /* System stacks only. No webfont payload or layout shift. */
+  --display: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, sans-serif;
+  --body: ui-sans-serif, system-ui, -apple-system, "SF Pro Text", sans-serif;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", monospace;
+
+  /* Type scale. */
+  --step-display: clamp(2.5rem, 5.2vw, 3.5rem);
+  --step-h2: clamp(1.75rem, 3vw, 2.5rem);
+  --step-h3: clamp(1.25rem, 1.8vw, 1.5rem);
+  --step-lede: clamp(1rem, 1.4vw, 1.125rem);
+
+  /* Layout scale. */
+  --panel: #0a0b12;
+  --mat: clamp(8px, 1vw, 13px);
+  --gutter: clamp(1.25rem, 4vw, 2rem);
+  --section-y: clamp(3.5rem, 7vw, 6rem);
+  --measure: 44rem;
+  --page: 76rem;
+
+  /* Shape scale. */
+  --radius-control: 8px;
+  --radius-card: 16px;
+  --radius-panel: 22px;
+  --radius-pill: 999px;
+}

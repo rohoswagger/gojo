@@ -109,10 +109,11 @@ The landing and high-emphasis marketing headings deliberately use a separate rou
 
 ## Typography
 
-- Display text uses `var(--display)`: the macOS rounded system stack.
-- Body copy and controls use `var(--body)`: the native sans-serif system stack.
-- Kicker labels, metadata, and technical values use `var(--mono)`.
-- No webfonts. The native stacks keep the site Mac-like and avoid font payloads and layout shift.
+- Landing and high-emphasis marketing display text uses `var(--font-marketing-display)`: the macOS rounded system stack.
+- Body copy, controls, and generic UI headings use `var(--font-interface)`: the native sans-serif system stack.
+- Kicker labels, metadata, and technical values use `var(--font-technical)`.
+- `--display`, `--body`, and `--mono` are compatibility aliases for the existing site skin. They must not define separate stacks.
+- No webfonts. On macOS the display role resolves to SF Pro Rounded; non-Apple screenshot environments fall back to their local system face, so glyph shapes and widths may differ even when the CSS is identical.
 - Use the shared `--step-display`, `--step-h2`, `--step-h3`, and `--step-lede` scales before adding a page-specific size.
 
 ## Layout

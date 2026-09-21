@@ -12,6 +12,11 @@ assert.ok(
   globals.indexOf('@import "./design-tokens.css"') < globals.indexOf('@import "./skin.css"'),
   "Design tokens must load before component styles"
 )
+assert.doesNotMatch(
+  globals,
+  /--font-(?:display|body|mono-face):\s*(?:ui-|system-ui|SF)/,
+  "globals.css must alias canonical font roles instead of defining a second font system"
+)
 
 const requiredTokens = [
   "--surface",
@@ -20,6 +25,9 @@ const requiredTokens = [
   "--gojo-warm-ink",
   "--gojo-warm-muted",
   "--gojo-warm-accent",
+  "--font-marketing-display",
+  "--font-interface",
+  "--font-technical",
   "--display",
   "--body",
   "--mono",
@@ -47,9 +55,13 @@ for (const heading of [
 }
 
 assert.ok(design.includes("app/design-tokens.css"), "DESIGN.md must name the runtime token source")
-assert.ok(design.includes("var(--display)"), "DESIGN.md must define display-font usage")
-assert.ok(design.includes("var(--body)"), "DESIGN.md must define body-font usage")
-assert.ok(design.includes("var(--mono)"), "DESIGN.md must define label-font usage")
+assert.ok(design.includes("var(--font-marketing-display)"), "DESIGN.md must define marketing-display usage")
+assert.ok(design.includes("var(--font-interface)"), "DESIGN.md must define interface-font usage")
+assert.ok(design.includes("var(--font-technical)"), "DESIGN.md must define technical-font usage")
+assert.ok(
+  design.includes("`--display`, `--body`, and `--mono` are compatibility aliases"),
+  "DESIGN.md must explain the legacy aliases"
+)
 assert.ok(
   design.includes("separate rounded display font") && design.includes("That is not the body font"),
   "DESIGN.md must preserve the landing page's separate display-font role"

@@ -29,10 +29,16 @@
   --gojo-warm-highlight: #ffaf89;
   --gojo-warm-panel: #29140f;
 
-  /* System stacks only. No webfont payload or layout shift. */
-  --display: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, sans-serif;
-  --body: ui-sans-serif, system-ui, -apple-system, "SF Pro Text", sans-serif;
-  --mono: ui-monospace, "SF Mono", "JetBrains Mono", monospace;
+  /* One typography system with explicit roles. The landing/high-emphasis
+     display face is intentionally distinct from interface and body copy. */
+  --font-marketing-display: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, sans-serif;
+  --font-interface: ui-sans-serif, system-ui, -apple-system, "SF Pro Text", sans-serif;
+  --font-technical: ui-monospace, "SF Mono", "JetBrains Mono", monospace;
+
+  /* Backward-compatible aliases used by the existing site skin. */
+  --display: var(--font-marketing-display);
+  --body: var(--font-interface);
+  --mono: var(--font-technical);
 
   /* Type scale. */
   --step-display: clamp(2.5rem, 5.2vw, 3.5rem);

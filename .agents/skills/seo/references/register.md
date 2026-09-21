@@ -7,7 +7,7 @@ Create `.seo/runs/YYYY-MM-DD-HHMM.md` for every invocation, including measure-on
 ```markdown
 # SEO run — <UTC timestamp>
 
-Mode: daily
+Mode: hourly
 Evidence window: <complete dates, timezone, filters>
 
 ## Vitals

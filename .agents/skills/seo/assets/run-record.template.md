@@ -1,6 +1,6 @@
 # SEO run — <UTC timestamp>
 
-Mode: daily
+Mode: hourly
 Evidence window: <complete dates, timezone, filters>
 
 ## Vitals

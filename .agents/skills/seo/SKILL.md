@@ -29,7 +29,7 @@ Do not use this skill to merge a PR, spend money, change pricing, alter secrets,
 
 | Mode | Behavior |
 |---|---|
-| `daily` | Measure, rank all eligible actions, execute one, verify, register. Default for every heartbeat. |
+| `hourly` | Measure, rank all eligible actions, execute one, verify, register. Default for every hourly heartbeat. |
 | `measure` | Measure and register only. Select and execute nothing. |
 | `fix <target>` | Force repair/refresh for a named page, claim, or defect. |
 | `write [topic]` | Force one editorial piece after validating demand and overlap. |
@@ -74,7 +74,7 @@ Initialize missing files from `assets/` using `scripts/init_state.py`. Never ove
 8. **No sensitive analytics:** never collect dictated text, audio, clipboard contents, filenames, window titles, license keys, machine IDs, email addresses, or raw URLs with query strings/fragments.
 9. **No invented work:** if no candidate clears the action bar, register the measurements and stop.
 
-## Daily Procedure
+## Hourly Procedure
 
 ### 0. Establish current state
 

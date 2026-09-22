@@ -33,7 +33,18 @@ for (const required of [".legal-content h2", ".legal-content ul", ".legal-conten
   if (!styles.includes(required)) throw new Error(`Legal-page styling is missing ${required}`)
 }
 
-for (const required of ["PostHog", "Query strings and URL fragments are removed", "does not set a cookie or stable browser identifier"]) {
+for (const required of [
+  "PostHog",
+  "Query strings and URL fragments are removed",
+  "temporary browser-session identifier",
+  "sessionStorage",
+  "without using your email",
+  "cookies",
+  "identifier across browser sessions",
+  "client_reference_id",
+  "purchase_completed",
+  "does not include your email",
+]) {
   if (!privacy.includes(required)) throw new Error(`Privacy page is missing ${required}`)
 }
 

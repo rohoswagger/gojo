@@ -16,7 +16,7 @@ export default function PrivacyPage() {
       <main className="mx-auto w-full max-w-3xl px-6 py-16 sm:px-8 sm:py-24">
         <p className="text-muted-foreground font-mono text-xs tracking-[0.16em] uppercase">Gojo</p>
         <h1 className="mt-4 text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">Privacy</h1>
-        <p className="text-muted-foreground mt-5 text-sm">Last updated September 18, 2026</p>
+        <p className="text-muted-foreground mt-5 text-sm">Last updated September 21, 2026</p>
 
         <div className="legal-content mt-12">
           <p>
@@ -30,7 +30,17 @@ export default function PrivacyPage() {
             The website may send anonymous page views and download or pricing-button clicks to PostHog when
             analytics is enabled. These events include the page path, the destination of the clicked link,
             and the selected plan where relevant. Query strings and URL fragments are removed before an event
-            is sent. The website does not set a cookie or stable browser identifier for this analytics.
+            is sent. A random temporary browser-session identifier in sessionStorage separates one visit from
+            another without using your email, license information, device identifiers, cookies, or a stable
+            identifier across browser sessions.
+          </p>
+          <p>
+            When you open a Stripe checkout from the website, that pseudonymous session identifier is sent to
+            Stripe as a client_reference_id. If payment completes, Stripe returns it to Gojo through a signed
+            webhook so Gojo can record a limited purchase_completed event in PostHog. That event may include
+            checkout mode, payment status, currency, purchase amount, and whether the purchase was connected
+            to a website session. It does not include your email, payment details, Stripe customer identifier,
+            license key, or Checkout Session identifier.
           </p>
           <p>
             Like most web services, PostHog and Cloudflare can receive standard request metadata, such as an

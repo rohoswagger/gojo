@@ -10,6 +10,12 @@ const STRIPE_PURCHASE_EVENTS = new Set([
   "checkout.session.completed",
   "checkout.session.async_payment_succeeded",
 ])
+const GOJO_PAYMENT_LINK_PLANS = {
+  plink_1Tz4aUHNTmi4FmMH8bXNzSgr: "personal_monthly",
+  plink_1Tz4ZMHNTmi4FmMH5Gmo5pdS: "personal_lifetime",
+  plink_1TqeW2HNTmi4FmMHP7hTyRCT: "multi_monthly",
+  plink_1TqeW2HNTmi4FmMHyLRBrjW4: "multi_lifetime",
+}
 const POSTHOG_CAPTURE_ENDPOINT = "https://us.i.posthog.com/capture/"
 const SIGNATURE_TOLERANCE_SECONDS = 300
 const GOJO_REFERENCE_PATTERN = /^gojo_([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i
@@ -52,7 +58,16 @@ async function verifyStripeSignature(body, header, secret, nowSeconds = Math.flo
   return false
 }
 
-function purchaseProperties(event) {
+async function eventUuid(eventId) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`gojo:${eventId}`))
+  const bytes = new Uint8Array(digest).slice(0, 16)
+  bytes[6] = (bytes[6] & 0x0f) | 0x80
+  bytes[8] = (bytes[8] & 0x3f) | 0x80
+  const hex = [...bytes].map((byte) => byte.toString(16).padStart(2, "0")).join("")
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}
+
+function purchaseProperties(event, plan) {
   const checkout = event.data?.object ?? {}
   const reference = typeof checkout.client_reference_id === "string" ? checkout.client_reference_id : ""
   const match = reference.match(GOJO_REFERENCE_PATTERN)
@@ -65,6 +80,7 @@ function purchaseProperties(event) {
     $insert_id: event.id,
     $process_person_profile: false,
     source: "stripe_webhook",
+    plan,
     checkout_mode: typeof checkout.mode === "string" ? checkout.mode : "unknown",
     payment_status: typeof checkout.payment_status === "string" ? checkout.payment_status : "unknown",
     attributed,
@@ -102,13 +118,26 @@ async function handleStripeWebhook(request, env) {
     return jsonResponse({ received: true }, 200)
   }
 
+  const checkout = event.data.object
+  const paymentLink = typeof checkout.payment_link === "string" ? checkout.payment_link : checkout.payment_link?.id
+  const plan = Object.hasOwn(GOJO_PAYMENT_LINK_PLANS, paymentLink) ? GOJO_PAYMENT_LINK_PLANS[paymentLink] : null
+  if (!plan || event.livemode !== true) return jsonResponse({ received: true }, 200)
+  if (typeof event.id !== "string" || !/^evt_[a-zA-Z0-9_]+$/.test(event.id) ||
+      !Number.isInteger(event.created) || event.created <= 0) {
+    return jsonResponse({ error: "Invalid purchase event" }, 400)
+  }
+
+  const properties = purchaseProperties(event, plan)
   const captureResponse = await globalThis.fetch(POSTHOG_CAPTURE_ENDPOINT, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       api_key: env.POSTHOG_API_KEY,
       event: "purchase_completed",
-      properties: purchaseProperties(event),
+      distinct_id: properties.distinct_id,
+      uuid: await eventUuid(event.id),
+      timestamp: new Date(event.created * 1000).toISOString(),
+      properties,
     }),
   })
   if (!captureResponse.ok) {

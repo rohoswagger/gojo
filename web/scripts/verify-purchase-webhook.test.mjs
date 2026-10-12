@@ -29,9 +29,12 @@ async function signature(body, timestamp = Math.floor(Date.now() / 1000)) {
 function checkoutEvent(type = "checkout.session.completed") {
   return {
     id: "evt_test_purchase",
+    created: 1791849600,
+    livemode: true,
     type,
     data: {
       object: {
+        payment_link: "plink_1Tz4ZMHNTmi4FmMH5Gmo5pdS",
         client_reference_id: clientReferenceId,
         mode: "payment",
         payment_status: "paid",
@@ -85,6 +88,9 @@ test("records a signed paid checkout without forwarding customer PII", async () 
     assert.equal(payload.properties.$session_id, sessionId)
     assert.equal(payload.properties.$insert_id, "evt_test_purchase")
     assert.equal(payload.properties.$process_person_profile, false)
+    assert.equal(payload.timestamp, "2026-10-13T00:00:00.000Z")
+    assert.match(payload.uuid, /^[0-9a-f]{8}-[0-9a-f]{4}-8[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+    assert.equal(payload.properties.plan, "personal_lifetime")
     assert.equal(payload.properties.value, 9.99)
     assert.equal(payload.properties.currency, "usd")
     assert.equal(JSON.stringify(payload).includes("must-not-be-forwarded@example.com"), false)
@@ -96,9 +102,12 @@ test("records a signed paid checkout without forwarding customer PII", async () 
 test("records a signed delayed-payment success", async () => {
   const event = {
     id: "evt_async_paid_123",
+    created: 1791849600,
+    livemode: true,
     type: "checkout.session.async_payment_succeeded",
     data: {
       object: {
+        payment_link: "plink_1Tz4ZMHNTmi4FmMH5Gmo5pdS",
         client_reference_id: clientReferenceId,
         mode: "payment",
         payment_status: "paid",
@@ -173,4 +182,88 @@ test("acknowledges unrelated signed Stripe events without capturing", async () =
   } finally {
     globalThis.fetch = originalFetch
   }
+})
+
+async function capturedRequests(events, captureStatus = 200) {
+  const calls = []
+  const responses = []
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = async (url, init) => {
+    calls.push(JSON.parse(init.body))
+    return new Response("ok", { status: captureStatus })
+  }
+  try {
+    for (const event of events) {
+      responses.push(await worker.fetch(await requestFor(event), environment(), {}))
+    }
+    return { calls, responses }
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+}
+
+test("replayed deliveries use the same PostHog UUID, timestamp, and identity", async () => {
+  const { calls, responses } = await capturedRequests([checkoutEvent(), checkoutEvent()])
+  assert.deepEqual(responses.map((response) => response.status), [200, 200])
+  assert.equal(calls.length, 2)
+  assert.deepEqual(calls[0], calls[1])
+  assert.ok(calls[0].uuid)
+  assert.ok(calls[0].timestamp)
+})
+
+test("ignores unpaid checkouts, test-mode events, and another product's payment link", async () => {
+  const unpaid = checkoutEvent()
+  unpaid.data.object.payment_status = "unpaid"
+  const testMode = checkoutEvent()
+  testMode.livemode = false
+  const otherProduct = checkoutEvent()
+  otherProduct.data.object.payment_link = "plink_another_product"
+  const prototype = checkoutEvent()
+  prototype.data.object.payment_link = "toString"
+  const { calls, responses } = await capturedRequests([unpaid, testMode, otherProduct, prototype])
+  assert.deepEqual(responses.map((response) => response.status), [200, 200, 200, 200])
+  assert.equal(calls.length, 0)
+})
+
+test("classifies each of Gojo's four purchase plans", async () => {
+  const plans = [
+    ["plink_1Tz4aUHNTmi4FmMH8bXNzSgr", "personal_monthly"],
+    ["plink_1Tz4ZMHNTmi4FmMH5Gmo5pdS", "personal_lifetime"],
+    ["plink_1TqeW2HNTmi4FmMHP7hTyRCT", "multi_monthly"],
+    ["plink_1TqeW2HNTmi4FmMHyLRBrjW4", "multi_lifetime"],
+  ]
+  const events = plans.map(([id], index) => {
+    const event = checkoutEvent()
+    event.id = `evt_plan_${index}`
+    event.data.object.payment_link = index === 0 ? { id } : id
+    return event
+  })
+  const { calls } = await capturedRequests(events)
+  assert.deepEqual(calls.map((call) => call.properties.plan), plans.map(([, plan]) => plan))
+})
+
+test("unattributed checkouts do not forward arbitrary client reference data", async () => {
+  const event = checkoutEvent()
+  event.data.object.client_reference_id = "must-not-be-forwarded@example.com"
+  const { calls } = await capturedRequests([event])
+  assert.equal(calls[0].properties.attributed, false)
+  assert.equal(calls[0].properties.$session_id, undefined)
+  assert.equal(calls[0].properties.distinct_id, "gojo_purchase_evt_test_purchase")
+  assert.equal(JSON.stringify(calls[0]).includes("must-not-be-forwarded@example.com"), false)
+})
+
+test("asks Stripe to retry when PostHog returns an error", async () => {
+  const { responses } = await capturedRequests([checkoutEvent()], 503)
+  assert.equal(responses[0].status, 500)
+})
+
+test("rejects an expired signing timestamp", async () => {
+  const event = checkoutEvent()
+  const body = JSON.stringify(event)
+  const response = await worker.fetch(
+    await requestFor(event, await signature(body, Math.floor(Date.now() / 1000) - 301)),
+    environment(),
+    {}
+  )
+  assert.equal(response.status, 400)
 })

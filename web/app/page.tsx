@@ -21,16 +21,16 @@ import {
 // ---------------------------------------------------------------------------
 
 export const metadata: Metadata = {
-  title: "Gojo - Your Mac, one hover away",
+  title: "Gojo - MacBook notch workspace",
   description:
-    "Gojo puts private on-device dictation, windows, clipboard, files, media, and system controls one hover away in your MacBook notch.",
+    "Gojo brings window controls, clipboard history, a file shelf, music, display controls, and on-device dictation into one MacBook notch workspace.",
   alternates: {
     canonical: "https://trygojo.com/",
   },
   openGraph: {
-    title: "Gojo - Your Mac, one hover away",
+    title: "Gojo - MacBook notch workspace",
     description:
-      "Dictate anywhere, move windows, recover copied text, stage files, control music, and more from your MacBook notch.",
+      "Manage windows, recover copied text, stage files, control music, and use local dictation from your MacBook notch.",
     type: "website",
     url: "https://trygojo.com/",
     images: [
@@ -44,9 +44,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Gojo - Your Mac, one hover away",
+    title: "Gojo - MacBook notch workspace",
     description:
-      "Private local dictation and the Mac tools you reach for, together in your MacBook notch.",
+      "Windows, clipboard, files, music, display controls, and local dictation in one MacBook notch workspace.",
     images: ["https://trygojo.com/assets/og.jpg"],
   },
 }
@@ -164,13 +164,13 @@ export default function Home() {
 
         <main className="hero">
           <h1>
-            <span className="line">Everything you reach for,</span>
+            <span className="line">Your everyday Mac tools,</span>
             <span className="line">
-              right in the <span className="glow">notch</span>.
+              in the MacBook <span className="glow">notch</span>.
             </span>
           </h1>
           <p className="sub">
-            Dictation, window snapping, clipboard history, a file shelf, music and screen warmth.
+            Window controls, clipboard history, a file shelf, music, screen warmth and local dictation.
             One surface, always a hover away.
           </p>
 
@@ -201,7 +201,7 @@ export default function Home() {
             </a>
           </div>
           <p className="meta">
-            No card, no account &middot; Dictation runs on device &middot; macOS 14 or later
+            No card, no account &middot; Local dictation runs on device &middot; macOS 14 or later
           </p>
         </main>
       </div>
@@ -290,14 +290,15 @@ export default function Home() {
               <p className="act-index" aria-hidden="true">
                 <Mic className="act-icon" strokeWidth={1.75} aria-hidden="true" />Dictation
               </p>
-              <h3 id="act-dictation">Dictation that never leaves your Mac.</h3>
+              <h3 id="act-dictation">On-device dictation, right where you type.</h3>
               <p>
                 Hold one shortcut and speak. The words appear wherever your cursor already is, in
                 Mail, Slack, a commit message or a search box.
               </p>
               <p className="act-note">
-                Speech recognition runs on a model you download once. No API key, no account, and no
-                audio ever leaves your Mac. It works on a plane.
+                With a local model selected, speech recognition runs on your Mac after one download.
+                Local mode needs no API key and works offline. Optional cloud dictation sends audio
+                to your selected provider using your own API key.
               </p>
               <ul className="act-proof">
                 <li>
@@ -305,7 +306,7 @@ export default function Home() {
                   <kbd>⌥</kbd> to talk, release to insert
                 </li>
                 <li>Choose your model, or swap it later</li>
-                <li>Runs offline, on-device, every time</li>
+                <li>Local models run offline after download</li>
               </ul>
             </div>
             <figure className="act-shot shot-inset">
@@ -368,7 +369,7 @@ export default function Home() {
                 </p>
                 <ul className="act-proof">
                   <li>Search without opening another app</li>
-                  <li>Passwords and secrets stay out of history</li>
+                  <li>Items marked private by supported password managers are skipped</li>
                 </ul>
               </div>
               <figure className="act-shot">

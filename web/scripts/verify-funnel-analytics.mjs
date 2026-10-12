@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs"
+import { readFileSync, readdirSync } from "node:fs"
+import { parse } from "node-html-parser"
 import { resolve } from "node:path"
 
 const source = (path) => readFileSync(resolve(path), "utf8")
@@ -75,4 +76,22 @@ if (!readme.includes("NEXT_PUBLIC_POSTHOG_KEY")) {
   throw new Error("README must document the PostHog build variable")
 }
 
-console.log("funnel analytics source contract passed")
+function verifyDownloadLinks(directory) {
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const path = resolve(directory, entry.name)
+    if (entry.isDirectory()) verifyDownloadLinks(path)
+    else if (entry.name.endsWith(".html")) {
+      const page = parse(readFileSync(path, "utf8"))
+      for (const link of page.querySelectorAll("a[href]")) {
+        const href = link.getAttribute("href")
+        if (!/^https:\/\/downloads\.trygojo\.com\/Gojo(?:-[\d.]+)?\.dmg$/.test(href)) continue
+        if (link.getAttribute("data-funnel-event") !== "download_cta_clicked") {
+          throw new Error(`${path}: untracked direct download ${href}`)
+        }
+      }
+    }
+  }
+}
+
+verifyDownloadLinks("out")
+console.log("funnel analytics and rendered download coverage passed")

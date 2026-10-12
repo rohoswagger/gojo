@@ -17,7 +17,12 @@ function Anchor({
     )
   }
   return (
-    <a href={href} rel={href.startsWith("http") ? "noopener" : undefined} {...props}>
+    <a
+      href={href}
+      rel={href.startsWith("http") ? "noopener" : undefined}
+      data-funnel-event={/^https:\/\/downloads\.trygojo\.com\/Gojo(?:-[\d.]+)?\.dmg$/.test(href) ? "download_cta_clicked" : undefined}
+      {...props}
+    >
       {children}
     </a>
   )

@@ -64,14 +64,14 @@ export default function PressPage() {
               puts private dictation and everyday tools in the notch.
             </p>
             <div className="press-actions">
-              <a className="btn btn-primary" href="https://downloads.trygojo.com/Gojo.dmg">
+              <a data-funnel-event="download_cta_clicked" className="btn btn-primary" href="https://downloads.trygojo.com/Gojo.dmg">
                 Download the trial
               </a>
               <a className="press-ghost-action" href="/assets/demo.mp4">
                 Watch the demo <span aria-hidden="true">↗</span>
               </a>
             </div>
-            <p className="press-trust">No card · No account · Dictation runs on device</p>
+            <p className="press-trust">No card · No account · Local dictation runs on device</p>
           </div>
 
           <figure className="press-demo">
@@ -119,7 +119,8 @@ export default function PressPage() {
               <span>Copy-ready description</span>
               <p>
                 “Gojo is a native macOS 14+ app that puts on-device dictation, window controls,
-                clipboard history, file staging, media, and display tools in the MacBook notch.”
+                clipboard history, file staging, media, and display tools in the MacBook notch.
+                Optional cloud dictation sends audio to the selected provider.”
               </p>
             </aside>
           </div>
@@ -172,7 +173,7 @@ export default function PressPage() {
                 <span>Product demo video</span>
                 <b aria-hidden="true">↗</b>
               </a>
-              <a href="https://downloads.trygojo.com/Gojo.dmg">
+              <a data-funnel-event="download_cta_clicked" href="https://downloads.trygojo.com/Gojo.dmg">
                 <span>Current signed download</span>
                 <b aria-hidden="true">↓</b>
               </a>

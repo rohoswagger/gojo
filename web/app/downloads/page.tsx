@@ -3,8 +3,8 @@ import Link from "next/link";
 import { GojoFooter } from "@/components/gojo-footer";
 import { GojoHeader } from "@/components/gojo-header";
 
-const DMG = "https://downloads.trygojo.com/Gojo.dmg";
 const VERSION = "1.5.1";
+const DMG = `https://downloads.trygojo.com/Gojo-${VERSION}.dmg`;
 const SIZE = "17 MB";
 const MIN_OS = "macOS 14 or later";
 // Printed by scripts/release.sh and verified against the published artifact.
@@ -56,7 +56,7 @@ const jsonLd = {
 const steps = [
   {
     n: "Open the disk image",
-    body: "Double click the downloaded Gojo.dmg to mount it.",
+    body: `Double click the downloaded Gojo-${VERSION}.dmg to mount it.`,
   },
   {
     n: "Drag Gojo to Applications",
@@ -64,7 +64,7 @@ const steps = [
   },
   {
     n: "Launch and grant access",
-    body: "Gojo asks for Accessibility so it can manage windows and read media keys. Nothing else is requested up front.",
+    body: "Onboarding offers optional camera, calendar, and reminder access, then Accessibility and a music source. Accessibility enables window controls, media-key handling, and dictation insertion. Local dictation also needs microphone access and a model download in Settings.",
   },
 ];
 
@@ -87,19 +87,19 @@ export default function DownloadsPage() {
               card.
             </p>
 
-            <a className="btn btn-primary download-btn" href={DMG}>
+            <a className="btn btn-primary download-btn" href={DMG} data-funnel-event="download_cta_clicked">
               Download for macOS
             </a>
 
             <p className="download-spec">
               Version {VERSION} <span aria-hidden="true">&middot;</span> {SIZE}{" "}
-              <span aria-hidden="true">&middot;</span> {MIN_OS}
+              <span aria-hidden="true">&middot;</span> {MIN_OS} <span aria-hidden="true">&middot;</span> Apple Silicon
             </p>
 
             <ul className="download-trust">
-              <li>Signed and notarized by Apple</li>
-              <li>Dictation runs on device</li>
-              <li>Updates install themselves</li>
+              <li>Developer ID signed and notarized by Apple</li>
+              <li>Local dictation runs on device</li>
+              <li>Updates through Sparkle</li>
             </ul>
           </section>
         </main>
@@ -127,7 +127,7 @@ export default function DownloadsPage() {
               confirm the file yourself, compare its checksum.
             </p>
             <pre className="download-code">
-              <code>shasum -a 256 ~/Downloads/Gojo.dmg</code>
+              <code>{`shasum -a 256 ~/Downloads/Gojo-${VERSION}.dmg`}</code>
             </pre>
             <p className="download-hash-label">Expected for {VERSION}</p>
             <p className="download-hash">{SHA256}</p>

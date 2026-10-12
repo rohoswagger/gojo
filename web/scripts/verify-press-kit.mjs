@@ -83,6 +83,7 @@ const pressEntry = [...sitemap.matchAll(/<url>\s*([\s\S]*?)\s*<\/url>/g)]
   .map((match) => match[1])
   .find((entry) => entry.includes("<loc>https://trygojo.com/press/</loc>"))
 assert.ok(pressEntry, "Generated sitemap is missing the press kit")
-assert.ok(pressEntry.includes("<lastmod>2026-09-21</lastmod>"))
+const lastmod = JSON.parse(read("content/lastmod.json"))
+assert.ok(pressEntry.includes(`<lastmod>${lastmod["/press/"]}</lastmod>`))
 
 console.log("rendered press and reviewer kit contract passed")

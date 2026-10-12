@@ -3,8 +3,8 @@
 import { useEffect } from "react"
 import { usePathname } from "next/navigation"
 
-const apiHost = "https://us.i.posthog.com"
-const apiKey = process.env.NEXT_PUBLIC_POSTHOG_KEY
+const apiHost = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://us.i.posthog.com"
+const apiKey = process.env.NEXT_PUBLIC_POSTHOG_KEY ?? process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN
 const sessionStorageKey = "gojo_analytics_session"
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 

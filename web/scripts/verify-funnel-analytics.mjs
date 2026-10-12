@@ -18,6 +18,8 @@ for (const required of [
   '"$pageview"',
   "data-funnel-event",
   "NEXT_PUBLIC_POSTHOG_KEY",
+  "NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN",
+  "NEXT_PUBLIC_POSTHOG_HOST",
   "navigator.sendBeacon",
   "usePathname",
   "urlWithoutQueryOrHash",

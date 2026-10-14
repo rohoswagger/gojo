@@ -136,6 +136,7 @@
 		B19016222CC15B3D00E3F12E /* Defaults in Frameworks */ = {isa = PBXBuildFile; productRef = B19016212CC15B3D00E3F12E /* Defaults */; };
 		D1C7000000000000000000B1 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = D1C7000000000000000000D1 /* WhisperKit */; };
 		D1C8000000000000000000B1 /* FluidAudio in Frameworks */ = {isa = PBXBuildFile; productRef = D1C8000000000000000000D1 /* FluidAudio */; };
+		D1CA000000000000000000B1 /* DictationModelValidationCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1CA000000000000000000A1 /* DictationModelValidationCache.swift */; };
 		D1C7000000000000000000B2 /* DictationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C7000000000000000000A1 /* DictationModels.swift */; };
 		D1C7000000000000000000B3 /* DictationProtocols.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C7000000000000000000A2 /* DictationProtocols.swift */; };
 		D1C7000000000000000000B4 /* DictationSessionStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C7000000000000000000A3 /* DictationSessionStateMachine.swift */; };
@@ -238,6 +239,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		D1CA000000000000000000A1 /* DictationModelValidationCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationModelValidationCache.swift; sourceTree = "<group>"; };
 		D1C7000000000000000000A1 /* DictationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationModels.swift; sourceTree = "<group>"; };
 		D1C7000000000000000000A2 /* DictationProtocols.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationProtocols.swift; sourceTree = "<group>"; };
 		D1C7000000000000000000A3 /* DictationSessionStateMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationSessionStateMachine.swift; sourceTree = "<group>"; };
@@ -506,6 +508,7 @@
 			isa = PBXGroup;
 			children = (
 				D1C7000000000000000000A1 /* DictationModels.swift */,
+				D1CA000000000000000000A1 /* DictationModelValidationCache.swift */,
 				D1C7000000000000000000A2 /* DictationProtocols.swift */,
 				D1C7000000000000000000A3 /* DictationSessionStateMachine.swift */,
 				D1C7000000000000000000A4 /* DictationController.swift */,
@@ -1193,6 +1196,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D1C7000000000000000000B2 /* DictationModels.swift in Sources */,
+				D1CA000000000000000000B1 /* DictationModelValidationCache.swift in Sources */,
 				D1C7000000000000000000B3 /* DictationProtocols.swift in Sources */,
 				D1C7000000000000000000B4 /* DictationSessionStateMachine.swift in Sources */,
 				D1C7000000000000000000B5 /* DictationController.swift in Sources */,

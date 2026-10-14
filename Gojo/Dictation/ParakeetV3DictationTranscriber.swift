@@ -5,7 +5,7 @@ import Foundation
 
 actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
     private var manager: AsrManager?
-    private var validatedModelFolder: URL?
+    private var modelValidation = DictationModelValidationCache()
     private var loadTask: (generation: UInt, task: Task<AsrManager, Error>)?
     private var loadGeneration: UInt = 0
     private var transcriptionTask: (generation: UInt, task: Task<String, Error>)?
@@ -17,30 +17,33 @@ actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
     }
 
     func install() async throws {
-        validatedModelFolder = try await Self.resolvePinnedModelFolder(
+        _ = try await resolvePinnedModelFolder(
             allowDownload: DictationModelRequest.settingsDownload.allowsDownload
         )
     }
 
     func remove() async throws {
         await unload()
+        modelValidation.invalidate()
         try Self.removeCachedModel()
-        validatedModelFolder = nil
     }
 
     func isModelInstalled() -> Bool {
-        guard let folder = Self.cachedModelFolder() else {
-            validatedModelFolder = nil
-            return false
-        }
-        if validatedModelFolder == folder { return true }
-        guard (try? Self.validateModel(at: folder)) == true else {
+        installedModelFolder() != nil
+    }
+
+    private func installedModelFolder() -> URL? {
+        guard let folder = Self.cachedModelFolder(),
+              let validatedFolder = try? modelValidation.validatedFolder(
+                  at: folder,
+                  requiredFiles: Array(Self.modelSHA256.keys),
+                  validate: Self.validateModel
+              ) else {
             Self.clearCachedModelFolder()
-            validatedModelFolder = nil
-            return false
+            modelValidation.invalidate()
+            return nil
         }
-        validatedModelFolder = folder
-        return true
+        return validatedFolder
     }
 
     func transcribe(_ audio: DictationAudio) async throws -> String {
@@ -126,12 +129,12 @@ actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
         if let manager { return manager }
         if let loadTask { return try await loadTask.task.value }
 
+        guard let snapshot = installedModelFolder() else {
+            throw WhisperKitDictationError.modelNotInstalled
+        }
         loadGeneration &+= 1
         let generation = loadGeneration
         let task = Task<AsrManager, Error> {
-            let snapshot = try await Self.resolvePinnedModelFolder(
-                allowDownload: DictationModelRequest.transcription.allowsDownload
-            )
             try Task.checkCancellation()
             let modelFolder = try Self.prepareFluidAudioLayout(for: snapshot)
             let models = try await Self.loadModelsOffline(from: modelFolder)
@@ -147,7 +150,6 @@ actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
                 throw CancellationError()
             }
             manager = loadedManager
-            validatedModelFolder = Self.cachedModelFolder()
             loadTask = nil
             return loadedManager
         } catch {
@@ -260,13 +262,8 @@ actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
         }
     }
 
-    private static func resolvePinnedModelFolder(allowDownload: Bool) async throws -> URL {
-        if let cachedURL = cachedModelFolder() {
-            if (try? validateModel(at: cachedURL)) == true {
-                return cachedURL
-            }
-            clearCachedModelFolder()
-        }
+    private func resolvePinnedModelFolder(allowDownload: Bool) async throws -> URL {
+        if let cachedURL = installedModelFolder() { return cachedURL }
 
         guard allowDownload else {
             throw WhisperKitDictationError.modelNotInstalled
@@ -274,17 +271,21 @@ actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
 
         let hub = HubApiWrapper(useBackgroundSession: true)
         let snapshot = try await hub.snapshot(
-            from: HubApiWrapper.Repo(id: repository),
-            revision: revision,
-            matching: downloadPatterns
+            from: HubApiWrapper.Repo(id: Self.repository),
+            revision: Self.revision,
+            matching: Self.downloadPatterns
         )
-        guard let expectedURL = DictationModelStorage.hubRepositoryRoot(repository),
+        guard let expectedURL = DictationModelStorage.hubRepositoryRoot(Self.repository),
               snapshot.standardizedFileURL.path == expectedURL.standardizedFileURL.path else {
-            throw WhisperKitDictationError.modelUnavailable(repository)
+            throw WhisperKitDictationError.modelUnavailable(Self.repository)
         }
-        _ = try validateModel(at: snapshot)
-        UserDefaults.standard.set(snapshot.path, forKey: cachedModelFolderKey)
-        return snapshot
+        let validatedFolder = try modelValidation.validatedFolder(
+            at: snapshot,
+            requiredFiles: Array(Self.modelSHA256.keys),
+            validate: Self.validateModel
+        )
+        UserDefaults.standard.set(validatedFolder.path, forKey: Self.cachedModelFolderKey)
+        return validatedFolder
     }
 
     private static func prepareFluidAudioLayout(for snapshot: URL) throws -> URL {
@@ -338,7 +339,7 @@ actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
         )
     }
 
-    private static func validateModel(at folder: URL) throws -> Bool {
+    private static func validateModel(at folder: URL) throws {
         var totalBytes: UInt64 = 0
         for (relativePath, expectedHash) in modelSHA256 {
             let fileURL = folder.appendingPathComponent(relativePath)
@@ -352,7 +353,6 @@ actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
                 throw ParakeetV3DictationError.integrityFailed(relativePath)
             }
         }
-        return true
     }
 
     private static func sha256(of url: URL) throws -> String {

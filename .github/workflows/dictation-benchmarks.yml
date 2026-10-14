@@ -1,0 +1,38 @@
+name: Dictation benchmark infrastructure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/benchmarks/**'
+      - 'tests/test_dictation_benchmark.py'
+      - 'tests/dictation_benchmark_regression.sh'
+      - 'tests/fixtures/dictation-benchmark/**'
+      - 'Makefile'
+      - '.github/workflows/dictation-benchmarks.yml'
+  pull_request:
+    paths:
+      - 'scripts/benchmarks/**'
+      - 'tests/test_dictation_benchmark.py'
+      - 'tests/dictation_benchmark_regression.sh'
+      - 'tests/fixtures/dictation-benchmark/**'
+      - 'Makefile'
+      - '.github/workflows/dictation-benchmarks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-benchmark-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test benchmark contracts and regression gates
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: make test-dictation-benchmark

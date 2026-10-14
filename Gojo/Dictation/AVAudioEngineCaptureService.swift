@@ -27,6 +27,7 @@ enum AVAudioEngineCaptureError: Error, Equatable {
 
 actor AVAudioEngineCaptureService: DictationAudioCapturing {
     typealias LevelObserver = @Sendable (Float) -> Void
+    typealias StreamConsumer = @Sendable ([Float], Double) -> Void
 
     private struct CaptureContext {
         let engine: AVAudioEngine
@@ -40,6 +41,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
     private let levelObserver: LevelObserver
     private var livenessWatchdog: Task<Void, Never>?
     private var configurationChangeObserver: (any NSObjectProtocol)?
+    private var streamConsumer: StreamConsumer?
 
     init(levelObserver: @escaping LevelObserver = { _ in }) {
         self.levelObserver = levelObserver
@@ -103,6 +105,11 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
             let freshContext = try makeCaptureContext()
             try startPreparedCaptureContext(freshContext, startTime: startTime)
         }
+    }
+
+    func setStreamConsumer(_ consumer: StreamConsumer?) {
+        streamConsumer = consumer
+        context?.accumulator.setStreamConsumer(consumer)
     }
 
     func discardPreparedCapture() {
@@ -192,6 +199,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
         startTime: TimeInterval
     ) throws {
         do {
+            captureContext.accumulator.setStreamConsumer(streamConsumer)
             try captureContext.engine.start()
             #if DEBUG
             let engineMilliseconds = Int(
@@ -235,6 +243,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
         context.engine.stop()
         do {
             let freshContext = try makeCaptureContext()
+            freshContext.accumulator.setStreamConsumer(streamConsumer)
             try freshContext.engine.start()
             self.context = freshContext
             #if DEBUG
@@ -271,6 +280,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
     }
 
     private func stopActiveCapture(_ context: CaptureContext) {
+        streamConsumer = nil
         livenessWatchdog?.cancel()
         livenessWatchdog = nil
         self.context = nil
@@ -429,6 +439,7 @@ private final class LockedMonoSampleAccumulator: @unchecked Sendable {
     private var samples: [Float] = []
     private var meter = DictationAudioLevelMeter()
     private var receivedFirstBuffer = false
+    private var streamConsumer: AVAudioEngineCaptureService.StreamConsumer?
 
     init(
         channelCount: Int,
@@ -436,6 +447,12 @@ private final class LockedMonoSampleAccumulator: @unchecked Sendable {
     ) {
         self.channelCount = max(1, channelCount)
         self.levelObserver = levelObserver
+    }
+
+    func setStreamConsumer(_ consumer: AVAudioEngineCaptureService.StreamConsumer?) {
+        lock.lock()
+        streamConsumer = consumer
+        lock.unlock()
     }
 
     func append(_ buffer: AVAudioPCMBuffer) {
@@ -470,8 +487,10 @@ private final class LockedMonoSampleAccumulator: @unchecked Sendable {
             sampleCount: frameCount,
             timestamp: DispatchTime.now().uptimeNanoseconds
         )
+        let consumer = streamConsumer
         lock.unlock()
         if let level { levelObserver(level) }
+        if let consumer { consumer(mono, buffer.format.sampleRate) }
     }
 
     func hasReceivedAudio() -> Bool {

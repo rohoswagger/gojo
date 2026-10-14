@@ -54,7 +54,7 @@ private final class DictationModelDownloadPromptController {
     }
 }
 
-private actor DictationTranscriberRouter: LocalDictationTranscribing {
+private actor DictationTranscriberRouter: LocalDictationTranscribing, DictationStreamingTranscribing {
     private let local: LocalDictationTranscriber
     private let openRouter: OpenRouterDictationTranscriber
     private let provider: @Sendable () -> DictationProvider
@@ -88,6 +88,19 @@ private actor DictationTranscriberRouter: LocalDictationTranscribing {
         async let cancelOpenRouter: Void = openRouter.cancelTranscription()
         await cancelLocal
         await cancelOpenRouter
+    }
+
+    func beginStreamingSession() async -> (@Sendable ([Float], Double) -> Void)? {
+        guard provider() == .local else { return nil }
+        return await local.beginStreamingSession()
+    }
+
+    func finishStreamingSession() async throws -> String {
+        try await local.finishStreamingSession()
+    }
+
+    func cancelStreamingSession() async {
+        await local.cancelStreamingSession()
     }
 }
 

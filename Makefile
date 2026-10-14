@@ -5,6 +5,8 @@ SCHEME := Gojo
 CONFIGURATION := Debug
 DERIVED_DATA_PATH := .build/DerivedData
 APP_PATH := $(DERIVED_DATA_PATH)/Build/Products/$(CONFIGURATION)/Gojo.app
+BENCHMARK_SOURCE ?= scripts/benchmarks/fixtures/synthetic-dictation-corpus.jsonl
+BENCHMARK_CORPUS ?= .build/benchmarks/corpus
 
 help:
 	@echo "Gojo local commands:"
@@ -23,6 +25,11 @@ help:
 	@echo "  make test-alt-tab Run window switcher selection regression checks"
 	@echo "  make test-search Run search calculator/fuzzy-matcher regression checks"
 	@echo "  make test-accessibility-menu Run menu accessibility-flow regression checks"
+	@echo "  make test-dictation-benchmark Run offline benchmark infrastructure checks without building the app"
+	@echo "  make benchmark-dictation-prepare Freeze audio with BENCHMARK_SYNTHESIZE=1 or a recorded-audio source"
+	@echo "  make benchmark-dictation Run a local adapter with BENCHMARK_CONFIG and BENCHMARK_OUTPUT"
+	@echo "  make benchmark-dictation-report Validate BENCHMARK_RUN and report accuracy and timing"
+	@echo "  make benchmark-dictation-compare Compare BENCHMARK_BASELINE and BENCHMARK_CANDIDATE"
 	@echo "  make test-dictation Run local dictation regressions and benchmark scorer checks"
 	@echo "  make test-dictation-model-validation Run model validation cache regressions"
 	@echo "  make test-dictation-cleanup-benchmark Compare fast OpenRouter cleanup models (paid)"
@@ -136,7 +143,7 @@ test-dictation: build
 	./tests/text_insertion_xpc_regression.sh
 	./tests/dictation_unicode_typing_regression.sh
 	bash ./tests/dictation_live_harness_regression.sh
-	./tests/dictation_benchmark_regression.sh
+	$(MAKE) test-dictation-benchmark
 	bash ./tests/dictation_cleanup_benchmark_regression.sh
 
 test-dictation-model-validation:
@@ -179,3 +186,24 @@ test-dictation-real-microphone-live:
 
 clean:
 	rm -rf "$(DERIVED_DATA_PATH)"
+
+.PHONY: test-dictation-benchmark benchmark-dictation-prepare benchmark-dictation benchmark-dictation-report benchmark-dictation-compare
+
+test-dictation-benchmark:
+	bash tests/dictation_benchmark_regression.sh
+	python3 -m unittest discover -s tests -p 'test_dictation_benchmark.py' -v
+
+benchmark-dictation-prepare:
+	python3 scripts/benchmarks/dictation_benchmark.py prepare "$(BENCHMARK_SOURCE)" --output "$(BENCHMARK_CORPUS)" $(if $(filter 1,$(BENCHMARK_SYNTHESIZE)),--synthesize,)
+
+benchmark-dictation:
+	@test -n "$(BENCHMARK_CONFIG)" -a -n "$(BENCHMARK_OUTPUT)" || (echo "Set BENCHMARK_CONFIG and a new BENCHMARK_OUTPUT directory"; exit 2)
+	python3 scripts/benchmarks/dictation_benchmark.py run --corpus "$(BENCHMARK_CORPUS)" --config "$(BENCHMARK_CONFIG)" --output "$(BENCHMARK_OUTPUT)"
+
+benchmark-dictation-report:
+	@test -n "$(BENCHMARK_RUN)" || (echo "Set BENCHMARK_RUN"; exit 2)
+	python3 scripts/benchmarks/dictation_benchmark.py report "$(BENCHMARK_RUN)"
+
+benchmark-dictation-compare:
+	@test -n "$(BENCHMARK_BASELINE)" -a -n "$(BENCHMARK_CANDIDATE)" || (echo "Set BENCHMARK_BASELINE and BENCHMARK_CANDIDATE"; exit 2)
+	python3 scripts/benchmarks/dictation_benchmark.py compare "$(BENCHMARK_BASELINE)" "$(BENCHMARK_CANDIDATE)"

@@ -333,7 +333,7 @@ class DictationBenchmarkCLI(unittest.TestCase):
         real_is_file = Path.is_file
         def platform_file(path):
             return True if str(path) == "/usr/bin/sandbox-exec" else real_is_file(path)
-        for behavior in ("success", "bad-text", "nan", "malformed", "report-array", "timings-array", "failed-process", "timeout", "supports-no-download"):
+        for behavior in ("success", "bad-text", "nan", "overflow", "malformed", "report-array", "timings-array", "failed-process", "timeout", "supports-no-download"):
             with self.subTest(behavior=behavior):
                 artifact_dir = self.directory / ("adapter-" + behavior)
                 report_dir = artifact_dir / items[0]["item_id"]
@@ -365,6 +365,8 @@ class DictationBenchmarkCLI(unittest.TestCase):
                         report["text"] = None
                     if current_behavior == "nan":
                         report["timings"]["fullPipeline"] = float("nan")
+                    if current_behavior == "overflow":
+                        report["timings"]["fullPipeline"] = 1e308
                     if current_behavior == "report-array":
                         report = []
                     if current_behavior == "timings-array":

@@ -95,7 +95,7 @@ def main():
                 pipeline = number(timings.get("fullPipeline"), "CLI timings.fullPipeline")
                 row["hypothesis"] = report["text"]
                 row["raw_hypothesis"] = report["text"]
-                row["timings_ms"]["engine_pipeline"] = pipeline * 1000
+                row["timings_ms"]["engine_pipeline"] = number(pipeline * 1000, "CLI fullPipeline milliseconds")
             except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:
                 row.pop("hypothesis", None)
                 row.pop("raw_hypothesis", None)

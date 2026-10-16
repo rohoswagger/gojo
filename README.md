@@ -50,7 +50,7 @@ Pause detection uses microphone volume. Sustained background noise can delay a p
 
 Parakeet Unified handles English with punctuation and capitalization. Parakeet v3 covers 25 European languages. Whisper Small and Whisper Large v3 are English options. Downloaded models recognize speech on this Mac without an API key or cloud fallback. Optional S1-mini cleanup and vocabulary replacements also run locally. Selecting **OpenRouter** instead sends audio to the configured cloud model and requires an API key.
 
-Gojo refuses password fields. Each completed phrase stays tied to its captured field while processing. If the field changes or cannot be verified, voice mode keeps the text available for copying instead of redirecting it. The Control and Option shortcut is fixed so it is always easy to remember.
+Gojo refuses password fields. In voice mode, a phrase targeting a password field stops recording without transcribing or saving that phrase. Previously accepted phrases finish normally. Each completed phrase stays tied to its captured field while processing. If the field changes or cannot be verified, voice mode keeps the text available for copying instead of redirecting it. The Control and Option shortcut is fixed so it is always easy to remember.
 
 ### Drag-and-drop shelf
 

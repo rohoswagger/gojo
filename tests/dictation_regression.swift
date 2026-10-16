@@ -316,14 +316,16 @@ actor GatedTargetProvider: DictationTargetCapturing {
 actor FollowingTargetProvider: DictationTargetCapturing {
     typealias Target = String
     private let phrases: [String?]
+    private let failures: [Int: DictationFailure]
     private var gateOrdinal: Int?
     private var gate: CheckedContinuation<Void, Never>?
     private(set) var captures = 0
     private(set) var additionalCaptures = 0
 
-    init(_ phrases: [String?], gateOrdinal: Int? = nil) {
+    init(_ phrases: [String?], gateOrdinal: Int? = nil, failures: [Int: DictationFailure] = [:]) {
         self.phrases = phrases
         self.gateOrdinal = gateOrdinal
+        self.failures = failures
     }
 
     func captureTarget() async throws -> String {
@@ -337,6 +339,7 @@ actor FollowingTargetProvider: DictationTargetCapturing {
         if ordinal == gateOrdinal {
             await withCheckedContinuation { gate = $0 }
         }
+        if let failure = failures[ordinal] { throw failure }
         guard let target = phrases[ordinal - 1] else { throw FriendlyTargetError() }
         return target
     }
@@ -619,6 +622,8 @@ struct DictationRegressionRunner {
         await testFollowFocusCancellationReleasesAllTargets()
         await testFollowFocusLateTargetCancellation()
         await testFollowFocusRecoveryKeepsListening()
+        await testSecurePhraseStopsBeforeInference()
+        await testSecurePhraseDrainsAcceptedSafeJobs()
         await testRecoveryBudgetFinishesAndDrains()
         print("dictation-regression-pass")
     }
@@ -2899,6 +2904,68 @@ struct DictationRegressionRunner {
         assertEqual(await inserter.releases, ["initial-field", "moved-field#1", "editor#1"], "failed and successful phrase targets must both release")
         await controller.clearRecoveryText()
         assertEqual(recovery.snapshot(), "", "discard must clear the recoverable transcript")
+    }
+
+    static func testSecurePhraseStopsBeforeInference() async {
+        let target = FollowingTargetProvider([nil, "tail-field#1"], failures: [1: .secureTextTarget])
+        let audio = ContinuousAudioCapture()
+        let transcriber = ContinuousTranscriber(["Sensitive phrase.", "Sensitive tail."])
+        let inserter = RetainedInserter()
+        let recovery = RecoveryRecorder()
+        let controller = DictationController(
+            targetProvider: target, audioCapture: audio, transcriber: transcriber,
+            polisher: FakePolisher(log: EventLog()), inserter: inserter,
+            recoveryObserver: { text, _ in recovery.record(text) }
+        )
+        await controller.hotKeyDown(mode: .continuous, targetPolicy: .followFocus)
+        await waitForState(.listening, controller: controller, message: "secure phrase session should listen")
+        await audio.setTail(2)
+        await audio.emit(1)
+        await waitForState(.error(.secureTextTarget), controller: controller, message: "secure phrase must stop voice mode with a typed refusal")
+        assertEqual(await transcriber.ordinals, [], "secure phrase and stop tail must never reach inference")
+        assertEqual(recovery.snapshot(), "", "secure audio must not become saved text")
+        assertEqual(await controller.recoveryText, "", "secure audio must not enter controller recovery")
+        assertEqual(await audio.stops, 1, "secure refusal must stop microphone capture once")
+        assertEqual(await audio.cancellations, 0, "secure refusal should finish its capture cleanly")
+        assertEqual(await target.additionalCaptures, 1, "secure refusal must discard the stop tail before target capture")
+        assertEqual(await inserter.chunks, [], "secure refusal must not insert text")
+        assertEqual(await controller.isVoiceModeActive, false, "secure refusal must close voice mode")
+    }
+
+    static func testSecurePhraseDrainsAcceptedSafeJobs() async {
+        let target = FollowingTargetProvider(
+            [nil, "editor#1", nil, "tail-field#1"], failures: [3: .secureTextTarget]
+        )
+        let audio = ContinuousAudioCapture()
+        let transcriber = ContinuousTranscriber(
+            ["Safe recovery.", "Safe insertion.", "Sensitive phrase.", "Sensitive tail."], gateFirst: true
+        )
+        let inserter = RetainedInserter()
+        let controller = DictationController(
+            targetProvider: target, audioCapture: audio, transcriber: transcriber,
+            polisher: FakePolisher(log: EventLog()), inserter: inserter
+        )
+        await controller.hotKeyDown(mode: .continuous, targetPolicy: .followFocus)
+        await waitForState(.listening, controller: controller, message: "secure drain session should listen")
+        await audio.emit(1)
+        await waitForCondition("safe inference should remain in flight") { await transcriber.isWaiting() }
+        await audio.emit(2)
+        await waitForCondition("second safe phrase must be accepted before secure refusal") { await target.additionalCaptures == 2 }
+        await audio.setTail(4)
+        await audio.emit(3)
+        await waitForCondition("secure refusal must stop capture while safe inference is blocked") { await audio.stops == 1 }
+        assertEqual(await controller.recoveryText, "", "secure refusal must leave saved text unchanged before safe jobs drain")
+        assertEqual(await transcriber.ordinals, [1], "secure refusal must preserve only the in-flight safe inference")
+        await transcriber.releaseFirst()
+        await waitForState(.error(.secureTextTarget), controller: controller, message: "secure refusal must remain visible after safe jobs drain")
+        assertEqual(await transcriber.ordinals, [1, 2], "only accepted safe phrases may reach inference")
+        assertEqual(await controller.recoveryText, "Safe recovery.", "only the accepted unavailable-field phrase may enter recovery")
+        assertEqual(await inserter.chunks, ["Safe insertion."], "accepted safe insertion must finish exactly once")
+        assertEqual(await inserter.targets, ["editor#1"], "safe jobs must retain their original target")
+        assertEqual(await inserter.releases, ["initial-field", "editor#1"], "secure stop must release accepted safe leases")
+        assertEqual(await target.additionalCaptures, 3, "secure stop tail must not capture a new target")
+        assertEqual(await audio.stops, 1, "safe drain must not stop capture twice")
+        assertEqual(await audio.cancellations, 0, "secure stop must preserve accepted safe work")
     }
 
     static func testRecoveryBudgetFinishesAndDrains() async {

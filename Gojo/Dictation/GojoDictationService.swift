@@ -117,6 +117,7 @@ private struct XPCTargetProvider: DictationTargetCapturing {
             let code = result["error"] as? String ?? "targetUnavailable"
             dictationTargetLogger.error("capture success=false error=\(code, privacy: .public)")
             if code == "permissionMissing" { throw DictationFailure.accessibilityPermissionDenied }
+            if code == "secureTextTarget" { throw DictationFailure.secureTextTarget }
             throw DictationXPCError(code: code)
         }
         dictationTargetLogger.notice("capture success=true")
@@ -488,6 +489,7 @@ final class GojoDictationService: ObservableObject {
             shortcutPreflighting = true
             defer { shortcutPreflighting = false }
             if requestsVoiceMode, !isDictationInactive {
+                receive(await controller.state)
                 if !(await controller.isVoiceModeActive) { rejectShortcutStart() }
                 return
             }
@@ -505,6 +507,7 @@ final class GojoDictationService: ObservableObject {
                 }
             }
             guard modelOperation == nil, isDictationInactive else {
+                receive(await controller.state)
                 let stateName: String
                 switch state {
                 case .idle: stateName = "idle"
@@ -590,6 +593,7 @@ final class GojoDictationService: ObservableObject {
                     receive(currentState)
                 }
             } else {
+                receive(await controller.state)
                 rejectShortcutStart()
             }
         case .keyUp:
@@ -1055,6 +1059,8 @@ extension DictationFailure: LocalizedError {
             return "Allow Gojo to use the microphone in System Settings, then try again."
         case .accessibilityPermissionDenied:
             return "Enable Gojo in System Settings > Privacy & Security > Accessibility."
+        case .secureTextTarget:
+            return "Gojo does not dictate into password fields."
         case .targetUnavailable(let detail):
             return detail
         case .captureFailed:

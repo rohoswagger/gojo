@@ -618,6 +618,7 @@ enum DictationFailure: Error, Equatable, Sendable {
     case cloudConfigurationMissing(String)
     case microphonePermissionDenied
     case accessibilityPermissionDenied
+    case secureTextTarget
     case targetUnavailable(String)
     case captureFailed(String)
     case transcriptionFailed(String)

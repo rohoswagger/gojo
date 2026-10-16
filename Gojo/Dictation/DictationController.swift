@@ -54,6 +54,7 @@ where TargetProvider: DictationTargetCapturing,
         var lastDestinationID: String?
         var lastInsertedCharacter: Character?
         var lastTranscript: String?
+        var terminalFailure: DictationFailure?
     }
 
     private let targetProvider: TargetProvider
@@ -506,6 +507,7 @@ where TargetProvider: DictationTargetCapturing,
 
     private func receiveContinuousAudio(_ audio: DictationAudio, sessionID expectedSession: UUID) async {
         guard expectedSession == sessionID, let session = continuousSession,
+              session.terminalFailure == nil,
               !audio.samples.isEmpty, audio.sampleRate > 0 else { return }
         guard session.pending.count < 3 else {
             failContinuousSession(.captureFailed("Dictation could not keep up. Stop and start again."))
@@ -529,6 +531,11 @@ where TargetProvider: DictationTargetCapturing,
                 guard expectedSession == sessionID, continuousSession != nil, !Task.isCancelled else { return }
                 targetSnapshot = nil
                 targetObserver?(nil)
+                if error as? DictationFailure == .secureTextTarget {
+                    continuousSession?.terminalFailure = .secureTextTarget
+                    stopContinuousSession(intent: .finish)
+                    return
+                }
                 unavailableReason = Self.userFacingDetail(for: error)
             }
         }
@@ -704,7 +711,9 @@ where TargetProvider: DictationTargetCapturing,
         continuousSession = nil
         if let completedTarget { await inserter.releaseTarget(completedTarget) }
         guard expectedSession == sessionID, !Task.isCancelled else { return }
-        if let transcript = session.lastTranscript {
+        if let failure = session.terminalFailure {
+            transition(.failed(failure))
+        } else if let transcript = session.lastTranscript {
             transition(.transcriptionCompleted(transcript))
             transition(.insertionCompleted(transcript))
         } else {

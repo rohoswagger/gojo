@@ -15,14 +15,24 @@ private let dictationAudioPipelineLogger = Logger(
 )
 #endif
 
-enum AVAudioEngineCaptureError: Error, Equatable {
+enum AVAudioEngineCaptureError: Error, Equatable, LocalizedError {
     case alreadyCapturing
     case notCapturing
     case inputUnavailable
+    case inputConfigurationChanged
     case unsupportedInputFormat
     case sampleBufferTooLarge
     case converterUnavailable
     case conversionFailed(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .inputConfigurationChanged:
+            return "The microphone changed and dictation stopped. Start dictation again."
+        default:
+            return nil
+        }
+    }
 }
 
 actor AVAudioEngineCaptureService: DictationAudioCapturing {
@@ -137,6 +147,9 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
             throw AVAudioEngineCaptureError.alreadyCapturing
         }
         let existingCapture = promoting ? context : nil
+        if let existingCapture, !existingCapture.engine.isRunning {
+            throw AVAudioEngineCaptureError.inputConfigurationChanged
+        }
         discardPreparedCapture()
 
         let engine = existingCapture?.engine ?? AVAudioEngine()
@@ -293,13 +306,29 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
             forName: .AVAudioEngineConfigurationChange,
             object: nil,
             queue: nil
-        ) { [weak self] _ in
+        ) { [weak self] notification in
+            guard let engine = notification.object as? AVAudioEngine else { return }
+            let engineID = ObjectIdentifier(engine)
             Task { [weak self] in
-                guard let self else { return }
-                await self.discardPreparedCapture()
-                await self.prepareForCaptureIfAuthorized()
+                await self?.handleConfigurationChange(engineID: engineID)
             }
         }
+    }
+
+    private func handleConfigurationChange(engineID: ObjectIdentifier) async {
+        if let preparedContext, ObjectIdentifier(preparedContext.engine) == engineID {
+            discardPreparedCapture()
+        }
+        if let continuousContext,
+           ObjectIdentifier(continuousContext.engine) == engineID,
+           !continuousContext.engine.isRunning {
+            stopActiveContinuousCapture(continuousContext)
+            continuousContext.accumulator.discard()
+            continuousContext.continuation.finish(
+                throwing: AVAudioEngineCaptureError.inputConfigurationChanged
+            )
+        }
+        await prepareForCaptureIfAuthorized()
     }
 
     private static func tapFormat(for inputNode: AVAudioInputNode) throws -> AVAudioFormat {

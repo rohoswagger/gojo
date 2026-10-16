@@ -20,7 +20,7 @@ private func helperDebug(_ message: String) {
     os_log("%{public}@", log: gojoHelperDebugLog, type: .default, "[GOJO-HELPER] " + message)
 }
 
-private enum CapturedTextTargetKind: Equatable {
+private enum CapturedTextTargetKind: String, Equatable {
     case accessibility
     case applicationPaste
     case applicationUnicode
@@ -87,6 +87,7 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
     private var lastWindowTargetApplication: NSRunningApplication?
     private var capturedTextTargets: [String: CapturedTextTarget] = [:]
 
+    private static let maximumCapturedTextTargets = 16
     private static let pasteKeyCode: CGKeyCode = 9
     private static let transientPasteboardType = NSPasteboard.PasteboardType(
         "org.nspasteboard.TransientType"
@@ -160,6 +161,33 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
         preferredTarget: NSDictionary?,
         with reply: @escaping (NSDictionary) -> Void
     ) {
+        captureTextTarget(
+            promptIfNeeded,
+            preferredTarget: preferredTarget,
+            replacingExistingTargets: true,
+            reply: reply
+        )
+    }
+
+    @objc func captureAdditionalFocusedTextTarget(
+        _ promptIfNeeded: Bool,
+        preferredTarget: NSDictionary?,
+        with reply: @escaping (NSDictionary) -> Void
+    ) {
+        captureTextTarget(
+            promptIfNeeded,
+            preferredTarget: preferredTarget,
+            replacingExistingTargets: false,
+            reply: reply
+        )
+    }
+
+    private func captureTextTarget(
+        _ promptIfNeeded: Bool,
+        preferredTarget: NSDictionary?,
+        replacingExistingTargets: Bool,
+        reply: @escaping (NSDictionary) -> Void
+    ) {
         DispatchQueue.main.async { [weak self] in
             guard let self else {
                 reply([
@@ -170,12 +198,29 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
                 return
             }
 
-            // A new capture attempt supersedes every earlier destination, even
-            // when the new focus is invalid or authorization was revoked.
-            self.capturedTextTargets.removeAll(keepingCapacity: true)
+            if replacingExistingTargets {
+                self.capturedTextTargets.removeAll(keepingCapacity: true)
+            }
             guard self.ensureAccessibilityAuthorizationSync(promptIfNeeded: promptIfNeeded) else {
                 reply(self.textCaptureFailure(authorized: false, error: "permissionMissing"))
                 return
+            }
+            guard self.capturedTextTargets.count < Self.maximumCapturedTextTargets else {
+                reply(self.textCaptureFailure(authorized: true, error: "targetLimitReached"))
+                return
+            }
+            let complete: ([String: Any]) -> Void = { result in
+                var result = result
+                if let token = result["token"] as? String,
+                   let target = self.capturedTextTargets[token] {
+                    if !replacingExistingTargets, target.kind != .accessibility {
+                        self.capturedTextTargets.removeValue(forKey: token)
+                        reply(self.textCaptureFailure(authorized: true, error: "unverifiedTextTarget"))
+                        return
+                    }
+                    result["targetIdentity"] = "\(target.pid):\(target.windowID ?? 0):\(CFHash(target.element)):\(target.kind.rawValue)"
+                }
+                reply(NSDictionary(dictionary: result))
             }
             let topmostApplication = self.topmostTargetApplication()
             let focusedElements = self.focusedTextTargetCandidates(
@@ -206,7 +251,7 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
                 if let displayID = preferredApplicationTarget.displayID {
                     captureReply["displayID"] = NSNumber(value: displayID)
                 }
-                reply(NSDictionary(dictionary: captureReply))
+                complete(captureReply)
                 return
             }
             guard !focusedElements.isEmpty else {
@@ -230,7 +275,7 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
                     if let displayID = target.displayID {
                         captureReply["displayID"] = NSNumber(value: displayID)
                     }
-                    reply(NSDictionary(dictionary: captureReply))
+                    complete(captureReply)
                     return
                 }
                 reply(self.textCaptureFailure(authorized: true, error: "noFocusedTextTarget"))
@@ -277,7 +322,7 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
                     if let displayID = target.displayID {
                         captureReply["displayID"] = NSNumber(value: displayID)
                     }
-                    reply(NSDictionary(dictionary: captureReply))
+                    complete(captureReply)
                     return
                 case let .editable(element, allowsPasteFallback):
                     var pid = pid_t(0)
@@ -307,7 +352,7 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
                        let displayID = self.displayID(containing: frame) {
                         captureReply["displayID"] = NSNumber(value: displayID)
                     }
-                    reply(NSDictionary(dictionary: captureReply))
+                    complete(captureReply)
                     return
                 }
             }
@@ -331,7 +376,7 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
                 if let displayID = target.displayID {
                     captureReply["displayID"] = NSNumber(value: displayID)
                 }
-                reply(NSDictionary(dictionary: captureReply))
+                complete(captureReply)
                 return
             }
 
@@ -344,6 +389,30 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
         token: String,
         with reply: @escaping (NSDictionary) -> Void
     ) {
+        performTextInsertion(text, token: token, retainingTarget: false, reply: reply)
+    }
+
+    @objc func insertTextRetainingTarget(
+        _ text: String,
+        token: String,
+        with reply: @escaping (NSDictionary) -> Void
+    ) {
+        performTextInsertion(text, token: token, retainingTarget: true, reply: reply)
+    }
+
+    @objc func releaseTextTarget(_ token: String, with reply: @escaping () -> Void) {
+        DispatchQueue.main.async { [weak self] in
+            self?.capturedTextTargets.removeValue(forKey: token)
+            reply()
+        }
+    }
+
+    private func performTextInsertion(
+        _ text: String,
+        token: String,
+        retainingTarget: Bool,
+        reply: @escaping (NSDictionary) -> Void
+    ) {
         DispatchQueue.main.async { [weak self] in
             guard let self else {
                 reply([
@@ -354,23 +423,37 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
                 ])
                 return
             }
+            let complete: (NSDictionary) -> Void = { result in
+                let error = result["error"] as? String
+                if retainingTarget,
+                   (result["success"] as? NSNumber)?.boolValue != true,
+                   error != "applicationPasteRequired",
+                   error != "applicationUnicodeRequired" {
+                    self.capturedTextTargets.removeValue(forKey: token)
+                }
+                reply(result)
+            }
             guard AXIsProcessTrusted() else {
                 self.capturedTextTargets.removeValue(forKey: token)
-                reply(self.textInsertionFailure(authorized: false, error: "permissionMissing"))
+                complete(self.textInsertionFailure(authorized: false, error: "permissionMissing"))
                 return
             }
             guard !text.isEmpty else {
                 self.capturedTextTargets.removeValue(forKey: token)
-                reply(self.textInsertionFailure(authorized: true, error: "emptyText"))
+                complete(self.textInsertionFailure(authorized: true, error: "emptyText"))
                 return
             }
-            guard let target = self.capturedTextTargets.removeValue(forKey: token) else {
-                reply(self.textInsertionFailure(authorized: true, error: "invalidToken"))
+            let capturedTarget = retainingTarget
+                ? self.capturedTextTargets[token]
+                : self.capturedTextTargets.removeValue(forKey: token)
+            guard let target = capturedTarget else {
+                complete(self.textInsertionFailure(authorized: true, error: "invalidToken"))
                 return
             }
+            let retainedToken = retainingTarget ? token : nil
             if target.kind == .applicationPaste {
                 guard let windowID = target.windowID else {
-                    reply(self.textInsertionFailure(authorized: true, error: "focusChanged"))
+                    complete(self.textInsertionFailure(authorized: true, error: "focusChanged"))
                     return
                 }
                 let applicationPasteReply: [String: Any] = [
@@ -382,19 +465,19 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
                     "pid": NSNumber(value: target.pid),
                     "windowID": NSNumber(value: windowID),
                 ]
-                reply(NSDictionary(dictionary: applicationPasteReply))
+                complete(NSDictionary(dictionary: applicationPasteReply))
                 return
             }
             if target.kind == .applicationUnicode {
                 guard let windowID = target.windowID else {
-                    reply(self.textInsertionFailure(authorized: true, error: "focusChanged"))
+                    complete(self.textInsertionFailure(authorized: true, error: "focusChanged"))
                     return
                 }
                 guard !self.hasSecureFocusedAncestry(for: target.pid) else {
-                    reply(self.textInsertionFailure(authorized: true, error: "secureTextTarget"))
+                    complete(self.textInsertionFailure(authorized: true, error: "secureTextTarget"))
                     return
                 }
-                reply([
+                complete([
                     "authorized": true,
                     "success": false,
                     "method": "application-unicode",
@@ -407,7 +490,7 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
             }
 
             guard self.isStillFocused(target) else {
-                reply(self.textInsertionFailure(authorized: true, error: "focusChanged"))
+                complete(self.textInsertionFailure(authorized: true, error: "focusChanged"))
                 return
             }
 
@@ -422,7 +505,7 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
             )
             if axResult == .success {
                 guard let accessibilityExpectation else {
-                    reply([
+                    complete([
                         "authorized": true,
                         "success": false,
                         "method": "accessibility",
@@ -434,17 +517,18 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
                 self.waitForAccessibilityConfirmation(
                     expectation: accessibilityExpectation,
                     target: target,
+                    retainedToken: retainedToken,
                     attemptsRemaining: 20,
-                    reply: reply
+                    reply: complete
                 )
                 return
             }
 
             guard target.allowsPasteFallback else {
-                reply(self.textInsertionFailure(authorized: true, error: "axInsertionFailed"))
+                complete(self.textInsertionFailure(authorized: true, error: "axInsertionFailed"))
                 return
             }
-            self.insertWithGuardedPaste(text, target: target, reply: reply)
+            self.insertWithGuardedPaste(text, target: target, retainedToken: retainedToken, reply: complete)
         }
     }
 
@@ -1247,8 +1331,13 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
     private func insertWithGuardedPaste(
         _ text: String,
         target: CapturedTextTarget,
+        retainedToken: String?,
         reply: @escaping (NSDictionary) -> Void
     ) {
+        guard isTextTargetActive(retainedToken) else {
+            reply(textInsertionFailure(authorized: true, error: "invalidToken"))
+            return
+        }
         guard isStillFocused(target) else {
             reply(textInsertionFailure(authorized: true, error: "focusChanged"))
             return
@@ -1312,6 +1401,7 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
         waitForPasteConfirmation(
             expectation: expectation,
             target: target,
+            retainedToken: retainedToken,
             pasteboard: pasteboard,
             injectedChangeCount: injectedChangeCount,
             snapshot: snapshot,
@@ -1323,9 +1413,14 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
     private func waitForAccessibilityConfirmation(
         expectation: PasteMutationExpectation,
         target: CapturedTextTarget,
+        retainedToken: String?,
         attemptsRemaining: Int,
         reply: @escaping (NSDictionary) -> Void
     ) {
+        guard isTextTargetActive(retainedToken) else {
+            reply(textInsertionFailure(authorized: true, error: "invalidToken"))
+            return
+        }
         if expectation.confirms(
             currentValue: copyString(target.element, attribute: kAXValueAttribute as String)
         ) {
@@ -1348,6 +1443,7 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
                 insertWithGuardedPaste(
                     expectation.insertionText,
                     target: target,
+                    retainedToken: retainedToken,
                     reply: reply
                 )
                 return
@@ -1365,6 +1461,7 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
             self?.waitForAccessibilityConfirmation(
                 expectation: expectation,
                 target: target,
+                retainedToken: retainedToken,
                 attemptsRemaining: attemptsRemaining - 1,
                 reply: reply
             )
@@ -1374,12 +1471,23 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
     private func waitForPasteConfirmation(
         expectation: PasteMutationExpectation,
         target: CapturedTextTarget,
+        retainedToken: String?,
         pasteboard: NSPasteboard,
         injectedChangeCount: Int,
         snapshot: PasteboardSnapshot,
         attemptsRemaining: Int,
         reply: @escaping (NSDictionary) -> Void
     ) {
+        guard isTextTargetActive(retainedToken) else {
+            if pasteboard.changeCount == injectedChangeCount,
+               expectation.confirms(
+                currentValue: copyString(target.element, attribute: kAXValueAttribute as String)
+               ) {
+                _ = snapshot.restore(to: pasteboard)
+            }
+            reply(textInsertionFailure(authorized: true, error: "invalidToken"))
+            return
+        }
         if expectation.confirms(
             currentValue: copyString(target.element, attribute: kAXValueAttribute as String)
         ) {
@@ -1412,6 +1520,7 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
             self?.waitForPasteConfirmation(
                 expectation: expectation,
                 target: target,
+                retainedToken: retainedToken,
                 pasteboard: pasteboard,
                 injectedChangeCount: injectedChangeCount,
                 snapshot: snapshot,
@@ -1419,6 +1528,11 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
                 reply: reply
             )
         }
+    }
+
+    private func isTextTargetActive(_ retainedToken: String?) -> Bool {
+        guard let retainedToken else { return true }
+        return capturedTextTargets[retainedToken] != nil
     }
 
     private func pasteMutationExpectation(

@@ -39,7 +39,7 @@ fi
 
 make -C "$ROOT" stop >/dev/null
 started_at="$(date '+%Y-%m-%d %H:%M:%S')"
-open -g "$APP"
+open -g --env GOJO_LICENSE=lifetime "$APP"
 
 ready=false
 for _ in $(seq 1 600); do

@@ -70,6 +70,15 @@ private final class OpaquePasteField: NSTextField {
             paste(nil)
             return
         }
+        if !event.modifierFlags.intersection([.command, .control]).isEmpty {
+            super.keyDown(with: event)
+            return
+        }
+        if let characters = event.characters, !characters.isEmpty {
+            text += characters
+            persistTextIfChanged()
+            return
+        }
         super.keyDown(with: event)
     }
 

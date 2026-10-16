@@ -11,20 +11,95 @@ CLIPBOARD_FILE=""
 EXPECTED_TEXT='abcdefghijklmnopqrs👨‍👩‍👧‍👦tail'
 SENTINEL="gojo-unicode-typing-clipboard-sentinel"
 
+clipboard_state() {
+  swift - "$1" "$2" <<'SWIFT'
+import AppKit
+import Foundation
+
+let arguments = Array(CommandLine.arguments.dropFirst())
+let url = URL(fileURLWithPath: arguments[1])
+let pasteboard = NSPasteboard.general
+
+func snapshot() throws -> [[String: Data]] {
+    try (pasteboard.pasteboardItems ?? []).map { item in
+        var dataByType: [String: Data] = [:]
+        for type in item.types {
+            guard let data = item.data(forType: type) else {
+                throw NSError(domain: "ClipboardSnapshot", code: 1)
+            }
+            dataByType[type.rawValue] = data
+        }
+        return dataByType
+    }
+}
+
+do {
+    if arguments[0] == "save" {
+        let data = try PropertyListSerialization.data(
+            fromPropertyList: snapshot(), format: .binary, options: 0
+        )
+        try data.write(to: url, options: .atomic)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+    } else {
+        let data = try Data(contentsOf: url)
+        guard let saved = try PropertyListSerialization.propertyList(
+            from: data, options: [], format: nil
+        ) as? [[String: Data]] else {
+            throw NSError(domain: "ClipboardSnapshot", code: 2)
+        }
+        if arguments[0] == "restore" {
+            let items = saved.map { dataByType in
+                let item = NSPasteboardItem()
+                for (type, data) in dataByType {
+                    item.setData(data, forType: NSPasteboard.PasteboardType(type))
+                }
+                return item
+            }
+            pasteboard.clearContents()
+            guard items.isEmpty || pasteboard.writeObjects(items) else {
+                throw NSError(domain: "ClipboardSnapshot", code: 3)
+            }
+        }
+        let current = try snapshot()
+        guard current == saved else {
+            FileHandle.standardError.write(Data(
+                "Clipboard item data changed (before=\(saved.count) items, after=\(current.count) items).\n".utf8
+            ))
+            for index in 0..<max(saved.count, current.count) {
+                let before = saved.indices.contains(index) ? saved[index] : [:]
+                let after = current.indices.contains(index) ? current[index] : [:]
+                for type in Set(before.keys).union(after.keys).sorted() where before[type] != after[type] {
+                    FileHandle.standardError.write(Data("Changed clipboard type: \(type)\n".utf8))
+                }
+            }
+            throw NSError(domain: "ClipboardSnapshot", code: 4)
+        }
+    }
+} catch {
+    FileHandle.standardError.write(Data("Could not preserve, verify, or restore all clipboard item types.\n".utf8))
+    exit(1)
+}
+SWIFT
+}
+
 cleanup() {
+  local status=$?
   if [[ -n "$FIXTURE_PID" ]] && kill -0 "$FIXTURE_PID" 2>/dev/null; then
     kill "$FIXTURE_PID" 2>/dev/null || true
     wait "$FIXTURE_PID" 2>/dev/null || true
   fi
   if [[ -n "$CLIPBOARD_FILE" && -f "$CLIPBOARD_FILE" ]]; then
-    pbcopy < "$CLIPBOARD_FILE" || true
+    clipboard_state restore "$CLIPBOARD_FILE" || status=1
   fi
   if [[ -n "$FIXTURE_DIR" && -d "$FIXTURE_DIR" ]]; then
     rm -rf "$FIXTURE_DIR"
   fi
   release_dictation_live_lock
+  exit "$status"
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 cd "$ROOT"
 acquire_dictation_live_lock
@@ -35,9 +110,10 @@ if [[ ! -d "$APP" ]]; then
 fi
 
 FIXTURE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/gojo-unicode-typing-e2e.XXXXXX")"
-CLIPBOARD_FILE="$FIXTURE_DIR/clipboard.txt"
-pbpaste > "$CLIPBOARD_FILE" || : > "$CLIPBOARD_FILE"
+CLIPBOARD_FILE="$FIXTURE_DIR/clipboard.plist"
+clipboard_state save "$CLIPBOARD_FILE"
 printf '%s' "$SENTINEL" | pbcopy
+clipboard_state save "$FIXTURE_DIR/sentinel.plist"
 
 fixture_app="$FIXTURE_DIR/GojoUnicodeTypingFixture.app"
 fixture_binary="$fixture_app/Contents/MacOS/GojoUnicodeTypingFixture"
@@ -58,10 +134,10 @@ plutil -insert CFBundlePackageType -string APPL "$fixture_app/Contents/Info.plis
 plutil -insert CFBundleShortVersionString -string 1.0 "$fixture_app/Contents/Info.plist"
 
 make -C "$ROOT" stop >/dev/null
-open -g "$APP"
+open -g --env GOJO_LICENSE=lifetime "$APP"
 sleep 3
 
-open -n "$fixture_app" --stdout "$fixture_log" --stderr "$fixture_log" --args \
+open -n --env GOJO_LICENSE=lifetime "$fixture_app" --stdout "$fixture_log" --stderr "$fixture_log" --args \
   "$fixture_ready" "$fixture_text"
 
 for _ in $(seq 1 1200); do
@@ -128,12 +204,12 @@ grep -q 'method=application-unicode' <<<"$result"
 grep -q 'partialInsertion=false' <<<"$result"
 
 for _ in $(seq 1 100); do
-  if [[ -f "$fixture_text" ]] && grep -Fqx "$EXPECTED_TEXT" "$fixture_text"; then
+  if [[ -f "$fixture_text" ]] && cmp -s "$fixture_text" <(printf '%s' "$EXPECTED_TEXT"); then
     break
   fi
   sleep 0.05
 done
-if ! [[ -f "$fixture_text" ]] || ! grep -Fqx "$EXPECTED_TEXT" "$fixture_text"; then
+if ! [[ -f "$fixture_text" ]] || ! cmp -s "$fixture_text" <(printf '%s' "$EXPECTED_TEXT"); then
   cat "$fixture_log" >&2
   echo "Unicode typing did not deliver the exact expected string." >&2
   if [[ -f "$fixture_text" ]]; then
@@ -149,9 +225,6 @@ PY
   exit 1
 fi
 
-if [[ "$(pbpaste)" != "$SENTINEL" ]]; then
-  echo "Unicode typing unexpectedly changed the clipboard." >&2
-  exit 1
-fi
+clipboard_state check "$FIXTURE_DIR/sentinel.plist"
 
 echo "dictation-unicode-typing-live-e2e-pass"

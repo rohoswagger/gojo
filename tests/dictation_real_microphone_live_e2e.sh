@@ -4,7 +4,13 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP="$ROOT/.build/DerivedData/Build/Products/Debug/Gojo.app"
 source "$ROOT/tests/dictation_live_lock.sh"
+MODE="${1:-hold}"
+if [[ "$MODE" != "hold" && "$MODE" != "voice" ]]; then
+  echo "Usage: $0 [hold|voice]" >&2
+  exit 2
+fi
 REFERENCE="Gojo local microphone dictation works."
+SECOND_REFERENCE="Voice mode keeps listening."
 FIXTURE_DIR=""
 FIXTURE_PID=""
 FOCUS_KEEPER_PID=""
@@ -31,7 +37,9 @@ cleanup() {
   fi
   release_dictation_live_lock
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 skip() {
   echo "dictation-real-microphone-live-e2e-skip: $*" >&2
@@ -47,7 +55,7 @@ import Foundation
 guard CommandLine.arguments.count == 3 else { exit(2) }
 
 switch CommandLine.arguments[1] {
-case "down", "up":
+case "down", "up", "lock":
     var userInfo: [String: Any] = ["action": CommandLine.arguments[1]]
     if let expectedPID = Int32(CommandLine.arguments[2]), expectedPID > 0 {
         userInfo["expectedPID"] = NSNumber(value: expectedPID)
@@ -165,15 +173,18 @@ command -v say >/dev/null || skip "macOS say is unavailable"
 acquire_dictation_live_lock
 make -C "$ROOT" stop >/dev/null
 started_at="$(date '+%Y-%m-%d %H:%M:%S')"
-open -g "$APP"
+open -g --env GOJO_LICENSE=lifetime "$APP"
 
 ready=false
 for _ in $(seq 1 600); do
-  if /usr/bin/log show \
+  shortcut_log="$(/usr/bin/log show \
       --style compact \
       --start "$started_at" \
-      --predicate 'subsystem == "rohoswagger.gojo.dictation" AND category == "shortcut"' \
-      | grep -q 'monitor started chord=control+option'; then
+      --predicate 'subsystem == "rohoswagger.gojo.dictation" AND category == "shortcut"')"
+  if grep -q 'accessibility permission missing\|accessibility permission denied' <<<"$shortcut_log"; then
+    skip "the Debug app is not authorized for Accessibility"
+  fi
+  if grep -q 'monitor started chord=control+option' <<<"$shortcut_log"; then
     ready=true
     break
   fi
@@ -253,8 +264,47 @@ if [[ "$listening" != true ]]; then
   exit 1
 fi
 
+if [[ "$MODE" == "voice" ]]; then
+  post_dictation_control lock "$FIXTURE_PID"
+fi
 say -r 160 "$REFERENCE"
-sleep 0.25
+if [[ "$MODE" == "voice" ]]; then
+  for expected in "$REFERENCE" "$REFERENCE $SECOND_REFERENCE"; do
+    inserted=false
+    for _ in $(seq 1 240); do
+      if [[ -f "$fixture_text" ]] && python3 - "$fixture_text" "$expected" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+words = lambda value: re.findall(r"[\w]+", value.casefold(), flags=re.UNICODE)
+raise SystemExit(0 if words(Path(sys.argv[1]).read_text()) == words(sys.argv[2]) else 1)
+PY
+      then
+        inserted=true
+        break
+      fi
+      pipeline="$(latest_pipeline_log || true)"
+      if grep -q 'state=error' <<<"$pipeline"; then
+        echo "$pipeline" >&2
+        exit 1
+      fi
+      sleep 0.25
+    done
+    if [[ "$inserted" != true ]]; then
+      echo "Voice mode did not insert the expected utterance before Stop." >&2
+      [[ -f "$fixture_text" ]] && cat "$fixture_text" >&2
+      exit 1
+    fi
+    echo "voice-mode-inserted-before-stop: $expected"
+    if [[ "$expected" == "$REFERENCE" ]]; then
+      say -r 160 "$SECOND_REFERENCE"
+    fi
+  done
+  REFERENCE="$REFERENCE $SECOND_REFERENCE"
+else
+  sleep 0.25
+fi
 
 post_dictation_control up "$FIXTURE_PID"
 DICTATION_ACTIVE=false
@@ -362,6 +412,18 @@ recognizable = within_error_budget or contains_anchor
 raise SystemExit(0 if recognizable else 1)
 PY
   then
+    if [[ "$MODE" == "voice" ]]; then
+      python3 - "$fixture_text" "$REFERENCE" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+words = lambda value: re.findall(r"[\w]+", value.casefold(), flags=re.UNICODE)
+actual = Path(sys.argv[1]).read_text()
+assert words(actual) == words(sys.argv[2]), f"Stop duplicated or lost an utterance: {actual!r}"
+PY
+      echo "dictation-voice-mode-real-microphone-live-e2e-pass"
+    fi
     echo "$audio_log"
     echo "$final_pipeline"
     echo "dictation-real-microphone-live-e2e-pass"

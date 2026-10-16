@@ -91,34 +91,63 @@ private actor DictationTranscriberRouter: LocalDictationTranscribing {
     }
 }
 
+private struct DictationTextTarget: Sendable, Equatable {
+    let token: String
+    let identity: String?
+    let processID: pid_t?
+    let displayID: CGDirectDisplayID?
+}
+
 private struct XPCTargetProvider: DictationTargetCapturing {
-    func captureTarget() async throws -> String {
+    func captureTarget() async throws -> DictationTextTarget {
         let result = await XPCHelperClient.shared.captureFocusedTextTarget(promptIfNeeded: true)
+        return try capturedTarget(from: result)
+    }
+
+    func captureAdditionalTarget() async throws -> DictationTextTarget {
+        let result = await XPCHelperClient.shared.captureAdditionalFocusedTextTarget(promptIfNeeded: false)
+        return try capturedTarget(from: result)
+    }
+
+    func destinationIdentifier(for target: DictationTextTarget) -> String? { target.identity }
+
+    private func capturedTarget(from result: NSDictionary) throws -> DictationTextTarget {
         guard (result["success"] as? NSNumber)?.boolValue == true,
               let token = result["token"] as? String else {
             let code = result["error"] as? String ?? "targetUnavailable"
             dictationTargetLogger.error("capture success=false error=\(code, privacy: .public)")
+            if code == "permissionMissing" { throw DictationFailure.accessibilityPermissionDenied }
             throw DictationXPCError(code: code)
         }
-        let displayID = (result["displayID"] as? NSNumber).map {
-            CGDirectDisplayID($0.uint32Value)
-        }
-        await MainActor.run {
-            GojoDictationService.shared.setSessionDisplayID(displayID)
-        }
         dictationTargetLogger.notice("capture success=true")
-        return token
+        return DictationTextTarget(
+            token: token,
+            identity: result["targetIdentity"] as? String,
+            processID: ((result["processID"] ?? result["pid"]) as? NSNumber).map { pid_t($0.int32Value) },
+            displayID: (result["displayID"] as? NSNumber).map { CGDirectDisplayID($0.uint32Value) }
+        )
     }
 }
 
 private struct XPCTextInserter: DictationTextInserting {
-    func insert(_ text: String, into target: String) async throws {
-        let result = await XPCHelperClient.shared.insertText(text, token: target)
+    func insert(_ text: String, into target: DictationTextTarget) async throws {
+        let result = await XPCHelperClient.shared.insertText(text, token: target.token)
         guard (result["success"] as? NSNumber)?.boolValue == true else {
             let code = result["error"] as? String ?? "insertionFailed"
             dictationTargetLogger.error("insert success=false error=\(code, privacy: .public)")
             throw DictationXPCError(code: code)
         }
+    }
+
+    func insertRetainingTarget(_ text: String, into target: DictationTextTarget) async throws {
+        let result = await XPCHelperClient.shared.insertTextRetainingTarget(text, token: target.token)
+        guard (result["success"] as? NSNumber)?.boolValue == true else {
+            throw DictationXPCError(code: result["error"] as? String ?? "insertionFailed")
+        }
+    }
+
+    func releaseTarget(_ target: DictationTextTarget) async {
+        await XPCHelperClient.shared.releaseTextTarget(target.token)
     }
 }
 
@@ -127,6 +156,8 @@ private struct DictationXPCError: LocalizedError {
 
     var errorDescription: String? {
         switch code {
+        case "unverifiedTextTarget":
+            return "This field cannot safely receive background dictation. The text is saved for copying."
         case "permissionMissing":
             return "Allow Gojo to control your Mac in System Settings, then try again."
         case "secureTextTarget":
@@ -190,6 +221,9 @@ final class GojoDictationService: ObservableObject {
     @Published private(set) var modelOperation: DictationModelOperation?
     @Published private(set) var modelErrors: [DictationModelID: String] = [:]
     @Published private(set) var audioLevel: Float = 0
+    @Published private(set) var recoveryText = ""
+    @Published private(set) var recoveryMessage: String?
+    @Published private(set) var targetApplicationName: String?
     @Published private(set) var sessionDisplayID: CGDirectDisplayID?
 
     private let localTranscriber: LocalDictationTranscriber
@@ -202,6 +236,7 @@ final class GojoDictationService: ObservableObject {
     private var s1MiniOperationID: UUID?
     private var hasLoadedInitialModelStatus = false
     private var shortcutPreflighting = false
+    private var shortcutGeneration: UInt = 0
     private var shortcutSessionGate = DictationShortcutSessionGate()
     private var transcriberWarmGeneration: UInt = 0
     private let warmupSequencer = DictationWarmupSequencer()
@@ -256,7 +291,11 @@ final class GojoDictationService: ObservableObject {
         self.polisher = polisher
         let observer: Controller.StateObserver = { [weak self] state in
             Task { @MainActor in
-                self?.receive(state)
+                guard let self, let controller = self.controller else { return }
+                let generation = self.shortcutGeneration
+                let currentState = await controller.state
+                guard generation == self.shortcutGeneration, currentState == state else { return }
+                self.receive(state)
             }
         }
         let audioCapture = AVAudioEngineCaptureService { [weak self] level in
@@ -273,7 +312,25 @@ final class GojoDictationService: ObservableObject {
             transcriber: pipelineTranscriber,
             polisher: polisher,
             inserter: XPCTextInserter(),
-            stateObserver: observer
+            stateObserver: observer,
+            recoveryObserver: { [weak self] text, message in
+                Task { @MainActor in
+                    guard let self, let controller = self.controller,
+                          await controller.recoverySnapshot == (text, message) else { return }
+                    self.recoveryText = text
+                    self.recoveryMessage = message
+                }
+            },
+            targetObserver: { [weak self] target in
+                Task { @MainActor in
+                    guard let self, let controller = self.controller,
+                          await controller.targetSnapshot == target else { return }
+                    if let target { self.sessionDisplayID = target.displayID }
+                    self.targetApplicationName = (target?.processID).flatMap {
+                        NSRunningApplication(processIdentifier: $0)?.localizedName
+                    }
+                }
+            }
         )
         Task { await audioCapture.prepareForCaptureIfAuthorized() }
         initialModelStatusTask = Task(priority: .utility) { [localTranscriber] in
@@ -384,11 +441,12 @@ final class GojoDictationService: ObservableObject {
     }
 
     var canChangeModel: Bool {
-        guard modelOperation == nil, !shortcutPreflighting else {
-            return false
-        }
+        modelOperation == nil && !shortcutPreflighting && isDictationInactive
+    }
+
+    private var isDictationInactive: Bool {
         switch state {
-        case .requestingPermission, .listening, .transcribing, .inserting:
+        case .requestingPermission, .listening, .pausing, .paused, .transcribing, .inserting:
             return false
         case .idle, .succeeded, .error:
             return true
@@ -398,7 +456,7 @@ final class GojoDictationService: ObservableObject {
     var canChangeCleanupModel: Bool {
         guard s1MiniOperation == nil else { return false }
         switch state {
-        case .requestingPermission, .listening, .transcribing, .inserting:
+        case .requestingPermission, .listening, .pausing, .paused, .transcribing, .inserting:
             return false
         case .idle, .succeeded, .error:
             return true
@@ -413,11 +471,25 @@ final class GojoDictationService: ObservableObject {
         shortcutEventQueue.send(event)
     }
 
+    func beginShortcut() {
+        shortcutPreflighting = true
+        Self.sendShortcutEvent(.keyDown)
+    }
+
     private func processShortcutEvent(_ event: DictationShortcutEvent) async {
         guard let controller else { return }
         switch event {
-        case .keyDown:
-            if state == .transcribing, modelOperation == nil {
+        case .keyDown, .startVoiceMode:
+            let requestsVoiceMode: Bool
+            if case .startVoiceMode = event { requestsVoiceMode = true } else { requestsVoiceMode = false }
+            shortcutGeneration &+= 1
+            shortcutPreflighting = true
+            defer { shortcutPreflighting = false }
+            if requestsVoiceMode, !isDictationInactive {
+                if !(await controller.isVoiceModeActive) { rejectShortcutStart() }
+                return
+            }
+            if !requestsVoiceMode, state == .transcribing, modelOperation == nil {
                 // A stuck or slow transcription must never hold the shortcut
                 // hostage: pressing it again abandons the in-flight session so
                 // a fresh one can start immediately. The mirrored state can lag
@@ -430,12 +502,14 @@ final class GojoDictationService: ObservableObject {
                     receive(.idle)
                 }
             }
-            guard canChangeModel else {
+            guard modelOperation == nil, isDictationInactive else {
                 let stateName: String
                 switch state {
                 case .idle: stateName = "idle"
                 case .requestingPermission: stateName = "requestingPermission"
                 case .listening: stateName = "listening"
+                case .pausing: stateName = "pausing"
+                case .paused: stateName = "paused"
                 case .transcribing: stateName = "transcribing"
                 case .inserting: stateName = "inserting"
                 case .succeeded: stateName = "succeeded"
@@ -448,11 +522,10 @@ final class GojoDictationService: ObservableObject {
                 return
             }
             sessionDisplayID = nil
+            targetApplicationName = nil
             #if DEBUG
             let shortcutStartTime = ProcessInfo.processInfo.systemUptime
             #endif
-            shortcutPreflighting = true
-            defer { shortcutPreflighting = false }
             if selectedProvider == .local {
                 // The launch scan performs the full integrity checks once. Normal
                 // shortcut activation uses that cached result instead of hashing
@@ -500,8 +573,20 @@ final class GojoDictationService: ObservableObject {
                     return
                 }
             }
-            if await controller.hotKeyDown() {
+            let mode: DictationCaptureMode = requestsVoiceMode
+                ? .continuous : .singleUtterance
+            if await controller.hotKeyDown(
+                mode: mode,
+                pauseDuration: DictationPauseDuration.saved().seconds,
+                targetPolicy: mode == .continuous ? .followFocus : .fixed
+            ) {
+                if requestsVoiceMode { DictationModifierHotKeyMonitor.shared.adoptVoiceModeSession() }
                 shortcutSessionGate.acceptKeyDown()
+                shortcutPreflighting = false
+                let currentState = await controller.state
+                if DictationShortcutStatePolicy.shouldRearm(after: currentState) {
+                    receive(currentState)
+                }
             } else {
                 rejectShortcutStart()
             }
@@ -511,9 +596,27 @@ final class GojoDictationService: ObservableObject {
                 return
             }
             await controller.hotKeyUp()
+        case .lockVoiceMode:
+            if await controller.lockVoiceMode(pauseDuration: DictationPauseDuration.saved().seconds) {
+                DictationModifierHotKeyMonitor.shared.adoptVoiceModeSession()
+                DictationPanelController.shared.show()
+            } else {
+                rejectShortcutStart()
+            }
+        case .pauseVoiceMode:
+            await controller.pauseVoiceMode()
+        case .resumeVoiceMode:
+            await controller.resumeVoiceMode()
+        case .finishVoiceMode:
+            shortcutSessionGate.reset()
+            await controller.finishVoiceMode()
+        case .clearRecoveryText:
+            await controller.clearRecoveryText()
         case .cancel:
+            DictationModifierHotKeyMonitor.shared.rejectCurrentDictationStart()
             shortcutSessionGate.reset()
             await controller.cancel()
+            receive(await controller.state)
         }
     }
 
@@ -522,14 +625,24 @@ final class GojoDictationService: ObservableObject {
         DictationModifierHotKeyMonitor.shared.rejectCurrentDictationStart()
     }
 
-    func cancel() {
-        Self.sendShortcutEvent(.cancel)
+    func cancel() { Self.sendShortcutEvent(.cancel) }
+
+    func cancel(completion: @escaping @MainActor @Sendable () -> Void) {
+        Self.shortcutEventQueue.send(.cancel) { await completion() }
     }
 
-    func terminate() {
-        guard let controller else { return }
-        Task { await controller.terminate() }
+    func startVoiceMode() {
+        shortcutPreflighting = true
+        Self.sendShortcutEvent(.startVoiceMode)
     }
+
+    func pauseVoiceMode() { Self.sendShortcutEvent(.pauseVoiceMode) }
+    func resumeVoiceMode() { Self.sendShortcutEvent(.resumeVoiceMode) }
+    func finishVoiceMode() { Self.sendShortcutEvent(.finishVoiceMode) }
+    func stopVoiceMode() { finishVoiceMode() }
+    func clearRecoveryText() { Self.sendShortcutEvent(.clearRecoveryText) }
+
+    func terminate() { Self.sendShortcutEvent(.cancel) }
 
     #if DEBUG
     func transcribeE2E(_ audio: DictationAudio) async throws -> String {
@@ -629,29 +742,18 @@ final class GojoDictationService: ObservableObject {
     }
 
     private func receive(_ newState: DictationState) {
+        if DictationShortcutStatePolicy.shouldRearm(after: newState, isStartingShortcut: shortcutPreflighting) {
+            shortcutSessionGate.reset()
+            DictationModifierHotKeyMonitor.shared.rejectCurrentDictationStart()
+        }
         state = newState
         if newState != .listening {
             audioLevel = 0
         }
-        if NotchAlertPolicy.shouldDismissAlertForDictationActivity(
-            GojoViewCoordinator.shared.notchAlert,
-            isActive: newState == .requestingPermission || newState == .listening
-        ) {
-            GojoViewCoordinator.shared.dismissNotchAlert(from: .dictation)
-        }
         if case .error(let failure) = newState {
             let reason = failure.errorDescription ?? String(describing: failure)
             dictationPipelineLogger.error("state=error reason=\(reason, privacy: .public)")
-            GojoViewCoordinator.shared.postNotchAlert(
-                NotchAlert(
-                    source: .dictation,
-                    severity: .error,
-                    message: reason,
-                    targetDisplayID: sessionDisplayID
-                )
-            )
         } else if case .succeeded = newState {
-            GojoViewCoordinator.shared.dismissNotchAlert(from: .dictation)
             dictationPipelineLogger.notice("state=succeeded")
         }
     }
@@ -926,9 +1028,6 @@ final class GojoDictationService: ObservableObject {
         }
     }
 
-    fileprivate func setSessionDisplayID(_ displayID: CGDirectDisplayID?) {
-        sessionDisplayID = displayID
-    }
 }
 
 extension DictationFailure: LocalizedError {
@@ -940,6 +1039,8 @@ extension DictationFailure: LocalizedError {
             return detail
         case .microphonePermissionDenied:
             return "Allow Gojo to use the microphone in System Settings, then try again."
+        case .accessibilityPermissionDenied:
+            return "Enable Gojo in System Settings > Privacy & Security > Accessibility."
         case .targetUnavailable(let detail):
             return detail
         case .captureFailed:

@@ -1344,13 +1344,6 @@ struct AccentCircleButton: View {
 }
 
 struct Shortcuts: View {
-    @AppStorage(DictationActivationMode.defaultsKey)
-    private var dictationActivationModeRawValue = DictationActivationMode.holdToTalk.rawValue
-
-    private var dictationActivationMode: DictationActivationMode {
-        DictationActivationMode(rawValue: dictationActivationModeRawValue) ?? .holdToTalk
-    }
-
     var body: some View {
         Form {
             Section {
@@ -1364,14 +1357,12 @@ struct Shortcuts: View {
                     .font(.caption)
             }
             Section {
-                LabeledContent(
-                    dictationActivationMode == .holdToTalk ? "Hold to Dictate:" : "Tap to Dictate:",
-                    value: "⌃⌥"
-                )
+                LabeledContent("Push to talk:", value: "⌃⌥")
+                LabeledContent("Lock / finish voice mode:", value: "⌃⌥ then Space")
             } header: {
                 Text("Dictation")
             } footer: {
-                Text(dictationShortcutHelp)
+                Text("Hold Control and Option to talk; release to insert. While holding both keys, press Space to keep listening after release. Repeat Control–Option, then Space to finish.")
                     .multilineTextAlignment(.trailing)
                     .foregroundStyle(.secondary)
                     .font(.caption)
@@ -1411,20 +1402,13 @@ struct Shortcuts: View {
         .navigationTitle("Shortcuts")
     }
 
-    private var dictationShortcutHelp: String {
-        switch dictationActivationMode {
-        case .holdToTalk:
-            return "Hold Control and Option while you talk. Release either key when you are done."
-        case .tapToTalk:
-            return "Tap Control and Option to start. Tap them again when you are done."
-        }
-    }
+
 }
 
 struct DictationSettings: View {
     @ObservedObject private var dictation = GojoDictationService.shared
-    @AppStorage(DictationActivationMode.defaultsKey)
-    private var dictationActivationModeRawValue = DictationActivationMode.holdToTalk.rawValue
+    @AppStorage(DictationPauseDuration.defaultsKey)
+    private var dictationPauseDurationRawValue = DictationPauseDuration.natural.rawValue
     @State private var microphoneStatus = AVCaptureDevice.authorizationStatus(for: .audio)
     @State private var accessibilityAuthorized = false
     @State private var modelToRemove: DictationModelID?
@@ -1439,41 +1423,52 @@ struct DictationSettings: View {
     var body: some View {
         Form {
             Section {
-                Picker("Activation", selection: dictationActivationModeBinding) {
-                    ForEach(DictationActivationMode.allCases) { mode in
-                        Text(mode.title).tag(mode)
+                LabeledContent("Push to talk", value: "Hold ⌃⌥")
+                LabeledContent("Lock microphone", value: "⌃⌥ then Space")
+            } header: {
+                Text("Keyboard shortcuts")
+            } footer: {
+                Text("Release Control–Option to insert text. Press Space while holding both keys to keep listening. Repeat the shortcut to finish; Escape cancels.")
+            }
+
+            Section {
+                Picker("Insert after a pause", selection: $dictationPauseDurationRawValue) {
+                    ForEach(DictationPauseDuration.allCases) { duration in
+                        Text(duration.title).tag(duration.rawValue)
                     }
                 }
-                .pickerStyle(.segmented)
+                .disabled(!dictation.canChangeModel)
 
-                LabeledContent("Shortcut", value: "⌃⌥")
+                LabeledContent("Floating controls") {
+                    Button("Show controls") {
+                        DictationPanelController.shared.show()
+                    }
+                }
+                LabeledContent("Window position") {
+                    Button("Reset") {
+                        DictationPanelController.shared.resetPosition()
+                    }
+                }
                 LabeledContent("Status") {
                     if showsModelPreparation {
                         HStack(spacing: 6) {
                             ProgressView().controlSize(.small)
-                            Text("Preparing voice model…")
+                            Text("Preparing model…")
                                 .foregroundStyle(.secondary)
                         }
                     } else {
                         Text(DictationSettingsStatus.title(for: dictation.state))
                     }
                 }
-                if showsModelPreparation {
-                    Text("Dictation starts once the model finishes loading.")
+                if let detail = dictation.stateDetail {
+                    Text(detail)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                if let detail = dictation.stateDetail {
-                    Text(detail)
-                        .foregroundStyle(.orange)
-                        .font(.caption)
-                }
             } header: {
-                Text("Voice input")
+                Text("Voice mode")
             } footer: {
-                Text(dictationActivationHelp)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text("Text goes into the focused field between phrases. Drag the floating controls to move them; their position is saved for each display.")
             }
 
             Section {
@@ -1585,31 +1580,25 @@ struct DictationSettings: View {
             if dictation.selectedProvider == .local {
                 Section {
                     ForEach(DictationModelDescriptor.all) { model in
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack(alignment: .firstTextBaseline) {
+                        HStack(alignment: .center, spacing: 16) {
+                            VStack(alignment: .leading, spacing: 4) {
                                 Text(model.displayName)
                                     .fontWeight(.medium)
-                                if model.isRecommended {
-                                    Text("Recommended")
-                                        .font(.caption2.weight(.semibold))
-                                        .foregroundStyle(.secondary)
-                                }
-                                Spacer()
                                 Text("\(model.engineLabel) · \(model.downloadSizeLabel)")
-                                    .foregroundStyle(.secondary)
-                            }
-
-                            Text(model.detail)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-
-                            if let error = dictation.modelErrors[model.id] {
-                                Text(error)
                                     .font(.caption)
-                                    .foregroundStyle(.orange)
+                                    .foregroundStyle(.secondary)
+                                Text(model.detail)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                if let error = dictation.modelErrors[model.id] {
+                                    Text(error)
+                                        .font(.caption)
+                                        .foregroundStyle(.orange)
+                                }
                             }
-
-                            HStack {
+                            Spacer(minLength: 8)
+                            HStack(spacing: 8) {
                                 Button(modelButtonTitle(for: model.id)) {
                                     if dictation.isModelInstalled(model.id) {
                                         dictation.selectModel(model.id)
@@ -1618,7 +1607,6 @@ struct DictationSettings: View {
                                     }
                                 }
                                 .disabled(modelButtonDisabled(for: model.id))
-
                                 if dictation.isModelInstalled(model.id) {
                                     Button(
                                         dictation.removingModel == model.id ? "Removing…" : "Remove",
@@ -1629,11 +1617,12 @@ struct DictationSettings: View {
                                     .disabled(!dictation.canChangeModel)
                                 }
                             }
+                            .controlSize(.small)
                         }
-                        .padding(.vertical, 3)
+                        .padding(.vertical, 4)
                     }
                 } header: {
-                    Text("Voice models")
+                    Text("Speech models")
                 } footer: {
                     Text("Download one or more models, then choose which one Gojo should use. Dictation stays on this Mac.")
                         .font(.caption)
@@ -1855,20 +1844,6 @@ struct DictationSettings: View {
         }
     }
 
-    private var dictationActivationMode: DictationActivationMode {
-        DictationActivationMode(rawValue: dictationActivationModeRawValue) ?? .holdToTalk
-    }
-
-    private var dictationActivationModeBinding: Binding<DictationActivationMode> {
-        Binding(
-            get: { dictationActivationMode },
-            set: { mode in
-                dictationActivationModeRawValue = mode.rawValue
-                DictationModifierHotKeyMonitor.shared.setActivationMode(mode)
-            }
-        )
-    }
-
     private var dictationProviderBinding: Binding<DictationProvider> {
         Binding(
             get: { dictation.selectedProvider },
@@ -1951,20 +1926,11 @@ struct DictationSettings: View {
         }
     }
 
-    private var dictationActivationHelp: String {
-        switch dictationActivationMode {
-        case .holdToTalk:
-            return "Click a text field, then hold Control and Option while you talk. Release either key when you are done. If a transcription is taking too long, press the shortcut again to cancel it and start over."
-        case .tapToTalk:
-            return "Click a text field, then tap Control and Option to start. Tap them again when you are done. If a transcription is taking too long, tap the shortcut again to cancel it and start over."
-        }
-    }
-
     private func modelButtonTitle(for model: DictationModelID) -> String {
         if dictation.preparingModel == model { return "Downloading…" }
         if dictation.switchingModel == model { return "Switching…" }
-        if dictation.selectedModel == model, dictation.isModelInstalled(model) { return "In Use" }
-        if dictation.isModelInstalled(model) { return "Use This Model" }
+        if dictation.selectedModel == model, dictation.isModelInstalled(model) { return "Selected" }
+        if dictation.isModelInstalled(model) { return "Use" }
         return "Download"
     }
 

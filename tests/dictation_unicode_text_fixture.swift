@@ -35,7 +35,14 @@ private final class UnicodeTextView: NSView {
 
     override func accessibilityIsIgnored() -> Bool { false }
     override func accessibilityRole() -> NSAccessibility.Role? { .group }
+    override func accessibilityLabel() -> String? { "Unicode typing field" }
     override func accessibilityValue() -> Any? { text }
+
+    override func setAccessibilityValue(_ value: Any?) {
+        guard let value = value as? String else { return }
+        text = value
+        persistTextIfChanged()
+    }
 
     func persistTextIfChanged() {
         guard text != lastPersistedText else { return }

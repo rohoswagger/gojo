@@ -35,6 +35,7 @@ help:
 	@echo "  make test-dictation-opaque-paste-live Verify opaque app paste and focus safety"
 	@echo "  make test-dictation-unicode-typing-live Verify guarded Unicode typing and clipboard safety"
 	@echo "  make test-dictation-real-microphone-live Verify real microphone capture, transcription, and insertion"
+	@echo "  make test-dictation-voice-mode-live Verify two pause insertions before stopping the microphone"
 	@echo ""
 	@echo "Release:"
 	@echo "  make release VERSION=x.y.z      Cut a private signed/notarized release (see RELEASING.md)"
@@ -126,10 +127,13 @@ test-accessibility-menu:
 
 test-dictation: build
 	./tests/dictation_regression.sh
+	bash ./tests/dictation_pause_segmentation_regression.sh
+	bash ./tests/dictation_panel_regression.sh
 	./tests/dictation_event_tap_host_regression.sh
+	bash ./tests/dictation_shortcut_cancellation_regression.sh
 	./tests/openrouter_dictation_regression.sh
 	./tests/dictation_offline_policy_regression.sh
-	./tests/notch_alert_regression.sh
+	bash ./tests/dictation_presentation_ownership_regression.sh
 	bash ./tests/dictation_capture_probe_regression.sh
 	./tests/text_insertion_xpc_regression.sh
 	./tests/dictation_unicode_typing_regression.sh
@@ -171,6 +175,9 @@ test-dictation-unicode-typing-live:
 
 test-dictation-real-microphone-live:
 	./tests/dictation_real_microphone_live_e2e.sh
+
+test-dictation-voice-mode-live:
+	bash ./tests/dictation_real_microphone_live_e2e.sh voice
 
 clean:
 	rm -rf "$(DERIVED_DATA_PATH)"

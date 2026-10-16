@@ -8,6 +8,8 @@ TARGET_KIND="${1:-native}"
 PROBE_KIND="${2:-insertion}"
 FIXTURE_DIR=""
 FIXTURE_PID=""
+CLIPBOARD_FILE=""
+BROWSER_HELPER=""
 
 case "$PROBE_KIND" in
   insertion)
@@ -29,14 +31,27 @@ case "$PROBE_KIND" in
 esac
 
 cleanup() {
+  local status=$?
+  local clipboard_restored=true
+  if [[ -n "$BROWSER_HELPER" && -x "$BROWSER_HELPER" && -f "$FIXTURE_DIR/state.json" ]]; then
+    "$BROWSER_HELPER" close "$FIXTURE_DIR/state.json" "$fixture_url" "$fixture_title" || true
+  fi
   if [[ -n "$FIXTURE_PID" ]] && kill -0 "$FIXTURE_PID" 2>/dev/null; then
     kill "$FIXTURE_PID" 2>/dev/null || true
     wait "$FIXTURE_PID" 2>/dev/null || true
   fi
-  if [[ -n "$FIXTURE_DIR" && -d "$FIXTURE_DIR" ]]; then
+  if [[ -n "$CLIPBOARD_FILE" && -f "$CLIPBOARD_FILE" && -x "$BROWSER_HELPER" ]]; then
+    if ! "$BROWSER_HELPER" restore "$CLIPBOARD_FILE"; then
+      status=1
+      clipboard_restored=false
+      echo "Clipboard restoration failed. Snapshot retained at $CLIPBOARD_FILE." >&2
+    fi
+  fi
+  if [[ "$clipboard_restored" == true && -n "$FIXTURE_DIR" && -d "$FIXTURE_DIR" ]]; then
     rm -rf "$FIXTURE_DIR"
   fi
   release_dictation_live_lock
+  exit "$status"
 }
 trap cleanup EXIT INT TERM
 
@@ -126,7 +141,7 @@ acquire_dictation_live_lock
 # Always exercise the just-built binary rather than a process that may still
 # have the same path but an older image mapped in memory.
 make -C "$ROOT" stop >/dev/null
-open -g "$APP"
+open -g --env GOJO_LICENSE=lifetime "$APP"
 sleep 3
 started_at="$(date '+%Y-%m-%d %H:%M:%S')"
 
@@ -171,24 +186,42 @@ case "$TARGET_KIND" in
     focus_native_fixture_and_post "$notification_name" "$PROBE_KIND"
     ;;
   browser)
-    open -a Safari "$ROOT/tests/fixtures/dictation-e2e.html"
-    focus_owner="Safari"
+    FIXTURE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/gojo-browser-dictation-e2e.XXXXXX")"
+    BROWSER_HELPER="$FIXTURE_DIR/browser-helper"
+    CLIPBOARD_FILE="$FIXTURE_DIR/clipboard.json"
+    swiftc "$ROOT/tests/dictation_browser_fixture.swift" -o "$BROWSER_HELPER"
+    "$BROWSER_HELPER" snapshot "$CLIPBOARD_FILE"
+    python3 "$ROOT/tests/dictation_browser_fixture.py" serve \
+      "$ROOT/tests/fixtures/dictation-e2e.html" "$FIXTURE_DIR" &
+    FIXTURE_PID=$!
+    for _ in $(seq 1 100); do
+      [[ -f "$FIXTURE_DIR/ready.json" ]] && break
+      kill -0 "$FIXTURE_PID" 2>/dev/null || break
+      sleep 0.05
+    done
+    if [[ ! -f "$FIXTURE_DIR/ready.json" ]]; then
+      echo "The loopback browser fixture did not start." >&2
+      exit 1
+    fi
+    fixture_url="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["url"])' "$FIXTURE_DIR/ready.json")"
+    fixture_title="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["title"])' "$FIXTURE_DIR/ready.json")"
+    open -a Safari "$fixture_url"
+    for _ in $(seq 1 100); do
+      [[ -f "$FIXTURE_DIR/state.json" ]] && break
+      sleep 0.05
+    done
+    if [[ ! -f "$FIXTURE_DIR/state.json" ]]; then
+      echo "Safari did not report the unique browser fixture state. Refusing to type." >&2
+      exit 1
+    fi
+    "$BROWSER_HELPER" post "$FIXTURE_DIR/state.json" "$fixture_url" \
+      "$fixture_title" "$notification_name"
     ;;
   *)
     echo "Usage: $0 [native|browser] [insertion|model]" >&2
     exit 2
     ;;
 esac
-
-if [[ "$TARGET_KIND" == "browser" ]]; then
-  sleep 2
-  swift "$ROOT/tests/dictation_e2e_focus.swift" Safari
-  sleep 1
-fi
-
-if [[ "$TARGET_KIND" == "browser" ]]; then
-  swift -e "import Foundation; DistributedNotificationCenter.default().postNotificationName(Notification.Name(\"$notification_name\"), object: nil, deliverImmediately: true)"
-fi
 
 for _ in $(seq 1 "$attempts"); do
   sleep 1
@@ -235,12 +268,13 @@ PY
       exit 1
     fi
     echo "$result"
+    grep -q 'success=true' <<<"$result"
     if [[ "$PROBE_KIND" == "model" ]]; then
-      grep -q 'success=true verified=true referenceMatch=true' <<<"$result"
-    else
-      grep -q 'success=true verified=true' <<<"$result"
+      grep -q 'referenceMatch=true' <<<"$result"
     fi
-    exit
+    python3 "$ROOT/tests/dictation_browser_fixture.py" verify \
+      "$FIXTURE_DIR/state.json" "$fixture_url" "$fixture_title" "$expected_text"
+    exit 0
   fi
 done
 

@@ -1,4 +1,4 @@
-.PHONY: help build run stop restart smoke reset-onboarding run-onboarding test-release-signing test-window test-window-ui test-window-focus test-flux test-alt-tab test-search test-accessibility-menu test-dictation test-dictation-cleanup-benchmark test-dictation-live test-dictation-codex-capture-live test-dictation-secure-live test-dictation-multidisplay-live test-dictation-model-live test-dictation-installed-models-live test-dictation-shortcut-live test-dictation-opaque-paste-live test-dictation-unicode-typing-live test-dictation-real-microphone-live release release-dry clean
+.PHONY: help build run stop restart smoke reset-onboarding run-onboarding test-release-signing test-window test-window-ui test-window-focus test-flux test-alt-tab test-search test-accessibility-menu test-dictation test-dictation-model-validation test-dictation-cleanup-benchmark test-dictation-live test-dictation-codex-capture-live test-dictation-secure-live test-dictation-multidisplay-live test-dictation-model-live test-dictation-installed-models-live test-dictation-shortcut-live test-dictation-opaque-paste-live test-dictation-unicode-typing-live test-dictation-real-microphone-live release release-dry clean
 
 PROJECT := Gojo.xcodeproj
 SCHEME := Gojo
@@ -24,6 +24,7 @@ help:
 	@echo "  make test-search Run search calculator/fuzzy-matcher regression checks"
 	@echo "  make test-accessibility-menu Run menu accessibility-flow regression checks"
 	@echo "  make test-dictation Run local dictation regressions and benchmark scorer checks"
+	@echo "  make test-dictation-model-validation Run model validation cache regressions"
 	@echo "  make test-dictation-cleanup-benchmark Compare fast OpenRouter cleanup models (paid)"
 	@echo "  make test-dictation-live Verify focused insertion in TextEdit and Safari (requires Accessibility)"
 	@echo "  make test-dictation-codex-capture-live Verify capture against a running Codex window"
@@ -126,8 +127,10 @@ test-accessibility-menu:
 	./tests/accessibility_authorization_flow_regression.sh
 
 test-dictation: build
+	bash ./tests/dictation_model_validation_regression.sh
 	./tests/dictation_regression.sh
 	bash ./tests/dictation_pause_segmentation_regression.sh
+	bash ./tests/dictation_capture_liveness_regression.sh
 	bash ./tests/dictation_panel_regression.sh
 	./tests/dictation_event_tap_host_regression.sh
 	bash ./tests/dictation_shortcut_cancellation_regression.sh
@@ -140,6 +143,9 @@ test-dictation: build
 	bash ./tests/dictation_live_harness_regression.sh
 	./tests/dictation_benchmark_regression.sh
 	bash ./tests/dictation_cleanup_benchmark_regression.sh
+
+test-dictation-model-validation:
+	bash ./tests/dictation_model_validation_regression.sh
 
 test-dictation-cleanup-benchmark:
 	python3 scripts/benchmarks/benchmark_cleanup.py

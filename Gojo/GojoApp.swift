@@ -707,6 +707,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         ) { _ in
             Task { @MainActor in
                 await DictationModifierHotKeyMonitor.shared.recoverIfNeeded()
+                GojoDictationService.shared.handleSystemWake()
             }
         }
 

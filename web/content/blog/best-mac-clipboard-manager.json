@@ -18,8 +18,8 @@
     "twitter:image": "https://trygojo.com/assets/og.jpg"
   },
   "article": {
-    "published_time": "2026-09-04",
-    "modified_time": "2026-09-04",
+    "published_time": "2026-09-02",
+    "modified_time": "2026-09-02",
     "section": "macOS utilities",
     "author": "Gojo",
     "robots": "index,follow,max-image-preview:large"
@@ -31,8 +31,8 @@
         "@type": "BlogPosting",
         "headline": "Best clipboard managers for Mac in 2026",
         "url": "https://trygojo.com/blog/best-mac-clipboard-manager/",
-        "datePublished": "2026-09-04",
-        "dateModified": "2026-09-04",
+        "datePublished": "2026-09-02",
+        "dateModified": "2026-09-02",
         "author": {
           "@type": "Organization",
           "name": "Gojo",
@@ -102,10 +102,10 @@
     ]
   },
   "hero": {
-    "label": "September 4, 2026",
+    "label": "September 2, 2026",
     "title": "Best clipboard managers for Mac in 2026",
     "summary": "The best Mac clipboard manager depends on whether you want a local history, cross-device sync, a keyboard launcher, or clipboard access inside a wider notch workspace.",
-    "meta": ["Checked September 4, 2026", "9 min read"],
+    "meta": ["Checked September 2, 2026", "9 min read"],
     "breadcrumb": [
       { "label": "Home", "href": "/" },
       { "label": "Blog", "href": "/blog/" }
@@ -128,7 +128,7 @@
       "content": [
         {
           "t": "text",
-          "s": "Disclosure: Gojo publishes this comparison. We checked official product pages, documentation, and pricing on September 4, 2026. Clipboard features and prices can change, so verify the selected plan before buying. We do not treat a privacy label as proof of a particular storage path."
+          "s": "Disclosure: Gojo publishes this comparison. We checked official product pages, documentation, and pricing on September 2, 2026. Clipboard features and prices can change, so verify the selected plan before buying. We do not treat a privacy label as proof of a particular storage path."
         }
       ]
     },
@@ -154,7 +154,7 @@
         "Best for",
         "Privacy and retention",
         "Images and files",
-        "Price checked September 4, 2026"
+        "Price checked September 2, 2026"
       ],
       "rows": [
         [
@@ -306,7 +306,7 @@
     {
       "type": "paragraph",
       "content": [
-        { "t": "text", "s": "Primary sources checked September 4, 2026: " },
+        { "t": "text", "s": "Primary sources checked September 2, 2026: " },
         {
           "t": "link",
           "s": "Gojo product materials",

@@ -95,11 +95,11 @@ Set the file path in `.env.local` as `SPARKLE_PRIVATE_ED_KEY`.
 
 > **The Sparkle private key is the most sensitive secret in this project.** Anyone with it can sign updates Sparkle will trust on every existing install. Don't put it on cloud storage, don't share it. Keep an offline backup (encrypted USB drive / hardware key) so you don't lose your update channel if your machine dies.
 
-### 5. GitHub Pages
+### 5. Cloudflare download and update hosting
 
-The `SUFeedURL` in `Info.plist` points at `https://trygojo.com/appcast.xml`. Pages is already enabled to serve this — **Source: Deploy from a branch, Branch: `main`, Folder: the Cloudflare Worker in `web/`**. Because the Cloudflare Worker in `web/` is the published site root, `appcast.xml` serves at `…/gojo/appcast.xml`, and the same folder hosts the marketing site (`docs/index.html`).
+The `SUFeedURL` in `Info.plist` points at `https://updates.trygojo.com/appcast.xml`. Public releases upload the signed DMG and appcast to the `gojo-downloads` R2 bucket. The versioned DMG and latest `Gojo.dmg` are served at `downloads.trygojo.com`.
 
-The release script commits the updated `appcast.xml` to `main` at the end of each release; Pages serves it from there.
+The marketing Worker serves `trygojo.com`; its `/appcast.xml` redirect preserves the update path for apps through 1.3.0. Apps from 1.4.0 onward request the R2-backed update domain directly. The public release script also commits the appcast to `main`; private releases leave the public feed unchanged.
 
 ### 6. `.env.local`
 

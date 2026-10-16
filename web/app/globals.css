@@ -1,9 +1,11 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./design-tokens.css";
 /* The site skin (replaces public/site.css). Layered as `components` so
    Tailwind utilities still win where a component reaches for one. */
 @import "./skin.css" layer(components);
 @import "./marketing-heroes.css" layer(components);
+@import "./press.css" layer(components);
 
 @custom-variant dark (&:is(.dark *));
 
@@ -12,9 +14,12 @@
      separate cards, table heads and answer boxes from the page ground. */
   --background: #ffffff;
   --foreground: oklch(0.18 0 0);
-  --font-display: var(--font-body);
-  --font-body: ui-sans-serif, system-ui, sans-serif;
-  --font-mono-face: ui-monospace, SFMono-Regular, monospace;
+  /* Tailwind/swagui aliases consume the canonical roles in design-tokens.css.
+     Generic UI headings stay on the interface face; marketing heroes opt into
+     --font-marketing-display explicitly. */
+  --font-display: var(--font-interface);
+  --font-body: var(--font-interface);
+  --font-mono-face: var(--font-technical);
   --display-tracking: -0.03em;
   --squircle-factor: 1.4;
   --radius: calc(0.625rem * var(--squircle-factor));
@@ -572,4 +577,44 @@ body {
   box-shadow: none;
   background-image: none;
   border-color: var(--rule);
+}
+
+.legal-content {
+  color: var(--ink-2);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.legal-content > :first-child {
+  margin-top: 0;
+}
+
+.legal-content h2 {
+  margin: 2.5rem 0 0.75rem;
+  color: var(--ink-1);
+  font-family: var(--display);
+  font-size: 1.25rem;
+  font-weight: 550;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+.legal-content p,
+.legal-content ul {
+  margin: 0 0 1.25rem;
+}
+
+.legal-content ul {
+  padding-left: 1.25rem;
+  list-style: disc;
+}
+
+.legal-content li + li {
+  margin-top: 0.5rem;
+}
+
+.legal-content a {
+  color: var(--gojo-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }

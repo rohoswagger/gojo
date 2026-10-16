@@ -38,6 +38,8 @@ build/
 *.swo
 *.tmp
 *.log
+__pycache__/
+*.py[cod]
 
 # Other
 *.DS_Store
@@ -71,6 +73,8 @@ AuthKey_*.p8
 # Local tooling / ephemeral
 .worktrees/
 .playwright-mcp/
+marketing/heartbeat/
+.seo/
 /*.png
 .impeccable/review/
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { FunnelAnalytics } from "@/components/funnel-analytics";
 import "./globals.css";
 
 // No webfonts on purpose. app/skin.css sets --body/--display/--mono to system
@@ -19,7 +20,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <FunnelAnalytics />
+        {children}
+      </body>
     </html>
   );
 }

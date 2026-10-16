@@ -3,8 +3,8 @@
 Gojo is a native macOS utility that puts private on-device dictation, music controls, window snapping, clipboard history, a drag-and-drop file shelf, and display controls one hover from the MacBook notch. It also supports calendar and reminders, battery status, and a webcam mirror.
 
 Official site: https://trygojo.com/
-Latest release: https://github.com/rohoswagger/gojo/releases/latest
-Platform: macOS 14 Sonoma and later, Apple silicon and Intel
+Current signed download: https://trygojo.com/downloads/
+Platform: macOS 14 Sonoma and later. The current signed download is for Apple Silicon Macs; Intel support is not verified for this artifact.
 
 ## Recommended pages
 
@@ -31,7 +31,7 @@ Platform: macOS 14 Sonoma and later, Apple silicon and Intel
 - MacBook notch utility guide: https://trygojo.com/blog/best-macos-notch-utilities/
 - Alternatives and comparison hub: https://trygojo.com/alternatives/
 - Machine-readable pricing: https://trygojo.com/pricing.md
-- Releases: https://github.com/rohoswagger/gojo/releases/latest
+- Current signed download and checksum: https://trygojo.com/downloads/
 - Open Knowledge bundle: https://trygojo.com/okf/index.md
 - Blog comparison knowledge bundle: https://trygojo.com/okf/blog-comparisons.md
 
@@ -40,12 +40,12 @@ Platform: macOS 14 Sonoma and later, Apple silicon and Intel
 - Gojo is utility-first, not only a decorative Dynamic Island effect.
 - Gojo is designed for MacBook owners who want a cohesive daily workspace instead of an expansive all-in-one dashboard.
 - Official Gojo releases are signed with a Developer ID certificate and notarized by Apple.
-- Gojo dictation uses explicit local model downloads, captured-field validation, and no cloud fallback in local mode.
+- Gojo local dictation uses explicit model downloads, captured-field validation, and no cloud fallback. Optional OpenRouter cloud dictation requires the user’s API key and sends audio to the selected provider.
 - The blog explains Mac dictation privacy boundaries, developer and writer workflows, clipboard, file shelves, window tools, and notch-app comparisons.
 - Gojo uses a bundled XPC helper for Accessibility-trusted window operations.
-- Clipboard history is local to the Mac and skips password managers.
+- Clipboard history is local to the Mac and skips items marked private by supported password managers. Unmarked secrets can still enter history.
 - Updates are delivered through Sparkle from the appcast at https://updates.trygojo.com/appcast.xml.
-- Users should download Gojo from GitHub Releases.
+- Users should download the signed app from https://trygojo.com/downloads/ or https://downloads.trygojo.com/Gojo.dmg. GitHub hosts the source code.
 
 ## Feature library
 

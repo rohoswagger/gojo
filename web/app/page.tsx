@@ -17,20 +17,20 @@ import {
 // ---------------------------------------------------------------------------
 // Metadata + JSON-LD, reproduced verbatim from the old docs/index.html head.
 // The one deliberate change is `softwareVersion`: the source has a stale
-// "1.0.0"; the app now ships 1.4.0, so the JSON-LD reflects that.
+// "1.0.0"; the app now ships 1.5.1, so the JSON-LD reflects that.
 // ---------------------------------------------------------------------------
 
 export const metadata: Metadata = {
-  title: "Gojo - Your Mac, one hover away",
+  title: "Gojo - MacBook notch workspace",
   description:
-    "Gojo puts private on-device dictation, windows, clipboard, files, media, and system controls one hover away in your MacBook notch.",
+    "Gojo brings window controls, clipboard history, a file shelf, music, display controls, and on-device dictation into one MacBook notch workspace.",
   alternates: {
     canonical: "https://trygojo.com/",
   },
   openGraph: {
-    title: "Gojo - Your Mac, one hover away",
+    title: "Gojo - MacBook notch workspace",
     description:
-      "Dictate anywhere, move windows, recover copied text, stage files, control music, and more from your MacBook notch.",
+      "Manage windows, recover copied text, stage files, control music, and use local dictation from your MacBook notch.",
     type: "website",
     url: "https://trygojo.com/",
     images: [
@@ -44,9 +44,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Gojo - Your Mac, one hover away",
+    title: "Gojo - MacBook notch workspace",
     description:
-      "Private local dictation and the Mac tools you reach for, together in your MacBook notch.",
+      "Windows, clipboard, files, music, display controls, and local dictation in one MacBook notch workspace.",
     images: ["https://trygojo.com/assets/og.jpg"],
   },
 }
@@ -60,7 +60,7 @@ const jsonLd = {
   description:
     "Gojo is a MacBook productivity hub for private on-device dictation, window management, clipboard history, file staging, media, and system controls.",
   url: "https://trygojo.com/",
-  softwareVersion: "1.4.0",
+  softwareVersion: "1.5.1",
   featureList: [
     "Private on-device voice dictation",
     "Window snapping and management",
@@ -110,12 +110,51 @@ const pricingTabs = [
   { id: "pricing-tab-multi", controls: "pricing-panel-multi", name: "Multi-Mac", device: "3 Macs" },
 ]
 
+const faqItems = [
+  {
+    question: "What is Gojo?",
+    answer:
+      "Gojo is a native macOS 14+ app that turns the MacBook notch into a workspace for dictation, window controls, clipboard history, a file shelf, media controls, and display tools.",
+  },
+  {
+    question: "Does Gojo keep dictation on my Mac?",
+    answer:
+      "Gojo's on-device dictation options process audio locally on your Mac and type into the text field you are already using. Optional connected services are separate features you choose to enable.",
+  },
+  {
+    question: "Does Gojo work on more than one Mac?",
+    answer: "Yes. Personal plans cover one Mac. Multi-Mac plans cover up to three Macs.",
+  },
+  {
+    question: "Is there a free trial?",
+    answer: "Yes. You can try Gojo for three days without a card.",
+  },
+  {
+    question: "Can I buy Gojo once instead of subscribing?",
+    answer:
+      "Yes. Gojo offers both monthly subscriptions and one-time lifetime plans for Personal and Multi-Mac access.",
+  },
+]
+
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqItems.map(({ question, answer }) => ({
+    "@type": "Question",
+    name: question,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: answer,
+    },
+  })),
+}
+
 export default function Home() {
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify([jsonLd, faqJsonLd]) }}
       />
 
       <div className="shell hero-shell">
@@ -125,13 +164,13 @@ export default function Home() {
 
         <main className="hero">
           <h1>
-            <span className="line">Everything you reach for,</span>
+            <span className="line">Your everyday Mac tools,</span>
             <span className="line">
-              right in the <span className="glow">notch</span>.
+              in the MacBook <span className="glow">notch</span>.
             </span>
           </h1>
           <p className="sub">
-            Dictation, window snapping, clipboard history, a file shelf, music and screen warmth.
+            Window controls, clipboard history, a file shelf, music, screen warmth and local dictation.
             One surface, always a hover away.
           </p>
 
@@ -144,7 +183,11 @@ export default function Home() {
           </div>
 
           <div className="cta">
-            <a className="btn btn-primary" href="https://downloads.trygojo.com/Gojo.dmg">
+            <a
+              className="btn btn-primary"
+              data-funnel-event="download_cta_clicked"
+              href="https://downloads.trygojo.com/Gojo.dmg"
+            >
               <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                 <path
                   d="M8 1v9m0 0L4.5 6.5M8 10l3.5-3.5M2 13h12"
@@ -158,7 +201,7 @@ export default function Home() {
             </a>
           </div>
           <p className="meta">
-            No card, no account &middot; Dictation runs on device &middot; macOS 14 or later
+            No card, no account &middot; Local dictation runs on device &middot; macOS 14 or later
           </p>
         </main>
       </div>
@@ -247,14 +290,15 @@ export default function Home() {
               <p className="act-index" aria-hidden="true">
                 <Mic className="act-icon" strokeWidth={1.75} aria-hidden="true" />Dictation
               </p>
-              <h3 id="act-dictation">Dictation that never leaves your Mac.</h3>
+              <h3 id="act-dictation">On-device dictation, right where you type.</h3>
               <p>
                 Hold one shortcut and speak. The words appear wherever your cursor already is, in
                 Mail, Slack, a commit message or a search box.
               </p>
               <p className="act-note">
-                Speech recognition runs on a model you download once. No API key, no account, and no
-                audio ever leaves your Mac. It works on a plane.
+                With a local model selected, speech recognition runs on your Mac after one download.
+                Local mode needs no API key and works offline. Optional cloud dictation sends audio
+                to your selected provider using your own API key.
               </p>
               <ul className="act-proof">
                 <li>
@@ -262,7 +306,7 @@ export default function Home() {
                   <kbd>⌥</kbd> to talk, release to insert
                 </li>
                 <li>Choose your model, or swap it later</li>
-                <li>Runs offline, on-device, every time</li>
+                <li>Local models run offline after download</li>
               </ul>
             </div>
             <figure className="act-shot shot-inset">
@@ -325,7 +369,7 @@ export default function Home() {
                 </p>
                 <ul className="act-proof">
                   <li>Search without opening another app</li>
-                  <li>Passwords and secrets stay out of history</li>
+                  <li>Items marked private by supported password managers are skipped</li>
                 </ul>
               </div>
               <figure className="act-shot">
@@ -488,7 +532,12 @@ export default function Home() {
                   <p className="plan-copy">
                     Stay flexible with full access on one Mac. Cancel anytime.
                   </p>
-                  <a className="btn btn-monthly" href="https://buy.stripe.com/5kQfZhgUU2gI59o4FMeAg05">
+                  <a
+                    className="btn btn-monthly"
+                    data-funnel-event="pricing_cta_clicked"
+                    data-funnel-plan="personal_monthly"
+                    href="https://buy.stripe.com/5kQfZhgUU2gI59o4FMeAg05"
+                  >
                     Choose subscription
                   </a>
                 </div>
@@ -511,7 +560,12 @@ export default function Home() {
                   <p className="plan-copy">
                     Pay once and keep Gojo on one Mac, including future updates.
                   </p>
-                  <a className="btn btn-buy" href="https://buy.stripe.com/fZu5kD3446wY31gb4aeAg04">
+                  <a
+                    className="btn btn-buy"
+                    data-funnel-event="pricing_cta_clicked"
+                    data-funnel-plan="personal_lifetime"
+                    href="https://buy.stripe.com/fZu5kD3446wY31gb4aeAg04"
+                  >
                     Get lifetime access
                   </a>
                 </div>
@@ -532,7 +586,12 @@ export default function Home() {
                   <p className="plan-copy">
                     Stay flexible across up to three Macs. Cancel anytime.
                   </p>
-                  <a className="btn btn-monthly" href="https://buy.stripe.com/5kQcN5gUU7B245kgoueAg03">
+                  <a
+                    className="btn btn-monthly"
+                    data-funnel-event="pricing_cta_clicked"
+                    data-funnel-plan="multi_monthly"
+                    href="https://buy.stripe.com/5kQcN5gUU7B245kgoueAg03"
+                  >
                     Choose subscription
                   </a>
                 </div>
@@ -555,13 +614,38 @@ export default function Home() {
                   <p className="plan-copy">
                     Pay once. Keep every feature and future update on up to three Macs.
                   </p>
-                  <a className="btn btn-buy" href="https://buy.stripe.com/9B64gzfQQ7B26ds1tAeAg02">
+                  <a
+                    className="btn btn-buy"
+                    data-funnel-event="pricing_cta_clicked"
+                    data-funnel-plan="multi_lifetime"
+                    href="https://buy.stripe.com/9B64gzfQQ7B26ds1tAeAg02"
+                  >
                     Get lifetime access
                   </a>
                 </div>
               </PricingPanel>
             </PricingPanels>
           </PricingTabsProvider>
+        </div>
+      </section>
+
+      <section className="content-band" aria-labelledby="faq-heading">
+        <div className="wrap">
+          <p className="eyebrow">Questions, answered</p>
+          <h2 id="faq-heading">The details before you download.</h2>
+          <p className="section-lede">
+            Gojo is designed to be useful without becoming another app you have to manage.
+          </p>
+          <div className="mt-8 divide-y border-y border-(--rule)">
+            {faqItems.map((item) => (
+              <details key={item.question} className="group py-5">
+                <summary className="cursor-pointer pr-8 font-medium text-(--ink-1)">
+                  {item.question}
+                </summary>
+                <p className="mt-3 max-w-3xl text-(--ink-2)">{item.answer}</p>
+              </details>
+            ))}
+          </div>
         </div>
       </section>
 

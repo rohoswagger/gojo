@@ -117,7 +117,7 @@ export default async function AlternativePage({ params }: Params) {
                 <li>
                   <Check className="why-tick" aria-hidden="true" />
                   <span>
-                    <strong>Dictation stays on your Mac</strong> — no API key, no account, no audio leaving the device
+                    <strong>Local dictation stays on your Mac</strong> — no API key or audio upload in local mode. Optional cloud mode sends audio to your selected provider.
                   </span>
                 </li>
                 <li>
@@ -183,7 +183,7 @@ export default async function AlternativePage({ params }: Params) {
               <p>Every feature unlocked. No account, no card.</p>
             </div>
             <div className="alt-detail-cta-actions">
-              <a className="btn btn-primary" href="https://downloads.trygojo.com/Gojo.dmg">
+              <a data-funnel-event="download_cta_clicked" className="btn btn-primary" href="https://downloads.trygojo.com/Gojo.dmg">
                 Download for macOS
               </a>
               <Link className="btn btn-ghost" href="/#buy">

@@ -25,3 +25,13 @@ Detailed route and browser results are in `verified-routes.json` and `browser-re
 ## Limits
 
 Changes are local and have not been deployed. T3 screenshot capture repeatedly failed with PreviewAutomationExecutionError, so no final image-based visual verdict is claimed. DOM/computed-style, axe and interaction evidence does not replace a human visual review or screen-reader review. Automated checks also do not establish a conversion lift; that requires production funnel data after deployment.
+
+## Latest-main integration for the PR
+
+Merged main through `b3a39a4` in an isolated worktree, including legal/press routes and production analytics/paid attribution. The original workspace's staged app work was not used. The final PR diff contains no native app changes.
+
+Expanded the coastal layout to privacy, terms and press without changing legal prose or downloadable press assets. Preserved FAQ schema and changed its check to compare rendered questions/answers with structured data. Shared canonical typography tokens now resolve the body-scoped local font, while section headings retain their native rounded face.
+
+The merged production build and its complete main-branch check suite pass: 65 exported pages, 57 direct-download actions, 128 SwagUI Button slots, no static issues. All 65 routes pass a fresh T3 320px axe/layout run with no reported violations or detected overflow; all hero fonts resolve to the coastal serif. Additional desktop and enlarged-text checks on new legal/press routes passed layout checks. A press-caption contrast failure found during integration was corrected before the final 65-route run. Manual contrast checks over photos and video-caption review remain outside the automated result.
+
+Current merged browser evidence is `merged-main-browser-results.json`; earlier 61-page evidence remains a historical snapshot. Screenshot capture limitations above still apply.

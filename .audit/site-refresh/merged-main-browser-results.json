@@ -1,0 +1,1296 @@
+[
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/",
+    "swaguiButtons": 12,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/404.html",
+    "swaguiButtons": 3,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 3
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/privacy/",
+    "swaguiButtons": 1,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 9
+      },
+      {
+        "id": "video-caption",
+        "nodes": 1
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/press/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 7
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/features/",
+    "swaguiButtons": 0,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 3
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/terms/",
+    "swaguiButtons": 1,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 2
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 14
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/alternatives/",
+    "swaguiButtons": 0,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/404/",
+    "swaguiButtons": 3,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 9
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/downloads/",
+    "swaguiButtons": 3,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 10
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/alternatives/karabiner-elements/",
+    "swaguiButtons": 3,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 10
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/alternatives/maccy/",
+    "swaguiButtons": 3,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 10
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/alternatives/flux/",
+    "swaguiButtons": 3,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 10
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/alternatives/boring-notch/",
+    "swaguiButtons": 3,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 10
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/alternatives/alttab/",
+    "swaguiButtons": 3,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 10
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/alternatives/dynamiclake/",
+    "swaguiButtons": 3,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 10
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/alternatives/rectangle/",
+    "swaguiButtons": 3,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 10
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/alternatives/raycast/",
+    "swaguiButtons": 3,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 10
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/alternatives/notchnook/",
+    "swaguiButtons": 3,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 10
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/alternatives/droppy/",
+    "swaguiButtons": 3,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 10
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/alternatives/alcove/",
+    "swaguiButtons": 3,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 10
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/alternatives/bettertouchtool/",
+    "swaguiButtons": 3,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/gojo-vs-dynamiclake/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 9
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/best-window-tiling-apps-mac/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/gojo-vs-rectangle/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/best-droppy-alternatives/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/droppy-alternatives-private-dictation/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/gojo-vs-macwhisper/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/gojo-vs-alttab/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/best-mac-clipboard-manager/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/gojo-vs-notchnook/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/local-voice-dictation-mac/",
+    "swaguiButtons": 1,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/best-macos-notch-utilities/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 9
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/best-local-dictation-apps-mac/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/voice-to-text-mac-without-cloud/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/best-mac-dictation-for-writers/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/gojo-vs-boring-notch/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/gojo-vs-flux/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/gojo-vs-yoink/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/best-window-management-tools-mac/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/gojo-vs-karabiner-elements/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/gojo-vs-alcove/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/gojo-vs-droppy/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/gojo-vs-raycast/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/gojo-vs-maccy/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/best-file-shelf-apps-mac/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/best-macos-accessibility-permission-apps/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 9
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/best-notchnook-alternatives/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/gojo-vs-superwhisper/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/best-mac-dictation-for-developers/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/gojo-vs-bettertouchtool/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/gojo-vs-apple-dictation/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/best-private-dictation-apps-mac/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/best-productivity-apps-mac/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/blog/best-mac-notch-apps-for-productivity/",
+    "swaguiButtons": 2,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 9
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/features/file-shelf/",
+    "swaguiButtons": 0,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/features/camera-mirror/",
+    "swaguiButtons": 0,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/features/calendar/",
+    "swaguiButtons": 0,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 9
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/features/window-controls/",
+    "swaguiButtons": 0,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 9
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/features/local-dictation/",
+    "swaguiButtons": 0,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/features/display-comfort/",
+    "swaguiButtons": 0,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/features/shortcuts/",
+    "swaguiButtons": 0,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/features/media-controls/",
+    "swaguiButtons": 0,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/features/battery-status/",
+    "swaguiButtons": 0,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  },
+  {
+    "headerOutsideMain": true,
+    "headerOverlap": false,
+    "headingFont": "coastalDisplay, \"coastalDisplay Fallback\", Georgia, serif",
+    "headingInMain": true,
+    "mainCount": 1,
+    "manualChecks": [
+      {
+        "id": "color-contrast",
+        "nodes": 8
+      }
+    ],
+    "minNavTarget": 44,
+    "overflow": [],
+    "path": "/features/clipboard-history/",
+    "swaguiButtons": 0,
+    "textScale": 1,
+    "violations": [],
+    "width": 320
+  }
+]

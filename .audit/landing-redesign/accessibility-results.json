@@ -1,0 +1,105 @@
+{
+  "scans": [
+    {
+      "path": "/features/",
+      "result": {
+        "incomplete": [
+          {
+            "id": "color-contrast",
+            "nodes": 27
+          }
+        ],
+        "mainCount": 1,
+        "skipTarget": true,
+        "violations": []
+      }
+    },
+    {
+      "path": "/downloads/",
+      "result": {
+        "incomplete": [],
+        "mainCount": 1,
+        "skipTarget": true,
+        "violations": []
+      }
+    },
+    {
+      "path": "/alternatives/",
+      "result": {
+        "incomplete": [
+          {
+            "id": "color-contrast",
+            "nodes": 33
+          }
+        ],
+        "mainCount": 1,
+        "skipTarget": true,
+        "violations": []
+      }
+    },
+    {
+      "path": "/blog/",
+      "result": {
+        "incomplete": [],
+        "mainCount": 1,
+        "skipTarget": true,
+        "violations": []
+      }
+    },
+    {
+      "path": "/",
+      "result": {
+        "incomplete": [
+          {
+            "id": "color-contrast",
+            "nodes": 8
+          }
+        ],
+        "mainCount": 1,
+        "skipTarget": true,
+        "violations": []
+      }
+    }
+  ],
+  "photographicContrast": [
+    {
+      "minSampledContrast": 10.95,
+      "text": "Your Mac.One hover away."
+    },
+    {
+      "minSampledContrast": 6.85,
+      "text": "One hover away."
+    },
+    {
+      "minSampledContrast": 9.21,
+      "text": "Your everyday tools, right in your MacBook notch."
+    },
+    {
+      "minSampledContrast": 5.65,
+      "text": "3 days free"
+    },
+    {
+      "minSampledContrast": 5.25,
+      "text": "Yours for $9.99 once"
+    },
+    {
+      "minSampledContrast": 6.8,
+      "text": "Give your notchsomething to do."
+    },
+    {
+      "minSampledContrast": 10.13,
+      "text": "No card or account. macOS 14 or later."
+    }
+  ],
+  "textScaling": {
+    "width": 320,
+    "textSize": "200%",
+    "overflow": false,
+    "headerOverlapsHeadline": false
+  },
+  "structure": {
+    "exportedPages": 61,
+    "mainLandmark": "one per page",
+    "skipDestination": "one focusable target per page"
+  }
+}

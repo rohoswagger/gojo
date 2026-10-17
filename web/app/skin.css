@@ -44,9 +44,33 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--gojo-accent);
+  outline: 3px solid #462a1c;
   outline-offset: 3px;
+  box-shadow: 0 0 0 3px #fff !important;
   border-radius: 6px;
+}
+
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 1000;
+  padding: 0.875rem 1.25rem;
+  border: 2px solid #462a1c;
+  border-radius: 999px;
+  background: #fff;
+  color: #462a1c;
+  font-size: 1rem;
+  font-weight: 650;
+  transform: translateY(calc(-100% - 1rem));
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+#main-content {
+  scroll-margin-top: 6rem;
 }
 
 .sr-only {
@@ -81,7 +105,8 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 1.5rem;
-  height: 4rem;
+  min-height: 4rem;
+  flex-wrap: wrap;
   /* Full-bleed bar, content centred on the page measure: the rule underneath
      runs edge to edge the way it does on onyx.app. */
   padding-inline: max(var(--gutter), calc((100% - var(--page)) / 2));
@@ -93,6 +118,7 @@ body {
 
 .brand {
   display: inline-flex;
+  min-height: 44px;
   align-items: center;
   gap: 0.5rem;
   font-family: var(--display);
@@ -117,7 +143,10 @@ body {
 
 .nav a,
 .ghost-link {
-  color: var(--ink-3);
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--ink-2);
   transition: color 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -131,8 +160,14 @@ body {
     gap: 1rem;
     font-size: 0.875rem;
   }
-  .site-header .nav a:first-child {
-    display: none;
+  .site-header:not(.site-header-overlay) {
+    gap: 0 1rem;
+    padding-block: 0.5rem;
+  }
+
+  .site-header:not(.site-header-overlay) .nav {
+    flex-wrap: wrap;
+    gap: 0 1rem;
   }
 }
 
@@ -148,8 +183,9 @@ body {
   border-radius: 8px;
   font-size: 0.9375rem;
   font-weight: 500;
-  line-height: 1;
-  white-space: nowrap;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.4;
   transition:
     background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
     border-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -304,6 +340,7 @@ body {
 
 .site-header-overlay .nav-cta {
   justify-self: end;
+  min-height: 44px;
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   box-shadow: 0 6px 20px -8px rgba(0, 0, 0, 0.55);
@@ -419,7 +456,7 @@ body {
     justify-self: start;
   }
   .site-header-overlay .nav a:first-child {
-    display: inline;
+    display: inline-flex;
   }
 }
 
@@ -4181,7 +4218,7 @@ kbd {
 }
 
 .article-shell[data-gojo-editorial="warm"] :focus-visible {
-  outline-color: var(--editorial-orange);
+  outline-color: #462a1c;
 }
 
 .article-shell[data-gojo-editorial="warm"]

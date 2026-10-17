@@ -11,14 +11,18 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <>
+    <div className="marketing-shell legal-shell" data-gojo-editorial="warm">
       <GojoHeader />
-      <main className="mx-auto w-full max-w-3xl px-6 py-16 sm:px-8 sm:py-24">
-        <p className="text-muted-foreground font-mono text-xs tracking-[0.16em] uppercase">Gojo</p>
-        <h1 className="mt-4 text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">Terms</h1>
-        <p className="text-muted-foreground mt-5 text-sm">Last updated September 18, 2026</p>
+      <main id="main-content" tabIndex={-1}>
+        <section className="article-hero" aria-labelledby="legal-title">
+          <div className="mx-auto w-full max-w-3xl px-6 sm:px-8">
+            <p className="text-muted-foreground text-sm">Gojo</p>
+            <h1 id="legal-title">Terms</h1>
+            <p className="text-muted-foreground mt-5 text-base">Last updated September 18, 2026</p>
+          </div>
+        </section>
 
-        <div className="legal-content mt-12">
+        <div className="legal-content mx-auto w-full max-w-3xl px-6 py-12 sm:px-8 sm:py-16">
           <p>
             These terms apply when you download, buy, or use Gojo. By doing so, you agree to them. If you do
             not agree, do not use Gojo.
@@ -95,6 +99,6 @@ export default function TermsPage() {
         </div>
       </main>
       <GojoFooter />
-    </>
+    </div>
   )
 }

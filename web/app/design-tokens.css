@@ -13,9 +13,9 @@
   --rule-soft: #f0f0f0;
 
   /* Brand and semantic colors. */
-  --gojo-accent: #4a46cf;
-  --gojo-accent-soft: #f0f0fb;
-  --gojo-accent-quiet: #5f5d86;
+  --gojo-accent: #a53f27;
+  --gojo-accent-soft: #fff0e7;
+  --gojo-accent-quiet: #71331e;
   --ok: #1a7f4b;
   --no: #b3372c;
 
@@ -31,12 +31,13 @@
 
   /* One typography system with explicit roles. The landing/high-emphasis
      display face is intentionally distinct from interface and body copy. */
-  --font-marketing-display: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, sans-serif;
+  --font-marketing-display: var(--font-coastal), Georgia, serif;
+  --font-heading: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, sans-serif;
   --font-interface: ui-sans-serif, system-ui, -apple-system, "SF Pro Text", sans-serif;
   --font-technical: ui-monospace, "SF Mono", "JetBrains Mono", monospace;
 
   /* Backward-compatible aliases used by the existing site skin. */
-  --display: var(--font-marketing-display);
+  --display: var(--font-heading);
   --body: var(--font-interface);
   --mono: var(--font-technical);
 
@@ -55,8 +56,12 @@
   --page: 76rem;
 
   /* Shape scale. */
-  --radius-control: 8px;
+  --radius-control: 999px;
   --radius-card: 16px;
   --radius-panel: 22px;
   --radius-pill: 999px;
+}
+
+body {
+  --font-marketing-display: var(--font-coastal), Georgia, serif;
 }

@@ -36,15 +36,15 @@ function SiteFooter({
 
           {columns.map((col) => (
             <div key={col.title}>
-              <p className="text-muted-foreground mb-4 font-mono text-[0.625rem] tracking-[0.22em] uppercase">
+              <h2 className="text-foreground mb-3 text-[0.8125rem] font-semibold tracking-[0.04em] uppercase">
                 {col.title}
-              </p>
-              <ul className="flex flex-col gap-2.5">
+              </h2>
+              <ul className="flex flex-col gap-1">
                 {col.links.map((l) => (
                   <li key={l.href}>
                     <a
                       href={l.href}
-                      className="text-muted-foreground hover:text-foreground text-[0.9375rem] transition-colors duration-(--duration-fast) ease-(--ease-swagui)"
+                      className="text-muted-foreground hover:text-foreground inline-flex min-h-8 items-center text-[0.9375rem] transition-colors duration-(--duration-fast) ease-(--ease-swagui)"
                     >
                       {l.label}
                     </a>

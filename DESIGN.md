@@ -22,9 +22,9 @@ colors:
   danger: "#b3372c"
 typography:
   display:
-    fontFamily: "ui-rounded, SF Pro Rounded, system-ui, -apple-system, sans-serif"
-    fontSize: "clamp(2.5rem, 5.2vw, 3.5rem)"
-    fontWeight: 550
+    fontFamily: "Instrument Serif, Georgia, serif"
+    fontSize: "clamp(3.25rem, 7vw, 6rem)"
+    fontWeight: 400
     lineHeight: 1.06
     letterSpacing: "-0.035em"
   headline:
@@ -46,7 +46,7 @@ typography:
     lineHeight: 1.5
   label:
     fontFamily: "ui-monospace, SF Mono, JetBrains Mono, monospace"
-    fontSize: "0.6875rem"
+    fontSize: "0.875rem"
     fontWeight: 500
     lineHeight: 1.2
     letterSpacing: "0.14em"
@@ -68,17 +68,17 @@ components:
   button-primary:
     backgroundColor: "{colors.ink-strong}"
     textColor: "{colors.white}"
-    rounded: "{rounded.md}"
+    rounded: "{rounded.pill}"
     padding: "0.6875rem 1.25rem"
   button-ghost:
     backgroundColor: "{colors.white}"
     textColor: "{colors.ink-strong}"
-    rounded: "{rounded.md}"
+    rounded: "{rounded.pill}"
     padding: "0.6875rem 1.25rem"
   editorial-hero-button:
     backgroundColor: "{colors.white}"
     textColor: "{colors.near-black}"
-    rounded: "{rounded.md}"
+    rounded: "{rounded.pill}"
     padding: "0.8125rem 1.5rem"
   feature-card:
     backgroundColor: "{colors.cream-card}"
@@ -98,9 +98,9 @@ components:
 
 **Creative North Star: "The Sunset Notch Desk"**
 
-Gojo's marketing world makes the MacBook notch feel like a warm, useful desk surface at the top edge of the screen. The homepage is the visual authority: sunset photography, a dark scrim, a real notch demo, and restrained native controls define the brand. Every marketing page should persuade by making the product visible quickly, then proving breadth with real interface evidence.
+Gojo's marketing world makes the MacBook notch feel like a warm, useful desk surface at the top edge of the screen. The homepage uses the Gojo sunset beach photograph, a cream-washed sky, editorial serif lettering, warm feature cards and genuine notch screenshots. Every marketing page should persuade by making the product visible quickly, then proving breadth with real interface evidence.
 
-The base site skin still supplies the structural system: 76rem page width, 44rem reading measure, 8px cards and buttons, sticky navigation, hairline rules, tight rounded display type, and no decorative clutter. Features and Alternatives use the warm editorial variant on top of that base: sunset-photo heroes, a flagship dark dictation spotlight, job-based feature chapters, three comparison decision lanes, product screenshots, and recognizable competitor marks.
+The base skin supplies a 76rem page width and 44rem reading measure. Shared coastal rules in `web/app/marketing-heroes.css` carry the approved beach photograph, cream surfaces, brown text, Instrument Serif heroes and round actions across interior pages. Feature and comparison pages retain their workflow chapters and comparison lanes. Blog, download and error routes share the same typography and controls.
 
 **Key Characteristics:**
 - Real product evidence appears in the first viewport: notch interface screenshots on Features, comparison marks on Alternatives, and the notch demo on the homepage.
@@ -140,7 +140,7 @@ The palette is warm and photographic: dark sunset panels carry white type, while
 
 ## Typography
 
-**Display Font:** `ui-rounded, "SF Pro Rounded", system-ui, -apple-system, sans-serif`
+**Hero font:** Locally hosted Instrument Serif, with Georgia and serif fallbacks. Section headings use the native rounded system stack.
 **Body Font:** `ui-sans-serif, system-ui, -apple-system, "SF Pro Text", sans-serif`
 **Label/Mono Font:** `ui-monospace, "SF Mono", "JetBrains Mono", monospace`
 
@@ -155,11 +155,11 @@ The palette is warm and photographic: dark sunset panels carry white type, while
 
 ### Named Rules
 
-**The Rounded Native Rule.** Display type should feel like it belongs in macOS utility UI: rounded, tight, and useful, not magazine-serif or corporate grotesque.
+**Type hierarchy.** Instrument Serif carries hero headlines. Native rounded headings and system body text keep feature cards, navigation and long articles readable.
 
 ## Layout
 
-The core layout uses a 76rem page width, a 44rem reading measure, and a responsive gutter. Home sections alternate between two-column product proof, full-width feature acts, and a centered pricing pair. Article pages keep a narrow reading column unless a feature or comparison needs evidence.
+The core layout uses a 76rem page width, a 44rem reading measure, and a responsive gutter. The homepage moves from a centered product preview to a four-shot workflow grid, a dark dictation section, display settings, and a centered pricing pair. Article pages keep a narrow reading column unless a feature or comparison needs evidence.
 
 Features and Alternatives deliberately break article monotony. The Features hub opens with a two-column headline/context row followed by one dominant, full-width notch capture in a subtle MacBook bezel. Use `/screenshots/windows.png` at its native 1322x418 dimensions as the shipping authority for this hero; do not replace it with layered tilted crops, sticky-note decoration, or low-resolution reconstructions. The rest of the hub is chaptered by job: movement workflows, Mac-awareness workflows, and compact small checks. Feature detail pages keep the warm hero and put a populated screenshot well beside the headline.
 
@@ -167,12 +167,34 @@ The Alternatives hub uses a Gojo-centered orbit of competitor marks in the first
 
 Responsive behavior is explicit: major split grids collapse to one column below tablet widths; feature chapter grids move from three columns to two, then one; compact feature cards preserve a wide copy column with a 5.5rem signal column on mobile; Alternatives lanes move from three columns to two, then one; comparison tables become two-column mobile rows; navigation wraps instead of crushing controls. The page must not overflow at 390px.
 
+## Homepage
+
+The homepage is a coastal Gojo world scoped by `web/app/home.module.css`. The user explicitly requested the beach theme, Gojo colors, expressive layouts and many aesthetic feature cards. This supersedes the temporary monochrome ASCII direction. Reference sites inform composition without replacing Gojo's own identity.
+
+### Composition
+
+The existing Gojo sunset photograph fills the hero. A cream wash across the sky keeps dark text readable while the ocean remains visible beneath the real notch screenshot. A floating cream navigation bar, large editorial serif headline, direct trial download and clear terms lead into a working screenshot selector. Six genuine product captures remain in the page.
+
+A sand ground follows the ocean. Four rounded screenshot cards use a twelve-column layout: music spans seven columns beside a five-column clipboard card; windows spans five beside a seven-column file shelf. An ember dictation card and cream display-settings card follow. Four smaller linked cards cover calendar, battery, camera mirror and shortcuts. Pricing and FAQs have quieter cream backgrounds. The closing trial action returns to the beach photograph.
+
+### Type and color
+
+The main canvas is warm cream `#faf3e8`, text warm charcoal `#30231e`, secondary text brown `#876650`, and brand action ember `#a53f27`. Peach, sand and warm cream distinguish the feature-card materials. The hero and closing headline use locally hosted Instrument Serif with an italic hero second line. Native rounded display type carries feature cards and section titles. All font files include their OFL license under `web/public/fonts/instrument-serif/`.
+
+The hero's primary action is dark brown on the light sky. Other actions use ember or cream according to their background. One finite notch entrance marks the product preview; reduced motion disables it. Cards do not all bounce, tilt or animate on scroll. Keyboard focus remains visible.
+
+### References and raster provenance
+
+Poke.com is the user's explicit reference. Its actual desktop hero, mobile hero and feature-section screenshots were viewed through Swaggin, and its live page was inspected in T3. The airy photographic opening, editorial serif and generous product presentation informed this design. Actual Intercom, Polestar and Headspace references were also viewed; their unrelated colors, art and customer claims were not adopted.
+
+The beach is the existing `web/public/assets/bg.webp`. Product captures remain the genuine existing PNGs under `web/public/screenshots/`: media, clipboard, windows, shelf, dictation-models and settings-nightshift. Their capture provenance lives in `web/public/screenshots/CAPTURE.md`. Preserve native proportions. The window image shows app choices, layout controls and shortcut labels; its empty preview region is not proof of populated window previews.
+
 ## Elevation & Depth
 
 Depth is a hybrid of tonal layering and selective shadows. Light surfaces use borders and tinted backgrounds before shadows. Dark hero evidence, screenshot wells, orbit marks, and the homepage demo use soft, large shadows to make the real interface feel physical.
 
 ### Shadow Vocabulary
-- **Hero Demo Shadow** (`0 30px 80px -24px rgba(0, 0, 0, 0.92)` plus subtle glow): Use for the homepage notch demo only.
+- **Homepage Product Shadow**: Use a soft, downward shadow on genuine notch captures only. The surrounding tonal fields remain flat.
 - **Editorial Screenshot Shadow** (`0 28px 75px rgba(33, 9, 2, 0.56)`): Use for product screenshots on warm dark heroes.
 - **Orbit Mark Shadow** (`0 14px 35px rgba(0, 0, 0, 0.32)`): Use for competitor marks floating in the Alternatives orbit.
 - **Warm Comparison Shadow** (`0 28px 70px rgba(33, 9, 2, 0.46)`): Use for the alternative detail `Versus` panel.
@@ -183,14 +205,14 @@ Depth is a hybrid of tonal layering and selective shadows. Light surfaces use bo
 
 ## Shapes
 
-The shape language is gently rounded and consistent. Buttons and standard cards use 8px. Screenshot wells and major comparison devices use 14px to 16px. Editorial chapter panels use 18px. The homepage photographic shell uses a 22px top radius. Chips and pricing tabs use pill radii.
+The shape language is gently rounded and consistent. Buttons use full pill radii; cards use their existing 8px to 24px radii. Screenshot wells and major comparison devices use 14px to 16px. Editorial chapter panels use 18px. The homepage feature cards use 18px to 24px radii; download, navigation, selector and pricing actions use fully rounded pill shapes. The beach hero closes with a softly rounded lower edge. Chips and pricing tabs use pill radii.
 
 Borders are hairline and structural. Avoid nested cards: when a mark or screenshot sits inside a larger panel, remove the extra tile if it would read as a card inside a card.
 
 ## Components
 
 ### Buttons
-- **Shape:** Gently rounded rectangle (8px).
+- **Shape:** Full pill radius, wrapping labels and at least 44px target height.
 - **Primary:** Near-black on light pages, white on dark editorial heroes and CTAs.
 - **Hover / Focus:** Background shifts only; warm CTA hover uses Cream Tint (`#fff0e7`) and focus uses a 2px visible coral-orange outline with 3px offset.
 - **Secondary / Ghost:** White or transparent fill with hairline border, used for pricing and secondary CTA links.
@@ -211,13 +233,13 @@ Borders are hairline and structural. Avoid nested cards: when a mark or screensh
 - **Focus:** Any interactive field must use the global visible focus rule.
 
 ### Navigation
-- **Style:** Sticky 4rem header with brand left and compact links. Dark editorial pages tint the header with the editorial dark color. The homepage header rides directly over the photograph.
+- **Style:** Sticky 4rem header with brand left and compact links. The shared header is a floating cream bar with an ember Download action, including interior routes.
 - **Typography:** Rounded brand wordmark, system-body nav links.
 - **Mobile:** Links reduce spacing and wrap where needed; do not compress the Download pill until it becomes illegible.
 
 ### Feature Hub Spotlight and Chapters
 
-The Features hub is not one continuous mosaic. The hero/header is a two-column headline/context row followed by one honest full-width notch capture in a subtle MacBook bezel. Lead the library below that with the dark dictation spotlight: large rounded display type, white copy on `editorial-panel`, a real dictation screenshot, and a peach action link. Follow it with job-based chapters. Movement and Mac-awareness chapters use three-up screenshot cards; the compact checks chapter uses tighter rows with a wide copy area and a fixed signal column.
+The Features hub is not one continuous mosaic. The hero/header is a two-column headline/context row followed by one honest full-width notch capture in a subtle MacBook bezel. Lead the library below that with the dark dictation spotlight: large rounded display type, white copy on `editorial-panel`, a real dictation screenshot, and a peach action link. Follow it with job-based chapters. Movement and Mac-awareness chapters use three-up screenshot cards; the compact checks chapter uses concise text cards without decorative signal bars.
 
 ### Feature Screenshot Wells
 
@@ -225,7 +247,7 @@ Feature pages use populated screenshot wells as proof. The hub signature is one 
 
 Dictation remains evidence-led. Use the genuine model settings capture for the dictation spotlight until a valid retina live-dictation capture exists. Computer Use staging captures can inform composition, but a 640x210 JPEG is below the retina floor; the current PNG capture set remains the shipping authority, with most workflow captures spanning 1298-1388px wide. Never substitute a low-resolution, upscaled, or AI-reconstructed image as product evidence.
 
-On dark feature detail heroes, captions and fact metadata must stay legible. Use raised white-alpha caption contrast rather than muted gray that disappears into the panel.
+Hero captions and metadata use solid brown text over the pale beach wash. Dark proof panels use light text with sufficient contrast.
 
 ### Alternatives Utility Orbit and Lane Library
 
@@ -243,7 +265,7 @@ The Alternatives hub library is lane-based, not a flat card grid. Notch & Island
 - **Do** preserve workflow card screenshot aspect ratios with containment rather than cropping.
 - **Do** preserve the Alternatives lane taxonomy: Notch & Island Utilities, Focused Specialists, and Power Layers.
 - **Do** keep dark screenshot captions and fact metadata readable against warm panels.
-- **Do** keep AA contrast, visible focus states, reduced-motion behavior, and 390px no-overflow behavior.
+- **Do** keep AA contrast, visible focus states, reduced-motion behavior, and 320px no-overflow behavior and 200% text reflow.
 - **Do** pair comparison colors with icons and words.
 
 ### Don't:
@@ -255,3 +277,9 @@ The Alternatives hub library is lane-based, not a flat card grid. Notch & Island
 - **Don't** leave screenshot wells empty on feature pages.
 - **Don't** use decorative numbering where the content already has headings, marks, or facts.
 - **Don't** add CTA eyebrows when the CTA headline and actions are already visible.
+
+Homepage copy stays compact. Do not restore selector captions, decorative section descriptions, or repeated trial promises. Feature cards use labels and one brief functional line. The small utility cards use labels only.
+
+Homepage readability. Keep the beach visible behind hero copy; do not add a solid text panel. Use one 21px supporting sentence and prominent 21px trial/lifetime offers. Selector controls use 15px labels and 44px minimum targets. Keep all navigation available on phones, allow text wrapping and 200% text reflow, and preserve the fixed preview frame. Scope main-heading styles to main content so footer headings retain their own scale.
+
+Shared React actions use the local SwagUI `Button`; alternative detail and error layouts use `Section`, and routes share `SiteFooter`. Static HTML generators retain their existing renderer with matching CSS. Keep the pricing controller and its roving focus behavior until a replacement proves the same DOM placement and keyboard behavior.

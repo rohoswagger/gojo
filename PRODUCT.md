@@ -30,6 +30,8 @@ The public site should lead with the whole-product outcome, quickly demonstrate 
 
 Quietly clever, tactile, and Mac-native. The voice should feel precise and useful without sounding corporate or search-spammy.
 
+The homepage keeps Gojo’s beach sunset identity, with ember, peach, sand and cream. Reference sites can guide composition and craft, but should not replace that identity with an unrelated palette.
+
 ## Anti-references
 
 Avoid generic AI-generated SaaS landing pages, misleading comparison tables, keyword-stuffed listicles, vague "productivity booster" claims, and content that compares apps without checking current official sources before publication.

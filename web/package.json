@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build && node --test scripts/verify-www-canonical-redirect.test.mjs && node --test scripts/verify-purchase-webhook.test.mjs && node scripts/verify-marketing-links.mjs && node scripts/verify-funnel-analytics.mjs && node scripts/verify-legal-pages.mjs && node scripts/verify-homepage-faq.mjs && node scripts/verify-sitemap-dates.mjs && node scripts/verify-design-system.mjs && node scripts/verify-press-kit.mjs",
+    "build": "next build && node --test scripts/verify-www-canonical-redirect.test.mjs && node --test scripts/verify-purchase-webhook.test.mjs && node scripts/verify-marketing-links.mjs && node scripts/verify-funnel-analytics.mjs && node scripts/verify-legal-pages.mjs && node scripts/verify-homepage-faq.mjs && node scripts/verify-sitemap-dates.mjs && node scripts/verify-design-system.mjs && node scripts/verify-press-kit.mjs && node scripts/verify-accessibility.mjs && node scripts/audit-site.mjs",
     "verify:canonical-host": "node --test scripts/verify-www-canonical-redirect.test.mjs",
     "verify:purchase-webhook": "node --test scripts/verify-purchase-webhook.test.mjs",
     "verify:design-system": "node scripts/verify-design-system.mjs",
@@ -16,7 +16,9 @@
     "verify:legal-pages": "node scripts/verify-legal-pages.mjs",
     "verify:homepage-faq": "node scripts/verify-homepage-faq.mjs",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "verify:accessibility": "node scripts/verify-accessibility.mjs",
+    "audit:site": "node scripts/audit-site.mjs"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

@@ -1,33 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Gojo website
 
-## Getting Started
+The marketing site uses Next.js with static export. Article data lives in
+`content/blog`. Feature and alternative pages use the HTML generators in `lib`.
+Shared coastal styles live in `app/marketing-heroes.css` over the base `app/skin.css`. React actions use the local SwagUI
+`Button` in `components/ui/button.tsx`.
 
-First, run the development server:
+## Run locally
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
+From `web`, install the locked dependencies and start the development server.
+
+```sh
+pnpm install --frozen-lockfile
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`. Run the source checks before a build.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```sh
+pnpm lint
+pnpm exec tsc --noEmit
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`pnpm build` writes the static site to `out` and runs the marketing link and
+accessibility checks, followed by the full route crawl. `pnpm verify:marketing`,
+`pnpm verify:accessibility` and `pnpm audit:site` check an existing export.
+The route crawl validates local assets, fragments, landmarks, canonicals and download tracking.
 
-## Learn More
+## Update release details
 
-To learn more about Next.js, take a look at the following resources:
+`lib/release.ts` pairs the download page's version, immutable artifact URL, byte
+size and SHA-256. The homepage also uses this release record for its version.
+Keep the versioned URL and checksum together. The mutable `Gojo.dmg` alias can
+change after a release.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Before updating the record, compare `../appcast.xml` with the release tag and
+download the versioned artifact. Read the actual byte count and SHA-256.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```sh
+curl --fail --location --output /tmp/Gojo-1.5.1.dmg https://downloads.trygojo.com/Gojo-1.5.1.dmg
+wc -c < /tmp/Gojo-1.5.1.dmg
+shasum -a 256 /tmp/Gojo-1.5.1.dmg
+```
+
+The published artifact was checked on 2026-10-16. The GET returned HTTP 200 at
+`https://downloads.trygojo.com/Gojo-1.5.1.dmg`. Its 17,217,841 bytes match the
+appcast enclosure. Tag `v1.5.1` sets the app's marketing version to `1.5.1`.
+Its SHA-256 is
+`510c5e9d8c3732a1cd8c91925d2c4a15d586d51e5468a985632bd2ada1a3b814`.
+
+## Preserve page behavior
+
+Keep each route's heading and body in one focusable `main#main-content`, with the
+header outside. Preserve blog canonicals, article JSON-LD, fragment IDs and
+article content. Use existing screenshots at their native aspect ratios.
+
+Direct DMG links carry `data-funnel-event="download_cta_clicked"` and a fixed
+`data-funnel-placement` value such as `downloads` or `blog_article`. Keep license
+links and purchase attribution intact.
 
 ## Analytics
 
@@ -39,8 +68,3 @@ Set `NEXT_PUBLIC_POSTHOG_KEY` or the existing `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN
 
 The Worker route `POST /api/stripe/webhook` requires two runtime secrets: `STRIPE_WEBHOOK_SECRET` for signature verification and `POSTHOG_API_KEY` for server-side capture. Configure Stripe to send `checkout.session.completed` and `checkout.session.async_payment_succeeded` to `https://trygojo.com/api/stripe/webhook`. Install both values with `wrangler secret put` through a protected prompt; never place them in source, `wrangler.jsonc`, command arguments, logs, or screenshots. The route fails closed when either binding is absent and returns an error when PostHog delivery fails so Stripe can retry. Each Stripe Event uses a deterministic UUID, its original timestamp, and the same distinct ID so PostHog can deduplicate replayed deliveries. This deduplicates retries of an Event ID; separate Stripe Event IDs are separate records. Subscription renewals and refunds are outside this acquisition event. Keep the Gojo Payment Link allowlist in `worker.mjs` aligned with the four website plans.
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

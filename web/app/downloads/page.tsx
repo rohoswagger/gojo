@@ -1,19 +1,13 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { GojoFooter } from "@/components/gojo-footer";
 import { GojoHeader } from "@/components/gojo-header";
-
-const VERSION = "1.5.1";
-const DMG = `https://downloads.trygojo.com/Gojo-${VERSION}.dmg`;
-const SIZE = "17 MB";
-const MIN_OS = "macOS 14 or later";
-// Printed by scripts/release.sh and verified against the published artifact.
-const SHA256 =
-  "510c5e9d8c3732a1cd8c91925d2c4a15d586d51e5468a985632bd2ada1a3b814";
+import { Button } from "@/components/ui/button";
+import { GOJO_RELEASE } from "@/lib/release";
 
 const TITLE = "Download Gojo for Mac";
-const DESCRIPTION =
-  "Download Gojo for macOS. Signed and notarized, version 1.5.1, with a full three day trial that needs no account and no card.";
+const DESCRIPTION = `Download Gojo ${GOJO_RELEASE.version} for macOS. Developer ID signed and Apple notarized, with a full three day trial that needs no account and no card.`;
 
 export const metadata: Metadata = {
   title: `${TITLE} | Gojo`,
@@ -38,11 +32,11 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   name: "Gojo",
-  operatingSystem: MIN_OS,
+  operatingSystem: GOJO_RELEASE.minimumSystemVersion,
   applicationCategory: "UtilitiesApplication",
-  softwareVersion: VERSION,
-  fileSize: SIZE,
-  downloadUrl: DMG,
+  softwareVersion: GOJO_RELEASE.version,
+  fileSize: `${GOJO_RELEASE.fileSizeBytes} bytes`,
+  downloadUrl: GOJO_RELEASE.downloadUrl,
   installUrl: "https://trygojo.com/downloads/",
   url: "https://trygojo.com",
   offers: {
@@ -56,56 +50,72 @@ const jsonLd = {
 const steps = [
   {
     n: "Open the disk image",
-    body: `Double click the downloaded Gojo-${VERSION}.dmg to mount it.`,
+    body: `Double click the downloaded ${GOJO_RELEASE.fileName} to mount it.`,
   },
   {
     n: "Drag Gojo to Applications",
     body: "The window shows Gojo beside your Applications folder. Drag it across.",
   },
   {
-    n: "Launch and grant access",
+    n: "Launch and choose permissions",
     body: "Onboarding offers optional camera, calendar, and reminder access, then Accessibility and a music source. Accessibility enables window controls, media-key handling, and dictation insertion. Local dictation also needs microphone access and a model download in Settings.",
   },
 ];
 
 export default function DownloadsPage() {
   return (
-    <>
+    <div className="marketing-shell download-shell" data-gojo-editorial="warm">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <GojoHeader />
 
-      <div className="shell download-shell">
-        <main>
-          <section className="download-hero">
-            <h1>Download Gojo</h1>
-            <p className="download-sub">
-              One hover from your notch to dictation, windows, clipboard, files,
-              media and display controls. Free for three days, no account and no
-              card.
-            </p>
+      <main id="main-content" tabIndex={-1} className="download-main">
+        <section className="download-hero" aria-labelledby="download-title">
+          <div className="wrap download-hero-layout">
+            <div className="download-hero-copy">
+              <h1 id="download-title">Download Gojo</h1>
+              <p className="download-sub">
+                One hover from your notch to dictation, windows, clipboard, files,
+                media and display controls. Free for three days, no account and no
+                card.
+              </p>
 
-            <a className="btn btn-primary download-btn" href={DMG} data-funnel-event="download_cta_clicked">
-              Download for macOS
-            </a>
+              <Button asChild size="lg" className="btn btn-primary download-btn">
+                <a
+                  href={GOJO_RELEASE.downloadUrl}
+                  data-funnel-event="download_cta_clicked"
+                  data-funnel-placement="downloads"
+                >
+                  Download for macOS
+                </a>
+              </Button>
 
-            <p className="download-spec">
-              Version {VERSION} <span aria-hidden="true">&middot;</span> {SIZE}{" "}
-              <span aria-hidden="true">&middot;</span> {MIN_OS} <span aria-hidden="true">&middot;</span> Apple Silicon
-            </p>
+              <p className="download-spec">
+                Version {GOJO_RELEASE.version} <span aria-hidden="true">&middot;</span>{" "}
+                {GOJO_RELEASE.fileSizeLabel} <span aria-hidden="true">&middot;</span>{" "}
+                {GOJO_RELEASE.minimumSystemVersion} <span aria-hidden="true">&middot;</span> Apple Silicon
+              </p>
 
-            <ul className="download-trust">
-              <li>Developer ID signed and notarized by Apple</li>
-              <li>Local dictation runs on device</li>
-              <li>Updates through Sparkle</li>
-            </ul>
-          </section>
-        </main>
-      </div>
+              <ul className="download-trust">
+                <li>Developer ID signed and Apple notarized</li>
+                <li>Local dictation stays on your Mac</li>
+                <li>Updates through Sparkle</li>
+              </ul>
+            </div>
+            <figure className="download-product-figure">
+              <Image
+                src="/screenshots/windows.png"
+                width={1322}
+                height={418}
+                alt="Gojo window controls showing app choices, snap layouts and keyboard shortcuts in the MacBook notch."
+                priority
+              />
+            </figure>
+          </div>
+        </section>
 
-      <main className="download-main">
         <div className="download-body">
           <section aria-labelledby="install-title">
             <h2 id="install-title">Installing</h2>
@@ -127,10 +137,12 @@ export default function DownloadsPage() {
               confirm the file yourself, compare its checksum.
             </p>
             <pre className="download-code">
-              <code>{`shasum -a 256 ~/Downloads/Gojo-${VERSION}.dmg`}</code>
+              <code>shasum -a 256 ~/Downloads/{GOJO_RELEASE.fileName}</code>
             </pre>
-            <p className="download-hash-label">Expected for {VERSION}</p>
-            <p className="download-hash">{SHA256}</p>
+            <p className="download-hash-label">
+              Expected SHA-256 for {GOJO_RELEASE.fileName}
+            </p>
+            <p className="download-hash">{GOJO_RELEASE.sha256}</p>
           </section>
 
           <section aria-labelledby="after-title">
@@ -140,9 +152,9 @@ export default function DownloadsPage() {
               one time purchase or a subscription, on one Mac or up to three.
             </p>
             <p className="download-actions">
-              <Link className="btn btn-primary" href="/#buy">
-                See pricing
-              </Link>
+              <Button asChild size="lg" className="btn btn-primary">
+                <Link href="/#buy">See pricing</Link>
+              </Button>
               <Link className="download-link" href="/features/">
                 Browse the feature library
               </Link>
@@ -152,6 +164,6 @@ export default function DownloadsPage() {
       </main>
 
       <GojoFooter />
-    </>
+    </div>
   );
 }

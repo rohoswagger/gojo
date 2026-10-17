@@ -54,7 +54,7 @@ const links = new Map(
 for (const href of [
   "/assets/demo.mp4",
   "/assets/og.jpg",
-  "https://downloads.trygojo.com/Gojo.dmg",
+  `https://downloads.trygojo.com/Gojo-${releaseVersion}.dmg`,
   "https://github.com/rohoswagger/gojo",
   "/press/",
 ]) {
@@ -72,10 +72,10 @@ for (const asset of ["out/assets/demo.mp4", "out/assets/demo-poster.jpg", "out/a
   assert.ok(existsSync(resolve(asset)), `Built press asset is missing: ${asset}`)
 }
 
-assert.ok(homepageText.includes("Originally $14.99, now $9.99 one time"))
-assert.ok(homepageText.includes("Originally $24.99, now $19.99 one time"))
+assert.ok(homepageText.includes("$9.99 one time"))
+assert.ok(homepageText.includes("$19.99 one time"))
 assert.ok(downloadText.includes(`Version ${releaseVersion}`))
-assert.ok(downloadText.includes("17 MB"))
+assert.ok(downloadText.includes("17.2 MB"))
 assert.ok(downloadText.includes("510c5e9d8c3732a1cd8c91925d2c4a15d586d51e5468a985632bd2ada1a3b814"))
 
 const sitemap = read("out/sitemap.xml")

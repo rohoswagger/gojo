@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
-import { FunnelAnalytics } from "@/components/funnel-analytics";
 import "./globals.css";
-
-// No webfonts on purpose. app/skin.css sets --body/--display/--mono to system
-// stacks (ui-sans-serif, SF Pro, ui-rounded), so loading Geist here would
-// ship font files nothing references.
+import FunnelAnalytics from "@/components/funnel-analytics";
+import { coastalDisplay } from "@/lib/coastal-font";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://trygojo.com"),
@@ -20,9 +17,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
-        <FunnelAnalytics />
+      <body className={coastalDisplay.variable}>
         {children}
+        <FunnelAnalytics />
       </body>
     </html>
   );

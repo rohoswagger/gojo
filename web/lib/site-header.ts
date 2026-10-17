@@ -21,5 +21,5 @@ export function siteHeaderHtml(): string {
   const links = getHeaderLinks()
     .map((link) => `<a class="ghost-link" href="${link.href}">${link.label}</a>`)
     .join("")
-  return `<header class="site-header site-header-overlay"><a class="brand" href="/" aria-label="Gojo home"><svg viewBox="0 0 256 172.29" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="${GOJO_LOGO_PATH}"/></svg>Gojo</a><nav class="nav" aria-label="Site">${links}</nav><a class="btn btn-primary nav-cta" href="${DOWNLOAD_LINK.href}">${DOWNLOAD_LINK.label}</a></header>`
+  return `<a class="skip-link" href="#main-content">Skip to content</a><header class="site-header site-header-overlay"><a class="brand" href="/" aria-label="Gojo home"><svg viewBox="0 0 256 172.29" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="${GOJO_LOGO_PATH}"/></svg>Gojo</a><nav class="nav" aria-label="Primary">${links}<a class="btn btn-primary nav-cta" href="${DOWNLOAD_LINK.href}">${DOWNLOAD_LINK.label}</a></nav></header>`
 }

@@ -1,6 +1,7 @@
 import Link from "next/link"
 
 import { GojoLogo } from "@/components/gojo-logo"
+import { Button } from "@/components/ui/button"
 import { DOWNLOAD_LINK, getHeaderLinks, type HeaderLink } from "@/lib/site-header"
 
 /**
@@ -19,28 +20,28 @@ export function GojoHeader({
 }) {
   const resolvedLinks = links ?? getHeaderLinks(home)
   return (
-    <header className={`site-header${overlay ? " site-header-overlay" : ""}`}>
-      <Link className="brand" href="/" aria-label="Gojo home">
-        <GojoLogo />
-        Gojo
-      </Link>
-      <nav className="nav" aria-label="Primary">
-        {resolvedLinks.map((link) => (
-          <Link key={link.href} className="ghost-link" href={link.href}>
-            {link.label}
-          </Link>
-        ))}
-        {!overlay ? (
-          <Link className="ghost-link" href={DOWNLOAD_LINK.href}>
-            {DOWNLOAD_LINK.label}
-          </Link>
-        ) : null}
-      </nav>
-      {overlay ? (
-        <Link className="btn btn-primary nav-cta" href={DOWNLOAD_LINK.href}>
-          {DOWNLOAD_LINK.label}
+    <>
+      <a className="skip-link" href="#main-content">Skip to content</a>
+      <header className={`site-header${overlay ? " site-header-overlay" : ""}`}>
+        <Link className="brand" href="/" aria-label="Gojo home">
+          <GojoLogo />
+          Gojo
         </Link>
-      ) : null}
-    </header>
+        <nav className="nav" aria-label="Primary">
+          {resolvedLinks.map((link) => (
+            <Link key={link.href} className="ghost-link" href={link.href}>
+              {link.label}
+            </Link>
+          ))}
+          <Button
+            asChild
+            variant={overlay ? "default" : "ghost"}
+            className={overlay ? "btn btn-primary nav-cta leading-[1.4] hover:brightness-100" : "ghost-link font-normal leading-[1.5]"}
+          >
+            <Link href={DOWNLOAD_LINK.href}>{DOWNLOAD_LINK.label}</Link>
+          </Button>
+        </nav>
+      </header>
+    </>
   )
 }

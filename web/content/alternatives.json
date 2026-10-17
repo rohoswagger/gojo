@@ -110,7 +110,7 @@
       "slug": "alttab",
       "name": "AltTab",
       "category": "window switcher",
-      "officialUrl": "https://alt-tab-macos.netlify.app/",
+      "officialUrl": "https://alt-tab.app/",
       "officialFacts": ["open-source macOS window switcher", "brings an Alt-Tab-style window switcher to macOS", "focuses on window switching", "not a notch workspace"],
       "bestFor": "fast, dedicated switching among individual windows",
       "gojoFit": "a broader notch workspace around window-heavy work, including controls beyond switching",

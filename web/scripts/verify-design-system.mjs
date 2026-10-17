@@ -63,15 +63,15 @@ assert.ok(
   "DESIGN.md must explain the legacy aliases"
 )
 assert.ok(
-  design.includes("separate rounded display font") && design.includes("That is not the body font"),
+  design.includes("separate serif display font") && design.includes("That is not the body font"),
   "DESIGN.md must preserve the landing page's separate display-font role"
 )
 
 const pressHeroRule = pressCss.match(/\.press-hero h1\s*\{[^}]*\}/s)?.[0] ?? ""
 for (const expected of [
-  "font-family: var(--display)",
+  "font-family: var(--font-marketing-display)",
   "font-size: var(--step-display)",
-  "font-weight: 550",
+  "font-weight: 400",
   "letter-spacing: -0.035em",
   "line-height: 1.06",
   "max-width: 16ch",
@@ -89,7 +89,7 @@ for (const file of cssFiles) {
   for (const declaration of declarations) {
     assert.match(
       declaration,
-      /^var\(--(?:display|body|mono|font-display|font-body|font-mono-face)\)$/,
+      /^var\(--(?:display|body|mono|font-display|font-body|font-mono-face|font-marketing-display)\)$/,
       `${file} bypasses the shared font tokens: ${declaration}`
     )
   }

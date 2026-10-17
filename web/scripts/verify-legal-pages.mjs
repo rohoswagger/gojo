@@ -18,7 +18,7 @@ for (const [label, page, canonical] of [
   if (!page.includes(canonical)) {
     throw new Error(`${label} page must define its canonical URL`)
   }
-  if (!page.includes("<GojoHeader />") || !page.includes("<GojoFooter />") || !page.includes('className="legal-content mt-12"')) {
+  if (!page.includes("<GojoHeader />") || !page.includes("<GojoFooter />") || !/className="legal-content(?:\s|")/.test(page)) {
     throw new Error(`${label} page must use the shared site navigation and legal content styling`)
   }
 }

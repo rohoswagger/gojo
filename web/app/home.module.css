@@ -29,7 +29,7 @@
 .header :global(.nav a:last-child) { color: #fff8ed; background: #a53f27; border-radius: 999px; padding: 10px 17px; }
 .hero { padding: 50px 32px 47px; text-align: center; color: #30231e; display: flex; flex-direction: column; align-items: center; gap: 26px; background: linear-gradient(180deg, #fff8e9f2 0%, #fff1dbbd 36%, #f8d9b347 65%, #38281c7a 100%), url('/assets/bg.webp') center 58% / cover; border-radius: 0 0 32px 32px; }
 .heroCopy { width: 100%; }
-.heroCopy h1 { font-family: var(--font-coastal), Georgia, serif; font-size: clamp(66px, 8vw, 104px); line-height: 1.04; font-weight: 400; letter-spacing: -.015em; margin: 0 0 24px; }
+.heroCopy h1 { font-family: var(--font-marketing-display); font-size: clamp(66px, 8vw, 104px); line-height: 1.04; font-weight: 400; letter-spacing: -.015em; margin: 0 0 24px; }
 .heroCopy h1 span { color: #71331e; font-style: italic; }
 .lede { max-width: 520px; margin: 0 auto 28px; color: #3e2b23; font-size: 21px; line-height: 1.5; text-wrap: balance; }
 .primaryButton { display: inline-flex; align-items: center; justify-content: center; gap: 10px; background: #a53f27; color: #fff9ef; border-radius: 999px; padding: 16px 26px; min-height: 48px; font-size: 17px; font-weight: 600; text-decoration: none; transition: background 160ms; }
@@ -128,7 +128,7 @@
 .faq details:first-child summary { padding-top: 4px; }
 .faq details p { padding: 0 20px 22px 0; color: #654b3c; font-size: 16px; line-height: 1.7; }
 .finalCta { margin: 0 20px 20px; border-radius: 24px; padding: 80px 24px; text-align: center; color: #fff3de; background: linear-gradient(#352218bf, #352218dc), url('/assets/bg.webp') center 78% / cover; }
-.finalCta h2 { font-family: var(--font-coastal), Georgia, serif; font-weight: 400; font-size: clamp(49px, 6vw, 78px); margin-bottom: 29px; text-shadow: 0 2px 15px #352218; }
+.finalCta h2 { font-family: var(--font-marketing-display); font-weight: 400; font-size: clamp(49px, 6vw, 78px); margin-bottom: 29px; text-shadow: 0 2px 15px #352218; }
 .finalCta .primaryButton { background: #fff3df; color: #783b25; }
 .finalCta .primaryButton:hover { background: #ffe0b6; }
 .finalCta p { margin-top: 18px; font-size: 16px; color: #fff4e5; }

@@ -113,7 +113,7 @@ export default async function AlternativePage({ params }: Params) {
                     <li>
                       <Check className="why-tick" aria-hidden="true" />
                       <span>
-                        <strong>Local dictation stays on your Mac.</strong> No API key or account needed for on-device recognition.
+                        <strong>Local dictation stays on your Mac.</strong> No API key or audio upload in local mode. Optional cloud mode sends audio to your selected provider.
                       </span>
                     </li>
                     <li>

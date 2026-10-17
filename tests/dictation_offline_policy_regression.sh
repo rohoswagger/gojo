@@ -59,8 +59,8 @@ require_match \
 
 require_match \
   Gojo/Dictation/ParakeetUnifiedDictationTranscriber.swift \
-  'private\s+func\s+loadManager\(\)\s+async\s+throws\s+->\s+UnifiedAsrManager.*?resolvePinnedModelFolder\(\s*allowDownload:\s*DictationModelRequest\.transcription\.allowsDownload\s*\).*?manager\.loadModels\(from:\s*modelFolder\)' \
-  "Parakeet Unified transcription loads must use the no-download request policy"
+  'private\s+func\s+loadManager\(\)\s+async\s+throws\s+->\s+UnifiedAsrManager.*?guard\s+let\s+modelFolder\s*=\s*installedModelFolder\(\)\s+else\s*\{\s*throw\s+WhisperKitDictationError\.modelNotInstalled\s*\}.*?manager\.loadModels\(from:\s*modelFolder\)' \
+  "Parakeet Unified loads must require an installed validated folder"
 
 require_order \
   Gojo/Dictation/ParakeetUnifiedDictationTranscriber.swift \
@@ -75,8 +75,8 @@ require_match \
 
 require_match \
   Gojo/Dictation/ParakeetV3DictationTranscriber.swift \
-  'private\s+func\s+loadManager\(\)\s+async\s+throws\s+->\s+AsrManager.*?resolvePinnedModelFolder\(\s*allowDownload:\s*DictationModelRequest\.transcription\.allowsDownload\s*\).*?loadModelsOffline\(from:\s*modelFolder\)' \
-  "Parakeet v3 transcription loads must use the no-download request policy"
+  'private\s+func\s+loadManager\(\)\s+async\s+throws\s+->\s+AsrManager.*?guard\s+let\s+snapshot\s*=\s*installedModelFolder\(\)\s+else\s*\{\s*throw\s+WhisperKitDictationError\.modelNotInstalled\s*\}.*?loadModelsOffline\(from:\s*modelFolder\)' \
+  "Parakeet v3 loads must require an installed validated snapshot"
 
 require_match \
   Gojo/Dictation/ParakeetV3DictationTranscriber.swift \

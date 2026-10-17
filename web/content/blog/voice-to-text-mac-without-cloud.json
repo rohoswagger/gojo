@@ -18,8 +18,8 @@
     "twitter:image": "https://trygojo.com/assets/og.jpg"
   },
   "article": {
-    "published_time": "2026-09-04",
-    "modified_time": "2026-09-04",
+    "published_time": "2026-08-25",
+    "modified_time": "2026-08-25",
     "section": "Mac dictation",
     "author": "Gojo",
     "robots": "index,follow,max-image-preview:large"
@@ -31,8 +31,8 @@
         "@type": "BlogPosting",
         "headline": "Voice-to-text on Mac without cloud processing",
         "url": "https://trygojo.com/blog/voice-to-text-mac-without-cloud/",
-        "datePublished": "2026-09-04",
-        "dateModified": "2026-09-04",
+        "datePublished": "2026-08-25",
+        "dateModified": "2026-08-25",
         "author": {
           "@type": "Organization",
           "name": "Gojo",
@@ -84,10 +84,10 @@
     ]
   },
   "hero": {
-    "label": "September 4, 2026",
+    "label": "August 25, 2026",
     "title": "Voice-to-text on Mac without cloud processing",
     "summary": "The clean test is not a privacy badge. It is whether the installed configuration can record, transcribe, clean up, and return a new sentence with the network disabled.",
-    "meta": ["Reviewed September 4, 2026", "8 min read"],
+    "meta": ["Reviewed August 25, 2026", "8 min read"],
     "breadcrumb": [
       { "label": "Home", "href": "/" },
       { "label": "Blog", "href": "/blog/" }
@@ -110,7 +110,7 @@
       "content": [
         {
           "t": "text",
-          "s": "Observed September 4, 2026. This guide describes technical boundaries, not legal compliance. A local path does not by itself satisfy a company's policy, contract, or regulation."
+          "s": "Observed August 25, 2026. This guide describes technical boundaries, not legal compliance. A local path does not by itself satisfy a company's policy, contract, or regulation."
         }
       ]
     },

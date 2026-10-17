@@ -30,7 +30,7 @@ let fallbackSession: string | undefined;
 function getSessionId(): string {
   try {
     const stored = sessionStorage.getItem("gojo_analytics_session");
-    if (stored && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(stored)) return stored;
+    if (stored && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(stored)) return stored;
     const session = fallbackSession ?? crypto.randomUUID();
     fallbackSession = session;
     sessionStorage.setItem("gojo_analytics_session", session);
@@ -64,13 +64,13 @@ function referringDomain(): string | undefined {
   }
 }
 
-export default function FunnelAnalytics() {
+export function FunnelAnalytics() {
   const pathname = usePathname();
   const lastPageview = useRef<string | null>(null);
   const pricingViewed = useRef(false);
 
   useEffect(() => {
-    const token = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN || process.env.NEXT_PUBLIC_POSTHOG_KEY;
+    const token = process.env.NEXT_PUBLIC_POSTHOG_KEY || process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
     const hostname = window.location.hostname;
     if (!token || hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]" || hostname.endsWith(".localhost")) return;
 
@@ -162,3 +162,5 @@ export default function FunnelAnalytics() {
 
   return null;
 }
+
+export default FunnelAnalytics;

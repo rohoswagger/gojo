@@ -1,0 +1,27 @@
+{
+  "candidates": [
+    {
+      "id": "example-repair",
+      "lane": "repair",
+      "target": "https://trygojo.com/example/",
+      "problem": "Replace with an observed problem",
+      "evidence": ["Replace with a source and measurement"],
+      "evidence_age_days": 0,
+      "intent_owner": "Replace with the primary query or reader job",
+      "conversion_destination": "https://trygojo.com/downloads/",
+      "metrics": {
+        "business_impact": 0,
+        "evidence_strength": 0,
+        "relevance": 0,
+        "ctr_potential": 0,
+        "link_health": 0,
+        "speed": 0,
+        "effort": 0,
+        "risk": 0,
+        "conflict": 0
+      },
+      "eligible": false,
+      "rejection_reason": "Template only"
+    }
+  ]
+}

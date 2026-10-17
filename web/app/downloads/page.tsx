@@ -58,7 +58,7 @@ const steps = [
   },
   {
     n: "Launch and choose permissions",
-    body: "Setup offers optional camera, calendar and reminders access, which you can skip. Grant Accessibility so Gojo can manage windows and read media keys.",
+    body: "Onboarding offers optional camera, calendar, and reminder access, then Accessibility and a music source. Accessibility enables window controls, media-key handling, and dictation insertion. Local dictation also needs microphone access and a model download in Settings.",
   },
 ];
 
@@ -95,13 +95,13 @@ export default function DownloadsPage() {
               <p className="download-spec">
                 Version {GOJO_RELEASE.version} <span aria-hidden="true">&middot;</span>{" "}
                 {GOJO_RELEASE.fileSizeLabel} <span aria-hidden="true">&middot;</span>{" "}
-                {GOJO_RELEASE.minimumSystemVersion}
+                {GOJO_RELEASE.minimumSystemVersion} <span aria-hidden="true">&middot;</span> Apple Silicon
               </p>
 
               <ul className="download-trust">
                 <li>Developer ID signed and Apple notarized</li>
                 <li>Local dictation stays on your Mac</li>
-                <li>Automatic updates included</li>
+                <li>Updates through Sparkle</li>
               </ul>
             </div>
             <figure className="download-product-figure">

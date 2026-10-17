@@ -12,54 +12,8 @@
    strings from lib/, so both paths share one styling contract.
    =========================================================================== */
 
-:root {
-  /* Ground + ink. Ink tiers are alpha on white so they compose over any
-     tinted surface without a second set of values. */
-  --surface: #ffffff;
-  --surface-2: #fafafa;
-  --surface-3: #f4f4f5;
-  --ink-1: rgba(0, 0, 0, 0.9);
-  --ink-2: rgba(0, 0, 0, 0.75);
-  --ink-3: rgba(0, 0, 0, 0.55);
-  /* --ink-4 is for borders and dividers only: at 0.45 it lands on 3.3:1,
-     under AA for text. Anything with words in it uses --ink-3 or darker. */
-  --ink-4: rgba(0, 0, 0, 0.45);
-  --rule: #e6e6e6;
-  --rule-soft: #f0f0f0;
-
-  /* Gojo's blue, kept from the old sheet's --accent-ink so it clears 4.5:1
-     as body-copy link colour on white. */
-  --gojo-accent: #4a46cf;
-  --gojo-accent-soft: #f0f0fb;
-  /* Brand-hued secondary text for the tinted half — same optical weight as
-     --ink-3 on white, so neither side of a comparison out-shouts the other. */
-  --gojo-accent-quiet: #5f5d86;
-
-  /* Comparison marks. Each is paired with its word ("Yes"/"No") so colour is
-     never the only carrier of meaning. */
-  --ok: #1a7f4b;
-  --no: #b3372c;
-
-  --display: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, sans-serif;
-  --body: ui-sans-serif, system-ui, -apple-system, "SF Pro Text", sans-serif;
-  --mono: ui-monospace, "SF Mono", "JetBrains Mono", monospace;
-
-  /* One type scale for the whole site. */
-  --step-display: clamp(2.5rem, 5.2vw, 3.5rem);
-  --step-h2: clamp(1.75rem, 3vw, 2.5rem);
-  --step-h3: clamp(1.25rem, 1.8vw, 1.5rem);
-  --step-lede: clamp(1rem, 1.4vw, 1.125rem);
-
-  /* The dark landing hero sits on a thin mat of page ground, as it did on the
-     old site — the only dark surface left in the system. */
-  --panel: #0a0b12;
-  --mat: clamp(8px, 1vw, 13px);
-
-  --gutter: clamp(1.25rem, 4vw, 2rem);
-  --section-y: clamp(3.5rem, 7vw, 6rem);
-  --measure: 44rem;
-  --page: 76rem; /* 1216px — onyx's content width at a 1280 viewport */
-}
+/* Runtime tokens live in app/design-tokens.css. Keep this file focused on
+   shared layout and component recipes so every page consumes the same source. */
 
 /* The marketing site is a light surface by design; opting out of the dark
    scheme keeps form controls and scrollbars in the same palette. */

@@ -137,7 +137,7 @@ body {
   max-width: 18ch;
   margin: 0;
   color: #30231e;
-  font-family: var(--font-coastal), Georgia, serif;
+  font-family: var(--font-marketing-display);
   font-size: clamp(2.75rem, 5.7vw, 5.25rem);
   font-weight: 400;
   line-height: 1.07;
@@ -344,7 +344,7 @@ body {
   box-shadow: none;
 }
 
-:is(.marketing-shell, .article-shell[data-gojo-editorial="warm"], .blog-shell) .article-cta h2 { color: #fff2dc; font-family: var(--font-coastal), Georgia, serif; font-size: clamp(2.25rem, 4vw, 3.5rem); font-weight: 400; }
+:is(.marketing-shell, .article-shell[data-gojo-editorial="warm"], .blog-shell) .article-cta h2 { color: #fff2dc; font-family: var(--font-marketing-display); font-size: clamp(2.25rem, 4vw, 3.5rem); font-weight: 400; }
 :is(.marketing-shell, .article-shell[data-gojo-editorial="warm"], .blog-shell) .article-cta > p { color: #ffe2c2; font-size: 17px; }
 :is(.marketing-shell, .article-shell[data-gojo-editorial="warm"], .blog-shell) .article-cta .article-cta-trust { color: #ffe2c2; font-size: 14px; }
 :is(.marketing-shell, .article-shell[data-gojo-editorial="warm"], .blog-shell) .article-cta a:not(.btn) { color: #fff3df; text-decoration: underline; min-height: 44px; display: inline-flex; align-items: center; }
@@ -406,7 +406,7 @@ body {
 .download-code { white-space: pre-wrap; background: #efdfca; color: #493125; border: 1px solid #d9bfa1; border-radius: 14px; }
 .download-hash { font-size: 15px; line-height: 1.8; }
 .not-found-main { max-width: 760px; margin: auto; padding: 90px 32px; }
-.not-found-main h1 { color: #30231e; font-family: var(--font-coastal), Georgia, serif; font-size: clamp(3rem, 7vw, 5.5rem); font-weight: 400; line-height: 1.08; }
+.not-found-main h1 { color: #30231e; font-family: var(--font-marketing-display); font-size: clamp(3rem, 7vw, 5.5rem); font-weight: 400; line-height: 1.08; }
 .not-found-main p { color: #654b3c; font-size: 19px; line-height: 1.75; margin-top: 22px; }
 .not-found-main .not-found-actions { margin-top: 28px; }
 

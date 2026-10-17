@@ -197,6 +197,7 @@ final class GojoDictationService: ObservableObject {
     private let polisher: S1MiniDictationPolisher
     private let openRouterClient: OpenRouterAPIClient
     private var controller: Controller?
+    private var audioCapture: AVAudioEngineCaptureService?
     private var initialModelStatusTask: Task<Set<DictationModelID>, Never>?
     private var s1MiniOperationTask: Task<Void, Never>?
     private var s1MiniOperationID: UUID?
@@ -254,17 +255,17 @@ final class GojoDictationService: ObservableObject {
         self.openRouterClient = openRouterClient
         self.pipelineTranscriber = pipelineTranscriber
         self.polisher = polisher
-        let observer: Controller.StateObserver = { [weak self] state in
-            Task { @MainActor in
-                self?.receive(state)
-            }
-        }
         let audioCapture = AVAudioEngineCaptureService { [weak self] level in
             Task { @MainActor in
                 guard let self else { return }
                 if level == 0 || self.state == .listening {
                     self.audioLevel = min(max(level, 0), 1)
                 }
+            }
+        }
+        let observer: Controller.StateObserver = { [weak self] state in
+            Task { @MainActor in
+                self?.receive(state)
             }
         }
         controller = Controller(
@@ -275,6 +276,7 @@ final class GojoDictationService: ObservableObject {
             inserter: XPCTextInserter(),
             stateObserver: observer
         )
+        self.audioCapture = audioCapture
         Task { await audioCapture.prepareForCaptureIfAuthorized() }
         initialModelStatusTask = Task(priority: .utility) { [localTranscriber] in
             await Self.scanInstalledModels(using: localTranscriber)
@@ -529,6 +531,18 @@ final class GojoDictationService: ObservableObject {
     func terminate() {
         guard let controller else { return }
         Task { await controller.terminate() }
+    }
+
+    /// The prewarmed capture engine binds to pre-sleep audio hardware and can
+    /// start without delivering buffers after wake, so wake discards it and
+    /// re-prepares after the HAL has settled.
+    func handleSystemWake() {
+        guard let audioCapture else { return }
+        Task {
+            await audioCapture.discardPreparedCapture()
+            try? await Task.sleep(for: .seconds(1))
+            await audioCapture.prepareForCaptureIfAuthorized()
+        }
     }
 
     #if DEBUG

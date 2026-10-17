@@ -18,8 +18,8 @@
     "twitter:image": "https://trygojo.com/assets/og.jpg"
   },
   "article": {
-    "published_time": "2026-09-04",
-    "modified_time": "2026-09-04",
+    "published_time": "2026-09-11",
+    "modified_time": "2026-09-11",
     "section": "macOS utilities",
     "author": "Gojo",
     "robots": "index,follow,max-image-preview:large"
@@ -33,8 +33,8 @@
         "mainEntityOfPage": "https://trygojo.com/blog/gojo-vs-yoink/",
         "headline": "Gojo vs Yoink: Mac file shelf comparison",
         "description": "Yoink specializes in temporary drag-and-drop staging. Gojo includes file staging in a broader MacBook notch workspace with local dictation, windows, clipboard, media, and controls.",
-        "datePublished": "2026-09-04",
-        "dateModified": "2026-09-04",
+        "datePublished": "2026-09-11",
+        "dateModified": "2026-09-11",
         "author": { "@type": "Organization", "name": "Gojo" },
         "publisher": { "@type": "Organization", "name": "Gojo" },
         "citation": [
@@ -75,10 +75,10 @@
     ]
   },
   "hero": {
-    "label": "September 4, 2026",
+    "label": "September 11, 2026",
     "title": "Gojo vs Yoink: Mac file shelf comparison",
     "summary": "Yoink earns its place when file dragging is a frequent, fiddly job. Gojo makes more sense when file staging is only one of several Mac tasks you want near the notch.",
-    "meta": ["Checked September 4, 2026", "7 min read"],
+    "meta": ["Checked September 11, 2026", "7 min read"],
     "breadcrumb": [
       { "label": "Home", "href": "/" },
       { "label": "Blog", "href": "/blog/" }
@@ -100,7 +100,7 @@
       "content": [
         {
           "t": "text",
-          "s": "Disclosure: Gojo publishes this comparison. Yoink-specific facts in this page come from Eternal Storms Software's official Yoink website and release notes, checked September 4, 2026. Gojo is not presented as a full substitute for Yoink's specialist workflow."
+          "s": "Disclosure: Gojo publishes this comparison. Yoink-specific facts in this page come from Eternal Storms Software's official Yoink website and release notes, checked September 11, 2026. Gojo is not presented as a full substitute for Yoink's specialist workflow."
         }
       ]
     },
@@ -252,7 +252,7 @@
       "content": [
         {
           "t": "text",
-          "s": "Official Yoink sources checked September 4, 2026: "
+          "s": "Official Yoink sources checked September 11, 2026: "
         },
         {
           "t": "link",

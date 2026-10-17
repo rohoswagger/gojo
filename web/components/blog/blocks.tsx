@@ -17,7 +17,7 @@ function Anchor({
       </Link>
     )
   }
-  const isDownload = href.startsWith("https://downloads.trygojo.com/") && href.endsWith(".dmg")
+  const isDownload = /^https:\/\/downloads\.trygojo\.com\/Gojo(?:-[\d.]+)?\.dmg$/.test(href)
   return (
     <a
       href={href}

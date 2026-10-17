@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/rohoswagger/gojo/releases/latest"><img src="https://img.shields.io/github/v/release/rohoswagger/gojo?display_name=tag&sort=semver&label=release" alt="Latest release"></a>
+  <a href="https://trygojo.com/downloads/">Official signed download</a>
   <a href="https://github.com/rohoswagger/gojo/actions/workflows/build.yml"><img src="https://github.com/rohoswagger/gojo/actions/workflows/build.yml/badge.svg" alt="Build"></a>
   <img src="https://img.shields.io/badge/macOS-14%2B-black" alt="macOS 14+">
 </p>
@@ -36,7 +36,7 @@ Now-playing surface that follows whatever's playing — Apple Music, Spotify, br
 
 ### Clipboard history
 
-Recent clipboard items, browsable from the notch. Pin entries, search, paste back into the focused app. Automatically excludes password managers.
+Recent clipboard items, browsable from the notch. Pin entries, search, paste back into the focused app. Skips clipboard items marked private by supported password managers. Other copied text, including unmarked secrets, can enter history.
 
 <!-- <p align="center"><img src="./web/public/screenshots/clipboard.png" alt="Clipboard tab" width="640"></p> -->
 
@@ -44,7 +44,7 @@ Recent clipboard items, browsable from the notch. Pin entries, search, paste bac
 
 Choose a speech model in **Settings > Dictation**, then click **Download**. Gojo never downloads a model by itself. Hold **Control–Option**, speak, and release both keys to type into the field you selected.
 
-Parakeet Unified is tuned for high-quality English with punctuation and capitalization. Parakeet v3 covers 25 European languages. Whisper Small is the quickest Whisper option, while Whisper Large v3 is the larger English Whisper option. After download, recognition stays on this Mac. Gojo does not use an API key or cloud transcription.
+Parakeet Unified is tuned for high-quality English with punctuation and capitalization. Parakeet v3 covers 25 European languages. Whisper Small is the quickest Whisper option, while Whisper Large v3 is the larger English Whisper option. With a local model selected, recognition stays on this Mac without an API key. Optional OpenRouter cloud dictation requires your own API key and sends audio to the selected provider; it is separate from local mode, which has no cloud fallback.
 
 Gojo refuses password fields and cancels insertion if you move to another field while it is transcribing. The Control and Option shortcut is fixed so it is always easy to remember.
 
@@ -78,11 +78,11 @@ A guided first launch opens with an animated aperture welcome, walks you through
 
 ## Install
 
-> Requires macOS 14 Sonoma or later. Apple Silicon and Intel both supported.
+> Requires macOS 14 Sonoma or later. The current signed download is for Apple Silicon Macs. Intel support is not verified for the published build.
 
 ### Latest release
 
-1. Download **Gojo-x.y.z.dmg** from the [latest release](https://github.com/rohoswagger/gojo/releases/latest).
+1. Download **Gojo.dmg** from the [official download page](https://trygojo.com/downloads/).
 2. Open the DMG and drag **Gojo.app** into **Applications**.
 3. Open Gojo from **Applications**.
 
@@ -118,7 +118,7 @@ make release VERSION=1.0.0       # build → sign → notarize → DMG → Spark
 make release-dry VERSION=1.0.0   # same, but stop before publishing
 ```
 
-See [RELEASING.md](./RELEASING.md) for one-time setup (signing certificate, App Store Connect API key, Sparkle keys, GitHub Pages) and the full cut-a-release checklist.
+See [RELEASING.md](./RELEASING.md) for one-time setup (signing certificate, App Store Connect API key, Sparkle keys, Cloudflare R2) and the full cut-a-release checklist.
 
 ## Permissions
 
@@ -127,7 +127,7 @@ Gojo asks for a few macOS permissions on first use of the relevant feature:
 | Permission | Why |
 |------------|-----|
 | **Accessibility** | Required for the window manager — read and resize windows of other apps via AX. |
-| **Microphone** | Required only while local dictation is listening. Audio is processed on-device and is not uploaded. |
+| **Microphone** | Required for dictation. Local models process audio on-device; optional cloud mode sends audio to your selected provider. |
 | **Apple Events** | Reading the now-playing track from Music/Spotify. |
 | **Camera** | Optional, for the webcam mirror. |
 | **Calendar & Reminders** | Optional, for displaying upcoming events and reminders. |
@@ -165,7 +165,7 @@ Gojo is two targets that talk over XPC:
 - **`Gojo.app`** — the SwiftUI host app. Owns the notch window, the views, music/clipboard/shelf/webcam managers, and most of the UI logic.
 - **`GojoXPCHelper.xpc`** — bundled XPC service. Holds the Accessibility authorization and performs AX-trusted operations (window enumeration, raise, frame set, zoom). Isolating AX in a separate process makes the trust model cleaner and lets the main app run without elevated permissions.
 
-Auto-update is provided by Sparkle via the appcast at `https://trygojo.com/appcast.xml` (EdDSA-signed updates).
+Auto-update is provided by Sparkle via the appcast at `https://updates.trygojo.com/appcast.xml` (EdDSA-signed updates).
 
 ## Troubleshooting
 

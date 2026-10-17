@@ -18,8 +18,8 @@
     "twitter:image": "https://trygojo.com/assets/og.jpg"
   },
   "article": {
-    "published_time": "2026-09-04",
-    "modified_time": "2026-09-04",
+    "published_time": "2026-08-22",
+    "modified_time": "2026-08-22",
     "section": "Mac dictation",
     "author": "Gojo",
     "robots": "index,follow,max-image-preview:large"
@@ -33,8 +33,8 @@
         "mainEntityOfPage": "https://trygojo.com/blog/gojo-vs-macwhisper/",
         "headline": "Gojo vs MacWhisper: direct dictation or transcript work?",
         "description": "Gojo is built for local text insertion into the app in front of you. MacWhisper is built around recording, importing, editing, and exporting transcripts.",
-        "datePublished": "2026-09-04",
-        "dateModified": "2026-09-04",
+        "datePublished": "2026-08-22",
+        "dateModified": "2026-08-22",
         "author": { "@type": "Organization", "name": "Gojo" },
         "publisher": { "@type": "Organization", "name": "Gojo" },
         "citation": [
@@ -75,10 +75,10 @@
     ]
   },
   "hero": {
-    "label": "September 4, 2026",
+    "label": "August 22, 2026",
     "title": "Gojo vs MacWhisper: direct dictation or transcript work?",
     "summary": "This comparison turns on one practical question. Do you need text in the field you are using now, or a recording and transcript you can search, edit, and export later?",
-    "meta": ["Checked September 4, 2026", "8 min read"],
+    "meta": ["Checked August 22, 2026", "8 min read"],
     "breadcrumb": [
       { "label": "Home", "href": "/" },
       { "label": "Blog", "href": "/blog/" }
@@ -100,7 +100,7 @@
       "content": [
         {
           "t": "text",
-          "s": "Disclosure: Gojo publishes this comparison. We reviewed MacWhisper's official website and Gojo's public architecture on September 4, 2026. Do not treat a local model option as proof that every optional AI integration is local."
+          "s": "Disclosure: Gojo publishes this comparison. We reviewed MacWhisper's official website and Gojo's public architecture on August 22, 2026. Do not treat a local model option as proof that every optional AI integration is local."
         }
       ]
     },
@@ -255,7 +255,7 @@
     {
       "type": "paragraph",
       "content": [
-        { "t": "text", "s": "Official sources checked September 4, 2026: " },
+        { "t": "text", "s": "Official sources checked August 22, 2026: " },
         {
           "t": "link",
           "s": "MacWhisper",

@@ -160,7 +160,7 @@ export function alternativeArticleBody(alternative: Alternative) {  const facts 
         <a class="btn btn-primary" href="https://downloads.trygojo.com/Gojo.dmg" data-funnel-event="download_cta_clicked" data-funnel-placement="alternative_detail_end">Download for macOS</a>
         <a class="alt-cta-link" href="../../#buy">See pricing</a>
       </p>
-      <p class="alt-fine">Signed and notarized <span aria-hidden="true">&middot;</span> macOS 14 or later <span aria-hidden="true">&middot;</span> Dictation runs on device</p>
+      <p class="alt-fine">Signed and notarized <span aria-hidden="true">&middot;</span> macOS 14 or later <span aria-hidden="true">&middot;</span> Local dictation runs on device</p>
     </section>
 
     <p class="alt-src">Primary source checked ${data.updated}: <a href="${escapeHtml(alternative.officialUrl)}" rel="external noopener">${escapeHtml(alternative.name)} official site</a>. Features, requirements and pricing change, so verify before buying. Read the longer <a href="${escapeHtml(alternative.relatedComparison)}">${escapeHtml(alternative.name)} comparison</a>.</p>

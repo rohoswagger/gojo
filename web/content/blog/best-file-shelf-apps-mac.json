@@ -18,8 +18,8 @@
     "twitter:image": "https://trygojo.com/assets/og.jpg"
   },
   "article": {
-    "published_time": "2026-09-04",
-    "modified_time": "2026-09-04",
+    "published_time": "2026-08-31",
+    "modified_time": "2026-08-31",
     "section": "macOS utilities",
     "author": "Gojo",
     "robots": "index,follow,max-image-preview:large"
@@ -31,8 +31,8 @@
         "@type": "BlogPosting",
         "headline": "Best file shelf apps for Mac in 2026",
         "url": "https://trygojo.com/blog/best-file-shelf-apps-mac/",
-        "datePublished": "2026-09-04",
-        "dateModified": "2026-09-04",
+        "datePublished": "2026-08-31",
+        "dateModified": "2026-08-31",
         "author": {
           "@type": "Organization",
           "name": "Gojo",
@@ -107,10 +107,10 @@
     ]
   },
   "hero": {
-    "label": "September 4, 2026",
+    "label": "August 31, 2026",
     "title": "Best file shelf apps for Mac in 2026",
     "summary": "A file shelf gives a dragged item somewhere to wait while you change apps, folders, Spaces, or displays. The best choice depends on whether you want a dedicated shelf, a notch workspace, or file actions and sharing too.",
-    "meta": ["Checked September 4, 2026", "9 min read"],
+    "meta": ["Checked August 31, 2026", "9 min read"],
     "breadcrumb": [
       { "label": "Home", "href": "/" },
       { "label": "Blog", "href": "/blog/" }
@@ -133,7 +133,7 @@
       "content": [
         {
           "t": "text",
-          "s": "Disclosure: Gojo publishes this comparison. We checked official product pages, release notes, and the Mac App Store on September 4, 2026. Privacy means only what each source documents. Where a vendor does not publish a storage or telemetry detail, this article says Not publicly documented."
+          "s": "Disclosure: Gojo publishes this comparison. We checked official product pages, release notes, and the Mac App Store on August 31, 2026. Privacy means only what each source documents. Where a vendor does not publish a storage or telemetry detail, this article says Not publicly documented."
         }
       ]
     },
@@ -159,7 +159,7 @@
         "Best for",
         "Shelf workflow",
         "Displays",
-        "Privacy and cost checked September 4, 2026"
+        "Privacy and cost checked August 31, 2026"
       ],
       "rows": [
         [
@@ -219,7 +219,7 @@
       "items": [
         "Gojo describes the shelf as temporary staging, not permanent storage or backup.",
         "Gojo supports macOS 14 and later.",
-        "Gojo pricing checked September 4, 2026: $2.99/month or $9.99 introductory lifetime for 1 Mac; up to 3-Mac plans are also available."
+        "Gojo pricing checked August 31, 2026: $2.99/month or $9.99 introductory lifetime for 1 Mac; up to 3-Mac plans are also available."
       ]
     },
     {
@@ -333,7 +333,7 @@
     {
       "type": "paragraph",
       "content": [
-        { "t": "text", "s": "Primary sources checked September 4, 2026: " },
+        { "t": "text", "s": "Primary sources checked August 31, 2026: " },
         {
           "t": "link",
           "s": "Gojo product materials",

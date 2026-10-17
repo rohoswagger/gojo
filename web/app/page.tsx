@@ -13,16 +13,16 @@ import { GOJO_RELEASE } from "@/lib/release"
 
 
 export const metadata: Metadata = {
-  title: "Gojo - Your Mac, one hover away",
+  title: "Gojo - MacBook notch workspace",
   description:
-    "Gojo puts private on-device dictation, windows, clipboard, files, media, and system controls one hover away in your MacBook notch.",
+    "Gojo brings window controls, clipboard history, a file shelf, music, display controls, and on-device dictation into one MacBook notch workspace.",
   alternates: {
     canonical: "https://trygojo.com/",
   },
   openGraph: {
-    title: "Gojo - Your Mac, one hover away",
+    title: "Gojo - MacBook notch workspace",
     description:
-      "Dictate anywhere, move windows, recover copied text, stage files, control music, and more from your MacBook notch.",
+      "Manage windows, recover copied text, stage files, control music, and use local dictation from your MacBook notch.",
     type: "website",
     url: "https://trygojo.com/",
     images: [
@@ -36,9 +36,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Gojo - Your Mac, one hover away",
+    title: "Gojo - MacBook notch workspace",
     description:
-      "Private local dictation and the Mac tools you reach for, together in your MacBook notch.",
+      "Windows, clipboard, files, music, display controls, and local dictation in one MacBook notch workspace.",
     images: ["https://trygojo.com/assets/og.jpg"],
   },
 }
@@ -117,10 +117,21 @@ const faqs = [
   { question: "What does a lifetime license include?", answer: "The full app and future updates. Personal covers one Mac. Multi-Mac covers up to three Macs. After checkout, use your license key to activate Gojo." },
 ]
 
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqs.map(({ question, answer }) => ({
+    "@type": "Question", name: question,
+    acceptedAnswer: { "@type": "Answer", text: answer },
+  })),
+}
+
+
 export default function Home() {
   return (
     <div className={`${styles.home} ${coastalDisplay.variable}`}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       <div className={styles.header}><GojoHeader home /></div>
       <main id="main-content" tabIndex={-1}>
         <section className={styles.hero} aria-labelledby="hero-heading">

@@ -1,0 +1,290 @@
+{
+  "recordedAt": "2026-10-14T21:17:54.858638+00:00",
+  "scope": "Installed-model validation only. No model loading, inference, microphone capture, insertion or end-to-end dictation timing.",
+  "hardware": "Apple M4 Pro, 48 GiB, 14 logical cores",
+  "os": "macOS 26.5.2 (25F84)",
+  "protocol": "Five alternating baseline/candidate runs per side. Fresh process each run. Warm filesystem cache. No profiler in measured runs. Busy host; app compilation had completed before comparison.",
+  "modelRevision": "4252711f6f060f9a2f91e5f081a806d7f45eebd8",
+  "modelBytes": 614080920,
+  "cacheSourceSHA256": "aa4822cdeccad753abfd742c2244a05ec30dbeed7bba9fdf343c8f6ab9062599",
+  "binarySHA256": "be5f0a19cd46b7b616efa2a251d27f8bb9bdb3bd38468664f86edadc1ba72b6d",
+  "swiftFlags": [
+    "-O",
+    "-swift-version",
+    "5",
+    "-target",
+    "arm64-apple-macosx14.0"
+  ],
+  "toolchain": "Apple Swift version 6.2.4 (swiftlang-6.2.4.1.4 clang-1700.6.4.2)\nTarget: arm64-apple-macosx26.0",
+  "summary": {
+    "errors": 0,
+    "successfulRuns": 10,
+    "modes": {
+      "baseline": {
+        "validationTotal": {
+          "medianSeconds": 1.363344208279159,
+          "minimumSeconds": 1.3474896250409074,
+          "maximumSeconds": 1.8210300833452493,
+          "samples": 5
+        },
+        "phases": {
+          "status-validation": {
+            "medianSeconds": 0.6643470000126399,
+            "minimumSeconds": 0.6479945416213013,
+            "maximumSeconds": 0.9314686250290833,
+            "samples": 5
+          },
+          "load-validation": {
+            "medianSeconds": 0.7153496666578576,
+            "minimumSeconds": 0.6885087916743942,
+            "maximumSeconds": 0.889561458316166,
+            "samples": 5
+          }
+        },
+        "shaPassesPerRun": 2,
+        "hashedBytesPerRun": 1228161840
+      },
+      "candidate": {
+        "validationTotal": {
+          "medianSeconds": 0.6760126666049473,
+          "minimumSeconds": 0.6431473749689758,
+          "maximumSeconds": 0.7504085416439921,
+          "samples": 5
+        },
+        "phases": {
+          "status-validation": {
+            "medianSeconds": 0.6756948749534786,
+            "minimumSeconds": 0.6429561666445807,
+            "maximumSeconds": 0.7502104999730363,
+            "samples": 5
+          },
+          "load-validation": {
+            "medianSeconds": 0.00019804167095571756,
+            "minimumSeconds": 0.00015554169658571482,
+            "maximumSeconds": 0.000317791651468724,
+            "samples": 5
+          }
+        },
+        "shaPassesPerRun": 1,
+        "hashedBytesPerRun": 614080920
+      }
+    }
+  },
+  "runs": [
+    {
+      "mode": "baseline",
+      "phases": [
+        {
+          "hashedBytes": 614080920,
+          "hashedFiles": 14,
+          "name": "status-validation",
+          "seconds": 0.9314686250290833
+        },
+        {
+          "hashedBytes": 614080920,
+          "hashedFiles": 14,
+          "name": "load-validation",
+          "seconds": 0.889561458316166
+        }
+      ],
+      "shaPasses": 2,
+      "hashedBytes": 1228161840,
+      "errors": 0
+    },
+    {
+      "mode": "candidate",
+      "phases": [
+        {
+          "hashedBytes": 614080920,
+          "hashedFiles": 14,
+          "name": "status-validation",
+          "seconds": 0.6756948749534786
+        },
+        {
+          "hashedBytes": 0,
+          "hashedFiles": 0,
+          "name": "load-validation",
+          "seconds": 0.000317791651468724
+        }
+      ],
+      "shaPasses": 1,
+      "hashedBytes": 614080920,
+      "errors": 0
+    },
+    {
+      "mode": "baseline",
+      "phases": [
+        {
+          "hashedBytes": 614080920,
+          "hashedFiles": 14,
+          "name": "status-validation",
+          "seconds": 0.6589808333665133
+        },
+        {
+          "hashedBytes": 614080920,
+          "hashedFiles": 14,
+          "name": "load-validation",
+          "seconds": 0.6885087916743942
+        }
+      ],
+      "shaPasses": 2,
+      "hashedBytes": 1228161840,
+      "errors": 0
+    },
+    {
+      "mode": "candidate",
+      "phases": [
+        {
+          "hashedBytes": 614080920,
+          "hashedFiles": 14,
+          "name": "status-validation",
+          "seconds": 0.6429561666445807
+        },
+        {
+          "hashedBytes": 0,
+          "hashedFiles": 0,
+          "name": "load-validation",
+          "seconds": 0.00019120832439512014
+        }
+      ],
+      "shaPasses": 1,
+      "hashedBytes": 614080920,
+      "errors": 0
+    },
+    {
+      "mode": "baseline",
+      "phases": [
+        {
+          "hashedBytes": 614080920,
+          "hashedFiles": 14,
+          "name": "status-validation",
+          "seconds": 0.6479945416213013
+        },
+        {
+          "hashedBytes": 614080920,
+          "hashedFiles": 14,
+          "name": "load-validation",
+          "seconds": 0.7153496666578576
+        }
+      ],
+      "shaPasses": 2,
+      "hashedBytes": 1228161840,
+      "errors": 0
+    },
+    {
+      "mode": "candidate",
+      "phases": [
+        {
+          "hashedBytes": 614080920,
+          "hashedFiles": 14,
+          "name": "status-validation",
+          "seconds": 0.7502104999730363
+        },
+        {
+          "hashedBytes": 0,
+          "hashedFiles": 0,
+          "name": "load-validation",
+          "seconds": 0.00019804167095571756
+        }
+      ],
+      "shaPasses": 1,
+      "hashedBytes": 614080920,
+      "errors": 0
+    },
+    {
+      "mode": "baseline",
+      "phases": [
+        {
+          "hashedBytes": 614080920,
+          "hashedFiles": 14,
+          "name": "status-validation",
+          "seconds": 0.6643470000126399
+        },
+        {
+          "hashedBytes": 614080920,
+          "hashedFiles": 14,
+          "name": "load-validation",
+          "seconds": 0.6958482500049286
+        }
+      ],
+      "shaPasses": 2,
+      "hashedBytes": 1228161840,
+      "errors": 0
+    },
+    {
+      "mode": "candidate",
+      "phases": [
+        {
+          "hashedBytes": 614080920,
+          "hashedFiles": 14,
+          "name": "status-validation",
+          "seconds": 0.7008136250078678
+        },
+        {
+          "hashedBytes": 0,
+          "hashedFiles": 0,
+          "name": "load-validation",
+          "seconds": 0.00015554169658571482
+        }
+      ],
+      "shaPasses": 1,
+      "hashedBytes": 614080920,
+      "errors": 0
+    },
+    {
+      "mode": "baseline",
+      "phases": [
+        {
+          "hashedBytes": 614080920,
+          "hashedFiles": 14,
+          "name": "status-validation",
+          "seconds": 0.6684459166717716
+        },
+        {
+          "hashedBytes": 614080920,
+          "hashedFiles": 14,
+          "name": "load-validation",
+          "seconds": 0.7391968333395198
+        }
+      ],
+      "shaPasses": 2,
+      "hashedBytes": 1228161840,
+      "errors": 0
+    },
+    {
+      "mode": "candidate",
+      "phases": [
+        {
+          "hashedBytes": 614080920,
+          "hashedFiles": 14,
+          "name": "status-validation",
+          "seconds": 0.6681639166781679
+        },
+        {
+          "hashedBytes": 0,
+          "hashedFiles": 0,
+          "name": "load-validation",
+          "seconds": 0.00022033328423276544
+        }
+      ],
+      "shaPasses": 1,
+      "hashedBytes": 614080920,
+      "errors": 0
+    }
+  ],
+  "excludedAttempts": [
+    {
+      "reason": "An initial comparison aborted on an interrupted filesystem operation (EINTR) during the first baseline load-validation pass. No incomplete run entered the summary. The full comparison was restarted."
+    }
+  ],
+  "functionalSmoke": {
+    "sdk": "FluidAudio 0.15.5 (19600a485baa4998812e4654b70d2bab8f2c9949)",
+    "model": "Parakeet Unified English INT8",
+    "audioSHA256": "59dfb9a4acb36fe2a2affc14bacbee2920ff435cb13cc314a08c13f66ba7860e",
+    "sampleCount": 176000,
+    "sampleRate": 16000,
+    "successfulTranscriptions": 2,
+    "errors": 0,
+    "result": "Both first and warm transcript matched the JFK reference. This separate SDK smoke test did not execute Gojo adapter lifecycle. Initial Core ML compilation was excluded from timing comparisons."
+  }
+}

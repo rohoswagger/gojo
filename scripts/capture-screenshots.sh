@@ -20,7 +20,7 @@ OUT="$ROOT/web/public/screenshots"
 #
 # name|min capture width|target aspect (w/h)|what to stage
 SHOTS=(
-  "dictation|1280|3.25|MISSING. Hold-to-dictate live activity mid-sentence, waveform moving"
+  "dictation|300|3.41|Floating voice capsule while recording, waveform moving; no notch dictation UI"
   "display|1280|3.25|MISSING. Night Shift / brightness control open in the notch"
   "media|1280|3.25|Real track playing, art loaded, scrubber part-way through"
   "clipboard|1280|3.25|4+ entries of different kinds, one row hovered"

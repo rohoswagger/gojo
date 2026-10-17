@@ -4,6 +4,10 @@ struct DictationSessionStateMachine: Sendable {
     enum Event: Equatable, Sendable {
         case hotKeyDown
         case hotKeyUp
+        case pauseRequested
+        case capturePaused
+        case resumeRequested
+        case finishRequested
         case captureStarted
         case permissionDenied
         case audioTooShort
@@ -35,6 +39,22 @@ struct DictationSessionStateMachine: Sendable {
         case (.requestingPermission, .captureStarted):
             state = .listening
             return .none
+
+        case (.listening, .pauseRequested):
+            state = .pausing
+            return .finishCapture
+
+        case (.pausing, .capturePaused):
+            state = .paused
+            return .none
+
+        case (.paused, .resumeRequested):
+            state = .requestingPermission
+            return .beginRequest
+
+        case (.paused, .finishRequested), (.pausing, .finishRequested):
+            state = .transcribing
+            return .finishCapture
 
         case (.requestingPermission, .permissionDenied):
             state = .error(.microphonePermissionDenied)

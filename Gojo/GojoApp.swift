@@ -94,6 +94,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var dictationOpaquePasteE2EProbeObserver: Any?
     private var dictationUnicodeTypingE2EProbeObserver: Any?
     private var dictationRealMicrophoneShortcutE2EObserver: Any?
+    private var dictationPanelPreviewObserver: Any?
     private var onboardingMusicE2EProbeObserver: Any?
     private var settingsE2EProbeObserver: Any?
 #endif
@@ -177,6 +178,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if let observer = dictationRealMicrophoneShortcutE2EObserver {
             DistributedNotificationCenter.default().removeObserver(observer)
             dictationRealMicrophoneShortcutE2EObserver = nil
+        }
+        if let observer = dictationPanelPreviewObserver {
+            DistributedNotificationCenter.default().removeObserver(observer)
+            dictationPanelPreviewObserver = nil
         }
         if let observer = onboardingMusicE2EProbeObserver {
             DistributedNotificationCenter.default().removeObserver(observer)
@@ -399,8 +404,68 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.shared = self
+        DictationPanelController.shared.startObserving()
 
 #if DEBUG
+        dictationPanelPreviewObserver = DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("rohoswagger.gojo.dictation-panel-preview"),
+            object: nil,
+            queue: .main
+        ) { notification in
+            let name = notification.userInfo?["state"] as? String ?? "idle"
+            Task { @MainActor in
+                let panel = DictationPanelController.shared
+                if name == "fade-test" {
+                    panel.previewFadeOut()
+                    return
+                }
+                if name == "snapshot" {
+                    let logger = Logger(subsystem: "rohoswagger.gojo.dictation", category: "workspace")
+                    do {
+                        if let url = try panel.exportPreviewImage() {
+                            logger.notice("previewImage=\(url.path, privacy: .public)")
+                        }
+                    } catch {
+                        logger.error("previewImageFailed=\(error.localizedDescription, privacy: .public)")
+                    }
+                    return
+                }
+                if name == "inspect" {
+                    let frame = panel.debugFrame ?? .zero
+                    let key = panel.debugIsKey
+                    let windowNumber = NSApp.windows.first(where: { $0.frame == frame })?.windowNumber ?? 0
+                    let owner = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "none"
+                    let logger = Logger(subsystem: "rohoswagger.gojo.dictation", category: "workspace")
+                    logger.notice("panel window=\(windowNumber, privacy: .public) x=\(frame.minX, privacy: .public) y=\(frame.minY, privacy: .public) width=\(frame.width, privacy: .public) height=\(frame.height, privacy: .public) key=\(key, privacy: .public) frontmost=\(owner, privacy: .public)")
+                    return
+                }
+                if name == "recovery" {
+                    panel.showPreview(
+                        state: .listening,
+                        recoveryText: "This preview phrase could not be inserted because its original field lost focus.",
+                        recoveryMessage: "Saved for copying. Voice mode is still listening."
+                    )
+                    return
+                }
+                if name == "end" {
+                    panel.endPreview()
+                    return
+                }
+                let state: DictationState
+                switch name {
+                case "listening": state = .listening
+                case "preparing": state = .requestingPermission
+                case "pausing": state = .pausing
+                case "paused": state = .paused
+                case "processing": state = .transcribing
+                case "success": state = .succeeded("Preview complete")
+                case "error": state = .error(.captureFailed("Microphone unavailable. Check your input device and try again."))
+                case "permission": state = .error(.accessibilityPermissionDenied)
+                default: state = .idle
+                }
+                panel.showPreview(state: state)
+            }
+        }
         dictationCaptureE2EProbeObserver = DistributedNotificationCenter.default().addObserver(
             forName: Notification.Name("rohoswagger.gojo.dictation-capture-e2e-probe"),
             object: nil,
@@ -524,6 +589,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                             expectedPID,
                             attempts: 16
                         )
+                    case "lock":
+                        GojoDictationService.sendShortcutEvent(.lockVoiceMode)
                     case "up":
                         GojoDictationService.sendShortcutEvent(.keyUp)
                         await self?.stabilizeDictationE2ETargetFocus(
@@ -860,46 +927,38 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         let recoverySucceeded = monitor.recoverDisabledEventTapForTesting()
 
-        let originalMode = monitor.activationMode
-        let hold = await exerciseDictationEventTap(mode: .holdToTalk)
-        let tap = await exerciseDictationEventTap(mode: .tapToTalk)
+        let hold = await exerciseDictationEventTap(lockVoiceMode: false)
+        let locked = await exerciseDictationEventTap(lockVoiceMode: true)
         monitor.cancelCurrentSession()
         GojoDictationService.shared.cancel()
-        monitor.setActivationMode(originalMode)
 
         let success = recoverySucceeded
             && hold.started && hold.stopped
-            && tap.started && tap.stopped
+            && locked.started && locked.locked && locked.stopped && locked.spaceConsumed
         let message = "result success=\(success)"
             + " runID=\(runID)"
             + " recoverySucceeded=\(recoverySucceeded)"
-            + " holdStarted=\(hold.started)"
-            + " holdStopped=\(hold.stopped)"
+            + " holdStarted=\(hold.started) holdStopped=\(hold.stopped)"
             + " holdStartMs=\(hold.startMilliseconds)"
-            + " tapStarted=\(tap.started)"
-            + " tapStopped=\(tap.stopped)"
-            + " tapStartMs=\(tap.startMilliseconds)"
+            + " lockStarted=\(locked.started) lockHeld=\(locked.locked) lockStopped=\(locked.stopped)"
+            + " spaceConsumed=\(locked.spaceConsumed)"
         logger.notice("\(message, privacy: .public)")
     }
 
     @MainActor
     private func exerciseDictationEventTap(
-        mode: DictationActivationMode
-    ) async -> (started: Bool, stopped: Bool, startMilliseconds: Int) {
+        lockVoiceMode: Bool
+    ) async -> (started: Bool, stopped: Bool, startMilliseconds: Int, locked: Bool, spaceConsumed: Bool) {
         let monitor = DictationModifierHotKeyMonitor.shared
         monitor.cancelCurrentSession()
-        GojoDictationService.shared.cancel()
-        monitor.setActivationMode(mode)
-        try? await Task.sleep(for: .milliseconds(150))
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            GojoDictationService.shared.cancel { continuation.resume() }
+        }
 
         let startTime = ProcessInfo.processInfo.systemUptime
         guard await postControlOptionChordDown() else {
-            return (false, false, 0)
+            return (false, false, 0, false, false)
         }
-        if mode == .tapToTalk {
-            await postControlOptionChordUp()
-        }
-
         var started = false
         for _ in 0..<120 {
             let state = GojoDictationService.shared.state
@@ -907,23 +966,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 started = true
                 break
             }
-            if case .error = state {
-                break
-            }
+            if case .error = state { break }
             try? await Task.sleep(for: .milliseconds(25))
         }
         let startMilliseconds = Int(
             ((ProcessInfo.processInfo.systemUptime - startTime) * 1_000).rounded()
         )
-
-        if mode == .holdToTalk {
+        let consumedBefore = monitor.consumedVoiceLockPresses
+        var locked = false
+        if started, lockVoiceMode {
+            postVoiceLockSpace()
             await postControlOptionChordUp()
-        } else if started {
-            guard await postControlOptionChordDown() else {
-                monitor.cancelCurrentSession()
-                GojoDictationService.shared.cancel()
-                return (started, false, startMilliseconds)
+            for _ in 0..<80 {
+                if monitor.activationMode == .voiceMode,
+                   GojoDictationService.shared.state == .listening {
+                    locked = true
+                    break
+                }
+                try? await Task.sleep(for: .milliseconds(25))
             }
+            if locked, await postControlOptionChordDown() {
+                postVoiceLockSpace()
+                await postControlOptionChordUp()
+            }
+        } else {
             await postControlOptionChordUp()
         }
 
@@ -938,11 +1004,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 try? await Task.sleep(for: .milliseconds(25))
             }
         }
-
+        let spaceConsumed = monitor.consumedVoiceLockPresses >= consumedBefore + 2
         monitor.cancelCurrentSession()
         GojoDictationService.shared.cancel()
         try? await Task.sleep(for: .milliseconds(150))
-        return (started, stopped, startMilliseconds)
+        return (started, stopped, startMilliseconds, locked, spaceConsumed)
+    }
+
+    private func postVoiceLockSpace() {
+        for keyDown in [true, false] {
+            guard let source = CGEventSource(stateID: .hidSystemState),
+                  let event = CGEvent(keyboardEventSource: source, virtualKey: 49, keyDown: keyDown) else { return }
+            event.flags = [.maskControl, .maskAlternate]
+            event.post(tap: .cghidEventTap)
+        }
     }
 
     @MainActor

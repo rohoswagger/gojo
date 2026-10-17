@@ -20,13 +20,13 @@ final class DictationModifierHotKeyMonitor {
     private var recoveryPolicy = DictationEventTapRecoveryPolicy()
     private var startRequests = DictationEventTapStartRequestPolicy()
     private var machine = DictationModifierShortcutStateMachine(
-        mode: DictationActivationMode.saved()
+        mode: .holdToTalk
     )
 
     private init() {}
 
     var activationMode: DictationActivationMode {
-        machine.mode
+        machine.isVoiceLocked ? .voiceMode : machine.mode
     }
 
     var isMonitoring: Bool {
@@ -44,16 +44,23 @@ final class DictationModifierHotKeyMonitor {
     }
 
     func cancelCurrentSession() {
-        resetShortcutState()
+        activationTask?.cancel()
+        activationTask = nil
+        _ = machine.reset()
+        apply(.cancelDictation)
     }
 
-    /// Re-arms tap-to-talk after the service declines a begin request during
-    /// preflight. Unlike cancellation, rejection must not emit another service
-    /// event because no dictation session was admitted.
+    func adoptVoiceModeSession() {
+        activationTask?.cancel()
+        activationTask = nil
+        machine.adoptVoiceModeSession()
+    }
+
     func rejectCurrentDictationStart() {
         activationTask?.cancel()
         activationTask = nil
         machine.rejectDictationStart()
+        _ = machine.setMode(.holdToTalk)
     }
 
     /// A negative authorization notification can be emitted by the very check
@@ -66,6 +73,8 @@ final class DictationModifierHotKeyMonitor {
     }
 
     #if DEBUG
+    var consumedVoiceLockPresses: UInt64 { eventTapHost?.consumedVoiceLockPresses ?? 0 }
+
     /// Allows the live shortcut regression to verify recovery from the same
     /// disabled-tap state macOS can leave behind after sleep or a timeout.
     func recoverDisabledEventTapForTesting() -> Bool {
@@ -101,7 +110,7 @@ final class DictationModifierHotKeyMonitor {
         recoveryTask = nil
         if eventTapHost != nil {
             logger.error("monitor found a disabled event tap; recreating")
-            resetShortcutState()
+            resetShortcutState(preservingVoiceMode: true)
             tearDownEventTap()
         }
 
@@ -134,9 +143,7 @@ final class DictationModifierHotKeyMonitor {
     /// Revalidates the tap after lifecycle transitions where macOS can silently
     /// invalidate CGEvent taps (app activation, screen unlock, and system wake).
     func recoverIfNeeded() async {
-        // A tap can remain enabled even if its final modifier-release event was
-        // lost during a lifecycle transition. Always clear the gesture state.
-        resetShortcutState()
+        resetShortcutState(preservingVoiceMode: true)
         if let eventTapHost {
             if eventTapHost.isEnabledSnapshot {
                 recoveryTask?.cancel()
@@ -166,7 +173,7 @@ final class DictationModifierHotKeyMonitor {
         recoveryTask?.cancel()
         recoveryTask = nil
         recoveryPolicy.recordSuccess()
-        resetShortcutState()
+        cancelCurrentSession()
         tearDownEventTap()
     }
 
@@ -226,6 +233,8 @@ final class DictationModifierHotKeyMonitor {
                 hasDisallowedModifiers: hasDisallowedModifiers
             )))
 
+        case .lockToggle:
+            apply(machine.toggleVoiceLock())
         case .keyDown:
             apply(machine.handle(.keyDown))
         }
@@ -256,9 +265,18 @@ final class DictationModifierHotKeyMonitor {
             activationTask?.cancel()
             activationTask = nil
 
+        case .beginVoiceMode, .lockVoiceMode:
+            activationTask?.cancel()
+            activationTask = nil
+            if action == .beginVoiceMode {
+                GojoDictationService.shared.startVoiceMode()
+            } else {
+                GojoDictationService.sendShortcutEvent(.lockVoiceMode)
+            }
+
         case .beginDictation:
             logger.notice("event=keyDown chord=control+option mode=\(self.machine.mode.rawValue, privacy: .public)")
-            GojoDictationService.sendShortcutEvent(.keyDown)
+            GojoDictationService.shared.beginShortcut()
 
         case .finishDictation:
             logger.notice("event=keyUp chord=control+option mode=\(self.machine.mode.rawValue, privacy: .public)")
@@ -270,15 +288,15 @@ final class DictationModifierHotKeyMonitor {
         }
     }
 
-    private func resetShortcutState() {
-        let action = machine.reset()
+    private func resetShortcutState(preservingVoiceMode: Bool = false) {
+        let action = preservingVoiceMode ? machine.recoverGesture() : machine.reset()
         activationTask?.cancel()
         activationTask = nil
         apply(action)
     }
 
     private func recoverFromDisabledEventTap() {
-        resetShortcutState()
+        resetShortcutState(preservingVoiceMode: true)
         if let eventTapHost {
             if eventTapHost.isEnabledSnapshot {
                 recoveryPolicy.recordSuccess()
@@ -332,6 +350,7 @@ private enum DictationModifierEventTapInput: Sendable {
         hasDisallowedModifiers: Bool
     )
     case keyDown
+    case lockToggle
 }
 
 private final class DictationModifierEventTapContext: @unchecked Sendable {
@@ -341,6 +360,11 @@ private final class DictationModifierEventTapContext: @unchecked Sendable {
     private let lock = NSLock()
     private var eventTap: CFMachPort?
     private var enabled = false
+    private var suppressSpaceUp = false
+    #if DEBUG
+    private var consumedLockPresses: UInt64 = 0
+    var consumedVoiceLockPresses: UInt64 { lock.withLock { consumedLockPresses } }
+    #endif
 
     init(
         generation: UInt64,
@@ -381,6 +405,26 @@ private final class DictationModifierEventTapContext: @unchecked Sendable {
         }
     }
 
+    func consumeSpace(type: CGEventType, event: CGEvent) -> Bool {
+        guard event.getIntegerValueField(.keyboardEventKeycode) == 49 else { return false }
+        if type == .keyUp {
+            let suppressed = suppressSpaceUp
+            suppressSpaceUp = false
+            return suppressed
+        }
+        if suppressSpaceUp { return true }
+        let modifiers = event.flags.intersection([.maskControl, .maskAlternate, .maskCommand, .maskShift, .maskSecondaryFn])
+        guard modifiers == [.maskControl, .maskAlternate] else { return false }
+        if !suppressSpaceUp, event.getIntegerValueField(.keyboardEventAutorepeat) == 0 {
+            #if DEBUG
+            lock.withLock { consumedLockPresses &+= 1 }
+            #endif
+            forward(.lockToggle)
+        }
+        suppressSpaceUp = true
+        return true
+    }
+
     func forward(_ input: DictationModifierEventTapInput) {
         forwardInput(generation, input)
     }
@@ -416,6 +460,10 @@ private final class DictationModifierEventTapHost: @unchecked Sendable {
             forwardInput: forwardInput
         )
     }
+
+    #if DEBUG
+    var consumedVoiceLockPresses: UInt64 { context.consumedVoiceLockPresses }
+    #endif
 
     var isEnabledSnapshot: Bool {
         context.isEnabledSnapshot
@@ -508,6 +556,7 @@ private final class DictationModifierEventTapHost: @unchecked Sendable {
         let mask = CGEventMask(
             (1 << CGEventType.flagsChanged.rawValue)
                 | (1 << CGEventType.keyDown.rawValue)
+                | (1 << CGEventType.keyUp.rawValue)
         )
         guard let createdEventTap = CGEvent.tapCreate(
             tap: .cghidEventTap,
@@ -623,6 +672,10 @@ private func dictationModifierEventTapCallback(
     let context = Unmanaged<DictationModifierEventTapContext>
         .fromOpaque(userInfo)
         .takeUnretainedValue()
+
+    if (type == .keyDown || type == .keyUp), context.consumeSpace(type: type, event: event) {
+        return nil
+    }
 
     switch type {
     case .tapDisabledByTimeout, .tapDisabledByUserInput:

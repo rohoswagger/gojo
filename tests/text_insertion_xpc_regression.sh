@@ -14,7 +14,7 @@ helper_main = Path("GojoXPCHelper/main.swift").read_text()
 helper = Path("GojoXPCHelper/GojoXPCHelper.swift").read_text()
 client = Path("Gojo/XPCHelperClient/XPCHelperClient.swift").read_text()
 service = Path("Gojo/Dictation/GojoDictationService.swift").read_text()
-content_view = Path("Gojo/ContentView.swift").read_text()
+panel = Path("Gojo/Dictation/DictationPanelController.swift").read_text()
 resolver = Path("Gojo/WindowManagement/WindowTargetResolver.swift").read_text()
 policy_path = Path("GojoXPCHelper/DictationTextTargetPolicy.swift")
 assert policy_path.exists(), "Dictation target role policy must live outside the helper for direct regression coverage."
@@ -38,6 +38,9 @@ capture_signature = (
     "preferredTarget: NSDictionary?, "
     "with reply: @escaping (NSDictionary) -> Void)"
 )
+additional_capture_signature = capture_signature.replace(
+    "captureFocusedTextTarget", "captureAdditionalFocusedTextTarget"
+)
 insert_signature = (
     "func insertText(_ text: String, token: String, "
     "with reply: @escaping (NSDictionary) -> Void)"
@@ -45,7 +48,48 @@ insert_signature = (
 for source in (main_protocol, helper_protocol):
     normalized = re.sub(r"\s+", " ", source)
     assert capture_signature in normalized
+    assert additional_capture_signature in normalized
     assert insert_signature in normalized
+
+capture_entry_points = helper[
+    helper.index("@objc func captureFocusedTextTarget("):
+    helper.index("private func captureTextTarget(")
+]
+assert "replacingExistingTargets: true" in capture_entry_points
+assert "replacingExistingTargets: false" in capture_entry_points
+assert capture_entry_points.count("captureTextTarget(") == 2
+shared_capture = helper[
+    helper.index("private func captureTextTarget("):
+    helper.index("@objc func insertText(")
+]
+assert re.search(
+    r"if replacingExistingTargets\s*\{\s*"
+    r"self\.capturedTextTargets\.removeAll\(keepingCapacity: true\)\s*\}",
+    shared_capture,
+), "Only legacy capture may invalidate queued target leases."
+assert shared_capture.index("removeAll(") < shared_capture.index(
+    "ensureAccessibilityAuthorizationSync("
+), "Failed legacy capture must still invalidate earlier target leases."
+assert shared_capture.count("removeAll(") == 1
+assert shared_capture.count("capturedTextTargets.removeValue(") == 1
+assert "capturedTextTargets.removeValue(forKey: token)" in shared_capture
+assert "private static let maximumCapturedTextTargets = 16" in helper
+assert "capturedTextTargets.count < Self.maximumCapturedTextTargets" in shared_capture
+limit_guard = shared_capture[
+    shared_capture.index("guard self.capturedTextTargets.count"):
+    shared_capture.index("let complete:")
+]
+assert 'error: "targetLimitReached"' in limit_guard
+assert "return" in limit_guard
+assert "remove" not in limit_guard, "Capacity rejection must preserve queued target leases."
+assert shared_capture.count("focusedTextTargetCandidates(") == 1
+assert shared_capture.count("complete(captureReply)") == 5
+assert "reply(NSDictionary(dictionary: captureReply))" not in shared_capture
+assert 'result["targetIdentity"]' in shared_capture
+assert "CFHash(target.element)" in shared_capture
+assert "target.kind.rawValue" in shared_capture
+assert "!replacingExistingTargets, target.kind != .accessibility" in shared_capture
+assert 'error: "unverifiedTextTarget"' in shared_capture
 
 # Capture safety: resolve system focus, reject secure/protected controls and
 # ordinary non-editable controls, then retain only an opaque one-shot token.
@@ -152,11 +196,11 @@ assert "static func displayIndex(" in resolver
 assert "static func windowID(" in resolver
 assert '@Published private(set) var sessionDisplayID: CGDirectDisplayID?' in service
 assert 'result["displayID"] as? NSNumber' in service
-assert "setSessionDisplayID(displayID)" in service
-assert "dictation.sessionDisplayID" in content_view
-assert "Defaults[.showOnAllDisplays]" in content_view
+assert "await controller.targetSnapshot == target" in service
+assert "self.sessionDisplayID = target.displayID" in service
+assert "service.sessionDisplayID" in panel
 shortcut_key_down = service[
-    service.index("case .keyDown:"):
+    service.index("case .keyDown, .startVoiceMode:"):
     service.index("case .keyUp:")
 ]
 assert "state = await controller.state" not in shortcut_key_down
@@ -267,6 +311,15 @@ assert '"verified": true' in helper
 for key in ('"authorized"', '"success"', '"method"', '"error"'):
     assert key in helper
 assert "func captureFocusedTextTarget(promptIfNeeded: Bool = false) async -> NSDictionary" in client
+assert "nonisolated func captureAdditionalFocusedTextTarget(promptIfNeeded: Bool = false) async -> NSDictionary" in client
+shared_client_capture = client[
+    client.index("private nonisolated func captureTextTarget("):
+    client.index("private func preferredDictationApplicationPasteTarget(")
+]
+assert shared_client_capture.count("preferredDictationApplicationPasteTarget()") == 1
+assert shared_client_capture.count("notifyAuthorizationChange(authorized)") == 1
+assert "service.captureFocusedTextTarget(" in shared_client_capture
+assert "service.captureAdditionalFocusedTextTarget(" in shared_client_capture
 assert "func insertText(_ text: String, token: String) async -> NSDictionary" in client
 assert client.count('"error": "helperUnavailable"') >= 2
 

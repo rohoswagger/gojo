@@ -86,6 +86,20 @@ struct GojoHeader: View {
                             }
                             .buttonStyle(PlainButtonStyle())
                         }
+                        Button {
+                            DictationPanelController.shared.show()
+                            vm.close()
+                        } label: {
+                            Image(systemName: "waveform")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(Color(red: 0.98, green: 0.47, blue: 0.36))
+                                .frame(width: 30, height: 30)
+                                .contentShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .help("Open voice controls")
+                        .accessibilityLabel("Open voice controls")
+
                         if Defaults[.settingsIconInNotch] {
                             Button(action: {
                                 DispatchQueue.main.async {

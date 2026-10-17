@@ -33,15 +33,15 @@ the page's frames will crop your capture.
 
 ### `dictation.png` — flagship, gets the most page space
 
-Hold-to-dictate mid-sentence: waveform active, partial transcript visible,
-text landing in a real app behind it (Notes, Mail, Slack). This is the wedge
-PRODUCT.md leads with and it currently has **no image at all**, so it deserves
-the most staging effort.
+Capture the floating voice capsule while recording, with the waveform responding
+to speech. Dictation no longer renders recording status or errors inside the
+notch. Keep a small margin around the capsule and use its native proportions
+(150 × 44 points, at least 300 pixels wide on a Retina display).
 
-Dictate a sentence that shows off local processing — something a cloud service
-would be a bad idea for. Trigger is hold-to-talk on the configured modifier
-(Settings › Dictation). Have a model already downloaded so there's no
-progress bar in frame.
+Use a non-sensitive sample sentence. Hold Control–Option to speak, or press
+Space while holding those keys to lock voice mode on. Have a model downloaded
+before capturing. Do not stage a partial transcript: the capsule shows the
+waveform and controls, while completed phrases appear in the focused field.
 
 ### `media.png`
 

@@ -18,6 +18,7 @@ assert "release_dictation_live_lock()" in lock
 scripts = [
     "tests/dictation_live_e2e.sh",
     "tests/dictation_event_tap_shortcut_live_e2e.sh",
+    "tests/dictation_unicode_typing_live_e2e.sh",
     "tests/dictation_opaque_paste_live_e2e.sh",
     "tests/dictation_real_microphone_live_e2e.sh",
     "tests/dictation_codex_capture_live_e2e.sh",
@@ -32,6 +33,8 @@ for script_path in scripts:
     assert 'source "$ROOT/tests/dictation_live_lock.sh"' in script, script_path
     assert "acquire_dictation_live_lock" in script, script_path
     assert "release_dictation_live_lock" in script, script_path
+    assert 'open -g --env GOJO_LICENSE=lifetime "$APP"' in script, script_path
+    assert 'open -g "$APP"' not in script, script_path
 PY
 
 temp_dir="$(mktemp -d "${TMPDIR:-/tmp}/gojo-live-lock-regression.XXXXXX")"

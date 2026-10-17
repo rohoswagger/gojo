@@ -3,6 +3,7 @@ import Foundation
 enum DictationActivationMode: String, CaseIterable, Identifiable {
     case holdToTalk
     case tapToTalk
+    case voiceMode
 
     static let defaultsKey = "dictationActivationMode"
 
@@ -14,6 +15,8 @@ enum DictationActivationMode: String, CaseIterable, Identifiable {
             return "Hold to talk"
         case .tapToTalk:
             return "Tap to talk"
+        case .voiceMode:
+            return "Voice mode"
         }
     }
 
@@ -27,6 +30,45 @@ enum DictationActivationMode: String, CaseIterable, Identifiable {
 
     func save(in defaults: UserDefaults = .standard) {
         defaults.set(rawValue, forKey: Self.defaultsKey)
+    }
+}
+
+enum DictationPauseDuration: String, CaseIterable, Identifiable {
+    case short
+    case natural
+    case relaxed
+
+    static let defaultsKey = "gojo.dictation.pauseDuration"
+    var id: String { rawValue }
+
+    var seconds: TimeInterval {
+        switch self {
+        case .short: return 0.6
+        case .natural: return 0.9
+        case .relaxed: return 1.5
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .short: return "Short (0.6 seconds)"
+        case .natural: return "Natural (0.9 seconds)"
+        case .relaxed: return "Relaxed (1.5 seconds)"
+        }
+    }
+
+    static func saved(in defaults: UserDefaults = .standard) -> Self {
+        defaults.string(forKey: defaultsKey).flatMap(Self.init(rawValue:)) ?? .natural
+    }
+}
+
+enum DictationShortcutStatePolicy {
+    static func shouldRearm(after state: DictationState, isStartingShortcut: Bool = false) -> Bool {
+        guard !isStartingShortcut else { return false }
+        switch state {
+        case .idle, .succeeded, .error: return true
+        case .requestingPermission, .listening, .pausing, .paused, .transcribing, .inserting: return false
+        }
     }
 }
 
@@ -123,6 +165,7 @@ struct DictationModifierShortcutStateMachine {
         case idle
         case arming
         case active
+        case activeBlocked
         case stopping
         case blocked
     }
@@ -143,10 +186,13 @@ struct DictationModifierShortcutStateMachine {
         case scheduleActivation
         case cancelScheduledActivation
         case beginDictation
+        case beginVoiceMode
+        case lockVoiceMode
         case finishDictation
         case cancelDictation
     }
 
+    private(set) var isVoiceLocked = false
     private(set) var state: State = .idle
     private(set) var mode: DictationActivationMode
 
@@ -159,11 +205,15 @@ struct DictationModifierShortcutStateMachine {
             return reset()
         }
 
+        if isVoiceLocked { return .none }
+
         switch mode {
         case .holdToTalk:
             return handleHoldToTalk(event)
         case .tapToTalk:
             return handleTapToTalk(event)
+        case .voiceMode:
+            return handleVoiceMode(event)
         }
     }
 
@@ -176,21 +226,52 @@ struct DictationModifierShortcutStateMachine {
 
     mutating func reset() -> Action {
         let previousState = state
+        isVoiceLocked = false
         state = .idle
         switch previousState {
         case .arming where mode == .holdToTalk:
             return .cancelScheduledActivation
-        case .active, .stopping:
+        case .active, .activeBlocked, .stopping:
             return .cancelDictation
         case .idle, .arming, .blocked:
             return .none
         }
     }
 
-    /// Returns the gesture recognizer to idle when the downstream dictation
-    /// service rejects a begin request before a session exists. This deliberately
-    /// emits no cancellation action because there is nothing to cancel.
+    mutating func recoverGesture() -> Action {
+        if (isVoiceLocked || mode == .voiceMode), state == .active || state == .activeBlocked || state == .stopping {
+            state = .active
+            return .none
+        }
+        return reset()
+    }
+
+    mutating func toggleVoiceLock() -> Action {
+        if isVoiceLocked {
+            isVoiceLocked = false
+            state = .blocked
+            return .finishDictation
+        }
+        switch state {
+        case .arming:
+            isVoiceLocked = true
+            state = .active
+            return .beginVoiceMode
+        case .active:
+            isVoiceLocked = true
+            return .lockVoiceMode
+        default:
+            return .none
+        }
+    }
+
+    mutating func adoptVoiceModeSession() {
+        isVoiceLocked = true
+        state = .active
+    }
+
     mutating func rejectDictationStart() {
+        isVoiceLocked = false
         state = .idle
     }
 
@@ -259,11 +340,32 @@ struct DictationModifierShortcutStateMachine {
             }
             return .none
 
-        case (.blocked, _):
+        case (.blocked, _), (.activeBlocked, _):
             return .none
 
         case (_, .cancel):
             return .none
+        }
+    }
+
+    private mutating func handleVoiceMode(_ event: Event) -> Action {
+        switch (state, event) {
+        case (.active, .keyDown):
+            return .none
+        case (.active, .flagsChanged(_, let anyTriggerDown, hasDisallowedModifiers: true)):
+            if anyTriggerDown { state = .activeBlocked }
+            return .none
+        case (.stopping, .keyDown),
+             (.stopping, .flagsChanged(_, _, hasDisallowedModifiers: true)):
+            state = .activeBlocked
+            return .none
+        case (.activeBlocked, .flagsChanged(_, let anyTriggerDown, let hasDisallowedModifiers)):
+            if !anyTriggerDown && !hasDisallowedModifiers { state = .active }
+            return .none
+        case (.activeBlocked, _):
+            return .none
+        default:
+            return handleTapToTalk(event)
         }
     }
 
@@ -354,7 +456,7 @@ struct DictationModifierShortcutStateMachine {
             }
             return .none
 
-        case (.blocked, _):
+        case (.blocked, _), (.activeBlocked, _):
             return .none
 
         case (_, .cancel):

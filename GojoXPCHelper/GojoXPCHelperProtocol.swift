@@ -23,16 +23,21 @@ import Foundation
     func startSearchHotkeyInterception(_ token: String, with reply: @escaping (Bool) -> Void)
     /// Stops the ⌘Space event tap started by `startSearchHotkeyInterception`.
     func stopSearchHotkeyInterception()
-    /// Captures the currently focused editable text element and returns an opaque,
-    /// one-shot token. Replies with `authorized`, `success`, and either `token` or
+    /// Captures the currently focused editable text element and returns an opaque
+    /// token. Replies with `authorized`, `success`, and either `token` or
     /// a stable `error` string.
     func captureFocusedTextTarget(_ promptIfNeeded: Bool,
+        preferredTarget: NSDictionary?,
+        with reply: @escaping (NSDictionary) -> Void)
+    func captureAdditionalFocusedTextTarget(_ promptIfNeeded: Bool,
         preferredTarget: NSDictionary?,
         with reply: @escaping (NSDictionary) -> Void)
     /// Inserts text into a native element only when it is still focused. Browser
     /// and custom-editor replies identify the captured app and window for paste.
     /// Replies with `authorized`, `success`, `method`, and an optional `error`.
     func insertText(_ text: String, token: String, with reply: @escaping (NSDictionary) -> Void)
+    func insertTextRetainingTarget(_ text: String, token: String, with reply: @escaping (NSDictionary) -> Void)
+    func releaseTextTarget(_ token: String, with reply: @escaping () -> Void)
     func focusedWindowSnapshot(_ promptIfNeeded: Bool, with reply: @escaping (NSDictionary) -> Void)
     func setFocusedWindowFrame(_ normalFrame: NSDictionary, windowID: NSNumber?, with reply: @escaping (Bool) -> Void)
     /// Replies with a dict: `{"success": Bool, "frame": NSDictionary?}` where `frame`

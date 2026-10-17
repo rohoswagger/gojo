@@ -1,5 +1,22 @@
 import Foundation
 
+enum DictationCaptureMode: Sendable {
+    case singleUtterance
+    case continuous
+}
+
+enum DictationContinuousCaptureError: LocalizedError {
+    case unsupported
+    case bufferOverflow
+
+    var errorDescription: String? {
+        switch self {
+        case .unsupported: return "This audio capture does not support continuous dictation."
+        case .bufferOverflow: return "Dictation could not keep up. Stop and start again."
+        }
+    }
+}
+
 struct DictationAudio: Equatable, Sendable {
     static let transcriptionSampleRate = 16_000.0
 
@@ -600,6 +617,8 @@ enum DictationFailure: Error, Equatable, Sendable {
     case modelNotInstalled
     case cloudConfigurationMissing(String)
     case microphonePermissionDenied
+    case accessibilityPermissionDenied
+    case secureTextTarget
     case targetUnavailable(String)
     case captureFailed(String)
     case transcriptionFailed(String)
@@ -608,10 +627,17 @@ enum DictationFailure: Error, Equatable, Sendable {
     case insertionFailed(String)
 }
 
+enum DictationTargetPolicy: Sendable {
+    case fixed
+    case followFocus
+}
+
 enum DictationState: Equatable, Sendable {
     case idle
     case requestingPermission
     case listening
+    case pausing
+    case paused
     case transcribing
     case inserting
     case succeeded(String)
@@ -627,6 +653,10 @@ enum DictationSettingsStatus {
             return "Getting ready"
         case .listening:
             return "Listening"
+        case .pausing:
+            return "Finishing phrase"
+        case .paused:
+            return "Paused"
         case .transcribing:
             return "Transcribing"
         case .inserting:
@@ -640,6 +670,12 @@ enum DictationSettingsStatus {
 enum DictationShortcutEvent: Sendable {
     case keyDown
     case keyUp
+    case startVoiceMode
+    case lockVoiceMode
+    case pauseVoiceMode
+    case resumeVoiceMode
+    case finishVoiceMode
+    case clearRecoveryText
     case cancel
 }
 
@@ -656,13 +692,14 @@ final class DictationShortcutEventQueue: @unchecked Sendable {
         self.handler = handler
     }
 
-    func send(_ event: DictationShortcutEvent) {
+    func send(_ event: DictationShortcutEvent, completion: (@Sendable () async -> Void)? = nil) {
         lock.withLock {
             let predecessor = tail
             let handler = self.handler
             let next = Task {
                 await predecessor?.value
                 await handler(event)
+                await completion?()
             }
             tail = next
         }

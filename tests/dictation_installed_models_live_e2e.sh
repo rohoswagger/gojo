@@ -24,7 +24,7 @@ restore_selection() {
     defaults delete "$DOMAIN" "$MODEL_KEY" >/dev/null 2>&1 || true
   fi
   if [[ -d "$APP" ]]; then
-    open -g "$APP"
+    open -g --env GOJO_LICENSE=lifetime "$APP"
   fi
   release_dictation_live_lock
 }
@@ -85,7 +85,7 @@ for model in "${MODELS[@]}"; do
   make -C "$ROOT" stop >/dev/null
   defaults write "$DOMAIN" "$MODEL_KEY" -string "$model"
   started_at="$(date '+%Y-%m-%d %H:%M:%S')"
-  open -g "$APP"
+  open -g --env GOJO_LICENSE=lifetime "$APP"
 
   if ! wait_for_shortcut_monitor "$started_at"; then
     echo "Model matrix failed to launch Gojo for $model." >&2

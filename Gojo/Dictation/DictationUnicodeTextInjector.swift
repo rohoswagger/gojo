@@ -63,7 +63,8 @@ enum DictationUnicodeTextInjector {
         source: CGEventSource? = nil,
         tap: CGEventTapLocation = .cgSessionEventTap
     ) -> Bool {
-        guard !text.isEmpty,
+        guard !Task.isCancelled,
+              !text.isEmpty,
               text.utf16.count <= eventUTF16Limit,
               let keyDown = CGEvent(
                 keyboardEventSource: source,
@@ -89,6 +90,7 @@ enum DictationUnicodeTextInjector {
             stringLength: utf16.count,
             unicodeString: &utf16
         )
+        guard !Task.isCancelled else { return false }
         keyDown.post(tap: tap)
         keyUp.post(tap: tap)
         return true

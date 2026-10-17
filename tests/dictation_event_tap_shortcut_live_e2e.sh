@@ -30,7 +30,7 @@ acquire_dictation_live_lock
 
 make -C "$ROOT" stop >/dev/null
 started_at="$(date '+%Y-%m-%d %H:%M:%S')"
-open -g "$APP"
+open -g --env GOJO_LICENSE=lifetime "$APP"
 
 FIXTURE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/gojo-dictation-shortcut-e2e.XXXXXX")"
 fixture_app="$FIXTURE_DIR/GojoDictationFixture.app"
@@ -113,7 +113,8 @@ for _ in $(seq 1 120); do
     grep -q 'result success=true' <<<"$result"
     grep -q 'recoverySucceeded=true' <<<"$result"
     grep -q 'holdStarted=true holdStopped=true' <<<"$result"
-    grep -q 'tapStarted=true tapStopped=true' <<<"$result"
+    grep -q 'lockStarted=true lockHeld=true lockStopped=true' <<<"$result"
+    grep -q 'spaceConsumed=true' <<<"$result"
     exit 0
   fi
 done

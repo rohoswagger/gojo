@@ -10,5 +10,35 @@
   <button id="non-editable" type="button">Non-editable target</button>
   <label for="password">Protected target</label>
   <input id="password" type="password" autocomplete="off">
+  <script>
+    const run = new URLSearchParams(location.search).get("run");
+    if (location.hostname === "127.0.0.1" && /^[a-f0-9]{32}$/.test(run || "")) {
+      document.title = `Gojo Dictation E2E ${run}`;
+      const field = document.getElementById("dictation");
+      let sequence = 0;
+      const report = () => {
+        fetch(`/state?run=${run}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "omit",
+          body: JSON.stringify({
+            sequence: ++sequence,
+            href: location.href,
+            title: document.title,
+            fieldID: field.id,
+            value: field.value,
+            focused: document.hasFocus() && document.activeElement === field,
+            visible: document.visibilityState === "visible"
+          })
+        }).catch(() => {});
+      };
+      field.addEventListener("input", report);
+      window.addEventListener("focus", report);
+      window.addEventListener("blur", report);
+      document.addEventListener("visibilitychange", report);
+      setInterval(report, 100);
+      report();
+    }
+  </script>
 </body>
 </html>

@@ -41,7 +41,6 @@
 		1153BDA72D99B22200979FB0 /* YouTubeMusicController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1153BDA62D99B22200979FB0 /* YouTubeMusicController.swift */; };
 		115C12EC2ED3D003009754CA /* OpenNotchHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = 115C12EB2ED3D003009754CA /* OpenNotchHUD.swift */; };
 		1160F8D82DD98230006FBB94 /* NotchShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1160F8D72DD98230006FBB94 /* NotchShape.swift */; };
-		11A0E4022DD98240006FBB94 /* NotchAlert.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A0E4012DD98240006FBB94 /* NotchAlert.swift */; };
 		1163988D2DF5CAB40052E6AF /* EventModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1163988C2DF5CAB40052E6AF /* EventModel.swift */; };
 		1163988F2DF5CC870052E6AF /* CalendarModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1163988E2DF5CC870052E6AF /* CalendarModel.swift */; };
 		116398962DF5D6C00052E6AF /* CalendarServiceProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116398952DF5D6C00052E6AF /* CalendarServiceProviding.swift */; };
@@ -142,11 +141,14 @@
 		D1C7000000000000000000B4 /* DictationSessionStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C7000000000000000000A3 /* DictationSessionStateMachine.swift */; };
 		D1C7000000000000000000B5 /* DictationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C7000000000000000000A4 /* DictationController.swift */; };
 		D1C7000000000000000000B6 /* AVAudioEngineCaptureService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C7000000000000000000A5 /* AVAudioEngineCaptureService.swift */; };
+		D1C7000000000000000000F1 /* DictationUtteranceSegmenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C7000000000000000000F0 /* DictationUtteranceSegmenter.swift */; };
+		D1C7000000000000000000F5 /* DictationPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C7000000000000000000F2 /* DictationPanelController.swift */; };
+		D1C7000000000000000000F6 /* DictationPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C7000000000000000000F3 /* DictationPanelView.swift */; };
+		D1C7000000000000000000F7 /* DictationPanelPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C7000000000000000000F4 /* DictationPanelPlacement.swift */; };
 		D1C7000000000000000000B7 /* WhisperKitDictationTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C7000000000000000000A6 /* WhisperKitDictationTranscriber.swift */; };
 		D1C7000000000000000000B8 /* GojoDictationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C7000000000000000000A7 /* GojoDictationService.swift */; };
 		D1C7000000000000000000BA /* DictationModifierShortcutStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C7000000000000000000A9 /* DictationModifierShortcutStateMachine.swift */; };
 		D1C7000000000000000000BB /* DictationModifierHotKeyMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C7000000000000000000AA /* DictationModifierHotKeyMonitor.swift */; };
-		D1C7000000000000000000BC /* DictationNotchActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C7000000000000000000AB /* DictationNotchActivity.swift */; };
 		D1C8000000000000000000B2 /* ParakeetUnifiedDictationTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C8000000000000000000A1 /* ParakeetUnifiedDictationTranscriber.swift */; };
 		D1C8000000000000000000B3 /* LocalDictationTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C8000000000000000000A2 /* LocalDictationTranscriber.swift */; };
 		D1C8000000000000000000B4 /* ParakeetV3DictationTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C8000000000000000000A3 /* ParakeetV3DictationTranscriber.swift */; };
@@ -245,11 +247,14 @@
 		D1C7000000000000000000A3 /* DictationSessionStateMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationSessionStateMachine.swift; sourceTree = "<group>"; };
 		D1C7000000000000000000A4 /* DictationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationController.swift; sourceTree = "<group>"; };
 		D1C7000000000000000000A5 /* AVAudioEngineCaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AVAudioEngineCaptureService.swift; sourceTree = "<group>"; };
+		D1C7000000000000000000F0 /* DictationUtteranceSegmenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationUtteranceSegmenter.swift; sourceTree = "<group>"; };
+		D1C7000000000000000000F2 /* DictationPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationPanelController.swift; sourceTree = "<group>"; };
+		D1C7000000000000000000F3 /* DictationPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationPanelView.swift; sourceTree = "<group>"; };
+		D1C7000000000000000000F4 /* DictationPanelPlacement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationPanelPlacement.swift; sourceTree = "<group>"; };
 		D1C7000000000000000000A6 /* WhisperKitDictationTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperKitDictationTranscriber.swift; sourceTree = "<group>"; };
 		D1C7000000000000000000A7 /* GojoDictationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GojoDictationService.swift; sourceTree = "<group>"; };
 		D1C7000000000000000000A9 /* DictationModifierShortcutStateMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationModifierShortcutStateMachine.swift; sourceTree = "<group>"; };
 		D1C7000000000000000000AA /* DictationModifierHotKeyMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationModifierHotKeyMonitor.swift; sourceTree = "<group>"; };
-		D1C7000000000000000000AB /* DictationNotchActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationNotchActivity.swift; sourceTree = "<group>"; };
 		D1C9000000000000000000A1 /* DictationUnicodeTextInjector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationUnicodeTextInjector.swift; sourceTree = "<group>"; };
 		D1C8000000000000000000A1 /* ParakeetUnifiedDictationTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParakeetUnifiedDictationTranscriber.swift; sourceTree = "<group>"; };
 		D1C8000000000000000000A2 /* LocalDictationTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalDictationTranscriber.swift; sourceTree = "<group>"; };
@@ -290,7 +295,6 @@
 		1153BDA62D99B22200979FB0 /* YouTubeMusicController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeMusicController.swift; sourceTree = "<group>"; };
 		115C12EB2ED3D003009754CA /* OpenNotchHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenNotchHUD.swift; sourceTree = "<group>"; };
 		1160F8D72DD98230006FBB94 /* NotchShape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchShape.swift; sourceTree = "<group>"; };
-		11A0E4012DD98240006FBB94 /* NotchAlert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchAlert.swift; sourceTree = "<group>"; };
 		1163988C2DF5CAB40052E6AF /* EventModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventModel.swift; sourceTree = "<group>"; };
 		1163988E2DF5CC870052E6AF /* CalendarModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarModel.swift; sourceTree = "<group>"; };
 		116398952DF5D6C00052E6AF /* CalendarServiceProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarServiceProviding.swift; sourceTree = "<group>"; };
@@ -513,6 +517,10 @@
 				D1C7000000000000000000A3 /* DictationSessionStateMachine.swift */,
 				D1C7000000000000000000A4 /* DictationController.swift */,
 				D1C7000000000000000000A5 /* AVAudioEngineCaptureService.swift */,
+				D1C7000000000000000000F0 /* DictationUtteranceSegmenter.swift */,
+				D1C7000000000000000000F2 /* DictationPanelController.swift */,
+				D1C7000000000000000000F3 /* DictationPanelView.swift */,
+				D1C7000000000000000000F4 /* DictationPanelPlacement.swift */,
 				D1C7000000000000000000A6 /* WhisperKitDictationTranscriber.swift */,
 				D1C8000000000000000000A1 /* ParakeetUnifiedDictationTranscriber.swift */,
 				D1C8000000000000000000A3 /* ParakeetV3DictationTranscriber.swift */,
@@ -522,7 +530,6 @@
 				D1C7000000000000000000A7 /* GojoDictationService.swift */,
 				D1C7000000000000000000A9 /* DictationModifierShortcutStateMachine.swift */,
 				D1C7000000000000000000AA /* DictationModifierHotKeyMonitor.swift */,
-				D1C7000000000000000000AB /* DictationNotchActivity.swift */,
 				D1C9000000000000000000A1 /* DictationUnicodeTextInjector.swift */,
 			);
 			path = Dictation;
@@ -899,7 +906,6 @@
 			children = (
 				1194E8862EA6DDA7009C82D6 /* GojoSkyLightWindow.swift */,
 				1160F8D72DD98230006FBB94 /* NotchShape.swift */,
-				11A0E4012DD98240006FBB94 /* NotchAlert.swift */,
 				9AB0C6BB2C73C9CB00F7CD30 /* NotchHomeView.swift */,
 				14D570C52C5F38210011E668 /* GojoHeader.swift */,
 				14D570D12C5F6C6A0011E668 /* GojoExtrasMenu.swift */,
@@ -1201,11 +1207,14 @@
 				D1C7000000000000000000B4 /* DictationSessionStateMachine.swift in Sources */,
 				D1C7000000000000000000B5 /* DictationController.swift in Sources */,
 				D1C7000000000000000000B6 /* AVAudioEngineCaptureService.swift in Sources */,
+				D1C7000000000000000000F1 /* DictationUtteranceSegmenter.swift in Sources */,
+				D1C7000000000000000000F5 /* DictationPanelController.swift in Sources */,
+				D1C7000000000000000000F6 /* DictationPanelView.swift in Sources */,
+				D1C7000000000000000000F7 /* DictationPanelPlacement.swift in Sources */,
 				D1C7000000000000000000B7 /* WhisperKitDictationTranscriber.swift in Sources */,
 				D1C7000000000000000000B8 /* GojoDictationService.swift in Sources */,
 				D1C7000000000000000000BA /* DictationModifierShortcutStateMachine.swift in Sources */,
 				D1C7000000000000000000BB /* DictationModifierHotKeyMonitor.swift in Sources */,
-				D1C7000000000000000000BC /* DictationNotchActivity.swift in Sources */,
 				D1C9000000000000000000B1 /* DictationUnicodeTextInjector.swift in Sources */,
 				D1C8000000000000000000B2 /* ParakeetUnifiedDictationTranscriber.swift in Sources */,
 				D1C8000000000000000000B4 /* ParakeetV3DictationTranscriber.swift in Sources */,
@@ -1268,7 +1277,6 @@
 				1100292E2E86940F00035A57 /* QuickShareService.swift in Sources */,
 				1113ABCE2E80E27000EC13B2 /* ShelfActionService.swift in Sources */,
 				1160F8D82DD98230006FBB94 /* NotchShape.swift in Sources */,
-				11A0E4022DD98240006FBB94 /* NotchAlert.swift in Sources */,
 				5917FD112E57891600E87F1C /* MediaKeyInterceptor.swift in Sources */,
 				14C08BC12C8E03AD000F8AA0 /* NSImage+Extensions.swift in Sources */,
 				149E0B9A2C737D40006418B1 /* WebcamView.swift in Sources */,

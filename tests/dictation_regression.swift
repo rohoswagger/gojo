@@ -1,4 +1,5 @@
 import Foundation
+import AVFoundation
 
 func assertCondition(_ condition: @autoclosure () -> Bool, _ message: String) {
     if !condition() {
@@ -312,6 +313,225 @@ actor GatedTargetProvider: DictationTargetCapturing {
     }
 }
 
+actor FollowingTargetProvider: DictationTargetCapturing {
+    typealias Target = String
+    private let phrases: [String?]
+    private let failures: [Int: DictationFailure]
+    private var gateOrdinal: Int?
+    private var gate: CheckedContinuation<Void, Never>?
+    private(set) var captures = 0
+    private(set) var additionalCaptures = 0
+
+    init(_ phrases: [String?], gateOrdinal: Int? = nil, failures: [Int: DictationFailure] = [:]) {
+        self.phrases = phrases
+        self.gateOrdinal = gateOrdinal
+        self.failures = failures
+    }
+
+    func captureTarget() async throws -> String {
+        captures += 1
+        return "initial-field"
+    }
+
+    func captureAdditionalTarget() async throws -> String {
+        additionalCaptures += 1
+        let ordinal = additionalCaptures
+        if ordinal == gateOrdinal {
+            await withCheckedContinuation { gate = $0 }
+        }
+        if let failure = failures[ordinal] { throw failure }
+        guard let target = phrases[ordinal - 1] else { throw FriendlyTargetError() }
+        return target
+    }
+
+    nonisolated func destinationIdentifier(for target: String) -> String? {
+        String(target.split(separator: "#")[0])
+    }
+
+    func isWaiting() -> Bool { gate != nil }
+    func releaseCapture() {
+        gate?.resume()
+        gate = nil
+        gateOrdinal = nil
+    }
+}
+
+final class RecoveryRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var text = ""
+
+    func record(_ text: String) { lock.withLock { self.text = text } }
+    func snapshot() -> String { lock.withLock { text } }
+}
+
+actor ContinuousAudioCapture: DictationAudioCapturing {
+    private var continuation: AsyncThrowingStream<DictationAudio, Error>.Continuation?
+    private var startupContinuation: CheckedContinuation<Void, Never>?
+    private var startupIsGated = false
+    private var promotionIsGated = false
+    private var promotionContinuation: CheckedContinuation<Void, Never>?
+    private var tail: DictationAudio?
+    private var permissionGranted = true
+    private(set) var starts = 0
+    private(set) var stops = 0
+    private(set) var cancellations = 0
+    private(set) var pauseDuration: TimeInterval?
+
+    func requestPermission() async -> Bool { permissionGranted }
+    func setPermission(_ granted: Bool) { permissionGranted = granted }
+    func startCapture() async throws { starts += 1 }
+    func stopCapture() async throws -> DictationAudio { Self.audio(2) }
+
+    func startContinuousCapture(pauseDuration: TimeInterval) async throws -> AsyncThrowingStream<DictationAudio, Error> {
+        starts += 1
+        self.pauseDuration = pauseDuration
+        let stream = AsyncThrowingStream<DictationAudio, Error> { continuation = $0 }
+        if startupIsGated {
+            await withCheckedContinuation { startupContinuation = $0 }
+        }
+        return stream
+    }
+
+    func promoteCaptureToContinuous(pauseDuration: TimeInterval) async throws -> AsyncThrowingStream<DictationAudio, Error> {
+        self.pauseDuration = pauseDuration
+        let stream = AsyncThrowingStream<DictationAudio, Error> { continuation = $0 }
+        if promotionIsGated {
+            await withCheckedContinuation { promotionContinuation = $0 }
+        }
+        return stream
+    }
+
+    func gatePromotion() { promotionIsGated = true }
+    func isPromotionWaiting() -> Bool { promotionContinuation != nil }
+    func releasePromotion() {
+        promotionContinuation?.resume()
+        promotionContinuation = nil
+    }
+
+    func stopContinuousCapture() async throws {
+        stops += 1
+        if let tail {
+            continuation?.yield(tail)
+            self.tail = nil
+        }
+        continuation?.finish()
+        continuation = nil
+    }
+
+    func cancelCapture() async {
+        cancellations += 1
+        continuation?.finish()
+        continuation = nil
+        tail = nil
+    }
+
+    func emit(_ ordinal: Int) { continuation?.yield(Self.audio(ordinal)) }
+    func emit(_ audio: DictationAudio) { continuation?.yield(audio) }
+    func fail() { continuation?.finish(throwing: DictationContinuousCaptureError.bufferOverflow) }
+    func setTail(_ ordinal: Int) { tail = Self.audio(ordinal) }
+    func setTail(_ audio: DictationAudio) { tail = audio }
+    func gateStartup() { startupIsGated = true }
+    func startupWaiting() -> Bool { startupContinuation != nil }
+    func releaseStartup() {
+        startupIsGated = false
+        startupContinuation?.resume()
+        startupContinuation = nil
+    }
+
+    static func audio(_ ordinal: Int) -> DictationAudio {
+        DictationAudio(samples: Array(repeating: Float(ordinal), count: 3_200))
+    }
+}
+
+actor ContinuousTranscriber: LocalDictationTranscribing {
+    private var gate: CheckedContinuation<Void, Never>?
+    private var shouldGateFirst: Bool
+    private var firstReleased = false
+    private var transcripts: [String]
+    private(set) var ordinals: [Int] = []
+    private(set) var cancellations = 0
+    private var active = 0
+    private(set) var maximumActive = 0
+
+    init(_ transcripts: [String], gateFirst: Bool = false) {
+        self.transcripts = transcripts
+        shouldGateFirst = gateFirst
+    }
+
+    func transcribe(_ audio: DictationAudio) async throws -> String {
+        let ordinal = Int(audio.samples.first ?? 0)
+        ordinals.append(ordinal)
+        active += 1
+        maximumActive = max(maximumActive, active)
+        defer { active -= 1 }
+        if ordinals.count == 1, shouldGateFirst, !firstReleased {
+            await withCheckedContinuation { gate = $0 }
+        }
+        return transcripts[ordinal - 1]
+    }
+
+    func cancelTranscription() async {
+        cancellations += 1
+        while active > 0 { try? await Task.sleep(for: .milliseconds(2)) }
+    }
+
+    func isWaiting() -> Bool { gate != nil }
+    func releaseFirst() {
+        firstReleased = true
+        gate?.resume()
+        gate = nil
+    }
+}
+
+actor RetainedInserter: DictationTextInserting {
+    typealias Target = String
+    private(set) var chunks: [String] = []
+    private(set) var targets: [String] = []
+    private(set) var retainedInsertions = 0
+    private(set) var releases: [String] = []
+    private var failInsertion = false
+    private var rejectedTargets: Set<String> = []
+    private var releaseIsGated = false
+    private var releaseContinuation: CheckedContinuation<Void, Never>?
+
+    func insert(_ text: String, into target: String) async throws {
+        if failInsertion || rejectedTargets.contains(target) { throw FriendlyTargetError() }
+        chunks.append(text)
+        targets.append(target)
+    }
+
+    func insertRetainingTarget(_ text: String, into target: String) async throws {
+        retainedInsertions += 1
+        try await insert(text, into: target)
+    }
+
+    func releaseTarget(_ target: String) async {
+        releases.append(target)
+        if releaseIsGated {
+            releaseIsGated = false
+            await withCheckedContinuation { releaseContinuation = $0 }
+        }
+    }
+    func gateRelease() { releaseIsGated = true }
+    func isReleaseWaiting() -> Bool { releaseContinuation != nil }
+    func releaseAcknowledgement() {
+        releaseIsGated = false
+        releaseContinuation?.resume()
+        releaseContinuation = nil
+    }
+    func setFailure() { failInsertion = true }
+    func rejectTarget(_ target: String) { rejectedTargets.insert(target) }
+}
+
+func waitForCondition(_ message: String, _ condition: @escaping () async -> Bool) async {
+    for _ in 0..<200 {
+        if await condition() { return }
+        try? await Task.sleep(for: .milliseconds(5))
+    }
+    fputs("Assertion failed: \(message)\n", stderr)
+    exit(1)
+}
+
 final class StateRecorder: @unchecked Sendable {
     private let lock = NSLock()
     private var states: [DictationState] = []
@@ -361,6 +581,7 @@ struct DictationRegressionRunner {
         testModelStorageRemoval()
         testWhisperModelCatalog()
         testModifierOnlyShortcutPolicy()
+        testShortcutSessionRearming()
         testEventTapRecoveryPolicy()
         testEventTapStartRequestPolicy()
         testShortcutSessionGate()
@@ -379,6 +600,31 @@ struct DictationRegressionRunner {
         await testTranscriptionTeardownBeforeRestart()
         await testPolishingTeardownBeforeRestart()
         await testWatchdogAndLocalizedErrors()
+        testVoiceLockPreservesBufferedAudio()
+        await testVoiceLockDoesNotWaitForTargetRelease()
+        await testQueuedCommandsDuringVoiceLockPromotion()
+        await testFinishDuringVoiceLockPromotion()
+        await testFailedPendingVoiceLockCanRestart()
+        await testDuplicateVoiceStartDuringTargetCapture()
+        await testVoiceLockDuringStartup()
+        await testHoldToVoiceLockPromotion()
+        await testContinuousOrderedChunksAndStopTail()
+        await testFloatingFinishForSingleUtterance()
+        await testContinuousForcedSplitTail()
+        await testContinuousSpacingAndPolishingFallback()
+        await testContinuousCancellationAndCrossModeRestart()
+        await testContinuousOverflowAndFailureTeardown()
+        await testContinuousStartupStopAndCancel()
+        await testContinuousSessionLimit()
+        await testVoicePauseResumeAndFinish()
+        await testVoiceStartupIntents()
+        await testFollowFocusCapturesBeforeInferenceAndSpacesPerField()
+        await testFollowFocusCancellationReleasesAllTargets()
+        await testFollowFocusLateTargetCancellation()
+        await testFollowFocusRecoveryKeepsListening()
+        await testSecurePhraseStopsBeforeInference()
+        await testSecurePhraseDrainsAcceptedSafeJobs()
+        await testRecoveryBudgetFinishesAndDrains()
         print("dictation-regression-pass")
     }
 
@@ -1274,7 +1520,85 @@ struct DictationRegressionRunner {
             .tapToTalk,
             "the selected activation mode should persist"
         )
-        // Activation mode regression coverage ends here.
+        DictationActivationMode.voiceMode.save(in: defaults)
+        let savedVoiceMode = DictationActivationMode.saved(in: defaults)
+        var voice = DictationModifierShortcutStateMachine(mode: savedVoiceMode)
+        assertEqual(voice.handle(flags(exact: true, anyTriggerDown: true)), .none, "saved Voice mode should wait for chord release")
+        assertEqual(voice.handle(flags(exact: false, anyTriggerDown: false)), .beginDictation, "saved Voice mode should activate on a clean tap")
+        assertEqual(voice.state, .active, "Voice mode should keep recording after chord release")
+        assertEqual(voice.handle(.keyDown), .none, "typing must keep persistent voice mode active")
+        assertEqual(voice.handle(flags(exact: false, anyTriggerDown: false, disallowed: true)), .none, "Shift must not cancel voice mode")
+        assertEqual(voice.recoverGesture(), .none, "event tap recovery must retain persistent voice mode")
+        assertEqual(voice.state, .active, "event tap recovery must preserve the Stop gesture")
+        _ = voice.handle(flags(exact: true, anyTriggerDown: true))
+        assertEqual(voice.handle(.keyDown), .none, "typing a Control Option shortcut must disqualify Stop without cancelling voice")
+        assertEqual(voice.handle(flags(exact: false, anyTriggerDown: false)), .none, "a contaminated Stop tap must leave voice active")
+        _ = voice.handle(flags(exact: true, anyTriggerDown: true))
+        assertEqual(voice.handle(flags(exact: false, anyTriggerDown: false)), .finishDictation, "Voice mode should Stop on a second clean tap")
+        var adopted = DictationModifierShortcutStateMachine(mode: .holdToTalk)
+        adopted.adoptVoiceModeSession()
+        _ = adopted.handle(flags(exact: true, anyTriggerDown: true))
+        assertEqual(adopted.handle(flags(exact: false, anyTriggerDown: false)), .none, "releasing modifiers must preserve a workspace-started locked session")
+        assertEqual(adopted.toggleVoiceLock(), .finishDictation, "Space on the held chord must finish a workspace-started session")
+        var rejectedLock = DictationModifierShortcutStateMachine()
+        _ = rejectedLock.handle(flags(exact: true, anyTriggerDown: true))
+        assertEqual(rejectedLock.toggleVoiceLock(), .beginVoiceMode, "fast Space must request a locked start")
+        rejectedLock.rejectDictationStart()
+        assertEqual(rejectedLock.isVoiceLocked, false, "a rejected voice start must clear the phantom lock")
+        _ = rejectedLock.handle(flags(exact: false, anyTriggerDown: false))
+        assertEqual(rejectedLock.handle(flags(exact: true, anyTriggerDown: true)), .scheduleActivation, "a rejected lock must allow the next push-to-talk gesture")
+        var lock = DictationModifierShortcutStateMachine()
+        assertEqual(lock.handle(flags(exact: true, anyTriggerDown: true)), .scheduleActivation, "holding the chord must arm push to talk")
+        assertEqual(lock.toggleVoiceLock(), .beginVoiceMode, "Space before activation must start locked voice mode directly")
+        assertEqual(lock.handle(flags(exact: false, anyTriggerDown: false)), .none, "locked voice must survive modifier release")
+        assertEqual(lock.handle(.keyDown), .none, "typing must not cancel locked voice")
+        assertEqual(lock.recoverGesture(), .none, "event tap recovery must preserve voice lock")
+        _ = lock.handle(flags(exact: true, anyTriggerDown: true))
+        assertEqual(lock.toggleVoiceLock(), .finishDictation, "repeating the lock chord must finish")
+        _ = lock.handle(flags(exact: false, anyTriggerDown: false))
+        _ = lock.handle(flags(exact: true, anyTriggerDown: true))
+        assertEqual(lock.handle(.activationDelayElapsed), .beginDictation, "the next plain hold must remain push to talk")
+        assertEqual(lock.toggleVoiceLock(), .lockVoiceMode, "Space during a live hold must promote the current capture")
+        assertEqual(lock.handle(flags(exact: false, anyTriggerDown: false)), .none, "promotion must suppress push-to-talk release")
+        _ = lock.reset()
+        assertEqual(lock.isVoiceLocked, false, "cancel must clear the lock")
+        assertEqual(DictationShortcutStatePolicy.shouldRearm(after: .paused), false, "pause must retain the active Stop gesture")
+        assertEqual(DictationShortcutStatePolicy.shouldRearm(after: .pausing), false, "pause drain must retain the active Stop gesture")
+        assertEqual(DictationPauseDuration.saved(in: defaults).seconds, 0.9, "missing pause preference should use natural pauses")
+        defaults.set("relaxed", forKey: DictationPauseDuration.defaultsKey)
+        assertEqual(DictationPauseDuration.saved(in: defaults).seconds, 1.5, "pause duration should read the saved preference")
+    }
+
+    static func testShortcutSessionRearming() {
+        let down = DictationModifierShortcutStateMachine.Event.flagsChanged(
+            isExactChord: true, anyTriggerModifierDown: true, hasDisallowedModifiers: false
+        )
+        let up = DictationModifierShortcutStateMachine.Event.flagsChanged(
+            isExactChord: false, anyTriggerModifierDown: false, hasDisallowedModifiers: false
+        )
+        for mode in DictationActivationMode.allCases {
+            var shortcut = DictationModifierShortcutStateMachine(mode: mode)
+            _ = shortcut.handle(down)
+            let start = shortcut.handle(mode == .holdToTalk ? .activationDelayElapsed : up)
+            assertEqual(start, .beginDictation, "replacement gesture must begin a session")
+            if DictationShortcutStatePolicy.shouldRearm(after: .idle, isStartingShortcut: true) {
+                shortcut.rejectDictationStart()
+            }
+            if mode != .holdToTalk { _ = shortcut.handle(down) }
+            assertEqual(shortcut.handle(up), .finishDictation, "restart's idle notification must preserve the replacement Stop gesture")
+
+            for terminal in [DictationState.idle, .error(.transcriptionReturnedNoText), .succeeded("finished")] {
+                _ = shortcut.handle(down)
+                _ = shortcut.handle(mode == .holdToTalk ? .activationDelayElapsed : up)
+                if DictationShortcutStatePolicy.shouldRearm(after: terminal) {
+                    shortcut.rejectDictationStart()
+                }
+                assertEqual(shortcut.state, .idle, "terminal failure and success must rearm the shortcut")
+                _ = shortcut.handle(down)
+                assertEqual(shortcut.handle(mode == .holdToTalk ? .activationDelayElapsed : up), .beginDictation, "a fresh gesture must start after a terminal result")
+                _ = shortcut.reset()
+            }
+        }
     }
 
     static func testEventTapRecoveryPolicy() {
@@ -1631,20 +1955,34 @@ struct DictationRegressionRunner {
     static func testShortcutEventOrdering() async {
         let log = EventLog()
         let queue = DictationShortcutEventQueue { event in
-            if case .keyDown = event {
+            switch event {
+            case .keyDown:
                 try? await Task.sleep(for: .milliseconds(20))
                 await log.append("down")
-            } else if case .keyUp = event {
-                await log.append("up")
+            case .keyUp: await log.append("up")
+            case .startVoiceMode: await log.append("start voice")
+            case .lockVoiceMode: await log.append("lock voice")
+            case .pauseVoiceMode: await log.append("pause")
+            case .resumeVoiceMode: await log.append("resume")
+            case .finishVoiceMode: await log.append("finish")
+            case .clearRecoveryText: await log.append("discard")
+            case .cancel: await log.append("cancel")
             }
         }
         queue.send(.keyDown)
         queue.send(.keyUp)
+        queue.send(.startVoiceMode)
+        queue.send(.lockVoiceMode)
+        queue.send(.pauseVoiceMode)
+        queue.send(.resumeVoiceMode)
+        queue.send(.finishVoiceMode)
+        queue.send(.clearRecoveryText)
+        queue.send(.cancel) { await log.append("cancel complete") }
         await queue.drain()
         assertEqual(
             await log.snapshot(),
-            ["down", "up"],
-            "the production shortcut adapter must preserve a rapid down/up sequence"
+            ["down", "up", "start voice", "lock voice", "pause", "resume", "finish", "discard", "cancel", "cancel complete"],
+            "shortcut and workspace controls must preserve one ordered command sequence"
         )
     }
 
@@ -1885,5 +2223,769 @@ struct DictationRegressionRunner {
             controller: failingController,
             message: "localized target errors should reach the HUD verbatim"
         )
+
+        struct DeniedTarget: DictationTargetCapturing {
+            func captureTarget() async throws -> String { throw DictationFailure.accessibilityPermissionDenied }
+        }
+        let deniedAudio = FakeAudioCapture(log: log)
+        let deniedController = DictationController(
+            targetProvider: DeniedTarget(), audioCapture: deniedAudio,
+            transcriber: transcriber, polisher: polisher, inserter: inserter
+        )
+        await deniedController.hotKeyDown()
+        await waitForState(.error(.accessibilityPermissionDenied), controller: deniedController, message: "permission failures must retain their type for the correct repair action")
+        assertEqual(await deniedAudio.starts, 0, "denied Accessibility must fail before microphone capture")
     }
+    static func testFloatingFinishForSingleUtterance() async {
+        let log = EventLog()
+        let audio = FakeAudioCapture(log: log)
+        let inserter = FakeInserter(log: log)
+        let controller = DictationController(
+            targetProvider: FakeTargetProvider(log: log), audioCapture: audio,
+            transcriber: FakeTranscriber(log: log), polisher: FakePolisher(log: log), inserter: inserter
+        )
+        await controller.hotKeyDown()
+        await waitForState(.listening, controller: controller, message: "single-utterance session must listen")
+        await controller.finishVoiceMode()
+        await waitForState(.succeeded("locally transcribed"), controller: controller, message: "floating Finish must stop a single-utterance session")
+        await controller.hotKeyUp()
+        assertEqual(await audio.stops, 1, "a later physical release must not stop capture twice")
+        assertEqual(await inserter.insertions.map { $0.0 }, ["locally transcribed"], "floating Finish must insert the batch transcript once")
+    }
+
+    static func testVoiceLockPreservesBufferedAudio() {
+        let format = AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 1)!
+        let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 4_800)!
+        buffer.frameLength = 4_800
+        let held = LockedMonoSampleAccumulator(channelCount: 1, levelObserver: { _ in })
+        let locked = LockedContinuousSampleAccumulator(
+            channelCount: 1,
+            segmenter: try! DictationUtteranceSegmenter(sampleRate: 48_000, pauseDuration: 0.9),
+            levelObserver: { _ in }
+        )
+        buffer.floatChannelData![0].initialize(repeating: 0.1, count: 4_800)
+        held.append(buffer)
+        try! held.promote(to: locked)
+        buffer.floatChannelData![0].update(repeating: 0.2, count: 4_800)
+        held.append(buffer)
+        let preserved = try! locked.finish().flatMap { $0 }
+        assertEqual(preserved, Array(repeating: Float(0.1), count: 4_800) + Array(repeating: Float(0.2), count: 4_800), "promotion must preserve all buffered audio and route later buffers in order")
+        assertCondition(held.drain().isEmpty, "promotion must transfer ownership of the held audio")
+        let pausedHold = LockedMonoSampleAccumulator(channelCount: 1, levelObserver: { _ in })
+        let pausedLock = LockedContinuousSampleAccumulator(
+            channelCount: 1,
+            segmenter: try! DictationUtteranceSegmenter(sampleRate: 48_000, pauseDuration: 0.1),
+            levelObserver: { _ in }
+        )
+        for _ in 0..<6 {
+            buffer.floatChannelData![0].update(repeating: 0.1, count: 4_800)
+            pausedHold.append(buffer)
+            pausedHold.append(buffer)
+            buffer.floatChannelData![0].update(repeating: 0, count: 4_800)
+            pausedHold.append(buffer)
+        }
+        try! pausedHold.promote(to: pausedLock)
+        let priorPhrases = try! pausedLock.finish().flatMap { $0 }
+        assertEqual(priorPhrases.filter { $0 == 0.1 }.count, 6 * 9_600, "locking after many paused phrases must not overflow or lose prior speech")
+    }
+
+    static func testVoiceLockDoesNotWaitForTargetRelease() async {
+        let audio = ContinuousAudioCapture()
+        let inserter = RetainedInserter()
+        let controller = DictationController(
+            targetProvider: FakeTargetProvider(log: EventLog()), audioCapture: audio,
+            transcriber: ContinuousTranscriber(["tail"]),
+            polisher: FakePolisher(log: EventLog()), inserter: inserter
+        )
+        await inserter.gateRelease()
+        await controller.hotKeyDown()
+        await waitForState(.listening, controller: controller, message: "hold must start before slow target release")
+        _ = await controller.lockVoiceMode(pauseDuration: 0.9)
+        await waitForCondition("initial target release must be waiting") { await inserter.isReleaseWaiting() }
+        await audio.setTail(1)
+        await controller.finishVoiceMode()
+        await waitForState(.succeeded("tail"), controller: controller, message: "Finish must not wait for an obsolete target release acknowledgement")
+        assertEqual(await audio.stops, 1, "slow lease cleanup must not keep the microphone running")
+        await inserter.releaseAcknowledgement()
+    }
+
+    static func testQueuedCommandsDuringVoiceLockPromotion() async {
+        for shouldCancel in [true, false] {
+            let audio = ContinuousAudioCapture()
+            let inserter = RetainedInserter()
+            let log = EventLog()
+            let controller = DictationController(
+                targetProvider: FakeTargetProvider(log: EventLog()), audioCapture: audio,
+                transcriber: ContinuousTranscriber(["tail"]),
+                polisher: FakePolisher(log: EventLog()), inserter: inserter
+            )
+            await audio.gatePromotion()
+            await controller.hotKeyDown()
+            await waitForState(.listening, controller: controller, message: "hold must start before queued lock")
+            let queue = DictationShortcutEventQueue { event in
+                switch event {
+                case .lockVoiceMode: _ = await controller.lockVoiceMode(pauseDuration: 0.9)
+                case .cancel:
+                    await controller.cancel()
+                    await log.append("cancel accepted")
+                case .finishVoiceMode:
+                    await controller.finishVoiceMode()
+                    await log.append("finish accepted")
+                default: break
+                }
+            }
+            queue.send(.lockVoiceMode)
+            await waitForCondition("queued lock must begin promotion") { await audio.isPromotionWaiting() }
+            await audio.setTail(1)
+            queue.send(shouldCancel ? .cancel : .finishVoiceMode)
+            await waitForCondition("Cancel and Finish must be admitted while promotion is suspended") {
+                !(await log.snapshot()).isEmpty
+            }
+            if shouldCancel {
+                assertEqual(await controller.state, .idle, "queued Cancel must immediately clear the old session")
+            }
+            await queue.drain()
+            await audio.releasePromotion()
+            if shouldCancel {
+                await waitForCondition("cancelled promotion must clean up the microphone") { await audio.cancellations == 1 }
+                assertEqual(await inserter.chunks, [], "cancelled promotion must not insert stale audio")
+            } else {
+                await waitForState(.succeeded("tail"), controller: controller, message: "queued Finish must drain after promotion settles")
+                assertEqual(await audio.stops, 1, "queued Finish must stop the microphone once")
+            }
+        }
+    }
+
+    static func testFinishDuringVoiceLockPromotion() async {
+        let audio = ContinuousAudioCapture()
+        let controller = DictationController(
+            targetProvider: FakeTargetProvider(log: EventLog()), audioCapture: audio,
+            transcriber: ContinuousTranscriber(["tail"]),
+            polisher: FakePolisher(log: EventLog()), inserter: RetainedInserter()
+        )
+        await audio.gatePromotion()
+        await controller.hotKeyDown()
+        await waitForState(.listening, controller: controller, message: "hold must start before gated promotion")
+        let promotion = Task { await controller.lockVoiceMode(pauseDuration: 0.9) }
+        await waitForCondition("promotion must be gated") { await audio.isPromotionWaiting() }
+        await audio.setTail(1)
+        await controller.finishVoiceMode()
+        assertEqual(await audio.stops, 0, "Finish must wait for promotion to settle before stopping")
+        await audio.releasePromotion()
+        assertEqual(await promotion.value, true, "promotion must retain the pending Finish intent")
+        await waitForState(.succeeded("tail"), controller: controller, message: "Finish during promotion must drain successfully")
+        assertEqual(await audio.stops, 1, "pending Finish must stop continuous capture exactly once")
+    }
+
+    static func testFailedPendingVoiceLockCanRestart() async {
+        let target = GatedTargetProvider()
+        let audio = ContinuousAudioCapture()
+        let controller = DictationController(
+            targetProvider: target, audioCapture: audio,
+            transcriber: ContinuousTranscriber(["tail"]),
+            polisher: FakePolisher(log: EventLog()), inserter: RetainedInserter()
+        )
+        await audio.setPermission(false)
+        await controller.hotKeyDown()
+        await waitForCondition("failed pending-lock target must be gated") { await target.isWaiting() }
+        _ = await controller.lockVoiceMode(pauseDuration: 0.9)
+        await target.release()
+        await waitForState(.error(.microphonePermissionDenied), controller: controller, message: "pending lock must surface permission denial")
+        assertEqual(await controller.isVoiceModeActive, false, "failed startup must clear pending voice intent")
+        await audio.setPermission(true)
+        assertEqual(await controller.hotKeyDown(mode: .continuous, targetPolicy: .followFocus), true, "a failed pending lock must admit a fresh session")
+        await waitForState(.listening, controller: controller, message: "fresh voice session must actually start")
+        assertEqual(await audio.starts, 1, "restart must create its microphone instead of adopting stale intent")
+        await controller.cancel()
+    }
+
+    static func testDuplicateVoiceStartDuringTargetCapture() async {
+        for startsAsHold in [false, true] {
+            let target = GatedTargetProvider()
+            let audio = ContinuousAudioCapture()
+            let inserter = RetainedInserter()
+            let controller = DictationController(
+                targetProvider: target, audioCapture: audio,
+                transcriber: ContinuousTranscriber(["tail"]),
+                polisher: FakePolisher(log: EventLog()), inserter: inserter
+            )
+            assertEqual(await controller.hotKeyDown(mode: startsAsHold ? .singleUtterance : .continuous, targetPolicy: .followFocus), true, "first start must be admitted")
+            await waitForCondition("initial target must still be pending") { await target.isWaiting() }
+            if startsAsHold {
+                assertEqual(await controller.lockVoiceMode(pauseDuration: 0.9), true, "Space must admit a pending voice lock")
+                assertEqual(await controller.isVoiceModeActive, true, "a pending hold-to-voice lock is an admitted voice session")
+            }
+            assertEqual(await controller.hotKeyDown(mode: .continuous, targetPolicy: .followFocus), true, "duplicate voice Start must preserve the already admitted session")
+            assertEqual(await audio.starts, 0, "duplicate admission must not start a second microphone")
+            await target.release()
+            await waitForState(.listening, controller: controller, message: "the original voice start must complete")
+            await audio.setTail(1)
+            await controller.hotKeyUp()
+            await waitForState(.succeeded("tail"), controller: controller, message: "the accepted finish gesture must still stop the original session")
+            assertEqual(await audio.starts, 1, "idempotent voice Start must open only one capture")
+            assertEqual(await audio.stops, 1, "idempotent voice Start must retain one finish")
+        }
+    }
+
+    static func testVoiceLockDuringStartup() async {
+        for cancelDuringStartup in [false, true] {
+            let target = GatedTargetProvider()
+            let audio = ContinuousAudioCapture()
+            let inserter = RetainedInserter()
+            let controller = DictationController(
+                targetProvider: target, audioCapture: audio,
+                transcriber: ContinuousTranscriber(["pending lock"]),
+                polisher: FakePolisher(log: EventLog()), inserter: inserter
+            )
+            await controller.hotKeyDown()
+            await waitForCondition("target startup must be gated") { await target.isWaiting() }
+            let queue = DictationShortcutEventQueue { event in
+                if case .lockVoiceMode = event { _ = await controller.lockVoiceMode(pauseDuration: 0.9) }
+                if case .cancel = event { await controller.cancel() }
+            }
+            queue.send(.lockVoiceMode)
+            if cancelDuringStartup {
+                queue.send(.cancel)
+                await waitForCondition("Cancel must not wait behind pending lock startup") { await controller.state == .idle }
+                await target.release()
+                await queue.drain()
+                assertEqual(await audio.starts, 0, "cancelled startup lock must never start the microphone")
+            } else {
+                await queue.drain()
+                await target.release()
+                await waitForCondition("pending lock must promote after startup") { await audio.pauseDuration == 0.9 }
+                await audio.emit(1)
+                await waitForCondition("pending lock must insert while continuing to listen") { await inserter.chunks == ["pending lock"] }
+                assertEqual(await controller.state, .listening, "pending lock must stay active")
+                await controller.cancel()
+            }
+        }
+    }
+
+    static func testHoldToVoiceLockPromotion() async {
+        let audio = ContinuousAudioCapture()
+        let transcriber = ContinuousTranscriber(["locked phrase", "tail"])
+        let inserter = RetainedInserter()
+        let controller = DictationController(
+            targetProvider: FakeTargetProvider(log: EventLog()), audioCapture: audio,
+            transcriber: transcriber, polisher: FakePolisher(log: EventLog()), inserter: inserter
+        )
+        await controller.hotKeyDown()
+        await waitForState(.listening, controller: controller, message: "push to talk must begin capture")
+        assertEqual(await controller.isVoiceModeActive, false, "a batch hold must not be mistaken for an existing voice lock")
+        assertEqual(await controller.lockVoiceMode(pauseDuration: 0.6), true, "a live hold must promote to continuous voice")
+        assertEqual(await controller.isVoiceModeActive, true, "busy-start admission must preserve a live continuous session")
+        await waitForCondition("accepted voice lock must complete audio promotion") { await audio.pauseDuration == 0.6 }
+        assertEqual(await audio.starts, 1, "locking must not restart the microphone")
+        await audio.emit(1)
+        await waitForCondition("locked speech should insert between phrases") { await inserter.chunks.count == 1 }
+        assertEqual(await controller.state, .listening, "locked voice must remain listening after insertion")
+        await audio.setTail(2)
+        await controller.finishVoiceMode()
+        await waitForState(.succeeded("tail"), controller: controller, message: "finish must drain locked speech")
+        assertEqual(await audio.stops, 1, "finishing a locked hold must stop capture exactly once")
+        assertEqual(await inserter.chunks, ["locked phrase", "tail"], "locking must preserve ordered phrase insertion without assuming field identity")
+    }
+
+    static func testContinuousOrderedChunksAndStopTail() async {
+        let target = FakeTargetProvider(log: EventLog())
+        let audio = ContinuousAudioCapture()
+        let transcriber = ContinuousTranscriber([" first phrase ", "second phrase", "tail phrase"], gateFirst: true)
+        let inserter = RetainedInserter()
+        let recorder = StateRecorder()
+        let controller = DictationController(
+            targetProvider: target, audioCapture: audio, transcriber: transcriber,
+            polisher: FakePolisher(log: EventLog()), inserter: inserter,
+            stateObserver: { recorder.record($0) }
+        )
+        await controller.hotKeyDown(mode: .continuous, pauseDuration: 1.5)
+        await waitForState(.listening, controller: controller, message: "continuous session should listen")
+        await audio.emit(1)
+        await waitForCondition("first continuous inference should be gated") { await transcriber.isWaiting() }
+        await audio.emit(2)
+        assertEqual(await controller.state, .listening, "live microphone must remain listening during inference")
+        assertEqual(await controller.cancelIfTranscribing(), false, "batch transcription cancellation must ignore a live continuous session")
+        await audio.setTail(3)
+        await controller.hotKeyUp()
+        await controller.hotKeyUp()
+        await waitForCondition("Stop should flush capture once") { await audio.stops == 1 }
+        assertEqual(await controller.state, .transcribing, "Stop must show processing until queued utterances drain")
+        assertEqual(await controller.cancelIfTranscribing(), false, "batch cancellation must also ignore a draining continuous session")
+        await transcriber.releaseFirst()
+        await waitForState(.succeeded("tail phrase"), controller: controller, message: "Stop should drain every ordered chunk")
+        assertEqual(await transcriber.ordinals, [1, 2, 3], "inference must preserve capture order including tail")
+        assertEqual(await inserter.chunks, ["first phrase", " second phrase", " tail phrase"], "insertion must preserve literal ordered text with one separator")
+        assertEqual(await inserter.targets, ["focused-field", "focused-field", "focused-field"], "every chunk must use the original destination")
+        assertEqual(await inserter.retainedInsertions, 3, "continuous chunks must retain their target")
+        assertEqual(await inserter.releases, ["focused-field"], "successful drain must release its destination once")
+        assertEqual(await target.captures, 1, "continuous pauses must not recapture focus")
+        assertEqual(await audio.pauseDuration, 1.5, "the selected pause duration must reach capture")
+        assertEqual(await audio.stops, 1, "duplicate Stop must not flush the tail twice")
+        assertEqual(await transcriber.maximumActive, 1, "continuous inference must be serial")
+        assertCondition(!recorder.snapshot().contains(.succeeded("first phrase")), "a completed live chunk must not publish terminal success")
+    }
+
+    static func testContinuousForcedSplitTail() async {
+        var segmenter = try! DictationUtteranceSegmenter(sampleRate: 16_000)
+        let first = segmenter.append(samples: Array(repeating: Float(1), count: 320_000))
+        assertEqual(first.map(\.count), [320_000], "sustained speech must split at the duration limit")
+        assertEqual(segmenter.append(samples: Array(repeating: Float(2), count: 800)), [], "the short continuation must wait for Stop")
+        let tail = segmenter.finish()
+        assertEqual(tail.map(\.count), [800], "qualified speech must retain its short final continuation")
+        let audio = ContinuousAudioCapture()
+        let transcriber = ContinuousTranscriber(["long phrase", "final word"])
+        let inserter = RetainedInserter()
+        let controller = DictationController(
+            targetProvider: FakeTargetProvider(log: EventLog()), audioCapture: audio,
+            transcriber: transcriber, polisher: FakePolisher(log: EventLog()), inserter: inserter
+        )
+        await controller.hotKeyDown(mode: .continuous)
+        await waitForState(.listening, controller: controller, message: "forced-split session must listen")
+        await audio.emit(DictationAudio(samples: first[0]))
+        await audio.setTail(DictationAudio(samples: tail[0]))
+        await controller.hotKeyUp()
+        await waitForState(.succeeded("final word"), controller: controller, message: "Stop must transcribe the short continuation after the duration split")
+        assertEqual(await transcriber.ordinals, [1, 2], "every qualified segment must reach transcription")
+        assertEqual(await inserter.chunks, ["long phrase", " final word"], "duration splitting must preserve the last word")
+    }
+
+    static func testContinuousSpacingAndPolishingFallback() async {
+        let audio = ContinuousAudioCapture()
+        let transcriber = ContinuousTranscriber(["Hello.", "Next", ", please", "你好", "世界", "Again"])
+        let inserter = RetainedInserter()
+        let controller = DictationController(
+            targetProvider: FakeTargetProvider(log: EventLog()), audioCapture: audio,
+            transcriber: transcriber, polisher: FakePolisher(log: EventLog(), behavior: .fail),
+            inserter: inserter
+        )
+        await controller.hotKeyDown(mode: .continuous)
+        await waitForState(.listening, controller: controller, message: "spacing session should listen")
+        for ordinal in 1...6 {
+            await audio.emit(ordinal)
+            await waitForCondition("spacing chunk should insert before next input") { await inserter.chunks.count == ordinal }
+            assertEqual(await controller.state, .listening, "best-effort polish failure must keep the microphone live")
+        }
+        await controller.hotKeyUp()
+        await waitForState(.succeeded("Again"), controller: controller, message: "spacing session should finish")
+        assertEqual(await inserter.chunks, ["Hello.", " Next", ", please", "你好", "世界", "Again"], "punctuation and CJK boundaries must not gain an unwanted space")
+        assertEqual(await inserter.releases, ["focused-field"], "spacing session should release its destination")
+    }
+
+    static func testContinuousCancellationAndCrossModeRestart() async {
+        for initialMode in [DictationCaptureMode.continuous, .singleUtterance] {
+            let audio = ContinuousAudioCapture()
+            let transcriber = ContinuousTranscriber(["obsolete", "replacement"], gateFirst: true)
+            let inserter = RetainedInserter()
+            let controller = DictationController(
+                targetProvider: FakeTargetProvider(log: EventLog()), audioCapture: audio,
+                transcriber: transcriber, polisher: FakePolisher(log: EventLog()), inserter: inserter
+            )
+            await controller.hotKeyDown(mode: initialMode)
+            await waitForState(.listening, controller: controller, message: "old cross-mode session should listen")
+            if initialMode == .continuous { await audio.emit(1) } else { await controller.hotKeyUp() }
+            await waitForCondition("old cross-mode inference should block") { await transcriber.isWaiting() }
+            await controller.cancel()
+            let replacementMode: DictationCaptureMode = initialMode == .continuous ? .singleUtterance : .continuous
+            await controller.hotKeyDown(mode: replacementMode)
+            await waitForState(.listening, controller: controller, message: "replacement capture must start while old inference unwinds")
+            assertEqual(await audio.starts, 2, "cross-mode replacement must begin capture before blocked inference exits")
+            if replacementMode == .continuous { await audio.emit(2) }
+            await controller.hotKeyUp()
+            await waitForCondition("old inference cleanup should run before replacement inference") { await transcriber.cancellations == 1 }
+            assertEqual(await transcriber.ordinals.count, 1, "replacement inference must wait for old cleanup")
+            await transcriber.releaseFirst()
+            await waitForState(.succeeded("replacement"), controller: controller, message: "replacement should insert after old cleanup exits")
+            assertEqual(await inserter.chunks, ["replacement"], "cancellation must discard stale inference without affecting replacement")
+            assertEqual(await transcriber.maximumActive, 1, "cross-mode restarts must not overlap inference")
+            assertEqual(await audio.cancellations, 1, "obsolete cleanup must not cancel replacement capture")
+            assertEqual(await inserter.releases, ["focused-field"], "the retained target must release once across cross-mode restart")
+        }
+    }
+
+    static func testContinuousOverflowAndFailureTeardown() async {
+        let audio = ContinuousAudioCapture()
+        let transcriber = ContinuousTranscriber(["one", "two", "three", "four", "five"], gateFirst: true)
+        let inserter = RetainedInserter()
+        let controller = DictationController(
+            targetProvider: FakeTargetProvider(log: EventLog()), audioCapture: audio,
+            transcriber: transcriber, polisher: FakePolisher(log: EventLog()), inserter: inserter
+        )
+        await controller.hotKeyDown(mode: .continuous)
+        await waitForState(.listening, controller: controller, message: "overflow session should listen")
+        await audio.emit(1)
+        await waitForCondition("overflow test should block first inference") { await transcriber.isWaiting() }
+        for ordinal in 2...5 { await audio.emit(ordinal) }
+        await waitForState(.error(.captureFailed("Dictation could not keep up. Stop and start again.")), controller: controller, message: "four pending chunks must fail the bounded queue")
+        await waitForCondition("overflow must cancel microphone and release destination") {
+            let cancellations = await audio.cancellations
+            let releases = await inserter.releases
+            return cancellations == 1 && releases == ["focused-field"]
+        }
+        await transcriber.releaseFirst()
+        await waitForCondition("overflow should finish inference cleanup") { await transcriber.cancellations == 1 }
+        assertEqual(await transcriber.ordinals, [1], "overflow must discard pending inference")
+        assertEqual(await inserter.chunks, [], "overflow must discard the obsolete in-flight transcript")
+
+        for failureKind in 0...2 {
+            let failedAudio = ContinuousAudioCapture()
+            let failedInserter = RetainedInserter()
+            if failureKind == 1 { await failedInserter.setFailure() }
+            let failedController = DictationController(
+                targetProvider: FakeTargetProvider(log: EventLog()), audioCapture: failedAudio,
+                transcriber: ContinuousTranscriber([failureKind == 2 ? "  " : "word"]),
+                polisher: FakePolisher(log: EventLog()), inserter: failedInserter
+            )
+            await failedController.hotKeyDown(mode: .continuous)
+            await waitForState(.listening, controller: failedController, message: "failure session should listen")
+            if failureKind == 0 { await failedAudio.fail() } else { await failedAudio.emit(1) }
+            let expected: DictationState
+            switch failureKind {
+            case 0: expected = .error(.captureFailed("Dictation could not keep up. Stop and start again."))
+            case 1: expected = .error(.insertionFailed("Enable the required permission in System Settings."))
+            default: expected = .error(.transcriptionReturnedNoText)
+            }
+            await waitForState(expected, controller: failedController, message: "continuous failure must preserve its specific error")
+            await waitForCondition("continuous failure must tear down capture and release target") {
+                let cancellations = await failedAudio.cancellations
+                let releases = await failedInserter.releases
+                return cancellations == 1 && releases == ["focused-field"]
+            }
+            assertEqual(await failedInserter.chunks, [], "failed continuous chunks must not insert text")
+        }
+    }
+
+    static func testContinuousStartupStopAndCancel() async {
+        let audio = ContinuousAudioCapture()
+        await audio.gateStartup()
+        await audio.setTail(1)
+        let inserter = RetainedInserter()
+        let controller = DictationController(
+            targetProvider: FakeTargetProvider(log: EventLog()), audioCapture: audio,
+            transcriber: ContinuousTranscriber(["startup tail"]),
+            polisher: FakePolisher(log: EventLog()), inserter: inserter
+        )
+        await controller.hotKeyDown(mode: .continuous)
+        await waitForCondition("continuous startup should be gated") { await audio.startupWaiting() }
+        await controller.hotKeyUp()
+        await controller.hotKeyUp()
+        assertEqual(await controller.state, .requestingPermission, "startup Stop must latch until capture begins")
+        await audio.releaseStartup()
+        await waitForState(.succeeded("startup tail"), controller: controller, message: "startup Stop should flush the final phrase")
+        assertEqual(await audio.stops, 1, "startup Stop must flush once")
+        assertEqual(await inserter.chunks, ["startup tail"], "startup Stop must insert its tail once")
+        assertEqual(await inserter.releases, ["focused-field"], "startup Stop must release the destination")
+
+        let cancelledAudio = ContinuousAudioCapture()
+        await cancelledAudio.gateStartup()
+        let cancelledInserter = RetainedInserter()
+        let cancelledController = DictationController(
+            targetProvider: FakeTargetProvider(log: EventLog()), audioCapture: cancelledAudio,
+            transcriber: ContinuousTranscriber(["obsolete", "new"]),
+            polisher: FakePolisher(log: EventLog()), inserter: cancelledInserter
+        )
+        await cancelledController.hotKeyDown(mode: .continuous)
+        await waitForCondition("cancelled continuous startup should be gated") { await cancelledAudio.startupWaiting() }
+        await cancelledController.hotKeyUp()
+        await cancelledController.cancel()
+        await cancelledController.hotKeyDown(mode: .continuous)
+        assertEqual(await cancelledAudio.starts, 1, "replacement must wait for cancelled startup to unwind")
+        await cancelledAudio.releaseStartup()
+        await waitForState(.listening, controller: cancelledController, message: "replacement should start after cancelled startup teardown")
+        await cancelledAudio.emit(2)
+        await cancelledController.hotKeyUp()
+        await waitForState(.succeeded("new"), controller: cancelledController, message: "old startup latch must not stop replacement capture")
+        assertEqual(await cancelledAudio.cancellations, 1, "late startup cleanup must finish before replacement capture")
+        assertEqual(await cancelledAudio.stops, 1, "cancelled startup must not flush as a completed phrase")
+        assertEqual(await cancelledInserter.chunks, ["new"], "cancelled startup must not insert obsolete tail")
+        assertEqual(await cancelledInserter.releases, ["focused-field", "focused-field"], "cancel and replacement drain must each release one target")
+
+        let lateTarget = GatedTargetProvider()
+        let lateInserter = RetainedInserter()
+        let lateAudio = ContinuousAudioCapture()
+        let lateController = DictationController(
+            targetProvider: lateTarget, audioCapture: lateAudio,
+            transcriber: ContinuousTranscriber(["unused"]),
+            polisher: FakePolisher(log: EventLog()), inserter: lateInserter
+        )
+        await lateController.hotKeyDown(mode: .continuous)
+        await waitForCondition("target capture should be gated before cancellation") { await lateTarget.isWaiting() }
+        await lateController.cancel()
+        await lateTarget.release()
+        await waitForCondition("late cancelled target must be released") { await lateInserter.releases == ["focused-before-hud"] }
+        assertEqual(await lateAudio.starts, 0, "cancel during target capture must prevent microphone startup")
+        assertEqual(await lateController.state, .idle, "late target must not revive cancelled state")
+    }
+
+    static func testContinuousSessionLimit() async {
+        let audio = ContinuousAudioCapture()
+        await audio.setTail(1)
+        let inserter = RetainedInserter()
+        let controller = DictationController(
+            targetProvider: FakeTargetProvider(log: EventLog()), audioCapture: audio,
+            transcriber: ContinuousTranscriber(["limit tail"]),
+            polisher: FakePolisher(log: EventLog()), inserter: inserter,
+            maximumCaptureDuration: .milliseconds(1),
+            maximumContinuousSessionDuration: .milliseconds(80)
+        )
+        await controller.hotKeyDown(mode: .continuous)
+        await waitForState(.listening, controller: controller, message: "continuous watchdog session should listen")
+        try? await Task.sleep(for: .milliseconds(10))
+        assertEqual(await controller.state, .listening, "continuous sessions must not use the shorter batch watchdog")
+        await waitForState(.succeeded("limit tail"), controller: controller, message: "continuous session limit must flush and drain final speech")
+        assertEqual(await audio.stops, 1, "continuous session limit must flush capture once")
+        assertEqual(await audio.cancellations, 0, "continuous session limit must finish accepted speech")
+        assertEqual(await inserter.chunks, ["limit tail"], "continuous session limit must preserve the final phrase")
+        assertEqual(await inserter.releases, ["focused-field"], "continuous session limit must release its destination")
+    }
+
+    static func testVoicePauseResumeAndFinish() async {
+        let target = FakeTargetProvider(log: EventLog())
+        let audio = ContinuousAudioCapture()
+        let transcriber = ContinuousTranscriber(["pause tail", "resumed phrase"], gateFirst: true)
+        let inserter = RetainedInserter()
+        let controller = DictationController(
+            targetProvider: target, audioCapture: audio, transcriber: transcriber,
+            polisher: FakePolisher(log: EventLog()), inserter: inserter
+        )
+        await controller.hotKeyDown(mode: .continuous)
+        await waitForState(.listening, controller: controller, message: "voice mode should listen")
+        await audio.setTail(1)
+        await controller.pauseVoiceMode()
+        await controller.resumeVoiceMode()
+        await waitForCondition("pause tail should reach blocked inference") { await transcriber.isWaiting() }
+        assertEqual(await controller.state, .pausing, "pause must wait for accepted text before offering resume")
+        assertEqual(await audio.stops, 1, "pause must stop the microphone exactly once")
+        assertEqual(await audio.starts, 1, "resume must wait for the pause drain")
+        assertEqual(await inserter.releases, [], "pause must retain its original field")
+        await transcriber.releaseFirst()
+        await waitForState(.paused, controller: controller, message: "pause should drain into a retained session")
+        assertEqual(await inserter.chunks, ["pause tail"], "pause must insert the final spoken phrase")
+        await controller.resumeVoiceMode()
+        await waitForState(.listening, controller: controller, message: "resume should restart the microphone")
+        assertEqual(await target.captures, 1, "fixed target resume must keep the original capture")
+        await audio.setTail(2)
+        await controller.pauseVoiceMode()
+        await waitForState(.paused, controller: controller, message: "second pause should preserve resumed text")
+        assertEqual(await inserter.chunks, ["pause tail", " resumed phrase"], "resume must preserve separators in its original field")
+        await controller.finishVoiceMode()
+        await waitForState(.succeeded("resumed phrase"), controller: controller, message: "finish while paused must complete the retained session")
+        assertEqual(await audio.starts, 2, "finish while paused must not restart the microphone")
+        assertEqual(await audio.stops, 2, "finish while paused must not flush capture again")
+        assertEqual(await inserter.releases, ["focused-field"], "finish while paused must release the retained field")
+    }
+
+    static func testVoiceStartupIntents() async {
+        for finish in [false, true] {
+            let audio = ContinuousAudioCapture()
+            await audio.gateStartup()
+            await audio.setTail(1)
+            let inserter = RetainedInserter()
+            let controller = DictationController(
+                targetProvider: FakeTargetProvider(log: EventLog()), audioCapture: audio,
+                transcriber: ContinuousTranscriber(["startup phrase"]),
+                polisher: FakePolisher(log: EventLog()), inserter: inserter
+            )
+            await controller.hotKeyDown(mode: .continuous)
+            await waitForCondition("voice startup must be gated") { await audio.startupWaiting() }
+            await controller.pauseVoiceMode()
+            if finish { await controller.finishVoiceMode() }
+            await audio.releaseStartup()
+            await waitForState(finish ? .succeeded("startup phrase") : .paused, controller: controller, message: "startup must honor its latest stop intent")
+            assertEqual(await inserter.chunks, ["startup phrase"], "startup intent must preserve accepted tail")
+            assertEqual(await audio.stops, 1, "startup pause or finish must flush only once")
+            if !finish {
+                await audio.gateStartup()
+                await controller.resumeVoiceMode()
+                await waitForCondition("resume startup should be gated") { await audio.startupWaiting() }
+                await controller.pauseVoiceMode()
+                await controller.cancel()
+                await audio.releaseStartup()
+                await waitForCondition("cancelled resume must release its target") { await inserter.releases == ["focused-field"] }
+                assertEqual(await controller.state, .idle, "cancel must discard a pending startup pause")
+            }
+        }
+    }
+
+    static func testFollowFocusCapturesBeforeInferenceAndSpacesPerField() async {
+        let target = FollowingTargetProvider(["editor#1", "editor#2", "chat#1"])
+        let audio = ContinuousAudioCapture()
+        let transcriber = ContinuousTranscriber(["First phrase.", "Second phrase.", "New field."], gateFirst: true)
+        let inserter = RetainedInserter()
+        let controller = DictationController(
+            targetProvider: target, audioCapture: audio, transcriber: transcriber,
+            polisher: FakePolisher(log: EventLog()), inserter: inserter
+        )
+        await controller.hotKeyDown(mode: .continuous, targetPolicy: .followFocus)
+        await waitForState(.listening, controller: controller, message: "follow focus should listen")
+        await audio.emit(1)
+        await waitForCondition("follow focus first inference should block") { await transcriber.isWaiting() }
+        await audio.emit(2)
+        await audio.emit(3)
+        await waitForCondition("later phrase destinations must capture before earlier inference returns") { await target.additionalCaptures == 3 }
+        assertEqual(await transcriber.ordinals, [1], "capture must proceed independently of inference")
+        await controller.finishVoiceMode()
+        await transcriber.releaseFirst()
+        await waitForState(.succeeded("New field."), controller: controller, message: "follow focus finish should drain pinned destinations")
+        assertEqual(await inserter.targets, ["editor#1", "editor#2", "chat#1"], "each phrase must use the target captured before its inference")
+        assertEqual(await inserter.chunks, ["First phrase.", " Second phrase.", "New field."], "only consecutive phrases in the same field should gain a separator")
+        assertEqual(await inserter.releases, ["initial-field", "editor#1", "editor#2", "chat#1"], "follow focus must release validation and phrase leases")
+        assertEqual(await target.captures, 1, "follow focus startup must validate only once")
+    }
+
+    static func testFollowFocusCancellationReleasesAllTargets() async {
+        let target = FollowingTargetProvider(["editor#1", "chat#1"])
+        let audio = ContinuousAudioCapture()
+        let transcriber = ContinuousTranscriber(["obsolete", "queued"], gateFirst: true)
+        let inserter = RetainedInserter()
+        let controller = DictationController(
+            targetProvider: target, audioCapture: audio, transcriber: transcriber,
+            polisher: FakePolisher(log: EventLog()), inserter: inserter
+        )
+        await controller.hotKeyDown(mode: .continuous, targetPolicy: .followFocus)
+        await waitForState(.listening, controller: controller, message: "cancel test should listen")
+        await audio.emit(1)
+        await waitForCondition("cancel test inference must block") { await transcriber.isWaiting() }
+        await audio.emit(2)
+        await waitForCondition("queued target must be captured") { await target.additionalCaptures == 2 }
+        await controller.cancel()
+        await waitForCondition("cancel must release in-flight and queued targets before inference returns") { await inserter.releases.count == 3 }
+        assertEqual(Set(await inserter.releases), Set(["initial-field", "editor#1", "chat#1"]), "cancel must release each captured lease")
+        await transcriber.releaseFirst()
+        await waitForCondition("cancelled inference must unwind") { await transcriber.cancellations == 1 }
+        assertEqual(await inserter.chunks, [], "cancel must suppress obsolete transcripts")
+        assertEqual(await controller.state, .idle, "cancelled target cleanup must not revive voice mode")
+    }
+
+    static func testFollowFocusLateTargetCancellation() async {
+        let target = FollowingTargetProvider(["late-field#1"], gateOrdinal: 1)
+        let audio = ContinuousAudioCapture()
+        let inserter = RetainedInserter()
+        let controller = DictationController(
+            targetProvider: target, audioCapture: audio,
+            transcriber: ContinuousTranscriber(["obsolete"]),
+            polisher: FakePolisher(log: EventLog()), inserter: inserter
+        )
+        await controller.hotKeyDown(mode: .continuous, targetPolicy: .followFocus)
+        await waitForState(.listening, controller: controller, message: "late target test should listen")
+        await audio.emit(1)
+        await waitForCondition("phrase target capture must suspend") { await target.isWaiting() }
+        await controller.cancel()
+        await target.releaseCapture()
+        await waitForCondition("late phrase lease must release after cancellation") { await inserter.releases == ["initial-field", "late-field#1"] }
+        assertEqual(await inserter.chunks, [], "late captured target must not insert obsolete audio")
+        assertEqual(await controller.state, .idle, "late target must leave the cancelled state idle")
+    }
+
+    static func testFollowFocusRecoveryKeepsListening() async {
+        let target = FollowingTargetProvider([nil, "moved-field#1", "editor#1"])
+        let audio = ContinuousAudioCapture()
+        let inserter = RetainedInserter()
+        await inserter.rejectTarget("moved-field#1")
+        let recovery = RecoveryRecorder()
+        let controller = DictationController(
+            targetProvider: target, audioCapture: audio,
+            transcriber: ContinuousTranscriber(["No field.", "Focus changed.", "Inserted next."]),
+            polisher: FakePolisher(log: EventLog()), inserter: inserter,
+            recoveryObserver: { text, _ in recovery.record(text) }
+        )
+        await controller.hotKeyDown(mode: .continuous, targetPolicy: .followFocus)
+        await waitForState(.listening, controller: controller, message: "recovery test should listen")
+        await audio.emit(1)
+        await waitForCondition("missing destination must retain transcript") { recovery.snapshot() == "No field." }
+        assertEqual(await controller.state, .listening, "missing field must keep voice mode available")
+        await audio.emit(2)
+        await waitForCondition("focus failure must append recoverable text in order") { recovery.snapshot() == "No field. Focus changed." }
+        assertEqual(await controller.state, .listening, "insertion failure must keep microphone listening")
+        await audio.emit(3)
+        await waitForCondition("next focused phrase should insert") { await inserter.chunks == ["Inserted next."] }
+        await controller.finishVoiceMode()
+        await waitForState(.succeeded("Inserted next."), controller: controller, message: "recovery session must finish normally")
+        assertEqual(recovery.snapshot(), "No field. Focus changed.", "successful future phrases must not discard saved text")
+        assertEqual(await inserter.releases, ["initial-field", "moved-field#1", "editor#1"], "failed and successful phrase targets must both release")
+        await controller.clearRecoveryText()
+        assertEqual(recovery.snapshot(), "", "discard must clear the recoverable transcript")
+    }
+
+    static func testSecurePhraseStopsBeforeInference() async {
+        let target = FollowingTargetProvider([nil, "tail-field#1"], failures: [1: .secureTextTarget])
+        let audio = ContinuousAudioCapture()
+        let transcriber = ContinuousTranscriber(["Sensitive phrase.", "Sensitive tail."])
+        let inserter = RetainedInserter()
+        let recovery = RecoveryRecorder()
+        let controller = DictationController(
+            targetProvider: target, audioCapture: audio, transcriber: transcriber,
+            polisher: FakePolisher(log: EventLog()), inserter: inserter,
+            recoveryObserver: { text, _ in recovery.record(text) }
+        )
+        await controller.hotKeyDown(mode: .continuous, targetPolicy: .followFocus)
+        await waitForState(.listening, controller: controller, message: "secure phrase session should listen")
+        await audio.setTail(2)
+        await audio.emit(1)
+        await waitForState(.error(.secureTextTarget), controller: controller, message: "secure phrase must stop voice mode with a typed refusal")
+        assertEqual(await transcriber.ordinals, [], "secure phrase and stop tail must never reach inference")
+        assertEqual(recovery.snapshot(), "", "secure audio must not become saved text")
+        assertEqual(await controller.recoveryText, "", "secure audio must not enter controller recovery")
+        assertEqual(await audio.stops, 1, "secure refusal must stop microphone capture once")
+        assertEqual(await audio.cancellations, 0, "secure refusal should finish its capture cleanly")
+        assertEqual(await target.additionalCaptures, 1, "secure refusal must discard the stop tail before target capture")
+        assertEqual(await inserter.chunks, [], "secure refusal must not insert text")
+        assertEqual(await controller.isVoiceModeActive, false, "secure refusal must close voice mode")
+    }
+
+    static func testSecurePhraseDrainsAcceptedSafeJobs() async {
+        let target = FollowingTargetProvider(
+            [nil, "editor#1", nil, "tail-field#1"], failures: [3: .secureTextTarget]
+        )
+        let audio = ContinuousAudioCapture()
+        let transcriber = ContinuousTranscriber(
+            ["Safe recovery.", "Safe insertion.", "Sensitive phrase.", "Sensitive tail."], gateFirst: true
+        )
+        let inserter = RetainedInserter()
+        let controller = DictationController(
+            targetProvider: target, audioCapture: audio, transcriber: transcriber,
+            polisher: FakePolisher(log: EventLog()), inserter: inserter
+        )
+        await controller.hotKeyDown(mode: .continuous, targetPolicy: .followFocus)
+        await waitForState(.listening, controller: controller, message: "secure drain session should listen")
+        await audio.emit(1)
+        await waitForCondition("safe inference should remain in flight") { await transcriber.isWaiting() }
+        await audio.emit(2)
+        await waitForCondition("second safe phrase must be accepted before secure refusal") { await target.additionalCaptures == 2 }
+        await audio.setTail(4)
+        await audio.emit(3)
+        await waitForCondition("secure refusal must stop capture while safe inference is blocked") { await audio.stops == 1 }
+        assertEqual(await controller.recoveryText, "", "secure refusal must leave saved text unchanged before safe jobs drain")
+        assertEqual(await transcriber.ordinals, [1], "secure refusal must preserve only the in-flight safe inference")
+        await transcriber.releaseFirst()
+        await waitForState(.error(.secureTextTarget), controller: controller, message: "secure refusal must remain visible after safe jobs drain")
+        assertEqual(await transcriber.ordinals, [1, 2], "only accepted safe phrases may reach inference")
+        assertEqual(await controller.recoveryText, "Safe recovery.", "only the accepted unavailable-field phrase may enter recovery")
+        assertEqual(await inserter.chunks, ["Safe insertion."], "accepted safe insertion must finish exactly once")
+        assertEqual(await inserter.targets, ["editor#1"], "safe jobs must retain their original target")
+        assertEqual(await inserter.releases, ["initial-field", "editor#1"], "secure stop must release accepted safe leases")
+        assertEqual(await target.additionalCaptures, 3, "secure stop tail must not capture a new target")
+        assertEqual(await audio.stops, 1, "safe drain must not stop capture twice")
+        assertEqual(await audio.cancellations, 0, "secure stop must preserve accepted safe work")
+    }
+
+    static func testRecoveryBudgetFinishesAndDrains() async {
+        let target = FollowingTargetProvider([nil, nil])
+        let audio = ContinuousAudioCapture()
+        let inserter = RetainedInserter()
+        let controller = DictationController(
+            targetProvider: target, audioCapture: audio,
+            transcriber: ContinuousTranscriber(["Saved phrase", "Accepted tail"]),
+            polisher: FakePolisher(log: EventLog()), inserter: inserter,
+            maximumRecoveryTextBytes: 8
+        )
+        await controller.hotKeyDown(mode: .continuous, targetPolicy: .followFocus)
+        await waitForState(.listening, controller: controller, message: "recovery budget session should listen")
+        await audio.setTail(2)
+        await audio.emit(1)
+        await waitForState(.succeeded("Accepted tail"), controller: controller, message: "full saved text must finish and drain the accepted tail")
+        assertEqual(await controller.recoveryText, "Saved phrase Accepted tail", "budget stop must preserve already accepted phrases without truncating")
+        assertEqual(await controller.recoveryMessage, "Voice mode finished because saved text is full. Copy or discard the saved text before continuing.", "budget stop must explain why listening ended")
+        assertEqual(await audio.stops, 1, "recovery budget must stop the microphone once")
+    }
+
 }

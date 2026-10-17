@@ -15,12 +15,8 @@ swiftc \
   Gojo/Dictation/DictationSessionStateMachine.swift \
   Gojo/Dictation/DictationModifierShortcutStateMachine.swift \
   Gojo/Dictation/DictationController.swift \
+  Gojo/Dictation/DictationUtteranceSegmenter.swift \
   Gojo/Dictation/AVAudioEngineCaptureService.swift \
   tests/dictation_regression.swift \
   -o "$binary_path"
 "$binary_path"
-
-notch_activity_source="Gojo/Dictation/DictationNotchActivity.swift"
-notch_alert_source="Gojo/components/Notch/NotchAlert.swift"
-grep -Fq "recordControl" "$notch_activity_source"
-grep -Fq 'case .error: return "exclamationmark.triangle.fill"' "$notch_alert_source"

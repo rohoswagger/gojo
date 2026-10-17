@@ -25,8 +25,6 @@ struct ContentView: View {
     @ObservedObject var brightnessManager = BrightnessManager.shared
     @ObservedObject var volumeManager = VolumeManager.shared
     @ObservedObject var licenseManager = LicenseManager.shared
-    @ObservedObject private var dictation = GojoDictationService.shared
-    @StateObject private var dictationActivity = DictationNotchActivityModel()
     @State private var hoverTask: Task<Void, Never>?
     @State private var isHovering: Bool = false
     @State private var anyDropDebounceTask: Task<Void, Never>?
@@ -65,13 +63,7 @@ struct ContentView: View {
     private var computedChinWidth: CGFloat {
         var chinWidth: CGFloat = vm.closedNotchSize.width
 
-        if shouldShowNotchAlert {
-            chinWidth = NotchAlertView.totalWidth(closedNotchWidth: vm.closedNotchSize.width)
-        } else if shouldShowDictationActivity {
-            chinWidth += 2 * DictationNotchActivity.sideWidth(
-                for: vm.effectiveClosedNotchHeight
-            )
-        } else if coordinator.expandingView.type == .battery && coordinator.expandingView.show
+        if coordinator.expandingView.type == .battery && coordinator.expandingView.show
             && vm.notchState == .closed && Defaults[.showPowerStatusNotifications]
         {
             chinWidth = 640
@@ -88,47 +80,6 @@ struct ContentView: View {
         }
 
         return chinWidth
-    }
-
-    private var isDictationSessionDisplay: Bool {
-        if Defaults[.showOnAllDisplays],
-           let sessionDisplayID = dictation.sessionDisplayID,
-           let screen = vm.screenUUID.flatMap({ NSScreen.screen(withUUID: $0) }),
-           let screenNumber = screen.deviceDescription[
-               NSDeviceDescriptionKey("NSScreenNumber")
-           ] as? NSNumber {
-            return CGDirectDisplayID(screenNumber.uint32Value) == sessionDisplayID
-        }
-        guard let screenUUID = vm.screenUUID, !coordinator.selectedScreenUUID.isEmpty else {
-            return true
-        }
-        return screenUUID == coordinator.selectedScreenUUID
-    }
-
-    private var shouldShowNotchAlert: Bool {
-        guard let alert = coordinator.notchAlert, vm.notchState == .closed else { return false }
-        return isAlertTargetDisplay(alert)
-    }
-
-    private func isAlertTargetDisplay(_ alert: NotchAlert) -> Bool {
-        if Defaults[.showOnAllDisplays],
-           let targetDisplayID = alert.targetDisplayID,
-           let screen = vm.screenUUID.flatMap({ NSScreen.screen(withUUID: $0) }),
-           let screenNumber = screen.deviceDescription[
-               NSDeviceDescriptionKey("NSScreenNumber")
-           ] as? NSNumber {
-            return CGDirectDisplayID(screenNumber.uint32Value) == targetDisplayID
-        }
-        guard let screenUUID = vm.screenUUID, !coordinator.selectedScreenUUID.isEmpty else {
-            return true
-        }
-        return screenUUID == coordinator.selectedScreenUUID
-    }
-
-    private var shouldShowDictationActivity: Bool {
-        dictationActivity.phase != nil
-            && vm.notchState == .closed
-            && isDictationSessionDisplay
     }
 
     var body: some View {
@@ -177,28 +128,17 @@ struct ContentView: View {
                         return view
                             .animation(vm.notchState == .open ? openAnimation : closeAnimation, value: vm.notchState)
                             .animation(.smooth, value: gestureProgress)
-                            .animation(
-                                .timingCurve(0.22, 1, 0.36, 1, duration: 0.18),
-                                value: dictationActivity.phase
-                            )
-                            .animation(
-                                .spring(response: 0.34, dampingFraction: 0.86, blendDuration: 0),
-                                value: coordinator.notchAlert
-                            )
                     }
                     .contentShape(Rectangle())
                     .onHover { hovering in
-                        guard !shouldShowDictationActivity else { return }
                         handleHover(hovering)
                     }
                     .onTapGesture {
-                        guard !shouldShowDictationActivity else { return }
                         doOpen()
                     }
                     .conditionalModifier(Defaults[.enableGestures]) { view in
                         view
                             .panGesture(direction: .down) { translation, phase in
-                                guard !shouldShowDictationActivity else { return }
                                 handleDownGesture(translation: translation, phase: phase)
                             }
                     }
@@ -270,12 +210,6 @@ struct ContentView: View {
         .background(dragDetector)
         .preferredColorScheme(.dark)
         .environmentObject(vm)
-        .onAppear {
-            dictationActivity.update(state: dictation.state)
-        }
-        .onChange(of: dictation.state) { _, state in
-            dictationActivity.update(state: state)
-        }
         .onChange(of: clipboardState.keepsNotchOpenOnHoverExit) { _, shouldKeepOpen in
             guard !shouldKeepOpen,
                   !isHovering,
@@ -329,27 +263,7 @@ struct ContentView: View {
                     .padding(.top, 40)
                     Spacer()
                 } else {
-                    if shouldShowNotchAlert, let alert = coordinator.notchAlert {
-                        NotchAlertView(
-                            alert: alert,
-                            closedNotchWidth: vm.closedNotchSize.width,
-                            notchHeight: vm.effectiveClosedNotchHeight
-                        )
-                        .transition(
-                            .asymmetric(
-                                insertion: .opacity.animation(.easeOut(duration: 0.22).delay(0.06)),
-                                removal: .opacity.animation(.easeIn(duration: 0.12))
-                            )
-                        )
-                    } else if shouldShowDictationActivity, let phase = dictationActivity.phase {
-                        DictationNotchActivity(
-                            phase: phase,
-                            audioLevel: Double(dictation.audioLevel),
-                            closedNotchWidth: vm.closedNotchSize.width,
-                            height: vm.effectiveClosedNotchHeight
-                        )
-                        .transition(.opacity)
-                    } else if coordinator.expandingView.type == .battery && coordinator.expandingView.show
+                    if coordinator.expandingView.type == .battery && coordinator.expandingView.show
                         && vm.notchState == .closed && Defaults[.showPowerStatusNotifications]
                     {
                         HStack(spacing: 0) {

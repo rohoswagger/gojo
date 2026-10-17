@@ -1,0 +1,17 @@
+{
+  "surface": "T3 in-app browser",
+  "before": [
+    {"view":"Windows","imageHeight":224.4921875,"heroHeight":1010.2109375},
+    {"view":"Clipboard","imageHeight":201.5390625,"heroHeight":987.2578125},
+    {"view":"Files","imageHeight":214.421875,"heroHeight":1000.140625},
+    {"view":"Music","imageHeight":212.78125,"heroHeight":998.5}
+  ],
+  "after": [
+    {"view":"Windows","imageHeight":229.02505493164062,"heroHeight":943.6746826171875,"galleryTop":943.6746826171875},
+    {"view":"Clipboard","imageHeight":229.02505493164062,"heroHeight":943.6746826171875,"galleryTop":943.6746826171875},
+    {"view":"Files","imageHeight":229.02505493164062,"heroHeight":943.6746826171875,"galleryTop":943.6746826171875},
+    {"view":"Music","imageHeight":229.02505493164062,"heroHeight":943.6746826171875,"galleryTop":943.6746826171875}
+  ],
+  "captionRemoved": true,
+  "selectorButtonRadius": "999px"
+}

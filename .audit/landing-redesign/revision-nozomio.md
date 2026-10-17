@@ -1,0 +1,7 @@
+# Nozomio revision
+
+The user rejected the prior composition. The replacement will use a consistent near-black canvas, quieter type, restrained monochrome controls, and a custom ASCII Gojo wordmark as the authored moment. Real screenshots will float directly on tonal dark fields. Remove the wallpaper, tinted feature cards, orange headline emphasis, repeated section inversions and large boxed dictation block. Preserve trial-first ordering, existing links, six genuine product screenshots, pricing interactions and analytics contracts. Verify the actual T3 render before claiming aesthetic completion.
+
+References inspected. Nozomio at https://www.nozomio.com/ has animated ASCII lettering, a dark canvas, sparse labels, and centered quiet copy. The user-supplied domain is parked. Swaggin does not have Nozomio. Real Swaggin screenshots viewed include Cognition desktop fold, Astral dark desktop fold, Anthropic editorial section, Luma photographic hero, and Heyclicky product composition. Use Nozomio for restraint and authored lettering; use the product-first references for screenshot scale, not their decorative motifs.
+
+Implementation shape. Retain the server-rendered page and one screenshot selector. ASCII wordmark is static semantic decoration with a finite one-shot reveal that respects reduced motion. No animation timer, dependency, or generated raster image. Scoped CSS owns the homepage so other routes retain their visual world.

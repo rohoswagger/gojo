@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -72,41 +73,56 @@ export default async function BlogPostPage({ params }: Params) {
   const { hero } = post;
 
   return (
-    <div className="article-shell">
+    <div
+      className="marketing-shell article-shell blog-article-shell"
+      data-gojo-editorial="warm"
+    >
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(post.jsonLd) }}
       />
 
-      <div className="article-top">
-        <GojoHeader />
+      <GojoHeader />
 
-        <section className="article-hero">
-          <div className="wrap">
-            <nav className="breadcrumb" aria-label="Breadcrumb">
-              {hero.breadcrumb.map((crumb, i) => (
-                <span key={crumb.href} className="contents">
-                  {i > 0 ? <span aria-hidden="true">/</span> : null}
-                  <Link href={crumb.href}>{crumb.label}</Link>
-                </span>
-              ))}
-            </nav>
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="article-main blog-article-main"
+      >
+        <div className="article-top">
+          <section className="article-hero">
+            <div className="wrap">
+              <nav className="breadcrumb" aria-label="Breadcrumb">
+                {hero.breadcrumb.map((crumb, i) => (
+                  <span key={crumb.href} className="contents">
+                    {i > 0 ? <span aria-hidden="true">/</span> : null}
+                    <Link href={crumb.href}>{crumb.label}</Link>
+                  </span>
+                ))}
+              </nav>
 
-            {hero.label ? <p className="article-label">{hero.label}</p> : null}
-            <h1>{hero.title}</h1>
-            {hero.summary ? <p className="article-summary">{hero.summary}</p> : null}
+              {hero.label ? <p className="article-label">{hero.label}</p> : null}
+              <h1>{hero.title}</h1>
+              {hero.summary ? <p className="article-summary">{hero.summary}</p> : null}
 
-            <div className="article-meta">
-              {hero.meta.map((item) => (
-                <span key={item}>{item}</span>
-              ))}
-              <Link href="/blog/">All posts</Link>
+              <div className="article-meta">
+                {hero.meta.map((item) => (
+                  <span key={item}>{item}</span>
+                ))}
+                <Link href="/blog/">All posts</Link>
+              </div>
+              <figure className="article-product-figure">
+                <Image
+                  src="/screenshots/windows.png"
+                  width={1322}
+                  height={418}
+                  alt="Gojo window controls with app choices, snap layouts and keyboard shortcuts in the notch."
+                />
+              </figure>
             </div>
-          </div>
-        </section>
-      </div>
+          </section>
+        </div>
 
-      <main className="article-main">
         <article className="article-body article-reader">
           <ArticleBlocks blocks={post.blocks} />
         </article>

@@ -2,16 +2,8 @@ import { no, text, unknown, yes } from "@/components/comparison-table"
 import type { Cell, ComparisonRow } from "@/components/comparison-table"
 import type { Alternative } from "./alternatives"
 
-/**
- * What each developer publishes on their own product page, checked against
- * those pages directly. Anything they do not state is omitted here and renders
- * as "Not published" — never as a silent "no".
- *
- * This is the only file in the repo that makes a claim about a third-party
- * product, so it stays small and auditable. When re-checking, update
- * `updated` in content/alternatives.json at the same time.
- */
 type Published = {
+  checkedNote?: string
   notch?: Cell
   price?: Cell
   trial?: Cell
@@ -47,7 +39,7 @@ const PUBLISHED: Record<string, Published> = {
     openSource: yes(),
   },
   rectangle: {
-    notch: no("their words: not a notch workspace"),
+    notch: no("not a notch workspace"),
     price: text("Free and open source"),
     trial: text("10 days on Rectangle Pro"),
     minOs: text("macOS 10.15 or later"),
@@ -60,9 +52,10 @@ const PUBLISHED: Record<string, Published> = {
     openSource: yes("MIT"),
   },
   raycast: {
+    checkedNote: "Pro pricing and trial rechecked against the official billing manual on 2026-10-16.",
     notch: no("not built around a notch interaction"),
-    price: text("Free; Pro from $8/month"),
-    trial: text("14 days on Pro"),
+    price: text("Free; Pro from $8/month billed annually"),
+    trial: text("7 days on Pro"),
   },
   bettertouchtool: {
     // Their page lists a notch drop zone, so this is not a flat "no".
@@ -70,16 +63,17 @@ const PUBLISHED: Record<string, Published> = {
     trial: text("45 days"),
   },
   alttab: {
-    notch: no("their words: not a notch workspace"),
-    price: text("Free and open source"),
+    checkedNote: "Core/Pro pricing and the Pro trial rechecked against the official FAQ on 2026-10-16.",
+    notch: no("not a notch workspace"),
+    price: text("Free core; Pro from $9.99 one-time"),
     trial: text("14 days on Pro features"),
     openSource: yes(),
   },
   flux: {
-    notch: no("their words: not a notch workspace"),
+    notch: no("not a notch workspace"),
   },
   "karabiner-elements": {
-    notch: no("their words: not a notch utility"),
+    notch: no("not a notch utility"),
     price: text("Free"),
     openSource: yes(),
   },
@@ -134,7 +128,9 @@ export function comparisonRows(alternative: Alternative): ComparisonRow[] {
 }
 
 export function comparisonFootnote(alternative: Alternative, updated: string) {
-  return `The ${alternative.name} column is taken from its developer’s own product page, checked ${updated}. “Not published” means the detail was not stated there — not that the feature is missing. Prices and requirements change, so verify before buying.`
+  const checkedNote = PUBLISHED[alternative.slug]?.checkedNote
+  const rechecked = checkedNote ? ` ${checkedNote}` : ""
+  return `The ${alternative.name} column is taken from its developer’s own product page, checked ${updated}. “Not published” means the detail was not stated there — not that the feature is missing. Prices and requirements change, so verify before buying.${rechecked}`
 }
 
 function sentenceCase(s: string) {

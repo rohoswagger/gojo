@@ -2,6 +2,7 @@ import * as React from "react"
 import Link from "next/link"
 
 import type { Block, Inline } from "@/app/blog/lib"
+import { Button } from "@/components/ui/button"
 
 /** Internal routes go through next/link; anything else stays a plain anchor. */
 function Anchor({
@@ -16,8 +17,15 @@ function Anchor({
       </Link>
     )
   }
+  const isDownload = href.startsWith("https://downloads.trygojo.com/") && href.endsWith(".dmg")
   return (
-    <a href={href} rel={href.startsWith("http") ? "noopener" : undefined} {...props}>
+    <a
+      href={href}
+      rel={href.startsWith("http") ? "noopener" : undefined}
+      {...props}
+      data-funnel-event={isDownload ? "download_cta_clicked" : undefined}
+      data-funnel-placement={isDownload ? "blog_article" : undefined}
+    >
       {children}
     </a>
   )
@@ -65,7 +73,7 @@ function AnswerBox({ block }: { block: Extract<Block, { type: "answer" }> }) {
 
 function ComparisonTable({ block }: { block: Extract<Block, { type: "table" }> }) {
   return (
-    <div className="table-scroll">
+    <div className="table-scroll" role="region" aria-label={`Comparison table. ${block.head.join(", ")}`} tabIndex={0}>
       <table className="comparison-table">
         <thead>
           <tr>
@@ -119,15 +127,17 @@ function ArticleCta({ block }: { block: Extract<Block, { type: "cta" }> }) {
       <h2>{block.title}</h2>
       {block.copy ? <p>{block.copy}</p> : null}
       <div className="article-cta-actions">
-        {block.actions.map((action) => (
-          <Anchor
-            key={action.href}
-            href={action.href}
-            className={action.primary ? "btn btn-primary" : "article-cta-link"}
-          >
-            {action.label}
-          </Anchor>
-        ))}
+        {block.actions.map((action) =>
+          action.primary ? (
+            <Button key={action.href} asChild size="lg" className="btn btn-primary">
+              <Anchor href={action.href}>{action.label}</Anchor>
+            </Button>
+          ) : (
+            <Anchor key={action.href} href={action.href} className="article-cta-link">
+              {action.label}
+            </Anchor>
+          )
+        )}
       </div>
       {block.trust ? <p className="article-cta-trust">{block.trust}</p> : null}
     </section>

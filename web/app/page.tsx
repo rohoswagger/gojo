@@ -1,24 +1,16 @@
 import type { Metadata } from "next"
 import Image from "next/image"
-
-import { ClipboardList, FolderOpen, LayoutGrid, Mic, Music, Sunset } from "lucide-react";
-import { AutoplayVideo } from "@/components/autoplay-video"
+import Link from "next/link"
+import { ArrowRight, Download, Mic, LockKeyhole, CalendarDays, BatteryCharging, Camera, Command } from "lucide-react"
 import { GojoFooter } from "@/components/gojo-footer"
 import { GojoHeader } from "@/components/gojo-header"
-import { GojoLogo } from "@/components/gojo-logo"
-import { NightShiftComparison } from "@/components/night-shift-comparison"
-import {
-  PricingTabsProvider,
-  PricingTabList,
-  PricingPanels,
-  PricingPanel,
-} from "@/components/pricing-tabs"
+import { ProductPreview } from "@/components/product-preview"
+import { PricingTabsProvider, PricingTabList, PricingPanels, PricingPanel } from "@/components/pricing-tabs"
+import styles from "./home.module.css"
+import { coastalDisplay } from "@/lib/coastal-font"
+import { Button } from "@/components/ui/button"
+import { GOJO_RELEASE } from "@/lib/release"
 
-// ---------------------------------------------------------------------------
-// Metadata + JSON-LD, reproduced verbatim from the old docs/index.html head.
-// The one deliberate change is `softwareVersion`: the source has a stale
-// "1.0.0"; the app now ships 1.4.0, so the JSON-LD reflects that.
-// ---------------------------------------------------------------------------
 
 export const metadata: Metadata = {
   title: "Gojo - Your Mac, one hover away",
@@ -60,7 +52,7 @@ const jsonLd = {
   description:
     "Gojo is a MacBook productivity hub for private on-device dictation, window management, clipboard history, file staging, media, and system controls.",
   url: "https://trygojo.com/",
-  softwareVersion: "1.4.0",
+  softwareVersion: GOJO_RELEASE.version,
   featureList: [
     "Private on-device voice dictation",
     "Window snapping and management",
@@ -110,356 +102,67 @@ const pricingTabs = [
   { id: "pricing-tab-multi", controls: "pricing-panel-multi", name: "Multi-Mac", device: "3 Macs" },
 ]
 
+const smallTools = [
+  { slug: "calendar", title: "Calendar", icon: CalendarDays },
+  { slug: "battery-status", title: "Battery status", icon: BatteryCharging },
+  { slug: "camera-mirror", title: "Camera mirror", icon: Camera },
+  { slug: "shortcuts", title: "Shortcuts", icon: Command },
+]
+
+const faqs = [
+  { question: "What happens after the three-day trial?", answer: "Choose a monthly or lifetime license to keep using Gojo. The trial needs no card or account, so there is no trial subscription to cancel." },
+  { question: "Will Gojo work on my Mac?", answer: "Gojo requires macOS 14 or later. It is designed around the MacBook notch. Download the full trial to check the fit with your own setup before buying." },
+  { question: "Does dictation send my voice to the cloud?", answer: "Local dictation runs on your Mac and works offline after a model download. Optional cloud transcription sends audio to your chosen provider when you enable it." },
+  { question: "Which permissions does Gojo need?", answer: "Window management and media key controls use Accessibility access. Dictation asks for microphone access when you use it. You can choose the tools you enable." },
+  { question: "What does a lifetime license include?", answer: "The full app and future updates. Personal covers one Mac. Multi-Mac covers up to three Macs. After checkout, use your license key to activate Gojo." },
+]
+
 export default function Home() {
   return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-
-      <div className="shell hero-shell">
-        {/* The header sits inside the hero panel and over the photograph
-            rather than on a bar above it. */}
-        <GojoHeader overlay home />
-
-        <main className="hero">
-          <h1>
-            <span className="line">Everything you reach for,</span>
-            <span className="line">
-              right in the <span className="glow">notch</span>.
-            </span>
-          </h1>
-          <p className="sub">
-            Dictation, window snapping, clipboard history, a file shelf, music and screen warmth.
-            One surface, always a hover away.
-          </p>
-
-          <div className="stage">
-            <AutoplayVideo
-              className="demo-video"
-              src="/assets/demo.mp4"
-              poster="/assets/demo-poster.jpg"
-            />
-          </div>
-
-          <div className="cta">
-            <a className="btn btn-primary" href="https://downloads.trygojo.com/Gojo.dmg">
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path
-                  d="M8 1v9m0 0L4.5 6.5M8 10l3.5-3.5M2 13h12"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              Try it free for 3 days
-            </a>
-          </div>
-          <p className="meta">
-            No card, no account &middot; Dictation runs on device &middot; macOS 14 or later
-          </p>
-        </main>
-      </div>
-
-      <section className="utility-convergence" aria-labelledby="convergence-heading">
-        <div className="wrap convergence-layout">
-          <div className="convergence-copy">
-            <h2 id="convergence-heading">The apps this replaces.</h2>
-            <p>
-              
-                
-                These jobs usually mean a separate utility each, and a separate menu bar icon,
-                settings pane and set of shortcuts to go with it. Gojo does all of them from one
-                surface you already have.
-              
-              
-            </p>
-          </div>
-
-          <div
-            className="convergence-visual"
-            role="group"
-            aria-label="Gojo combines tools commonly handled by several separate Mac utilities"
-          >
-            <div className="utility-apps">
-              <a className="utility-app" href="https://theboring.name/" target="_blank" rel="noopener">
-                <Image src="/assets/utilities/boringnotch.png" width={64} height={64} loading="lazy" alt="" />
-                <span>Boring Notch</span>
-              </a>
-              <a
-                className="utility-app"
-                href="https://apps.apple.com/us/app/maccy/id1527619437?mt=12"
-                target="_blank"
-                rel="noopener"
-              >
-                <Image src="/assets/utilities/maccy.png" width={64} height={64} loading="lazy" alt="" />
-                <span>Maccy</span>
-              </a>
-              <a className="utility-app" href="https://justgetflux.com/" target="_blank" rel="noopener">
-                <Image src="/assets/utilities/flux.png" width={64} height={64} loading="lazy" alt="" />
-                <span>f.lux</span>
-              </a>
-              <a className="utility-app" href="https://rectangleapp.com/" target="_blank" rel="noopener">
-                <Image src="/assets/utilities/rectangle.png" width={64} height={64} loading="lazy" alt="" />
-                <span>Rectangle</span>
-              </a>
-              <a className="utility-app" href="https://dropoverapp.com/" target="_blank" rel="noopener">
-                <Image src="/assets/utilities/dropover.png" width={64} height={64} loading="lazy" alt="" />
-                <span>Dropover</span>
-              </a>
-            </div>
-            <div className="convergence-lines" aria-hidden="true">
-              <i></i>
-              <i></i>
-              <i></i>
-            </div>
-            <div className="gojo-core">
-              <GojoLogo />
-              <strong>Gojo</strong>
-              <span>One native workspace</span>
+    <div className={`${styles.home} ${coastalDisplay.variable}`}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <div className={styles.header}><GojoHeader home /></div>
+      <main id="main-content" tabIndex={-1}>
+        <section className={styles.hero} aria-labelledby="hero-heading">
+          <div className={styles.heroCopy}>
+            <h1 id="hero-heading">Your Mac.<br /><span>One hover away.</span></h1>
+            <p className={styles.lede}>Your everyday tools, right in your MacBook notch.</p>
+            <Button asChild size="lg" className="h-auto"><a className={styles.primaryButton} href="https://downloads.trygojo.com/Gojo.dmg" data-funnel-event="download_cta_clicked" data-funnel-placement="hero"><Download size={18} aria-hidden="true" /> Download for Mac</a></Button>
+            <div className={styles.heroOffer}>
+              <p className={styles.trialTerms}>3 days free</p>
+              <a className={styles.heroPrice} href="#buy">Yours for <strong>$9.99</strong> once <ArrowRight size={18} aria-hidden="true" /></a>
             </div>
           </div>
-          <p className="comparison-note">
-            Independent feature comparison. Gojo is not affiliated with or endorsed by the products
-            shown.
-          </p>
-        </div>
-      </section>
-
-      <section className="feature-acts" id="features" aria-labelledby="features-heading">
-        <div className="wrap">
-          <header className="acts-intro">
-            <h2 id="features-heading">The six tools.</h2>
-            <p>
-              
-                Everything below is the real app running in the notch. One scroll and you have seen
-                all of it.
-              
-            </p>
-          </header>
-        </div>
-
-        <article className="act act-flagship" aria-labelledby="act-dictation">
-          <div className="wrap act-inner">
-            <div className="act-copy">
-              <p className="act-index" aria-hidden="true">
-                <Mic className="act-icon" strokeWidth={1.75} aria-hidden="true" />Dictation
-              </p>
-              <h3 id="act-dictation">Dictation that never leaves your Mac.</h3>
-              <p>
-                Hold one shortcut and speak. The words appear wherever your cursor already is, in
-                Mail, Slack, a commit message or a search box.
-              </p>
-              <p className="act-note">
-                Speech recognition runs on a model you download once. No API key, no account, and no
-                audio ever leaves your Mac. It works on a plane.
-              </p>
-              <ul className="act-proof">
-                <li>
-                  Hold <kbd>⌃</kbd>
-                  <kbd>⌥</kbd> to talk, release to insert
-                </li>
-                <li>Choose your model, or swap it later</li>
-                <li>Runs offline, on-device, every time</li>
-              </ul>
-            </div>
-            <figure className="act-shot shot-inset">
-              <Image
-                src="/screenshots/dictation-models.png"
-                width={460}
-                height={171}
-                alt="Gojo's voice model list: Parakeet Unified from FluidAudio, 614 MB, in use on this Mac, with Parakeet v3 available below it."
-              />
-              <figcaption>
-                Models live on your Mac. You can see exactly which one is doing the work.
-              </figcaption>
-            </figure>
+          <ProductPreview />
+        </section>
+        <section id="features" className={styles.gallery} aria-labelledby="gallery-heading">
+          <header className={styles.galleryHeading}><h2 id="gallery-heading">Everything in<br /><span>your notch.</span></h2></header>
+          <div className={styles.screenshotGrid}>
+            <article><div className={`${styles.screenshotWell} ${styles.musicWell}`}><Image src="/screenshots/media.png" width={1308} height={392} alt="Gojo music player showing album artwork, playback controls and a scrubber." /></div><h3>Music controls</h3><p>Play, pause, skip and seek.</p></article>
+            <article><div className={`${styles.screenshotWell} ${styles.clipboardWell}`}><Image src="/screenshots/clipboard.png" width={1388} height={394} alt="Searchable clipboard history in the Gojo notch." /></div><h3>Clipboard history</h3><p>Search what you copied.</p></article>
+            <article><div className={`${styles.screenshotWell} ${styles.windowsWell}`}><Image src="/screenshots/windows.png" width={1322} height={418} alt="Gojo window controls showing app choices, snap layouts and keyboard shortcut labels." /></div><h3>Window controls</h3><p>Switch windows and snap them into place.</p></article>
+            <article><div className={`${styles.screenshotWell} ${styles.filesWell}`}><Image src="/screenshots/shelf.png" width={1298} height={392} alt="Files staged in Gojo's drag-and-drop shelf." /></div><h3>File shelf</h3><p>Drop files here. Drag them into another app.</p></article>
           </div>
-        </article>
-
-        <div className="acts-paper">
-          <article className="act" aria-labelledby="act-media">
-            <div className="wrap act-inner">
-              <div className="act-copy">
-                <p className="act-index" aria-hidden="true">
-                  <Music className="act-icon" strokeWidth={1.75} aria-hidden="true" />Media
-                </p>
-                <h3 id="act-media">Your music, out of the way.</h3>
-                <p>
-                  
-                Artwork, title and a scrubber sit in the notch. Skip, shuffle and seek whatever is
-                playing without raising a window.
-              
-                </p>
-                <ul className="act-proof">
-                  <li>Follows your current media source</li>
-                  <li>Reorder the controls you actually use</li>
-                </ul>
-              </div>
-              <figure className="act-shot">
-                <Image
-                  src="/screenshots/media.png"
-                  width={654}
-                  height={196}
-                  loading="lazy"
-                  alt="The notch open on the media tab: album art, the track Sunset Linen by LoFi Serenity, a scrubber, and playback controls, with a Spotify badge on the artwork."
-                />
-              </figure>
-            </div>
-          </article>
-
-          <article className="act act-flip" aria-labelledby="act-clipboard">
-            <div className="wrap act-inner">
-              <div className="act-copy">
-                <p className="act-index" aria-hidden="true">
-                  <ClipboardList className="act-icon" strokeWidth={1.75} aria-hidden="true" />Clipboard
-                </p>
-                <h3 id="act-clipboard">Everything you have copied, kept.</h3>
-                <p>
-                  
-                Everything you copy is saved and searchable from the notch. Anything a supported
-                password manager marks as private is skipped.
-              
-                </p>
-                <ul className="act-proof">
-                  <li>Search without opening another app</li>
-                  <li>Passwords and secrets stay out of history</li>
-                </ul>
-              </div>
-              <figure className="act-shot">
-                <Image
-                  src="/screenshots/clipboard.png"
-                  width={694}
-                  height={197}
-                  loading="lazy"
-                  alt="The notch open on the clipboard tab: a search field above a list of recently copied text entries."
-                />
-              </figure>
-            </div>
-          </article>
-
-          <article className="act" aria-labelledby="act-windows">
-            <div className="wrap act-inner">
-              <div className="act-copy">
-                <p className="act-index" aria-hidden="true">
-                  <LayoutGrid className="act-icon" strokeWidth={1.75} aria-hidden="true" />Windows
-                </p>
-                <h3 id="act-windows">See a window before you switch to it.</h3>
-                <p>
-                  
-                A switcher that shows you the window before you land on it, and a snap grid with the
-                shortcut printed under every layout.
-              
-                </p>
-                <ul className="act-proof">
-                  <li>
-                    Replaces <kbd>⌘</kbd>
-                    <kbd>⇥</kbd> with per-window previews
-                  </li>
-                  <li>Halves, thirds, maximize, and zoom</li>
-                </ul>
-              </div>
-              <figure className="act-shot">
-                <Image
-                  src="/screenshots/windows.png"
-                  width={661}
-                  height={209}
-                  loading="lazy"
-                  alt="The notch open on the windows tab: a list of open apps, a live preview pane for Ghostty, and a grid of six snap layouts each labelled with its keyboard shortcut."
-                />
-              </figure>
-            </div>
-          </article>
-
-          <article className="act act-flip" aria-labelledby="act-shelf">
-            <div className="wrap act-inner">
-              <div className="act-copy">
-                <p className="act-index" aria-hidden="true">
-                  <FolderOpen className="act-icon" strokeWidth={1.75} aria-hidden="true" />Shelf
-                </p>
-                <h3 id="act-shelf">A place to set files down.</h3>
-                <p>
-                  
-                Drag files to the notch and they wait while you move between folders, desktops and apps.
-                Drag them back out when you get there, or send them straight to AirDrop.
-              
-                </p>
-                <ul className="act-proof">
-                  <li>Survives folder, Space, and app switches</li>
-                  <li>AirDrop target built into the shelf</li>
-                </ul>
-              </div>
-              <figure className="act-shot">
-                <Image
-                  src="/screenshots/shelf.png"
-                  width={649}
-                  height={196}
-                  loading="lazy"
-                  alt="The notch open on the shelf tab: an AirDrop drop target beside two staged files waiting to be dragged out."
-                />
-              </figure>
-            </div>
-          </article>
-
-          <article className="act act-settings" aria-labelledby="act-display">
-            <div className="wrap act-inner">
-              <div className="act-copy">
-                <p className="act-index" aria-hidden="true">
-                  <Sunset className="act-icon" strokeWidth={1.75} aria-hidden="true" />Night Shift
-                </p>
-                <h3 id="act-display">Warmer screen after dark.</h3>
-                <p>
-                  
-                Night Shift on your own schedule, from the notch instead of System Settings. Sunset
-                times are worked out on your Mac from a location you set once.
-              
-                </p>
-                <ul className="act-proof">
-                  <li>Starts with your Mac, if you want it to</li>
-                  <li>Location is used locally and never sent anywhere</li>
-                </ul>
-              </div>
-              <NightShiftComparison />
-            </div>
-          </article>
-        </div>
-      </section>
-
-
-      <section className="customize-story" aria-labelledby="customize-heading">
-        <div className="wrap customize-layout">
-          <div className="customize-copy">
-            <h2 id="customize-heading">Make it yours.</h2>
-            <p>
-              
-                
-                Use all six or use one. Turn off what you do not need and reorder the rest, and the
-                notch stops showing it, tabs included.
-              
-              
-            </p>
+          <div className={styles.galleryCta}><Button asChild size="lg" className="h-auto"><a className={styles.primaryButton} href="https://downloads.trygojo.com/Gojo.dmg" data-funnel-event="download_cta_clicked" data-funnel-placement="features"><Download size={18} aria-hidden="true" /> Try Gojo free</a></Button></div>
+        </section>
+        <section className={styles.dictation} aria-labelledby="dictation-heading">
+          <div className={styles.dictationCopy}>
+            <Mic size={29} strokeWidth={1.5} aria-hidden="true" />
+            <h2 id="dictation-heading">Private<br />dictation.</h2>
+            <p>Hold the shortcut. Speak. Release to insert.</p>
+            <div className={styles.shortcut}><kbd>⌃ Control</kbd><span>+</span><kbd>⌥ Option</kbd><span>Hold to talk</span></div>
+            <Link href="/features/local-dictation/">Explore local dictation <ArrowRight size={16} aria-hidden="true" /></Link>
           </div>
-
-          <div className="customize-extras">
-            <p className="extras-lede">Also in the notch, if you switch them on:</p>
-            <ul className="extras-list">
-              <li>
-                Spotlight-replacement search on <kbd>⌥</kbd>
-                <kbd>Space</kbd>
-              </li>
-              <li>Calendar and next-event glance</li>
-              <li>Battery and charge state</li>
-              <li>Camera mirror for checking your framing</li>
-              <li>Shortcuts you already built</li>
-              <li>Brightness and volume HUDs</li>
-            </ul>
+          <div className={styles.dictationProof}>
+            <div className={styles.modelImage}><Image src="/screenshots/dictation-models.png" width={920} height={342} alt="Gojo speech models, with Parakeet Unified selected for on-device dictation." /></div>
+            <div className={styles.privacyNote}><LockKeyhole size={20} aria-hidden="true" /><div><h3>Your voice stays on your Mac.</h3><p>Download a model once. Dictate offline.</p></div></div>
           </div>
-        </div>
-      </section>
-
-      <section className="content-band" id="buy" aria-labelledby="buy-heading">
+        </section>
+        <section className={styles.displaySection} aria-labelledby="display-heading"><div><h2 id="display-heading">Display<br />comfort.</h2><p>Adjust warmth and schedule Night Shift.</p><Link href="/features/">Explore all Gojo features <ArrowRight size={16} aria-hidden="true" /></Link></div><div className={styles.displayScreenshot}><Image src="/screenshots/settings-nightshift.png" width={681} height={589} alt="Gojo display settings with Night Shift warmth and schedule controls." /></div></section>
+        <section className={styles.smallTools} aria-label="More tools for your day">
+          {smallTools.map((tool) => <Link key={tool.slug} href={`/features/${tool.slug}/`}><tool.icon size={25} strokeWidth={1.4} aria-hidden="true" /><h3>{tool.title}</h3><ArrowRight size={17} aria-hidden="true" /></Link>)}
+        </section>
+      <section className={styles.pricing} id="buy" aria-labelledby="buy-heading">
         <div className="wrap">
           <PricingTabsProvider tabs={pricingTabs}>
             <div className="buy-head">
@@ -488,19 +191,16 @@ export default function Home() {
                   <p className="plan-copy">
                     Stay flexible with full access on one Mac. Cancel anytime.
                   </p>
-                  <a className="btn btn-monthly" href="https://buy.stripe.com/5kQfZhgUU2gI59o4FMeAg05">
+                  <Button asChild size="lg" className="h-auto"><a className="btn btn-monthly" href="https://buy.stripe.com/5kQfZhgUU2gI59o4FMeAg05" data-funnel-event="pricing_cta_clicked" data-funnel-plan="personal_monthly" data-funnel-placement="pricing">
                     Choose subscription
-                  </a>
+                  </a></Button>
                 </div>
 
                 <div className="plan plan-lifetime">
-                  <span className="plan-tag">Best value &middot; Save 33%</span>
+                  <span className="plan-tag">Pay once. Keep it.</span>
                   <div className="plan-name">Lifetime</div>
                   <div className="plan-figure">
-                    <span className="sr-only">Originally $14.99, now $9.99 one time</span>
-                    <span className="plan-original" aria-hidden="true">
-                      $14.99
-                    </span>
+                    <span className="sr-only">$9.99 one time</span>
                     <span className="plan-amount" aria-hidden="true">
                       $9.99
                     </span>
@@ -511,9 +211,9 @@ export default function Home() {
                   <p className="plan-copy">
                     Pay once and keep Gojo on one Mac, including future updates.
                   </p>
-                  <a className="btn btn-buy" href="https://buy.stripe.com/fZu5kD3446wY31gb4aeAg04">
+                  <Button asChild size="lg" className="h-auto"><a className="btn btn-buy" href="https://buy.stripe.com/fZu5kD3446wY31gb4aeAg04" data-funnel-event="pricing_cta_clicked" data-funnel-plan="personal_lifetime" data-funnel-placement="pricing">
                     Get lifetime access
-                  </a>
+                  </a></Button>
                 </div>
               </PricingPanel>
 
@@ -532,19 +232,16 @@ export default function Home() {
                   <p className="plan-copy">
                     Stay flexible across up to three Macs. Cancel anytime.
                   </p>
-                  <a className="btn btn-monthly" href="https://buy.stripe.com/5kQcN5gUU7B245kgoueAg03">
+                  <Button asChild size="lg" className="h-auto"><a className="btn btn-monthly" href="https://buy.stripe.com/5kQcN5gUU7B245kgoueAg03" data-funnel-event="pricing_cta_clicked" data-funnel-plan="multi_monthly" data-funnel-placement="pricing">
                     Choose subscription
-                  </a>
+                  </a></Button>
                 </div>
 
                 <div className="plan plan-lifetime">
-                  <span className="plan-tag">Best value &middot; Save 20%</span>
+                  <span className="plan-tag">Pay once. Keep it.</span>
                   <div className="plan-name">Lifetime</div>
                   <div className="plan-figure">
-                    <span className="sr-only">Originally $24.99, now $19.99 one time</span>
-                    <span className="plan-original" aria-hidden="true">
-                      $24.99
-                    </span>
+                    <span className="sr-only">$19.99 one time</span>
                     <span className="plan-amount" aria-hidden="true">
                       $19.99
                     </span>
@@ -555,9 +252,9 @@ export default function Home() {
                   <p className="plan-copy">
                     Pay once. Keep every feature and future update on up to three Macs.
                   </p>
-                  <a className="btn btn-buy" href="https://buy.stripe.com/9B64gzfQQ7B26ds1tAeAg02">
+                  <Button asChild size="lg" className="h-auto"><a className="btn btn-buy" href="https://buy.stripe.com/9B64gzfQQ7B26ds1tAeAg02" data-funnel-event="pricing_cta_clicked" data-funnel-plan="multi_lifetime" data-funnel-placement="pricing">
                     Get lifetime access
-                  </a>
+                  </a></Button>
                 </div>
               </PricingPanel>
             </PricingPanels>
@@ -565,7 +262,13 @@ export default function Home() {
         </div>
       </section>
 
+        <section className={styles.faq} aria-labelledby="faq-heading">
+          <div><h2 id="faq-heading">Before you download.</h2><p>Want to see the full setup?<br /><Link href="/downloads/">Download and installation guide <ArrowRight size={15} aria-hidden="true" /></Link></p></div>
+          <div>{faqs.map((faq) => <details key={faq.question}><summary>{faq.question}</summary><p>{faq.answer}</p></details>)}</div>
+        </section>
+        <section className={styles.finalCta} aria-labelledby="final-heading"><h2 id="final-heading">Give your notch<br />something to do.</h2><Button asChild size="lg" className="h-auto"><a className={styles.primaryButton} href="https://downloads.trygojo.com/Gojo.dmg" data-funnel-event="download_cta_clicked" data-funnel-placement="footer"><Download size={18} aria-hidden="true" /> Try Gojo free for 3 days</a></Button><p>No card or account. macOS 14 or later.</p></section>
+      </main>
       <GojoFooter />
-    </>
+    </div>
   )
 }

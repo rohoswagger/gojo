@@ -10,18 +10,18 @@
 :root {
   /* White, not off-white: the skin's tinted surfaces (--surface-2/-3) are what
      separate cards, table heads and answer boxes from the page ground. */
-  --background: #ffffff;
-  --foreground: oklch(0.18 0 0);
+  --background: #faf3e8;
+  --foreground: #30231e;
   --font-display: var(--font-body);
   --font-body: ui-sans-serif, system-ui, sans-serif;
   --font-mono-face: ui-monospace, SFMono-Regular, monospace;
   --display-tracking: -0.03em;
   --squircle-factor: 1.4;
   --radius: calc(0.625rem * var(--squircle-factor));
-  --brand: oklch(0.58 0.16 250);
-  --brand-content: oklch(0.5 0.16 250);
-  --card: oklch(0.999 0 0);
-  --muted-foreground: oklch(0.498 0 0);
+  --brand: #a53f27;
+  --brand-content: #913822;
+  --card: #fff9ef;
+  --muted-foreground: #654b3c;
   --destructive: oklch(0.55 0.2 27);
   --success: oklch(0.55 0.13 155);
   --warning: oklch(0.68 0.14 75);
@@ -124,7 +124,7 @@ body {
     --accent-foreground: var(--foreground);
     --border: color-mix(in oklch, var(--foreground) 8%, transparent);
     --input: color-mix(in oklch, var(--foreground) 10%, transparent);
-    --ring: color-mix(in oklch, var(--brand) 55%, transparent);
+    --ring: #71331e;
     --destructive-foreground: oklch(1 0 0);
     --sidebar: color-mix(in oklch, var(--foreground) 3%, var(--background));
     --sidebar-foreground: var(--foreground);
@@ -500,15 +500,9 @@ body {
   }
 }
 
-/* ── swagui Sections inside an article ─────────────────────────────────────
-   /alternatives/<slug> composes swagui's Section, FaqAccordion and CtaBand
-   inside the article body. Those ship marketing-page defaults — 75rem wide,
-   8rem of vertical padding, centred headings — which read as holes next to
-   the article's reading column. Unlayered so it outranks their utilities.
-   ------------------------------------------------------------------------ */
 .article-main :is([data-slot="section"], [data-slot="faq-accordion"], [data-slot="cta-band"]) {
   padding-block: 2.5rem;
-  padding-inline: var(--gutter);
+  padding-inline: 0;
 }
 
 .article-main :is([data-slot="section"], [data-slot="faq-accordion"], [data-slot="cta-band"]) > div {

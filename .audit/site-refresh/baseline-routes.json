@@ -1,0 +1,1219 @@
+{
+  "summary": {
+    "pages": 61,
+    "families": [
+      "not-found",
+      "alternatives",
+      "blog",
+      "downloads",
+      "features",
+      "home"
+    ],
+    "downloadActions": 52,
+    "swaguiButtons": 0,
+    "issues": 106
+  },
+  "routes": [
+    {
+      "path": "/404/",
+      "file": "out/404/index.html",
+      "family": "not-found",
+      "heading": "404.Page not found.",
+      "images": 0,
+      "downloads": 0,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/404.html",
+      "file": "out/404.html",
+      "family": "not-found",
+      "heading": "404.Page not found.",
+      "images": 0,
+      "downloads": 0,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/alternatives/alcove/",
+      "file": "out/alternatives/alcove/index.html",
+      "family": "alternatives",
+      "title": "Alcove alternative: is Gojo a good fit for Mac?",
+      "heading": "Alcove vs Gojo: which fits your Mac?",
+      "images": 2,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 5
+    },
+    {
+      "path": "/alternatives/alttab/",
+      "file": "out/alternatives/alttab/index.html",
+      "family": "alternatives",
+      "title": "AltTab alternative: is Gojo a good fit for Mac?",
+      "heading": "AltTab vs Gojo: which fits your Mac?",
+      "images": 2,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 5
+    },
+    {
+      "path": "/alternatives/bettertouchtool/",
+      "file": "out/alternatives/bettertouchtool/index.html",
+      "family": "alternatives",
+      "title": "BetterTouchTool alternative: is Gojo a good fit for Mac?",
+      "heading": "BetterTouchTool vs Gojo: which fits your Mac?",
+      "images": 2,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 5
+    },
+    {
+      "path": "/alternatives/boring-notch/",
+      "file": "out/alternatives/boring-notch/index.html",
+      "family": "alternatives",
+      "title": "Boring Notch alternative: is Gojo a good fit for Mac?",
+      "heading": "Boring Notch vs Gojo: which fits your Mac?",
+      "images": 2,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 5
+    },
+    {
+      "path": "/alternatives/droppy/",
+      "file": "out/alternatives/droppy/index.html",
+      "family": "alternatives",
+      "title": "Droppy alternative: is Gojo a good fit for Mac?",
+      "heading": "Droppy vs Gojo: which fits your Mac?",
+      "images": 2,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 5
+    },
+    {
+      "path": "/alternatives/dynamiclake/",
+      "file": "out/alternatives/dynamiclake/index.html",
+      "family": "alternatives",
+      "title": "DynamicLake alternative: is Gojo a good fit for Mac?",
+      "heading": "DynamicLake vs Gojo: which fits your Mac?",
+      "images": 2,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 5
+    },
+    {
+      "path": "/alternatives/flux/",
+      "file": "out/alternatives/flux/index.html",
+      "family": "alternatives",
+      "title": "f.lux alternative: is Gojo a good fit for Mac?",
+      "heading": "f.lux vs Gojo: which fits your Mac?",
+      "images": 2,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 5
+    },
+    {
+      "path": "/alternatives/",
+      "file": "out/alternatives/index.html",
+      "family": "alternatives",
+      "title": "Best Gojo alternatives for Mac in 2026",
+      "heading": "Find the Mac utility that fits your day.",
+      "images": 24,
+      "downloads": 2,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/alternatives/karabiner-elements/",
+      "file": "out/alternatives/karabiner-elements/index.html",
+      "family": "alternatives",
+      "title": "Karabiner-Elements alternative: is Gojo a good fit for Mac?",
+      "heading": "Karabiner-Elements vs Gojo: which fits your Mac?",
+      "images": 2,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 5
+    },
+    {
+      "path": "/alternatives/maccy/",
+      "file": "out/alternatives/maccy/index.html",
+      "family": "alternatives",
+      "title": "Maccy alternative: is Gojo a good fit for Mac?",
+      "heading": "Maccy vs Gojo: which fits your Mac?",
+      "images": 2,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 5
+    },
+    {
+      "path": "/alternatives/notchnook/",
+      "file": "out/alternatives/notchnook/index.html",
+      "family": "alternatives",
+      "title": "NotchNook alternative: is Gojo a good fit for Mac?",
+      "heading": "NotchNook vs Gojo: which fits your Mac?",
+      "images": 2,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 5
+    },
+    {
+      "path": "/alternatives/raycast/",
+      "file": "out/alternatives/raycast/index.html",
+      "family": "alternatives",
+      "title": "Raycast alternative: is Gojo a good fit for Mac?",
+      "heading": "Raycast vs Gojo: which fits your Mac?",
+      "images": 2,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 5
+    },
+    {
+      "path": "/alternatives/rectangle/",
+      "file": "out/alternatives/rectangle/index.html",
+      "family": "alternatives",
+      "title": "Rectangle alternative: is Gojo a good fit for Mac?",
+      "heading": "Rectangle vs Gojo: which fits your Mac?",
+      "images": 2,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 5
+    },
+    {
+      "path": "/blog/best-droppy-alternatives/",
+      "file": "out/blog/best-droppy-alternatives/index.html",
+      "family": "blog",
+      "title": "5 best Droppy alternatives for Mac in 2026",
+      "heading": "5 best Droppy alternatives for Mac in 2026",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/best-file-shelf-apps-mac/",
+      "file": "out/blog/best-file-shelf-apps-mac/index.html",
+      "family": "blog",
+      "title": "Best file shelf apps for Mac in 2026",
+      "heading": "Best file shelf apps for Mac in 2026",
+      "images": 0,
+      "downloads": 0,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/best-local-dictation-apps-mac/",
+      "file": "out/blog/best-local-dictation-apps-mac/index.html",
+      "family": "blog",
+      "title": "Best local dictation apps for Mac in 2026",
+      "heading": "Best local dictation apps for Mac in 2026",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/best-mac-clipboard-manager/",
+      "file": "out/blog/best-mac-clipboard-manager/index.html",
+      "family": "blog",
+      "title": "Best clipboard managers for Mac in 2026",
+      "heading": "Best clipboard managers for Mac in 2026",
+      "images": 0,
+      "downloads": 0,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/best-mac-dictation-for-developers/",
+      "file": "out/blog/best-mac-dictation-for-developers/index.html",
+      "family": "blog",
+      "title": "Best voice dictation for developers on Mac in 2026",
+      "heading": "Best voice dictation for developers on Mac in 2026",
+      "images": 0,
+      "downloads": 0,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/best-mac-dictation-for-writers/",
+      "file": "out/blog/best-mac-dictation-for-writers/index.html",
+      "family": "blog",
+      "title": "Best Mac dictation apps for writers in 2026",
+      "heading": "Best Mac dictation apps for writers in 2026",
+      "images": 0,
+      "downloads": 0,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/best-mac-notch-apps-for-productivity/",
+      "file": "out/blog/best-mac-notch-apps-for-productivity/index.html",
+      "family": "blog",
+      "title": "Best Mac notch apps for productivity in 2026",
+      "heading": "Best Mac notch apps for productivity in 2026",
+      "images": 0,
+      "downloads": 0,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/best-macos-accessibility-permission-apps/",
+      "file": "out/blog/best-macos-accessibility-permission-apps/index.html",
+      "family": "blog",
+      "title": "Best macOS Accessibility permission apps for productivity",
+      "heading": "Best macOS Accessibility permission apps: Gojo, Rectangle, Raycast, Maccy, and more",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/best-macos-notch-utilities/",
+      "file": "out/blog/best-macos-notch-utilities/index.html",
+      "family": "blog",
+      "title": "Best macOS notch utilities: music, windows, clipboard, files",
+      "heading": "Best macOS notch utilities: what to look for before installing one",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/best-notchnook-alternatives/",
+      "file": "out/blog/best-notchnook-alternatives/index.html",
+      "family": "blog",
+      "title": "Best NotchNook alternatives for Mac in 2026",
+      "heading": "Best NotchNook alternatives for Mac in 2026",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/best-private-dictation-apps-mac/",
+      "file": "out/blog/best-private-dictation-apps-mac/index.html",
+      "family": "blog",
+      "title": "Best private dictation apps for Mac in 2026",
+      "heading": "Best private dictation apps for Mac in 2026",
+      "images": 0,
+      "downloads": 0,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/best-window-management-tools-mac/",
+      "file": "out/blog/best-window-management-tools-mac/index.html",
+      "family": "blog",
+      "title": "Best window management tools for Mac in 2026",
+      "heading": "Best window management tools for Mac in 2026",
+      "images": 0,
+      "downloads": 0,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/best-window-tiling-apps-mac/",
+      "file": "out/blog/best-window-tiling-apps-mac/index.html",
+      "family": "blog",
+      "title": "Best window tiling apps for Mac in 2026",
+      "heading": "Best window tiling apps for Mac in 2026",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/droppy-alternatives-private-dictation/",
+      "file": "out/blog/droppy-alternatives-private-dictation/index.html",
+      "family": "blog",
+      "title": "Droppy alternatives for private Mac dictation in 2026",
+      "heading": "Droppy alternatives for private Mac dictation in 2026",
+      "images": 0,
+      "downloads": 0,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/gojo-vs-alcove/",
+      "file": "out/blog/gojo-vs-alcove/index.html",
+      "family": "blog",
+      "title": "Gojo vs Alcove: daily Mac tools or Dynamic Island polish?",
+      "heading": "Gojo vs Alcove: daily Mac tools or Dynamic Island polish?",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/gojo-vs-alttab/",
+      "file": "out/blog/gojo-vs-alttab/index.html",
+      "family": "blog",
+      "title": "Gojo vs AltTab: Mac window switcher or notch workspace",
+      "heading": "Gojo vs AltTab: Mac window switching or a notch workspace?",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/gojo-vs-apple-dictation/",
+      "file": "out/blog/gojo-vs-apple-dictation/index.html",
+      "family": "blog",
+      "title": "Gojo vs Apple Dictation: which Mac option?",
+      "heading": "Gojo vs Apple Dictation: which Mac option?",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/gojo-vs-bettertouchtool/",
+      "file": "out/blog/gojo-vs-bettertouchtool/index.html",
+      "family": "blog",
+      "title": "Gojo vs BetterTouchTool: Mac automation or notch utility",
+      "heading": "Gojo vs BetterTouchTool: notch utility or deep Mac automation?",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/gojo-vs-boring-notch/",
+      "file": "out/blog/gojo-vs-boring-notch/index.html",
+      "family": "blog",
+      "title": "Gojo vs Boring Notch: MacBook notch utility comparison",
+      "heading": "Gojo vs Boring Notch: which MacBook notch utility fits your workflow?",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/gojo-vs-droppy/",
+      "file": "out/blog/gojo-vs-droppy/index.html",
+      "family": "blog",
+      "title": "Gojo vs Droppy: local dictation or utility breadth?",
+      "heading": "Gojo vs Droppy: local dictation or utility breadth?",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/gojo-vs-dynamiclake/",
+      "file": "out/blog/gojo-vs-dynamiclake/index.html",
+      "family": "blog",
+      "title": "Gojo vs DynamicLake: focused controls or a full Dynamic Island?",
+      "heading": "Gojo vs DynamicLake: focused controls or a full Dynamic Island?",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/gojo-vs-flux/",
+      "file": "out/blog/gojo-vs-flux/index.html",
+      "family": "blog",
+      "title": "Gojo vs f.lux: Mac display controls or adaptive lighting",
+      "heading": "Gojo vs f.lux: MacBook notch controls or adaptive display lighting?",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/gojo-vs-karabiner-elements/",
+      "file": "out/blog/gojo-vs-karabiner-elements/index.html",
+      "family": "blog",
+      "title": "Gojo vs Karabiner-Elements: keyboard remapper or notch utility",
+      "heading": "Gojo vs Karabiner-Elements: MacBook notch utility or keyboard remapper?",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/gojo-vs-maccy/",
+      "file": "out/blog/gojo-vs-maccy/index.html",
+      "family": "blog",
+      "title": "Gojo vs Maccy: Mac clipboard manager or notch workspace",
+      "heading": "Gojo vs Maccy: clipboard history or a broader Mac utility?",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/gojo-vs-macwhisper/",
+      "file": "out/blog/gojo-vs-macwhisper/index.html",
+      "family": "blog",
+      "title": "Gojo vs MacWhisper: direct dictation or transcript work?",
+      "heading": "Gojo vs MacWhisper: direct dictation or transcript work?",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/gojo-vs-notchnook/",
+      "file": "out/blog/gojo-vs-notchnook/index.html",
+      "family": "blog",
+      "title": "Gojo vs NotchNook: focused Mac controls or a widget-heavy notch?",
+      "heading": "Gojo vs NotchNook: focused Mac controls or a widget-heavy notch?",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/gojo-vs-raycast/",
+      "file": "out/blog/gojo-vs-raycast/index.html",
+      "family": "blog",
+      "title": "Gojo vs Raycast: Mac launcher or notch control surface",
+      "heading": "Gojo vs Raycast: MacBook notch controls or a keyboard-first launcher?",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/gojo-vs-rectangle/",
+      "file": "out/blog/gojo-vs-rectangle/index.html",
+      "family": "blog",
+      "title": "Gojo vs Rectangle: Mac window snapping or a notch workspace",
+      "heading": "Gojo vs Rectangle: which Mac window tool fits your workflow?",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/gojo-vs-superwhisper/",
+      "file": "out/blog/gojo-vs-superwhisper/index.html",
+      "family": "blog",
+      "title": "Gojo vs Superwhisper: local Mac dictation compared",
+      "heading": "Gojo vs Superwhisper: local Mac dictation compared",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/gojo-vs-yoink/",
+      "file": "out/blog/gojo-vs-yoink/index.html",
+      "family": "blog",
+      "title": "Gojo vs Yoink: Mac file shelf comparison",
+      "heading": "Gojo vs Yoink: Mac file shelf comparison",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/",
+      "file": "out/blog/index.html",
+      "family": "blog",
+      "title": "Gojo Blog: MacBook notch utility guides and comparisons",
+      "heading": "Mac utility writing from inside the notch.",
+      "images": 0,
+      "downloads": 0,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/local-voice-dictation-mac/",
+      "file": "out/blog/local-voice-dictation-mac/index.html",
+      "family": "blog",
+      "title": "Local voice dictation on Mac: what actually stays private",
+      "heading": "Local voice dictation on Mac: what actually stays private",
+      "images": 0,
+      "downloads": 0,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/blog/voice-to-text-mac-without-cloud/",
+      "file": "out/blog/voice-to-text-mac-without-cloud/index.html",
+      "family": "blog",
+      "title": "Voice-to-text on Mac without cloud processing",
+      "heading": "Voice-to-text on Mac without cloud processing",
+      "images": 0,
+      "downloads": 0,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/downloads/",
+      "file": "out/downloads/index.html",
+      "family": "downloads",
+      "title": "Download Gojo for Mac | Gojo",
+      "heading": "Download Gojo",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/features/battery-status/",
+      "file": "out/features/battery-status/index.html",
+      "family": "features",
+      "title": "Battery status for MacBook notch | Gojo",
+      "heading": "Battery status",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/features/calendar/",
+      "file": "out/features/calendar/index.html",
+      "family": "features",
+      "title": "Calendar and reminders for MacBook notch | Gojo",
+      "heading": "Calendar and reminders",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/features/camera-mirror/",
+      "file": "out/features/camera-mirror/index.html",
+      "family": "features",
+      "title": "Camera mirror for MacBook notch | Gojo",
+      "heading": "Camera mirror",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/features/clipboard-history/",
+      "file": "out/features/clipboard-history/index.html",
+      "family": "features",
+      "title": "Clipboard history for MacBook notch | Gojo",
+      "heading": "Clipboard history",
+      "images": 1,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/features/display-comfort/",
+      "file": "out/features/display-comfort/index.html",
+      "family": "features",
+      "title": "Display comfort controls for MacBook notch | Gojo",
+      "heading": "Display comfort controls",
+      "images": 1,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/features/file-shelf/",
+      "file": "out/features/file-shelf/index.html",
+      "family": "features",
+      "title": "File shelf for MacBook notch | Gojo",
+      "heading": "File shelf",
+      "images": 1,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/features/",
+      "file": "out/features/index.html",
+      "family": "features",
+      "title": "Gojo features: MacBook-notch productivity tools",
+      "heading": "Your Mac’s busiest tools, gathered at the quietest edge.",
+      "images": 7,
+      "downloads": 2,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/features/local-dictation/",
+      "file": "out/features/local-dictation/index.html",
+      "family": "features",
+      "title": "Private on-device dictation for MacBook notch | Gojo",
+      "heading": "Private on-device dictation",
+      "images": 1,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/features/media-controls/",
+      "file": "out/features/media-controls/index.html",
+      "family": "features",
+      "title": "Media controls for MacBook notch | Gojo",
+      "heading": "Media controls",
+      "images": 1,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/features/shortcuts/",
+      "file": "out/features/shortcuts/index.html",
+      "family": "features",
+      "title": "Shortcuts for MacBook notch | Gojo",
+      "heading": "Shortcuts",
+      "images": 0,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/features/window-controls/",
+      "file": "out/features/window-controls/index.html",
+      "family": "features",
+      "title": "Window controls for MacBook notch | Gojo",
+      "heading": "Window controls",
+      "images": 1,
+      "downloads": 1,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    },
+    {
+      "path": "/",
+      "file": "out/index.html",
+      "family": "home",
+      "title": "Gojo - Your Mac, one hover away",
+      "heading": "Your Mac.\nOne hover away.",
+      "images": 7,
+      "downloads": 3,
+      "swaguiButtons": 0,
+      "swaguiSections": 0
+    }
+  ],
+  "issues": [
+    {
+      "path": "/alternatives/alcove/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/alternatives/alcove/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/alternatives/alttab/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/alternatives/alttab/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/alternatives/bettertouchtool/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/alternatives/bettertouchtool/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/alternatives/boring-notch/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/alternatives/boring-notch/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/alternatives/droppy/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/alternatives/droppy/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/alternatives/dynamiclake/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/alternatives/dynamiclake/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/alternatives/flux/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/alternatives/flux/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/alternatives/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/alternatives/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/alternatives/",
+      "rule": "fragment-target",
+      "target": "#alternatives-library"
+    },
+    {
+      "path": "/alternatives/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/alternatives/karabiner-elements/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/alternatives/karabiner-elements/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/alternatives/maccy/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/alternatives/maccy/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/alternatives/notchnook/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/alternatives/notchnook/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/alternatives/raycast/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/alternatives/raycast/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/alternatives/rectangle/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/alternatives/rectangle/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/blog/best-droppy-alternatives/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/best-droppy-alternatives/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/blog/best-file-shelf-apps-mac/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/best-local-dictation-apps-mac/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/best-local-dictation-apps-mac/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/blog/best-mac-clipboard-manager/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/best-mac-dictation-for-developers/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/best-mac-dictation-for-writers/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/best-mac-notch-apps-for-productivity/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/best-macos-accessibility-permission-apps/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/best-macos-accessibility-permission-apps/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/blog/best-macos-notch-utilities/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/best-macos-notch-utilities/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/blog/best-notchnook-alternatives/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/best-notchnook-alternatives/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/blog/best-private-dictation-apps-mac/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/best-window-management-tools-mac/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/best-window-tiling-apps-mac/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/best-window-tiling-apps-mac/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/blog/droppy-alternatives-private-dictation/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/gojo-vs-alcove/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/gojo-vs-alcove/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/blog/gojo-vs-alttab/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/gojo-vs-alttab/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/blog/gojo-vs-apple-dictation/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/gojo-vs-apple-dictation/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/blog/gojo-vs-bettertouchtool/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/gojo-vs-bettertouchtool/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/blog/gojo-vs-boring-notch/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/gojo-vs-boring-notch/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/blog/gojo-vs-droppy/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/gojo-vs-droppy/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/blog/gojo-vs-dynamiclake/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/gojo-vs-dynamiclake/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/blog/gojo-vs-flux/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/gojo-vs-flux/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/blog/gojo-vs-karabiner-elements/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/gojo-vs-karabiner-elements/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/blog/gojo-vs-maccy/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/gojo-vs-maccy/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/blog/gojo-vs-macwhisper/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/gojo-vs-macwhisper/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/blog/gojo-vs-notchnook/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/gojo-vs-notchnook/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/blog/gojo-vs-raycast/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/gojo-vs-raycast/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/blog/gojo-vs-rectangle/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/gojo-vs-rectangle/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/blog/gojo-vs-superwhisper/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/gojo-vs-superwhisper/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/blog/gojo-vs-yoink/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/gojo-vs-yoink/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/blog/local-voice-dictation-mac/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/blog/voice-to-text-mac-without-cloud/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/downloads/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/features/battery-status/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/features/battery-status/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/features/calendar/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/features/calendar/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/features/camera-mirror/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/features/camera-mirror/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/features/clipboard-history/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/features/clipboard-history/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/features/display-comfort/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/features/display-comfort/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/features/file-shelf/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/features/file-shelf/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/features/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/features/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/features/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/features/local-dictation/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/features/local-dictation/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/features/media-controls/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/features/media-controls/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/features/shortcuts/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/features/shortcuts/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    },
+    {
+      "path": "/features/window-controls/",
+      "rule": "heading-in-main",
+      "target": "h1"
+    },
+    {
+      "path": "/features/window-controls/",
+      "rule": "tracked-download",
+      "target": "https://downloads.trygojo.com/Gojo.dmg"
+    }
+  ]
+}

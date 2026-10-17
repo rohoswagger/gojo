@@ -4,10 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build && node scripts/verify-marketing-links.mjs",
+    "build": "next build && node scripts/verify-marketing-links.mjs && node scripts/verify-accessibility.mjs && node scripts/audit-site.mjs",
     "verify:marketing": "node scripts/verify-marketing-links.mjs",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "verify:accessibility": "node scripts/verify-accessibility.mjs",
+    "audit:site": "node scripts/audit-site.mjs"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

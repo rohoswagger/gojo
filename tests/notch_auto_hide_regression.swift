@@ -49,7 +49,7 @@ struct NotchAutoHideRegression {
     }
 
     static func hidden(_ fullscreen: Bool, _ hover: Bool) -> Bool {
-        NotchAutoHidePolicy.shouldHide(isFullscreen: fullscreen, isHovering: hover)
+        NotchAutoHidePolicy.shouldHide(isFullscreen: fullscreen, isHoverRevealed: hover)
     }
 
     static func covers(_ window: CGRect, _ screen: CGRect, _ visible: CGRect) -> Bool {

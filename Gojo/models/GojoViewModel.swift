@@ -27,10 +27,10 @@ class GojoViewModel: NSObject, ObservableObject {
     var cancellables: Set<AnyCancellable> = []
     
     @Published var hideOnClosed: Bool = false
-    @Published var isHoveringNotch: Bool = false
+    @Published var isHoverRevealed: Bool = false
 
     var isAutoHidden: Bool {
-        NotchAutoHidePolicy.shouldHide(isFullscreen: hideOnClosed, isHovering: isHoveringNotch)
+        NotchAutoHidePolicy.shouldHide(isFullscreen: hideOnClosed, isHoverRevealed: isHoverRevealed)
     }
 
     @Published var edgeAutoOpenActive: Bool = false

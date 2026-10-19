@@ -1,8 +1,8 @@
 import CoreGraphics
 
 enum NotchAutoHidePolicy {
-    static func shouldHide(isFullscreen: Bool, isHovering: Bool) -> Bool {
-        isFullscreen && !isHovering
+    static func shouldHide(isFullscreen: Bool, isHoverRevealed: Bool) -> Bool {
+        isFullscreen && !isHoverRevealed
     }
 
     static func topWindowIndex(appKitWindowFrames: [CGRect], appKitScreenFrames: [CGRect], targetAppKitScreenFrame: CGRect) -> Int? {

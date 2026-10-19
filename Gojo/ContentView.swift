@@ -43,6 +43,11 @@ struct ContentView: View {
     // Shared interactive spring for movement/resizing to avoid conflicting animations
     private let animationSpring = Animation.interactiveSpring(response: 0.38, dampingFraction: 0.8, blendDuration: 0)
 
+    private var openAnimation: Animation {
+        reduceMotion ? .easeInOut(duration: 0.12)
+            : .spring(response: 0.42, dampingFraction: 0.8, blendDuration: 0)
+    }
+
     private let extendedHoverPadding: CGFloat = 30
     private let zeroHeightHoverPadding: CGFloat = 10
 
@@ -129,14 +134,13 @@ struct ContentView: View {
                     )
                     .frame(minHeight: vm.notchState == .closed ? zeroHeightHoverPadding : nil, alignment: .top)
                     .conditionalModifier(true) { view in
-                        let openAnimation = Animation.spring(response: 0.42, dampingFraction: 0.8, blendDuration: 0)
                         let closeAnimation = Animation.spring(response: 0.45, dampingFraction: 1.0, blendDuration: 0)
                         
                         return view
                             .animation(vm.notchState == .open ? openAnimation : closeAnimation, value: vm.notchState)
                             .animation(.smooth, value: gestureProgress)
                     }
-                    .animation(.easeInOut(duration: reduceMotion ? 0.12 : 0.25), value: vm.isAutoHidden)
+                    .animation(vm.notchState == .open ? openAnimation : .easeInOut(duration: reduceMotion ? 0.12 : 0.25), value: vm.isAutoHidden)
                     .contentShape(Rectangle())
                     .onHover { hovering in
                         handleHover(hovering)
@@ -204,7 +208,7 @@ struct ContentView: View {
                         .fill(Color.black.opacity(0.01))
                         .frame(width: computedChinWidth, height: vm.chinHeight)
                         .opacity(vm.isAutoHidden && vm.notchState == .closed ? 0 : 1)
-                        .animation(.easeInOut(duration: reduceMotion ? 0.12 : 0.25), value: vm.isAutoHidden)
+                        .animation(vm.notchState == .open ? openAnimation : .easeInOut(duration: reduceMotion ? 0.12 : 0.25), value: vm.isAutoHidden)
                 }
             }
         }
@@ -220,7 +224,7 @@ struct ContentView: View {
         .background(dragDetector)
         .onDisappear {
             hoverTask?.cancel()
-            vm.isHoveringNotch = false
+            vm.isHoverRevealed = false
         }
         .preferredColorScheme(.dark)
         .environmentObject(vm)
@@ -383,7 +387,6 @@ struct ContentView: View {
                 .transition(
                     .scale(scale: 0.8, anchor: .top)
                     .combined(with: .opacity)
-                    .animation(.smooth(duration: 0.35))
                 )
                 .zIndex(1)
                 .allowsHitTesting(vm.notchState == .open)
@@ -533,7 +536,8 @@ struct ContentView: View {
 
     private func doOpen() {
         if coordinator.firstLaunch { return }
-        withAnimation(animationSpring) {
+        withAnimation(openAnimation) {
+            vm.isHoverRevealed = isHovering
             vm.open()
         }
     }
@@ -545,18 +549,21 @@ struct ContentView: View {
         hoverTask?.cancel()
         
         if hovering {
+            let canAutoOpen = vm.notchState == .closed
+                && !coordinator.sneakPeek.show
+                && Defaults[.openNotchOnHover]
             withAnimation(animationSpring) {
                 isHovering = true
-                vm.isHoveringNotch = true
+                if !vm.isAutoHidden || !canAutoOpen {
+                    vm.isHoverRevealed = true
+                }
             }
             
             if vm.notchState == .closed && Defaults[.enableHaptics] {
                 haptics.toggle()
             }
             
-            guard vm.notchState == .closed,
-                  !coordinator.sneakPeek.show,
-                  Defaults[.openNotchOnHover] else { return }
+            guard canAutoOpen else { return }
             
             hoverTask = Task {
                 try? await Task.sleep(for: .seconds(Defaults[.minimumHoverDuration]))
@@ -564,10 +571,15 @@ struct ContentView: View {
                 
                 await MainActor.run {
                     guard self.vm.notchState == .closed,
-                          self.isHovering,
-                          !self.coordinator.sneakPeek.show else { return }
-                    
-                    self.doOpen()
+                          self.isHovering else { return }
+
+                    if self.coordinator.sneakPeek.show {
+                        withAnimation(self.animationSpring) {
+                            self.vm.isHoverRevealed = true
+                        }
+                    } else {
+                        self.doOpen()
+                    }
                 }
             }
         } else {
@@ -578,7 +590,7 @@ struct ContentView: View {
                 await MainActor.run {
                     withAnimation(animationSpring) {
                         self.isHovering = false
-                        self.vm.isHoveringNotch = false
+                        self.vm.isHoverRevealed = false
                     }
 
                     let shouldStayOpenForClipboardPreview =

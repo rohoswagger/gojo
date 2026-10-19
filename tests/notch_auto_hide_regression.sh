@@ -54,4 +54,5 @@ swiftc -swift-version 5 -warnings-as-errors \
 status=0
 "$scratch_dir/policy" || status=$?
 "$scratch_dir/layout" || status=$?
+"$repo_root/tests/notch_auto_hide_hover_regression.sh" || status=$?
 exit "$status"

@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] — 2026-10-19
+
+Keep speaking between phrases with persistent voice dictation and a compact,
+movable panel for recording controls and feedback.
+
+### Added
+
+- **Persistent voice mode.** Hold Control–Option and press Space, or click the
+  microphone in Voice controls, to keep recording. Pauses send each phrase
+  for transcription while the microphone continues listening. Choose a pause
+  duration of 0.6, 0.9, or 1.5 seconds.
+- **Floating dictation controls.** Open Voice controls from the notch or
+  Dictation settings. Pause, resume, finish, or cancel from the panel, and drag
+  it to a position Gojo remembers for each display.
+- **Saved text when insertion is unsafe.** Voice-mode phrases keep their
+  captured destination. Text that cannot be inserted safely remains available
+  to copy from Voice controls. Password fields stop capture.
+- **License recovery links.** Recover a lost key from onboarding or License
+  settings using the email address from the original purchase.
+
+### Changed
+
+- **Dictation feedback moves into the floating panel.** Recording, processing,
+  completion, and error states now appear alongside the controls.
+- **Parakeet preparation reuses successful model validation.** Unchanged model
+  files avoid a second integrity-hashing pass before loading. Changed or
+  missing files require validation again.
+
+### Fixed
+
+- **Microphone capture recovers after sleep and wake.** Gojo resets stale audio
+  state before the next recording. Sleep and screen lock cancel active
+  dictation sessions.
+
 ## [1.5.1] — 2026-09-04
 
 This patch release makes dictation react consistently and tightens the search
@@ -203,7 +237,8 @@ Meet Gojo — it turns the dead space around your MacBook's notch into a control
 - **Guided setup** — a polished first launch that gets you going in seconds.
 - **Automatic updates** — new versions install themselves; no re-downloading.
 
-[Unreleased]: https://github.com/rohoswagger/gojo/compare/v1.5.1...HEAD
+[Unreleased]: https://github.com/rohoswagger/gojo/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/rohoswagger/gojo/compare/v1.5.1...v1.6.0
 [1.5.1]: https://github.com/rohoswagger/gojo/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/rohoswagger/gojo/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/rohoswagger/gojo/compare/v1.3.0...v1.4.0

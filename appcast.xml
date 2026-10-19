@@ -6,6 +6,46 @@
     <description>Most recent changes to Gojo, with download links.</description>
     <language>en</language>
     <item>
+      <title>Version 1.6.0</title>
+      <pubDate>Mon, 19 Oct 2026 18:31:28 +0000</pubDate>
+      <sparkle:version>1792434465</sparkle:version>
+      <sparkle:shortVersionString>1.6.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+<p>Keep speaking between phrases with persistent voice dictation and a compact,</p>
+<p>movable panel for recording controls and feedback.</p>
+<h4>Added</h4>
+<ul><li>**Persistent voice mode.** Hold Control–Option and press Space, or click the</li></ul>
+<p>  microphone in Voice controls, to keep recording. Pauses send each phrase</p>
+<p>  for transcription while the microphone continues listening. Choose a pause</p>
+<p>  duration of 0.6, 0.9, or 1.5 seconds.</p>
+<ul><li>**Floating dictation controls.** Open Voice controls from the notch or</li></ul>
+<p>  Dictation settings. Pause, resume, finish, or cancel from the panel, and drag</p>
+<p>  it to a position Gojo remembers for each display.</p>
+<ul><li>**Saved text when insertion is unsafe.** Voice-mode phrases keep their</li></ul>
+<p>  captured destination. Text that cannot be inserted safely remains available</p>
+<p>  to copy from Voice controls. Password fields stop capture.</p>
+<ul><li>**License recovery links.** Recover a lost key from onboarding or License</li></ul>
+<p>  settings using the email address from the original purchase.</p>
+<h4>Changed</h4>
+<ul><li>**Dictation feedback moves into the floating panel.** Recording, processing,</li></ul>
+<p>  completion, and error states now appear alongside the controls.</p>
+<ul><li>**Parakeet preparation reuses successful model validation.** Unchanged model</li></ul>
+<p>  files avoid a second integrity-hashing pass before loading. Changed or</p>
+<p>  missing files require validation again.</p>
+<h4>Fixed</h4>
+<ul><li>**Microphone capture recovers after sleep and wake.** Gojo resets stale audio</li></ul>
+<p>  state before the next recording. Sleep and screen lock cancel active</p>
+<p>  dictation sessions.</p>
+      ]]></description>
+      <enclosure
+        url="https://downloads.trygojo.com/Gojo-1.6.0.dmg"
+        sparkle:edSignature="2VkOncYzdwWJrZRqbCsWBdIsIvDqvJxdw/SEm5Q9rw2ge/drgAWd9rGhs8MTyUJJPgTdh3IQ3XCYb2Z9cVVTAA=="
+        length="17399815"
+        type="application/octet-stream" />
+    </item>
+
+    <item>
       <title>Version 1.5.1</title>
       <pubDate>Fri, 04 Sep 2026 19:20:44 +0000</pubDate>
       <sparkle:version>1788549568</sparkle:version>

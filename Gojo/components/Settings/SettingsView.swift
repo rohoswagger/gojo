@@ -1409,7 +1409,7 @@ struct DictationSettings: View {
     @ObservedObject private var dictation = GojoDictationService.shared
     @AppStorage(DictationPauseDuration.defaultsKey)
     private var dictationPauseDurationRawValue = DictationPauseDuration.natural.rawValue
-    @State private var microphoneStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+    @ObservedObject private var microphonePermission = DictationMicrophonePermission.shared
     @State private var accessibilityAuthorized = false
     @State private var modelToRemove: DictationModelID?
     @State private var openRouterAPIKeyDraft = ""
@@ -1429,6 +1429,32 @@ struct DictationSettings: View {
                 Text("Keyboard shortcuts")
             } footer: {
                 Text("Release Control–Option to insert text. Press Space while holding both keys to keep listening. Repeat the shortcut to finish; Escape cancels.")
+            }
+
+            Section {
+                LabeledContent("Microphone", value: microphoneStatusLabel)
+                if microphonePermission.status == .notDetermined {
+                    Button("Request microphone access") {
+                        Task { await microphonePermission.requestIfNeeded() }
+                    }
+                    .disabled(microphonePermission.isRequesting)
+                } else if microphonePermission.status == .denied || microphonePermission.status == .restricted {
+                    Text(microphonePermissionGuidance)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Button("Open Microphone Settings") {
+                        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")!)
+                    }
+                }
+
+                LabeledContent("Accessibility", value: accessibilityAuthorized ? "Allowed" : "Required")
+                if !accessibilityAuthorized {
+                    Button("Open Accessibility Settings") {
+                        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+                    }
+                }
+            } header: {
+                Text("Permissions")
             }
 
             Section {
@@ -1792,18 +1818,6 @@ struct DictationSettings: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-
-            Section {
-                LabeledContent("Microphone", value: microphoneStatusLabel)
-                LabeledContent("Accessibility", value: accessibilityAuthorized ? "Allowed" : "Required")
-                if microphoneStatus == .denied || !accessibilityAuthorized {
-                    Button("Open Privacy & Security Settings") {
-                        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy")!)
-                    }
-                }
-            } header: {
-                Text("Permissions")
-            }
         }
         .navigationTitle("Dictation")
         .alert(item: $modelToRemove) { model in
@@ -1829,19 +1843,35 @@ struct DictationSettings: View {
             Text("English transcript cleanup will turn off. Vocabulary corrections will keep working, and you can download the model again later.")
         }
         .task {
-            microphoneStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+            await microphonePermission.requestIfNeeded()
+        }
+        .task {
             accessibilityAuthorized = await XPCHelperClient.shared.isAccessibilityAuthorized()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            microphonePermission.refresh()
+            Task {
+                accessibilityAuthorized = await XPCHelperClient.shared.isAccessibilityAuthorized()
+            }
         }
     }
 
     private var microphoneStatusLabel: String {
-        switch microphoneStatus {
+        if microphonePermission.isRequesting { return "Waiting for permission…" }
+        switch microphonePermission.status {
         case .authorized: return "Allowed"
         case .notDetermined: return "Not asked yet"
         case .denied: return "Denied"
         case .restricted: return "Restricted"
         @unknown default: return "Unknown"
         }
+    }
+
+    private var microphonePermissionGuidance: String {
+        if microphonePermission.status == .restricted {
+            return "Microphone access is restricted on this Mac. Review Screen Time or device management restrictions."
+        }
+        return "Allow Gojo in System Settings > Privacy & Security > Microphone."
     }
 
     private var dictationProviderBinding: Binding<DictationProvider> {

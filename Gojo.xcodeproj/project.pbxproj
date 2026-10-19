@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A07900000000000000000001 /* NotchAutoHidePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A07900000000000000000002 /* NotchAutoHidePolicy.swift */; };
 		1100290C2E847E2800035A57 /* NSItemProvider+LoadHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1100290B2E847E2800035A57 /* NSItemProvider+LoadHelpers.swift */; };
 		110029272E84FD4C00035A57 /* TemporaryFileStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 110029262E84FD4C00035A57 /* TemporaryFileStorageService.swift */; };
 		1100292A2E8691B400035A57 /* FileShareView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 110029292E8691B400035A57 /* FileShareView.swift */; };
@@ -242,6 +243,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A07900000000000000000002 /* NotchAutoHidePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchAutoHidePolicy.swift; sourceTree = "<group>"; };
 		D1CA000000000000000000A1 /* DictationModelValidationCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationModelValidationCache.swift; sourceTree = "<group>"; };
 		D1C7000000000000000000A1 /* DictationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationModels.swift; sourceTree = "<group>"; };
 		D1C7000000000000000000A2 /* DictationProtocols.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationProtocols.swift; sourceTree = "<group>"; };
@@ -650,6 +652,7 @@
 			children = (
 				111BE9942ECF2DEF0079DD4E /* DragDetector.swift */,
 				B1A78C812C8BA08100BD51B0 /* FullscreenMediaDetection.swift */,
+				A07900000000000000000002 /* NotchAutoHidePolicy.swift */,
 				5917FD102E57891600E87F1C /* MediaKeyInterceptor.swift */,
 				1182315B650DDE2B3E9E5884 /* AltTabHotKeyMonitor.swift */,
 				6CF341EA945184F4E23504E8 /* SearchHotkeyInterceptor.swift */,
@@ -1297,6 +1300,7 @@
 				B1C4489B2C97376A001F0858 /* TipStore.swift in Sources */,
 				1153BD912D986DB300979FB0 /* PlaybackState.swift in Sources */,
 				B1A78C822C8BA08100BD51B0 /* FullscreenMediaDetection.swift in Sources */,
+				A07900000000000000000001 /* NotchAutoHidePolicy.swift in Sources */,
 				14E9FEAE2C7325770062E83F /* Button+Bouncing.swift in Sources */,
 				14D570C92C5F38890011E668 /* GojoViewModel.swift in Sources */,
 				14D570BC2C5E98EB0011E668 /* generic.swift in Sources */,

@@ -10,6 +10,7 @@ swiftc \
   -swift-version 5 \
   -warnings-as-errors \
   -target arm64-apple-macosx14.0 \
+  Gojo/Dictation/DictationSpeechGate.swift \
   Gojo/Dictation/DictationUtteranceSegmenter.swift \
   tests/dictation_pause_segmentation_regression.swift \
   -o "$binary_path"

@@ -11,6 +11,9 @@ swiftc \
   -warnings-as-errors \
   -target "$(uname -m)-apple-macosx14.0" \
   Gojo/Dictation/DictationModels.swift \
+  Gojo/Dictation/DictationSessionPlan.swift \
+  Gojo/Dictation/DictationSpokenCommands.swift \
+  Gojo/Dictation/DictationFinalTextPolicy.swift \
   Gojo/Dictation/DictationProtocols.swift \
   Gojo/Dictation/DictationSessionStateMachine.swift \
   Gojo/Dictation/DictationModifierShortcutStateMachine.swift \
@@ -19,6 +22,9 @@ swiftc \
   Gojo/Dictation/DictationUtteranceSegmenter.swift \
   Gojo/components/Settings/DictationMicrophonePermission.swift \
   Gojo/Dictation/AVAudioEngineCaptureService.swift \
+  Gojo/Dictation/DictationPreviewAudioBuffer.swift \
+  Gojo/Dictation/DictationInputDevices.swift \
+  Gojo/Dictation/DictationSpeechGate.swift \
   tests/dictation_regression.swift \
   -o "$binary_path"
 "$binary_path"

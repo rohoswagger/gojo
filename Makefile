@@ -1,4 +1,4 @@
-.PHONY: test-permissions test-dev-handshake help build run stop restart smoke reset-onboarding run-onboarding test-release-signing test-window test-window-ui test-window-focus test-flux test-alt-tab test-search test-accessibility-menu test-dictation test-dictation-model-validation test-dictation-cleanup-benchmark test-dictation-live test-dictation-codex-capture-live test-dictation-secure-live test-dictation-multidisplay-live test-dictation-model-live test-dictation-installed-models-live test-dictation-shortcut-live test-dictation-opaque-paste-live test-dictation-unicode-typing-live test-dictation-real-microphone-live release release-dry clean
+.PHONY: test-dictation-sdk test-permissions test-dev-handshake help build run stop restart smoke reset-onboarding run-onboarding test-release-signing test-window test-window-ui test-window-focus test-flux test-alt-tab test-search test-accessibility-menu test-dictation test-dictation-model-validation test-dictation-cleanup-benchmark test-dictation-live test-dictation-codex-capture-live test-dictation-secure-live test-dictation-multidisplay-live test-dictation-model-live test-dictation-installed-models-live test-dictation-shortcut-live test-dictation-opaque-paste-live test-dictation-unicode-typing-live test-dictation-real-microphone-live release release-dry clean
 
 PROJECT := Gojo.xcodeproj
 SCHEME := Gojo
@@ -24,6 +24,7 @@ help:
 	@echo "  make test-search Run search calculator/fuzzy-matcher regression checks"
 	@echo "  make test-accessibility-menu Run menu accessibility-flow regression checks"
 	@echo "  make test-dictation Run local dictation regressions and benchmark scorer checks"
+	@echo "  make test-dictation-sdk Run recognition SDK regressions after make build"
 	@echo "  make test-permissions Run permission, recovery, and signing regressions"
 	@echo "  make test-dev-handshake Verify the signed app/helper connection without prompting"
 	@echo "  make test-dictation-model-validation Run model validation cache regressions"
@@ -125,6 +126,13 @@ test-accessibility-menu:
 	./tests/accessibility_authorization_flow_regression.sh
 
 test-dictation:
+	bash ./tests/dictation_session_plan_regression.sh
+	bash ./tests/dictation_audio_experience_regression.sh
+	bash ./tests/dictation_final_text_regression.sh
+	bash ./tests/s1_mini_polisher_policy_regression.sh
+	bash ./tests/dictation_residency_regression.sh
+	bash ./tests/dictation_cloud_request_regression.sh
+	bash ./tests/dictation_practice_regression.sh
 	bash ./tests/dictation_model_preparation_regression.sh
 	bash ./tests/dictation_model_preparation_service_regression.sh
 	bash ./tests/dictation_microphone_diagnostic_service_regression.sh
@@ -150,6 +158,10 @@ test-dictation:
 	bash ./tests/dictation_live_harness_regression.sh
 	./tests/dictation_benchmark_regression.sh
 	bash ./tests/dictation_cleanup_benchmark_regression.sh
+
+test-dictation-sdk:
+	bash ./tests/dictation_recognition_options_regression.sh
+	bash ./tests/dictation_recognition_lifecycle_regression.sh
 
 test-dictation-model-validation:
 	bash ./tests/dictation_model_validation_regression.sh

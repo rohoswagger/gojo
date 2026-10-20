@@ -14,6 +14,7 @@ swiftc \
   -framework SwiftUI \
   Gojo/components/Settings/SettingsWindowCloseObserver.swift \
   Gojo/Dictation/DictationModels.swift \
+  Gojo/Dictation/DictationSessionPlan.swift \
   Gojo/Dictation/DictationVocabularyImport.swift \
   tests/settings_vocabulary_import_close_regression.swift \
   -o "$binary_path"

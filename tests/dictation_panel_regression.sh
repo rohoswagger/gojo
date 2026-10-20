@@ -15,14 +15,4 @@ swiftc \
   -o "$binary_path"
 "$binary_path"
 
-swiftc \
-  -swift-version 5 \
-  -warnings-as-errors \
-  -target "$(uname -m)-apple-macosx14.0" \
-  Gojo/Dictation/DictationModels.swift \
-  Gojo/Dictation/DictationModifierShortcutStateMachine.swift \
-  Gojo/Dictation/DictationPanelPlacement.swift \
-  Gojo/Dictation/DictationPanelView.swift \
-  tests/dictation_panel_presentation_regression.swift \
-  -o "$binary_path"
-"$binary_path"
+bash tests/dictation_panel_presentation_regression.sh

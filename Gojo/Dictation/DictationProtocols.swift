@@ -3,20 +3,22 @@ import Foundation
 protocol DictationTargetCapturing: Sendable {
     associatedtype Target: Sendable
 
-    func captureTarget() async throws -> DictationTargetResolution<Target>
-    func captureAdditionalTarget() async throws -> DictationTargetResolution<Target>
+    func captureTarget(purpose: DictationSessionPurpose) async throws -> DictationTargetResolution<Target>
+    func captureAdditionalTarget(purpose: DictationSessionPurpose) async throws -> DictationTargetResolution<Target>
     func destinationIdentifier(for target: Target) -> String?
 }
 
 extension DictationTargetCapturing {
     func destinationIdentifier(for target: Target) -> String? { nil }
 
-    func captureAdditionalTarget() async throws -> DictationTargetResolution<Target> {
-        try await captureTarget()
+    func captureAdditionalTarget(purpose: DictationSessionPurpose) async throws -> DictationTargetResolution<Target> {
+        try await captureTarget(purpose: purpose)
     }
 }
 
 protocol DictationAudioCapturing: Sendable {
+    func configure(_ configuration: DictationCaptureConfiguration) async throws
+    func captureSnapshot() async -> DictationCaptureSnapshot?
     func requestPermission() async throws -> Bool
     func startCapture() async throws
     func stopCapture() async throws -> DictationAudio
@@ -27,6 +29,9 @@ protocol DictationAudioCapturing: Sendable {
 }
 
 extension DictationAudioCapturing {
+    func configure(_ configuration: DictationCaptureConfiguration) async throws {}
+    func captureSnapshot() async -> DictationCaptureSnapshot? { nil }
+
     func promoteCaptureToContinuous(pauseDuration: TimeInterval) async throws -> AsyncThrowingStream<DictationAudio, Error> {
         throw DictationContinuousCaptureError.unsupported
     }
@@ -41,37 +46,36 @@ extension DictationAudioCapturing {
 }
 
 protocol LocalDictationTranscribing: Sendable {
-    func transcribe(_ audio: DictationAudio) async throws -> String
+    func transcribe(_ audio: DictationAudio, request: DictationRecognitionRequest) async throws -> String
+    func prepare(request: DictationRecognitionRequest) async throws
     func cancelTranscription() async
-    /// Loads whatever `transcribe` would otherwise load on first use. Called
-    /// when a session starts so the cost overlaps with the user speaking.
-    func prepare() async throws
+    func beginSession(_ plan: DictationSessionPlan) async throws
+    func endSession(_ id: UUID) async
 }
 
 extension LocalDictationTranscribing {
     func cancelTranscription() async {}
-    func prepare() async throws {}
+    func prepare(request: DictationRecognitionRequest) async throws {}
+    func beginSession(_ plan: DictationSessionPlan) async throws {}
+    func endSession(_ id: UUID) async {}
 }
 
-/// Optionally refines an already-transcribed utterance before it is inserted.
-/// Implementations must support prompt cancellation so a replacement dictation
-/// session never races an earlier polish request.
 protocol DictationTextPolishing: Sendable {
-    func polish(_ transcript: String) async throws -> String
+    func polish(_ transcript: String, options: DictationTextOptions) async throws -> String
     func cancelPolishing() async
 }
 
 protocol DictationTextInserting: Sendable {
     associatedtype Target: Sendable
 
-    func insert(_ text: String, into target: Target) async throws -> DictationInsertionOutcome
-    func insertRetainingTarget(_ text: String, into target: Target) async throws -> DictationInsertionOutcome
+    func insert(_ text: String, into target: Target, plan: DictationSessionPlan) async throws -> DictationInsertionOutcome
+    func insertRetainingTarget(_ text: String, into target: Target, plan: DictationSessionPlan) async throws -> DictationInsertionOutcome
     func releaseTarget(_ target: Target) async
 }
 
 extension DictationTextInserting {
-    func insertRetainingTarget(_ text: String, into target: Target) async throws -> DictationInsertionOutcome {
-        try await insert(text, into: target)
+    func insertRetainingTarget(_ text: String, into target: Target, plan: DictationSessionPlan) async throws -> DictationInsertionOutcome {
+        try await insert(text, into: target, plan: plan)
     }
 
     func releaseTarget(_ target: Target) async {}

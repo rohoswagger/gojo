@@ -24,6 +24,8 @@ struct DictationUtteranceSegmenter {
     let minimumSpeechSampleCount: Int
     let analysisSampleCount: Int
 
+    private var gate: DictationSpeechGate
+    private let adaptiveSpeech: Bool
     private var utterance: Utterance?
     private var analysisSamples: [Float] = []
     private var prerollSamples: [Float]
@@ -32,7 +34,7 @@ struct DictationUtteranceSegmenter {
     private var continuesSpeech = false
     private var continuationSilenceCount = 0
 
-    init(sampleRate: Double, pauseDuration: TimeInterval = 0.9) throws {
+    init(sampleRate: Double, pauseDuration: TimeInterval = 0.9, adaptiveSpeech: Bool = true) throws {
         guard sampleRate.isFinite, (8_000...192_000).contains(sampleRate) else {
             throw ConfigurationError.invalidSampleRate
         }
@@ -41,6 +43,8 @@ struct DictationUtteranceSegmenter {
             throw ConfigurationError.invalidPauseDuration
         }
         self.sampleRate = sampleRate
+        self.adaptiveSpeech = adaptiveSpeech
+        gate = DictationSpeechGate(sampleRate: sampleRate, adaptive: adaptiveSpeech)
         pauseSampleCount = Int(ceil(sampleRate * pauseDuration))
         maximumUtteranceSampleCount = Int(ceil(sampleRate * Self.maximumUtteranceDuration))
         minimumSpeechSampleCount = Int(ceil(sampleRate * Self.minimumSpeechDuration))
@@ -89,12 +93,11 @@ struct DictationUtteranceSegmenter {
         prerollIndex = 0
         continuesSpeech = false
         continuationSilenceCount = 0
+        gate = DictationSpeechGate(sampleRate: sampleRate, adaptive: adaptiveSpeech)
     }
 
     private mutating func consumeAnalysisSamples(completed: inout [[Float]]) {
-        let sumOfSquares = analysisSamples.reduce(0.0) { $0 + Double($1) * Double($1) }
-        let rms = sqrt(sumOfSquares / Double(analysisSamples.count))
-        let isSpeech = rms.isFinite && rms >= Double(Self.speechRootMeanSquare)
+        let isSpeech = gate.consume(frame: analysisSamples)
         var index = 0
         while index < analysisSamples.count {
             if utterance == nil {
@@ -105,6 +108,7 @@ struct DictationUtteranceSegmenter {
                         if continuationSilenceCount >= pauseSampleCount {
                             continuesSpeech = false
                             continuationSilenceCount = 0
+                            gate.endUtterance()
                         }
                     }
                     return
@@ -134,6 +138,7 @@ struct DictationUtteranceSegmenter {
                     utterance!.speechSampleCount >= minimumSpeechSampleCount
                 completeUtterance(into: &completed)
                 continuesSpeech = reachedMaximum && carriesSpeech
+                gate.endUtterance(continuing: continuesSpeech)
                 continuationSilenceCount = 0
             }
         }

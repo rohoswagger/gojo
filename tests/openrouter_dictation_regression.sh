@@ -12,6 +12,7 @@ swiftc \
   -target arm64-apple-macosx14.0 \
   -framework Security \
   Gojo/Dictation/DictationModels.swift \
+  Gojo/Dictation/DictationSessionPlan.swift \
   Gojo/Dictation/DictationProtocols.swift \
   Gojo/Dictation/OpenRouterDictationSupport.swift \
   tests/openrouter_dictation_regression.swift \

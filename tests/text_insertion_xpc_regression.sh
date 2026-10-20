@@ -209,15 +209,20 @@ assert 'case "nonEditableTarget": return .copyOnly(.nonEditableTarget)' in provi
 assert 'case "permissionMissing": throw DictationFailure.accessibilityPermissionDenied' in provider
 assert 'default: throw DictationXPCError(code: code)' in provider
 assert provider.count("return .copyOnly(") == 2, "Only confirmed missing or non-editable destinations may start copy-only recording."
-assert 'return .captured(DictationTextTarget(' in provider
+assert 'return .captured(.external(' in provider
 assert 'result["token"] as? String' in provider
 assert "localizedDescription" not in provider, "Capture resolution must use helper error codes instead of localized messages."
 inserter = service[
     service.index("private struct XPCTextInserter"):
     service.index("private struct DictationXPCError")
 ]
-assert inserter.count("async throws -> DictationInsertionOutcome") == 2
-assert inserter.count('return (result["verified"] as? NSNumber)?.boolValue == true ? .verified : .unverified') == 2, "Only explicit app confirmation may discard the recovery copy."
+assert inserter.count("async throws -> DictationInsertionOutcome") == 3
+assert "try await insert(text, into: target, plan: plan, retaining: false)" in inserter
+assert "try await insert(text, into: target, plan: plan, retaining: true)" in inserter
+assert "case .external(let token, _, _, _) = target" in inserter
+assert "XPCHelperClient.shared.insertTextRetainingTarget(text, token: token)" in inserter
+assert "XPCHelperClient.shared.insertText(text, token: token)" in inserter
+assert inserter.count('return (result["verified"] as? NSNumber)?.boolValue == true ? .verified : .unverified') == 1, "The shared external insertion path must preserve the recovery copy without explicit app confirmation."
 shortcut_key_down = service[
     service.index("case .keyDown, .startVoiceMode:"):
     service.index("case .keyUp:")

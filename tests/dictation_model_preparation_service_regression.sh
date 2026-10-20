@@ -39,6 +39,8 @@ swiftc \
   -warnings-as-errors \
   -target "$(uname -m)-apple-macosx14.0" \
   Gojo/Dictation/DictationModels.swift \
+  Gojo/Dictation/DictationSessionPlan.swift \
+  Gojo/Dictation/DictationModelResidency.swift \
   Gojo/Dictation/DictationModelPreparation.swift \
   Gojo/Dictation/DictationModifierShortcutStateMachine.swift \
   "$test_directory/service.swift" \

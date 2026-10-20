@@ -22,7 +22,9 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
 
     private static let maximumPromptTokens = 200
 
-    private let vocabularyProvider: @Sendable () -> [DictationVocabularyEntry]
+    private var session: (id: UUID, request: DictationRecognitionRequest)?
+    private var maintenanceInProgress = false
+    private var activeTranscriptionModel: WhisperDictationModel?
     private var selectedModel: WhisperDictationModel
     private var model: (identifier: WhisperDictationModel, value: WhisperKit)?
     private var modelTask: (
@@ -35,14 +37,42 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
     private var activeTranscriptionGeneration: UInt?
     private var transcriptionGeneration: UInt = 0
 
-    init(
-        selectedModel: WhisperDictationModel = .smallEnglish,
-        vocabularyProvider: @escaping @Sendable () -> [DictationVocabularyEntry] = {
-            DictationVocabularyPolicy.load()
-        }
-    ) {
+    init(selectedModel: WhisperDictationModel = .smallEnglish) {
         self.selectedModel = selectedModel
-        self.vocabularyProvider = vocabularyProvider
+    }
+
+    func beginSession(_ plan: DictationSessionPlan) async throws {
+        _ = try validateSession(plan.recognition)
+        guard session == nil else { throw WhisperKitDictationError.sessionAlreadyActive }
+        session = (plan.id, plan.recognition)
+    }
+
+    func endSession(_ id: UUID) async {
+        guard session?.id == id else { return }
+        await cancelTranscription()
+        if session?.id == id { session = nil }
+    }
+
+    private static func localRequest(_ request: DictationRecognitionRequest) throws -> DictationLocalRecognition {
+        guard case .local(let local) = request, local.model.whisperModel != nil else {
+            throw WhisperKitDictationError.incompatibleRecognitionRequest
+        }
+        return local
+    }
+
+    private func validateSession(_ request: DictationRecognitionRequest) throws -> DictationLocalRecognition {
+        let local = try Self.localRequest(request)
+        guard !maintenanceInProgress else { throw WhisperKitDictationError.transcriptionAlreadyRunning }
+        guard modelTask == nil || modelTask?.identifier == local.model.whisperModel else {
+            throw WhisperKitDictationError.transcriptionAlreadyRunning
+        }
+        guard activeTranscriptionModel == nil || activeTranscriptionModel == local.model.whisperModel else {
+            throw WhisperKitDictationError.transcriptionAlreadyRunning
+        }
+        guard session == nil || session?.request == request else {
+            throw WhisperKitDictationError.incompatibleRecognitionRequest
+        }
+        return local
     }
 
     func install(_ requestedModel: WhisperDictationModel) async throws {
@@ -53,10 +83,13 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
     }
 
     func remove(_ requestedModel: WhisperDictationModel) async throws {
-        guard activeTranscriptionGeneration == nil else {
+        guard session == nil, !maintenanceInProgress, activeTranscriptionGeneration == nil else {
             throw WhisperKitDictationError.transcriptionAlreadyRunning
         }
+        maintenanceInProgress = true
+        defer { maintenanceInProgress = false }
         if model?.identifier == requestedModel {
+            await model?.value.unloadModels()
             model = nil
         }
         if let pending = modelTask, pending.identifier == requestedModel {
@@ -75,13 +108,15 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
     }
 
     func selectModel(_ requestedModel: WhisperDictationModel) async throws {
-        guard activeTranscriptionGeneration == nil else {
+        guard session == nil, !maintenanceInProgress, activeTranscriptionGeneration == nil else {
             throw WhisperKitDictationError.transcriptionAlreadyRunning
         }
         guard Self.cachedModelFolder(for: requestedModel) != nil else {
             throw WhisperKitDictationError.modelNotInstalled
         }
         guard requestedModel != selectedModel else { return }
+        maintenanceInProgress = true
+        defer { maintenanceInProgress = false }
 
         modelTaskGeneration &+= 1
         let pendingModelTask = modelTask
@@ -90,11 +125,13 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
             _ = await task.result
         }
         modelTask = nil
+        await model?.value.unloadModels()
         model = nil
         selectedModel = requestedModel
     }
 
-    func transcribe(_ audio: DictationAudio) async throws -> String {
+    func transcribe(_ audio: DictationAudio, request: DictationRecognitionRequest) async throws -> String {
+        let request = try validateSession(request)
         guard audio.sampleRate == DictationAudio.transcriptionSampleRate else {
             throw WhisperKitDictationError.invalidSampleRate(audio.sampleRate)
         }
@@ -105,43 +142,73 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
         transcriptionGeneration &+= 1
         let generation = transcriptionGeneration
         activeTranscriptionGeneration = generation
+        activeTranscriptionModel = request.model.whisperModel
         defer {
             if activeTranscriptionGeneration == generation {
                 activeTranscriptionGeneration = nil
+                activeTranscriptionModel = nil
             }
             if transcriptionTask?.generation == generation {
                 transcriptionTask = nil
             }
         }
 
-        let model = try await loadSelectedModel()
+        guard let requestedModel = request.model.whisperModel else {
+            throw WhisperKitDictationError.incompatibleRecognitionRequest
+        }
+        let model = try await loadModel(requestedModel)
         try Task.checkCancellation()
-        guard activeTranscriptionGeneration == generation else { throw CancellationError() }
+        guard activeTranscriptionGeneration == generation,
+              transcriptionGeneration == generation else { throw CancellationError() }
         let promptTokens = Self.promptTokens(
-            for: DictationVocabularyPolicy.recognitionTerms(vocabularyProvider()),
+            for: request.recognitionTerms,
             tokenizer: model.tokenizer
         )
-        let options = DecodingOptions(
-            language: "en",
+        let options = try Self.decodingOptions(for: request, promptTokens: promptTokens)
+        let task = Task<String, Error> {
+            let results = try await model.transcribe(
+                audioArray: audio.samples,
+                decodeOptions: options
+            )
+            try Task.checkCancellation()
+            return results.map(\.text).joined(separator: " ")
+        }
+        transcriptionTask = (generation, task)
+        let transcript = try await task.value
+        try Task.checkCancellation()
+        guard activeTranscriptionGeneration == generation,
+              transcriptionGeneration == generation else { throw CancellationError() }
+        return transcript
+    }
+
+    static func decodingOptions(
+        for request: DictationLocalRecognition,
+        promptTokens: [Int]? = nil
+    ) throws -> DecodingOptions {
+        _ = try localRequest(.local(request))
+        let language: String?
+        let detectsLanguage: Bool
+        switch request.language {
+        case .automatic:
+            language = nil
+            detectsLanguage = true
+        case .fixed(let code):
+            language = code
+            detectsLanguage = false
+        }
+        return DecodingOptions(
+            task: request.translateToEnglish ? .translate : .transcribe,
+            language: language,
             temperature: 0,
             temperatureFallbackCount: 0,
             usePrefillPrompt: true,
-            detectLanguage: false,
+            detectLanguage: detectsLanguage,
             skipSpecialTokens: true,
             withoutTimestamps: true,
             promptTokens: promptTokens,
             noSpeechThreshold: 0.6,
             chunkingStrategy: .vad
         )
-        let task = Task<String, Error> {
-            let results = try await model.transcribe(
-                audioArray: audio.samples,
-                decodeOptions: options
-            )
-            return results.map(\.text).joined(separator: " ")
-        }
-        transcriptionTask = (generation, task)
-        return try await task.value
     }
 
     private static func promptTokens(
@@ -159,8 +226,12 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
         return tokens.isEmpty ? nil : tokens
     }
 
-    func prepare() async throws {
-        _ = try await loadSelectedModel()
+    func prepare(request: DictationRecognitionRequest) async throws {
+        let request = try validateSession(request)
+        guard let model = request.model.whisperModel else {
+            throw WhisperKitDictationError.incompatibleRecognitionRequest
+        }
+        _ = try await loadModel(model)
     }
 
     func cancelTranscription() async {
@@ -168,13 +239,10 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
         let cancelledGeneration = activeTranscriptionGeneration
         let cancelledTranscription = transcriptionTask
         let cancelledModelTask = modelTask
+        if cancelledModelTask != nil { modelTaskGeneration &+= 1 }
         cancelledTranscription?.task.cancel()
         cancelledModelTask?.task.cancel()
 
-        // Core ML work may not stop synchronously when its Swift task is
-        // cancelled. Keep the actor unavailable until both tasks have fully
-        // unwound so a replacement session cannot reuse mutable WhisperKit
-        // state concurrently.
         if let task = cancelledTranscription?.task {
             _ = await task.result
         }
@@ -184,6 +252,7 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
 
         if activeTranscriptionGeneration == cancelledGeneration {
             activeTranscriptionGeneration = nil
+            activeTranscriptionModel = nil
         }
         if transcriptionTask?.generation == cancelledTranscription?.generation {
             transcriptionTask = nil
@@ -194,6 +263,9 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
     }
 
     func unload() async {
+        guard session == nil, !maintenanceInProgress else { return }
+        maintenanceInProgress = true
+        defer { maintenanceInProgress = false }
         await cancelTranscription()
         let pendingModelTask = modelTask
         pendingModelTask?.task.cancel()
@@ -201,23 +273,31 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
             _ = await task.result
         }
         modelTask = nil
+        await model?.value.unloadModels()
         model = nil
     }
 
-    private func loadSelectedModel() async throws -> WhisperKit {
-        let requestedModel = selectedModel
+    private func loadModel(_ requestedModel: WhisperDictationModel) async throws -> WhisperKit {
         if let model, model.identifier == requestedModel { return model.value }
         if let modelTask, modelTask.identifier == requestedModel {
-            do { return try await modelTask.task.value.value }
+            do {
+                let loaded = try await modelTask.task.value.value
+                guard modelTaskGeneration == modelTask.generation else { throw CancellationError() }
+                return loaded
+            }
             catch is CancellationError { throw CancellationError() }
             catch { throw DictationModelPreparationError.classify(error) }
         }
 
+        guard modelTask == nil else { throw WhisperKitDictationError.transcriptionAlreadyRunning }
         try DictationModelPreparationError.checkStorage()
-        modelTask?.task.cancel()
+        let previousModel = model?.value
+        model = nil
         modelTaskGeneration &+= 1
         let generation = modelTaskGeneration
         let task = Task<LoadedWhisperKit, Error> {
+            if let previousModel { await previousModel.unloadModels() }
+            try Task.checkCancellation()
             let modelFolder = try await Self.resolvePinnedModelFolder(
                 for: requestedModel,
                 allowDownload: DictationModelRequest.transcription.allowsDownload
@@ -234,8 +314,8 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
         modelTask = (requestedModel, generation, task)
         do {
             let loadedModel = try await task.value.value
-            guard modelTask?.generation == generation,
-                  selectedModel == requestedModel else {
+            guard modelTask?.generation == generation, modelTaskGeneration == generation else {
+                await loadedModel.unloadModels()
                 throw CancellationError()
             }
             model = (requestedModel, loadedModel)
@@ -436,6 +516,8 @@ enum WhisperKitDictationError: LocalizedError {
     case modelIntegrityFailed(String)
     case modelRemovalFailed
     case transcriptionAlreadyRunning
+    case incompatibleRecognitionRequest
+    case sessionAlreadyActive
 
     var errorDescription: String? {
         switch self {
@@ -451,6 +533,10 @@ enum WhisperKitDictationError: LocalizedError {
             return "Gojo could not remove the local speech model."
         case .transcriptionAlreadyRunning:
             return "A local transcription is already running."
+        case .incompatibleRecognitionRequest:
+            return "The speech recognition request does not match the active model or session."
+        case .sessionAlreadyActive:
+            return "A dictation session is already using the local speech model."
         }
     }
 }

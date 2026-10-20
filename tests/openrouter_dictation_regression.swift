@@ -358,10 +358,11 @@ struct OpenRouterDictationRegressionRunner {
         let transcriptionClient = BlockingOpenRouterClient()
         let transcriber = OpenRouterDictationTranscriber(
             client: transcriptionClient,
-            apiKeyProvider: { "key" },
-            modelProvider: { "model" }
+            apiKeyProvider: { "key" }
         )
-        let transcriptionTask = Task { try await transcriber.transcribe(audio) }
+        let transcriptionTask = Task {
+            try await transcriber.transcribe(audio, request: .openRouter(modelID: "model"))
+        }
         for _ in 0..<100 where (await transcriptionClient.count()) == 0 {
             try? await Task.sleep(for: .milliseconds(2))
         }

@@ -202,6 +202,7 @@ private actor S1MiniLlamaRuntime {
     }
 
     func prepare(modelURL: URL) throws {
+        try Task.checkCancellation()
         if loadedPath == modelURL.path, model != nil, context != nil { return }
         unload()
         if !backendInitialized {
@@ -244,6 +245,10 @@ private actor S1MiniLlamaRuntime {
         }
         vocab = nil
         loadedPath = nil
+        if backendInitialized {
+            llama_backend_free()
+            backendInitialized = false
+        }
     }
 
     func polish(_ transcript: String, style: DictationWritingStyle, modelURL: URL) throws -> String {
@@ -354,64 +359,79 @@ private actor S1MiniLlamaRuntime {
 actor S1MiniDictationPolisher: DictationTextPolishing {
     private let store = S1MiniModelStore()
     private let runtime = S1MiniLlamaRuntime()
-    private let enabledProvider: @Sendable () -> Bool
-    private let styleProvider: @Sendable () -> DictationWritingStyle
-    private let vocabularyProvider: @Sendable () -> [DictationVocabularyEntry]
-    private var polishingTask: Task<String, Error>?
+    private var polishingTasks: [UUID: Task<String, Error>] = [:]
+    private var preparationTasks: [UUID: Task<Void, Never>] = [:]
+    private var releaseTask: (id: UUID, task: Task<Void, Never>)?
+    private var resourceGeneration: UInt64 = 0
+    private var polishingGeneration: UInt64 = 0
 
-    init(
-        enabledProvider: @escaping @Sendable () -> Bool = {
-            UserDefaults.standard.bool(forKey: DictationOpenRouterSettings.polishingEnabledDefaultsKey)
-        },
-        styleProvider: @escaping @Sendable () -> DictationWritingStyle = {
-            DictationWritingStyle(rawValue: UserDefaults.standard.string(
-                forKey: DictationWritingStyle.defaultsKey
-            ) ?? "") ?? .punctuated
-        },
-        vocabularyProvider: @escaping @Sendable () -> [DictationVocabularyEntry] = {
-            DictationVocabularyPolicy.load()
+    func polish(_ transcript: String, options: DictationTextOptions) async throws -> String {
+        let prepared = DictationFinalTextPolicy.prepare(transcript, options: options)
+        let fallback = DictationFinalTextPolicy.finalize(prepared)
+        guard case .s1Mini(let style) = options.cleanup else { return fallback }
+        if let releaseTask { await releaseTask.task.value }
+        try Task.checkCancellation()
+        let generation = resourceGeneration
+        let polishingEpoch = polishingGeneration
+        guard await store.isInstalled(), generation == resourceGeneration,
+              polishingEpoch == polishingGeneration else { return fallback }
+        guard let modelURL = try? await store.modelURL() else {
+            try Task.checkCancellation()
+            return fallback
         }
-    ) {
-        self.enabledProvider = enabledProvider
-        self.styleProvider = styleProvider
-        self.vocabularyProvider = vocabularyProvider
-    }
+        guard generation == resourceGeneration, polishingEpoch == polishingGeneration else { return fallback }
+        try Task.checkCancellation()
 
-    func polish(_ transcript: String) async throws -> String {
-        let vocabulary = vocabularyProvider()
-        let correctedRaw = S1MiniVocabularyPipeline.prepare(
-            transcript: transcript,
-            vocabulary: vocabulary
-        )
-        guard enabledProvider(), await store.isInstalled() else { return correctedRaw }
-
-        let style = styleProvider()
-        let modelURL = try await store.modelURL()
+        let id = UUID()
         let task = Task<String, Error> { [runtime] in
-            try await runtime.polish(correctedRaw, style: style, modelURL: modelURL)
+            try await runtime.polish(prepared.transcript, style: style, modelURL: modelURL)
         }
-        polishingTask = task
-        defer { polishingTask = nil }
+        polishingTasks[id] = task
+        defer { polishingTasks.removeValue(forKey: id) }
         do {
-            let polished = try await task.value
-            return S1MiniVocabularyPipeline.finalize(
-                correctedRawTranscript: correctedRaw,
-                polishedTranscript: polished,
-                vocabulary: vocabulary,
-                style: style
-            )
+            let polished = try await withTaskCancellationHandler {
+                try await task.value
+            } onCancel: {
+                task.cancel()
+            }
+            try Task.checkCancellation()
+            return DictationFinalTextPolicy.finalize(prepared, polishedTranscript: polished)
         } catch is CancellationError {
             throw CancellationError()
         } catch {
-            return correctedRaw
+            return fallback
         }
     }
 
     func cancelPolishing() async {
-        let task = polishingTask
-        task?.cancel()
-        if let task { _ = await task.result }
-        polishingTask = nil
+        polishingGeneration &+= 1
+        let tasks = polishingTasks
+        for task in tasks.values { task.cancel() }
+        for task in tasks.values { _ = await task.result }
+        for id in tasks.keys { polishingTasks.removeValue(forKey: id) }
+    }
+
+    func releaseModels() async {
+        if let releaseTask {
+            await releaseTask.task.value
+            return
+        }
+        resourceGeneration &+= 1
+        let polishing = polishingTasks
+        let preparation = preparationTasks
+        let id = UUID()
+        let task = Task<Void, Never> { [runtime] in
+            for owned in polishing.values { owned.cancel() }
+            for owned in preparation.values { owned.cancel() }
+            for owned in polishing.values { _ = await owned.result }
+            for owned in preparation.values { await owned.value }
+            await runtime.unload()
+        }
+        releaseTask = (id, task)
+        await task.value
+        for id in polishing.keys { polishingTasks.removeValue(forKey: id) }
+        for id in preparation.keys { preparationTasks.removeValue(forKey: id) }
+        if releaseTask?.id == id { releaseTask = nil }
     }
 
     func isModelInstalled() async -> Bool {
@@ -423,13 +443,27 @@ actor S1MiniDictationPolisher: DictationTextPolishing {
     }
 
     func removeModel() async throws {
-        await cancelPolishing()
-        await runtime.unload()
+        await releaseModels()
         try await store.remove()
     }
 
     func prepareIfInstalled() async {
-        guard await store.isInstalled(), let url = try? await store.modelURL() else { return }
-        try? await runtime.prepare(modelURL: url)
+        if let releaseTask { await releaseTask.task.value }
+        guard !Task.isCancelled else { return }
+        let generation = resourceGeneration
+        guard await store.isInstalled(), generation == resourceGeneration,
+              let url = try? await store.modelURL(), generation == resourceGeneration else { return }
+        let id = UUID()
+        let task = Task<Void, Never> { [runtime] in
+            guard !Task.isCancelled else { return }
+            try? await runtime.prepare(modelURL: url)
+        }
+        preparationTasks[id] = task
+        await withTaskCancellationHandler {
+            await task.value
+        } onCancel: {
+            task.cancel()
+        }
+        preparationTasks.removeValue(forKey: id)
     }
 }

@@ -29,6 +29,8 @@ def member(name, optional=False):
 members = [member(name) for name in (
     "isDictationInactive", "processShortcutEvent", "rejectShortcutStart",
     "testMicrophone", "cancelMicrophoneTest", "receive",
+    "makeRecognitionRequest", "makeSessionPlan", "receiveCompletion",
+    "observeCorrections", "setLearnsCorrections", "cancelCorrectionObservationTask", "resetCorrectionLearning",
 )]
 members.append(member("canTestMicrophone", optional=True))
 for name in ("shortcutPreflighting", "awaitingControllerStart"):
@@ -38,6 +40,17 @@ for name in ("shortcutPreflighting", "awaitingControllerStart"):
     elif name == "shortcutPreflighting":
         raise SystemExit(f"Missing production service property: {name}")
 
+def declaration(name):
+    match = re.search(rf"^private (?:enum|struct) {name}\b", source, re.MULTILINE)
+    if not match:
+        raise SystemExit(f"Missing production target declaration: {name}")
+    end = re.search(r"^}$", source[match.start():], re.MULTILINE)
+    if not end:
+        raise SystemExit(f"Unterminated production target declaration: {name}")
+    return source[match.start():match.start() + end.end()] + "\n"
+
+targets = "\n".join(declaration(name) for name in ("DictationTextTarget", "XPCTargetProvider", "DictationXPCError"))
+template = template.replace("// __PRODUCTION_TARGET_DECLARATIONS__", targets)
 marker = "    // __PRODUCTION_SERVICE_MEMBERS__"
 if template.count(marker) != 1:
     raise SystemExit("Expected one production service extraction marker")
@@ -49,6 +62,8 @@ swiftc \
   -warnings-as-errors \
   -target "$(uname -m)-apple-macosx14.0" \
   Gojo/Dictation/DictationModels.swift \
+  Gojo/Dictation/DictationSessionPlan.swift \
+  Gojo/Dictation/DictationProtocols.swift \
   Gojo/Dictation/DictationModifierShortcutStateMachine.swift \
   "$test_directory/service.swift" \
   -o "$test_directory/regression"

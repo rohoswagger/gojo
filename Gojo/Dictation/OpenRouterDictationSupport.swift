@@ -389,8 +389,7 @@ enum OpenRouterDictationModelSelection {
 actor OpenRouterDictationTranscriber: LocalDictationTranscribing {
     private let client: OpenRouterDictationClient
     private let apiKeyProvider: @Sendable () -> String?
-    private let modelProvider: @Sendable () -> String?
-    private let languageProvider: @Sendable () -> String?
+    private var session: (id: UUID, request: DictationRecognitionRequest)?
     private var transcriptionTask: Task<String, Error>?
     private var transcriptionID: UUID?
 
@@ -398,24 +397,42 @@ actor OpenRouterDictationTranscriber: LocalDictationTranscribing {
         client: OpenRouterDictationClient = OpenRouterAPIClient(),
         apiKeyProvider: @escaping @Sendable () -> String? = {
             try? DictationKeychain.loadOpenRouterAPIKey()
-        },
-        modelProvider: @escaping @Sendable () -> String? = {
-            UserDefaults.standard.string(forKey: DictationOpenRouterSettings.modelDefaultsKey)
-        },
-        languageProvider: @escaping @Sendable () -> String? = { nil }
+        }
     ) {
         self.client = client
         self.apiKeyProvider = apiKeyProvider
-        self.modelProvider = modelProvider
-        self.languageProvider = languageProvider
     }
 
-    func transcribe(_ audio: DictationAudio) async throws -> String {
-        transcriptionTask?.cancel()
+    func beginSession(_ plan: DictationSessionPlan) async throws {
+        _ = try modelID(for: plan.recognition)
+        guard session == nil, transcriptionTask == nil else { throw OpenRouterDictationError.requestFailed }
+        session = (plan.id, plan.recognition)
+    }
+
+    func endSession(_ id: UUID) async {
+        guard session?.id == id else { return }
+        await cancelTranscription()
+        if session?.id == id { session = nil }
+    }
+
+    func prepare(request: DictationRecognitionRequest) async throws {
+        _ = try modelID(for: request)
+    }
+
+    private func modelID(for request: DictationRecognitionRequest) throws -> String {
+        guard case .openRouter(let modelID) = request,
+              !modelID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              session == nil || session?.request == request else {
+            throw OpenRouterDictationError.unsupportedModel
+        }
+        return modelID
+    }
+
+    func transcribe(_ audio: DictationAudio, request: DictationRecognitionRequest) async throws -> String {
+        let model = try modelID(for: request)
+        guard transcriptionTask == nil else { throw OpenRouterDictationError.requestFailed }
         let client = self.client
         let apiKeyProvider = self.apiKeyProvider
-        let modelProvider = self.modelProvider
-        let languageProvider = self.languageProvider
         let requestID = UUID()
         let task = Task<String, Error> {
             try Task.checkCancellation()
@@ -423,15 +440,14 @@ actor OpenRouterDictationTranscriber: LocalDictationTranscribing {
                 throw OpenRouterDictationError.missingAPIKey
             }
             let wav = try DictationWAVEncoder.encode(audio)
-            guard let model = modelProvider(), !model.isEmpty else {
-                throw OpenRouterDictationError.unsupportedModel
-            }
-            return try await client.transcribe(
+            let transcript = try await client.transcribe(
                 audio: wav,
                 model: model,
                 apiKey: apiKey,
-                language: languageProvider()
+                language: nil
             )
+            try Task.checkCancellation()
+            return transcript
         }
         transcriptionTask = task
         transcriptionID = requestID
@@ -441,7 +457,9 @@ actor OpenRouterDictationTranscriber: LocalDictationTranscribing {
                 transcriptionID = nil
             }
         }
-        return try await task.value
+        let transcript = try await task.value
+        try Task.checkCancellation()
+        return transcript
     }
 
     func cancelTranscription() async {

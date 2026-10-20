@@ -7,6 +7,15 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4D95D062DBCB467B765C1651 /* DictationFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB27AD04B7F6AF2732F56EF9 /* DictationFeedback.swift */; };
+		8E1BF7B33C000C58B2110621 /* DictationFinalTextPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F814ED0D71300D2D13E34CA2 /* DictationFinalTextPolicy.swift */; };
+		960AF9ED32D7CF5EDBFB4A2C /* DictationInputDevices.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C35AAAA1132F301351FE8D1 /* DictationInputDevices.swift */; };
+		13463747FC03EE29A56F9A4C /* DictationModelResidency.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5DD1EB79A074443F142DF77 /* DictationModelResidency.swift */; };
+		1265041496A59010E561DD66 /* DictationPracticeField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C25B15640DE1C7B18FE43A1 /* DictationPracticeField.swift */; };
+		6217A02B5ADA3A246FFAFEE7 /* DictationPreviewAudioBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1786845C99B9571C3179F71 /* DictationPreviewAudioBuffer.swift */; };
+		E96D6C1453497ECA5E861B45 /* DictationSessionPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADA89FC1F3EB5358825ED7B3 /* DictationSessionPlan.swift */; };
+		0580F2DCFDF173E007E170DC /* DictationSpeechGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD5D53D573735020ECEDC2DA /* DictationSpeechGate.swift */; };
+		6900138E4899226BAEDA916B /* DictationSpokenCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFBA545E25F4F12182ABEFBF /* DictationSpokenCommands.swift */; };
 		D1E1000000000000000000B1 /* DictationModelPreparation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1E1000000000000000000A1 /* DictationModelPreparation.swift */; };
 		D1CF000000000000000000B3 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1CF000000000000000000A2 /* main.swift */; };
 		D1CF000000000000000000B1 /* DictationHelperReadiness.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1CF000000000000000000A1 /* DictationHelperReadiness.swift */; };
@@ -242,6 +251,15 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		CB27AD04B7F6AF2732F56EF9 /* DictationFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationFeedback.swift; sourceTree = "<group>"; };
+		F814ED0D71300D2D13E34CA2 /* DictationFinalTextPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationFinalTextPolicy.swift; sourceTree = "<group>"; };
+		9C35AAAA1132F301351FE8D1 /* DictationInputDevices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationInputDevices.swift; sourceTree = "<group>"; };
+		C5DD1EB79A074443F142DF77 /* DictationModelResidency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationModelResidency.swift; sourceTree = "<group>"; };
+		9C25B15640DE1C7B18FE43A1 /* DictationPracticeField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationPracticeField.swift; sourceTree = "<group>"; };
+		B1786845C99B9571C3179F71 /* DictationPreviewAudioBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationPreviewAudioBuffer.swift; sourceTree = "<group>"; };
+		ADA89FC1F3EB5358825ED7B3 /* DictationSessionPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationSessionPlan.swift; sourceTree = "<group>"; };
+		DD5D53D573735020ECEDC2DA /* DictationSpeechGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationSpeechGate.swift; sourceTree = "<group>"; };
+		AFBA545E25F4F12182ABEFBF /* DictationSpokenCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationSpokenCommands.swift; sourceTree = "<group>"; };
 		D1E1000000000000000000A1 /* DictationModelPreparation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationModelPreparation.swift; sourceTree = "<group>"; };
 		D1CF000000000000000000A2 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		D1CF000000000000000000A1 /* DictationHelperReadiness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationHelperReadiness.swift; sourceTree = "<group>"; };
@@ -515,6 +533,15 @@
 				D1E1000000000000000000A1 /* DictationModelPreparation.swift */,
 				D1CF000000000000000000A1 /* DictationHelperReadiness.swift */,
 				D1C7000000000000000000A1 /* DictationModels.swift */,
+				CB27AD04B7F6AF2732F56EF9 /* DictationFeedback.swift */,
+				F814ED0D71300D2D13E34CA2 /* DictationFinalTextPolicy.swift */,
+				9C35AAAA1132F301351FE8D1 /* DictationInputDevices.swift */,
+				C5DD1EB79A074443F142DF77 /* DictationModelResidency.swift */,
+				9C25B15640DE1C7B18FE43A1 /* DictationPracticeField.swift */,
+				B1786845C99B9571C3179F71 /* DictationPreviewAudioBuffer.swift */,
+				ADA89FC1F3EB5358825ED7B3 /* DictationSessionPlan.swift */,
+				DD5D53D573735020ECEDC2DA /* DictationSpeechGate.swift */,
+				AFBA545E25F4F12182ABEFBF /* DictationSpokenCommands.swift */,
 				D1C7000000000000000000F8 /* DictationVocabularyImport.swift */,
 				D1CA000000000000000000A1 /* DictationModelValidationCache.swift */,
 				D1C7000000000000000000A2 /* DictationProtocols.swift */,
@@ -1207,6 +1234,15 @@
 				D1E1000000000000000000B1 /* DictationModelPreparation.swift in Sources */,
 				D1CF000000000000000000B1 /* DictationHelperReadiness.swift in Sources */,
 				D1C7000000000000000000B2 /* DictationModels.swift in Sources */,
+				4D95D062DBCB467B765C1651 /* DictationFeedback.swift in Sources */,
+				8E1BF7B33C000C58B2110621 /* DictationFinalTextPolicy.swift in Sources */,
+				960AF9ED32D7CF5EDBFB4A2C /* DictationInputDevices.swift in Sources */,
+				13463747FC03EE29A56F9A4C /* DictationModelResidency.swift in Sources */,
+				1265041496A59010E561DD66 /* DictationPracticeField.swift in Sources */,
+				6217A02B5ADA3A246FFAFEE7 /* DictationPreviewAudioBuffer.swift in Sources */,
+				E96D6C1453497ECA5E861B45 /* DictationSessionPlan.swift in Sources */,
+				0580F2DCFDF173E007E170DC /* DictationSpeechGate.swift in Sources */,
+				6900138E4899226BAEDA916B /* DictationSpokenCommands.swift in Sources */,
 				D1C7000000000000000000F9 /* DictationVocabularyImport.swift in Sources */,
 				D1CA000000000000000000B1 /* DictationModelValidationCache.swift in Sources */,
 				D1C7000000000000000000B3 /* DictationProtocols.swift in Sources */,

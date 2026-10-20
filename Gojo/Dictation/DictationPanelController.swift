@@ -24,6 +24,7 @@ final class DictationPanelController {
     private var isPanelStartPending = false
     private var displayedOnID: String?
     private var dismissalTask: Task<Void, Never>?
+    private var emptyCompletionTask: Task<Void, Never>?
     private var preferences: DictationPanelPreferences
     private var lastScreens: [DictationPanelScreen] = []
 
@@ -75,6 +76,49 @@ final class DictationPanelController {
                 if text.isEmpty, case .error = self.model.state { self.scheduleErrorDismissal() }
             }
             .store(in: &subscriptions)
+        service.$provisionalPreview
+            .receive(on: RunLoop.main)
+            .sink { [weak self] preview in
+                guard let self, !self.model.isPreview else { return }
+                self.model.provisionalPreview = preview
+            }
+            .store(in: &subscriptions)
+        service.$activeIntent
+            .receive(on: RunLoop.main)
+            .sink { [weak self] intent in
+                guard let self, !self.model.isPreview else { return }
+                self.model.activeIntent = intent
+            }
+            .store(in: &subscriptions)
+        Publishers.CombineLatest(service.$lastCompletion, service.$completionAttentionID)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] completion, id in
+                guard let self, !self.model.isPreview else { return }
+                self.emptyCompletionTask?.cancel()
+                guard case .empty(let reason) = completion, let id else {
+                    self.model.emptyCompletion = nil
+                    self.model.completionAttentionID = nil
+                    return
+                }
+                self.dismissalTask?.cancel()
+                self.model.emptyCompletion = reason
+                self.model.completionAttentionID = id
+                if !self.explicitlyDismissed, !self.suppressUntilInactive { self.presentPanel() }
+                self.emptyCompletionTask = Task { [weak self] in
+                    do {
+                        try await Task.sleep(for: .seconds(2))
+                        guard let self else { return }
+                        while self.model.showsDetails { try await Task.sleep(for: .milliseconds(50)) }
+                        guard !Task.isCancelled, self.model.completionAttentionID == id else { return }
+                        self.model.emptyCompletion = nil
+                        self.model.completionAttentionID = nil
+                        if !self.isActive(self.model.state), self.model.shouldHideWhenFinished {
+                            await self.fadeOutPanel()
+                        }
+                    } catch {}
+                }
+            }
+            .store(in: &subscriptions)
         NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.screensChanged() }
@@ -93,6 +137,10 @@ final class DictationPanelController {
 
     func dismiss() {
         explicitlyDismissed = true
+        emptyCompletionTask?.cancel()
+        emptyCompletionTask = nil
+        model.emptyCompletion = nil
+        model.completionAttentionID = nil
         dismissalTask?.cancel()
         dismissalTask = nil
         if model.isPreview {
@@ -277,6 +325,8 @@ final class DictationPanelController {
         model.targetApplicationName = service.targetApplicationName
         model.recoveryText = service.recoveryText
         model.recoveryMessage = service.recoveryMessage
+        model.provisionalPreview = service.provisionalPreview
+        model.activeIntent = service.activeIntent
     }
 
     private func perform(_ command: DictationPanelCommand) {

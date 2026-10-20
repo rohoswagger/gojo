@@ -21,6 +21,11 @@ if ! grep -Fq -- 'verify-sparkle-entitlements.sh' "$RELEASE_SCRIPT"; then
   exit 1
 fi
 
+if ! grep -Fq 'scripts/dev.py handshake "$APP_PATH"' "$RELEASE_SCRIPT"; then
+  echo "release script no longer verifies the signed app/helper connection" >&2
+  exit 1
+fi
+
 fixture_dir="$(mktemp -d "${TMPDIR:-/tmp}/gojo-release-signing-test.XXXXXX")"
 trap 'rm -rf "$fixture_dir"' EXIT
 mock_bin="$fixture_dir/bin"

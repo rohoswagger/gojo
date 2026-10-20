@@ -1,4 +1,4 @@
-.PHONY: help build run stop restart smoke reset-onboarding run-onboarding test-release-signing test-window test-window-ui test-window-focus test-flux test-alt-tab test-search test-accessibility-menu test-dictation test-dictation-model-validation test-dictation-cleanup-benchmark test-dictation-live test-dictation-codex-capture-live test-dictation-secure-live test-dictation-multidisplay-live test-dictation-model-live test-dictation-installed-models-live test-dictation-shortcut-live test-dictation-opaque-paste-live test-dictation-unicode-typing-live test-dictation-real-microphone-live release release-dry clean
+.PHONY: test-permissions test-dev-handshake help build run stop restart smoke reset-onboarding run-onboarding test-release-signing test-window test-window-ui test-window-focus test-flux test-alt-tab test-search test-accessibility-menu test-dictation test-dictation-model-validation test-dictation-cleanup-benchmark test-dictation-live test-dictation-codex-capture-live test-dictation-secure-live test-dictation-multidisplay-live test-dictation-model-live test-dictation-installed-models-live test-dictation-shortcut-live test-dictation-opaque-paste-live test-dictation-unicode-typing-live test-dictation-real-microphone-live release release-dry clean
 
 PROJECT := Gojo.xcodeproj
 SCHEME := Gojo
@@ -9,9 +9,9 @@ APP_PATH := $(DERIVED_DATA_PATH)/Build/Products/$(CONFIGURATION)/Gojo.app
 help:
 	@echo "Gojo local commands:"
 	@echo "  make build       Build the Debug macOS app"
-	@echo "  make run         Build, replace any running Gojo, then launch"
+	@echo "  make run         Build, verify helper, then launch if no Gojo is running"
 	@echo "  make stop        Stop running Gojo dev app processes"
-	@echo "  make restart     Stop, build, and launch the app"
+	@echo "  make restart     Stop, build, verify helper, and launch the app"
 	@echo "  make smoke       Build, launch, verify process, then stop"
 	@echo "  make reset-onboarding  Wipe config + permissions so onboarding runs again"
 	@echo "  make run-onboarding    Reset, then build + launch into onboarding"
@@ -24,6 +24,8 @@ help:
 	@echo "  make test-search Run search calculator/fuzzy-matcher regression checks"
 	@echo "  make test-accessibility-menu Run menu accessibility-flow regression checks"
 	@echo "  make test-dictation Run local dictation regressions and benchmark scorer checks"
+	@echo "  make test-permissions Run permission, recovery, and signing regressions"
+	@echo "  make test-dev-handshake Verify the signed app/helper connection without prompting"
 	@echo "  make test-dictation-model-validation Run model validation cache regressions"
 	@echo "  make test-dictation-cleanup-benchmark Compare fast OpenRouter cleanup models (paid)"
 	@echo "  make test-dictation-live Verify focused insertion in TextEdit and Safari (requires Accessibility)"
@@ -54,45 +56,31 @@ release-dry:
 	@DRY_RUN=1 ./scripts/release.sh $(VERSION) $(ARGS)
 
 build:
-	xcodebuild \
-		-project "$(PROJECT)" \
-		-scheme "$(SCHEME)" \
-		-configuration "$(CONFIGURATION)" \
-		-destination 'platform=macOS' \
-		-derivedDataPath "$(DERIVED_DATA_PATH)" \
-		build
+	python3 -B scripts/dev.py build --configuration "$(CONFIGURATION)" --derived-data "$(DERIVED_DATA_PATH)"
 
 run: build
-	$(MAKE) stop
-	@# GOJO_LICENSE forces the license state and keeps this build away from the
-	@# license Keychain entirely, so it can't strand the installed app's license.
-	@# Values: lifetime | monthly | trial | trial:<days> | locked
-	@if [ -n "$(GOJO_LICENSE)" ]; then \
-		open --env "GOJO_LICENSE=$(GOJO_LICENSE)" "$(APP_PATH)"; \
-	else \
-		open "$(APP_PATH)"; \
-	fi
+	python3 -B scripts/dev.py run "$(APP_PATH)"
+
+test-dev-handshake:
+	python3 -B scripts/dev.py handshake "$(APP_PATH)"
+
+test-permissions:
+	bash ./tests/dictation_permission_settings_regression.sh
+	./tests/dictation_regression.sh
+	bash ./tests/dictation_microphone_diagnostic_service_regression.sh
+	bash ./tests/dictation_microphone_permission_regression.sh
+	bash ./tests/dictation_audio_configuration_regression.sh
+	bash ./tests/dictation_capture_liveness_regression.sh
+	bash ./tests/dictation_shortcut_cancellation_regression.sh
+	bash ./tests/dictation_helper_lease_regression.sh
+	python3 -B tests/dev_signing_regression.py
 
 stop:
-	@for pattern in \
-		'/Gojo\.app/Contents/MacOS/Gojo' \
-		'/Gojo\.app/Contents/XPCServices/GojoXPCHelper\.xpc/Contents/MacOS/GojoXPCHelper' \
-		'/Gojo\.app/Contents/Resources/mediaremote-adapter\.pl' \
-		'/Gojo\.app/Contents/Frameworks/Sparkle\.framework/.*/Downloader'; do \
-		pids=$$(pgrep -f "$$pattern" || true); \
-		if [ -n "$$pids" ]; then kill $$pids 2>/dev/null || true; fi; \
-	done
-	@sleep 0.5
-	@for pattern in \
-		'/Gojo\.app/Contents/MacOS/Gojo' \
-		'/Gojo\.app/Contents/XPCServices/GojoXPCHelper\.xpc/Contents/MacOS/GojoXPCHelper' \
-		'/Gojo\.app/Contents/Resources/mediaremote-adapter\.pl' \
-		'/Gojo\.app/Contents/Frameworks/Sparkle\.framework/.*/Downloader'; do \
-		pids=$$(pgrep -f "$$pattern" || true); \
-		if [ -n "$$pids" ]; then kill -9 $$pids 2>/dev/null || true; fi; \
-	done
+	python3 -B scripts/dev.py stop "$(APP_PATH)"
 
-restart: run
+restart:
+	$(MAKE) stop
+	$(MAKE) run
 
 reset-onboarding:
 	@./scripts/reset-onboarding.sh $(ARGS)
@@ -129,6 +117,9 @@ test-accessibility-menu:
 	./tests/accessibility_authorization_flow_regression.sh
 
 test-dictation: build
+	bash ./tests/dictation_microphone_diagnostic_service_regression.sh
+	bash ./tests/dictation_microphone_permission_regression.sh
+	python3 -B tests/dev_signing_regression.py
 	bash ./tests/dictation_model_validation_regression.sh
 	./tests/dictation_regression.sh
 	bash ./tests/dictation_audio_configuration_regression.sh

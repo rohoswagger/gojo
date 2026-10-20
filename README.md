@@ -102,16 +102,39 @@ cd gojo
 make run
 ```
 
-`make run` builds the Debug app, stops any existing dev process, and launches it. Other useful targets:
+`make run` builds and signs the Debug app, checks its signature and embedded helper, then runs a nonprompting helper handshake before launching. It uses LaunchServices with the explicit app path and defaults to the lifetime development license override. It refuses to launch while another Gojo instance is running and reports that instance's PID and path.
+
+The helper accepts clients signed with an Apple-issued certificate for Gojo's team, `L6U44C67P5`. Install a valid development or Developer ID Application certificate and its private key for that team. The build discovers a matching identity automatically. To select one explicitly, set `GOJO_SIGNING_IDENTITY` to its SHA-1 or exact certificate name:
+
+```bash
+GOJO_SIGNING_IDENTITY='Developer ID Application: Your Name (L6U44C67P5)' make run
+```
+
+Missing or incompatible signing credentials stop the build with a diagnostic. Unsigned builds can check compilation by invoking `xcodebuild` directly with `CODE_SIGN_IDENTITY="-" CODE_SIGNING_ALLOWED=NO`; their helper connection and supported launch will fail signing validation.
+
+Other useful targets:
 
 | Command | Effect |
 |---------|--------|
-| `make build` | Build only |
-| `make stop` | Kill running dev instances |
-| `make restart` | Stop + build + launch |
+| `make build` | Build and verify app/helper signatures |
+| `make stop` | Stop this build's app and bundled helper/media processes |
+| `make restart` | Stop this build, then build and launch |
 | `make clean` | Remove `.build/` artifacts |
 
 You can also open `Gojo.xcodeproj` in Xcode and run normally.
+
+For Xcode runs, select a signing certificate for team `L6U44C67P5` for both the app and helper targets. Ad-hoc signing fails the helper's caller requirement. These checks can also run directly:
+
+```bash
+python3 -B scripts/dev.py preflight /absolute/path/to/Gojo.app
+python3 -B scripts/dev.py handshake /absolute/path/to/Debug/Gojo.app --timeout 15
+python3 -B scripts/dev.py stop /absolute/path/to/Debug/Gojo.app
+python3 -B tests/dev_signing_regression.py --app /absolute/path/to/signed/Gojo.app
+```
+
+The handshake launches a dedicated instance through LaunchServices, checks a nonce-matched typed helper reply on stdout, and cleans up its private temporary files and probe process. It never creates or reads the app's container. The probe accepts no output path and exits before normal app startup, including licensing and permission initialization. It does not request Accessibility or microphone access. A successful handshake can report `accessibilityAuthorized: false`; grant that permission separately when using a feature that needs it. Debug and Release builds both support signature preflight and the handshake probe.
+
+The stop command matches the resolved app path, rechecks each process's path and start time before signaling, and uses bounded termination waits. Installed copies and other development builds remain running.
 
 ### Releasing
 

@@ -38,6 +38,9 @@ jobs:
       - name: Release script regression
         run: make test-release-signing
 
+      - name: Permission and recovery regressions
+        run: make test-permissions
+
   build:
     name: Build (${{ matrix.configuration }})
     runs-on: macos-15

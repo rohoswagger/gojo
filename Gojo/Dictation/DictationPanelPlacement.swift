@@ -29,12 +29,14 @@ enum DictationPanelPlacement {
     static func restore(
         size: CGSize,
         screens: [DictationPanelScreen],
+        pointerDisplayID: String? = nil,
         preferredDisplayID: String?,
         fallbackDisplayID: String?,
         positions: [String: DictationPanelSavedPosition]
     ) -> DictationPanelPlacementResult? {
         let available = screens.filter { valid($0.visibleFrame) }
-        guard let screen = available.first(where: { $0.id == preferredDisplayID })
+        guard let screen = available.first(where: { $0.id == pointerDisplayID })
+            ?? available.first(where: { $0.id == preferredDisplayID })
             ?? available.first(where: { $0.id == fallbackDisplayID })
             ?? available.first else { return nil }
         let bounds = usableFrame(screen.visibleFrame)

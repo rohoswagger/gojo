@@ -79,6 +79,7 @@ test-permissions:
 	bash ./tests/dictation_shortcut_cancellation_regression.sh
 	bash ./tests/dictation_helper_lease_regression.sh
 	python3 -B tests/dev_signing_regression.py
+	bash ./tests/dictation_panel_regression.sh
 
 stop:
 	python3 -B scripts/dev.py stop "$(APP_PATH)"

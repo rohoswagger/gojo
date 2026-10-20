@@ -11,6 +11,24 @@ struct DictationPanelRegression {
         expect(initial.displayID == "left", "Session display is used for initial placement")
         expect(initial.frame == CGRect(x: -1035, y: -210, width: 150, height: 44), "Bottom center uses AppKit coordinates on a negative-origin display")
 
+        let pointerDisplay = DictationPanelPlacement.restore(
+            size: size, screens: [primary, left], pointerDisplayID: "left",
+            preferredDisplayID: "primary", fallbackDisplayID: "primary", positions: [:]
+        )!
+        expect(pointerDisplay.displayID == "left", "The pointer display overrides the previously used and focused displays")
+        let pointerPosition = DictationPanelSavedPosition(horizontal: 0.75, vertical: 0.5)
+        let restoredPointer = DictationPanelPlacement.restore(
+            size: size, screens: [primary, left], pointerDisplayID: "left",
+            preferredDisplayID: "primary", fallbackDisplayID: "primary", positions: ["left": pointerPosition]
+        )!
+        expect(restoredPointer == restore(size, [primary, left], "left", "primary", ["left": pointerPosition]),
+               "The pointer display retains its own saved panel position")
+        let missingPointer = DictationPanelPlacement.restore(
+            size: size, screens: [primary], pointerDisplayID: "disconnected",
+            preferredDisplayID: nil, fallbackDisplayID: "primary", positions: [:]
+        )!
+        expect(missingPointer.displayID == "primary", "An unavailable pointer display uses the existing safe fallback")
+
         let outside = CGRect(x: -3000, y: 1200, width: 216, height: 44)
         let clamped = DictationPanelPlacement.clamped(outside, to: left.visibleFrame)
         expect(clamped == CGRect(x: -1908, y: 784, width: 216, height: 44), "All panel edges are clamped to the visible display")

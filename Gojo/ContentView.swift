@@ -15,6 +15,7 @@ import SwiftUIIntrospect
 
 @MainActor
 struct ContentView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject var vm: GojoViewModel
     @ObservedObject var webcamManager = WebcamManager.shared
 
@@ -41,6 +42,11 @@ struct ContentView: View {
 
     // Shared interactive spring for movement/resizing to avoid conflicting animations
     private let animationSpring = Animation.interactiveSpring(response: 0.38, dampingFraction: 0.8, blendDuration: 0)
+
+    private var openAnimation: Animation {
+        reduceMotion ? .easeInOut(duration: 0.12)
+            : .spring(response: 0.42, dampingFraction: 0.8, blendDuration: 0)
+    }
 
     private let extendedHoverPadding: CGFloat = 30
     private let zeroHeightHoverPadding: CGFloat = 10
@@ -69,12 +75,11 @@ struct ContentView: View {
             chinWidth = 640
         } else if (!coordinator.expandingView.show || coordinator.expandingView.type == .music)
             && vm.notchState == .closed && (musicManager.isPlaying || !musicManager.isPlayerIdle)
-            && coordinator.musicLiveActivityEnabled && !vm.hideOnClosed
+            && coordinator.musicLiveActivityEnabled
         {
             chinWidth += (2 * max(0, vm.effectiveClosedNotchHeight - 12) + 20)
         } else if !coordinator.expandingView.show && vm.notchState == .closed
             && (!musicManager.isPlaying && musicManager.isPlayerIdle) && Defaults[.showNotHumanFace]
-            && !vm.hideOnClosed
         {
             chinWidth += (2 * max(0, vm.effectiveClosedNotchHeight - 12) + 20)
         }
@@ -116,19 +121,26 @@ struct ContentView: View {
                     )
                     .padding(
                         .bottom,
-                        vm.effectiveClosedNotchHeight == 0 ? 10 : 0
+                        vm.effectiveClosedNotchHeight == 0 ? zeroHeightHoverPadding : 0
                     )
                 
                 mainLayout
-                    .frame(height: vm.notchState == .open ? vm.notchSize.height : nil)
+                    .opacity(vm.isAutoHidden && vm.notchState == .closed ? 0 : 1)
+                    .accessibilityHidden(vm.isAutoHidden && vm.notchState == .closed)
+                    .frame(
+                        width: vm.isAutoHidden && vm.notchState == .closed ? vm.closedNotchSize.width : nil,
+                        height: vm.notchState == .open ? vm.notchSize.height
+                            : vm.isAutoHidden ? vm.closedNotchSize.height : nil
+                    )
+                    .frame(minHeight: vm.notchState == .closed ? zeroHeightHoverPadding : nil, alignment: .top)
                     .conditionalModifier(true) { view in
-                        let openAnimation = Animation.spring(response: 0.42, dampingFraction: 0.8, blendDuration: 0)
                         let closeAnimation = Animation.spring(response: 0.45, dampingFraction: 1.0, blendDuration: 0)
                         
                         return view
                             .animation(vm.notchState == .open ? openAnimation : closeAnimation, value: vm.notchState)
                             .animation(.smooth, value: gestureProgress)
                     }
+                    .animation(vm.notchState == .open ? openAnimation : .easeInOut(duration: reduceMotion ? 0.12 : 0.25), value: vm.isAutoHidden)
                     .contentShape(Rectangle())
                     .onHover { hovering in
                         handleHover(hovering)
@@ -195,6 +207,8 @@ struct ContentView: View {
                     Rectangle()
                         .fill(Color.black.opacity(0.01))
                         .frame(width: computedChinWidth, height: vm.chinHeight)
+                        .opacity(vm.isAutoHidden && vm.notchState == .closed ? 0 : 1)
+                        .animation(vm.notchState == .open ? openAnimation : .easeInOut(duration: reduceMotion ? 0.12 : 0.25), value: vm.isAutoHidden)
                 }
             }
         }
@@ -208,6 +222,10 @@ struct ContentView: View {
         )
         .animation(.smooth, value: gestureProgress)
         .background(dragDetector)
+        .onDisappear {
+            hoverTask?.cancel()
+            vm.isHoverRevealed = false
+        }
         .preferredColorScheme(.dark)
         .environmentObject(vm)
         .onChange(of: clipboardState.keepsNotchOpenOnHoverExit) { _, shouldKeepOpen in
@@ -293,10 +311,10 @@ struct ContentView: View {
                       } else if coordinator.sneakPeek.show && Defaults[.inlineHUD] && (coordinator.sneakPeek.type != .music) && (coordinator.sneakPeek.type != .battery) && vm.notchState == .closed {
                           InlineHUD(type: $coordinator.sneakPeek.type, value: $coordinator.sneakPeek.value, icon: $coordinator.sneakPeek.icon, hoverAnimation: $isHovering, gestureProgress: $gestureProgress)
                               .transition(.opacity)
-                      } else if (!coordinator.expandingView.show || coordinator.expandingView.type == .music) && vm.notchState == .closed && (musicManager.isPlaying || !musicManager.isPlayerIdle) && coordinator.musicLiveActivityEnabled && !vm.hideOnClosed && !licenseManager.isLocked {
+                      } else if (!coordinator.expandingView.show || coordinator.expandingView.type == .music) && vm.notchState == .closed && (musicManager.isPlaying || !musicManager.isPlayerIdle) && coordinator.musicLiveActivityEnabled && !licenseManager.isLocked {
                           MusicLiveActivity()
                               .frame(alignment: .center)
-                      } else if !coordinator.expandingView.show && vm.notchState == .closed && (!musicManager.isPlaying && musicManager.isPlayerIdle) && Defaults[.showNotHumanFace] && !vm.hideOnClosed  {
+                      } else if !coordinator.expandingView.show && vm.notchState == .closed && (!musicManager.isPlaying && musicManager.isPlayerIdle) && Defaults[.showNotHumanFace]  {
                           GojoFaceAnimation()
                        } else if vm.notchState == .open {
                            GojoHeader()
@@ -329,7 +347,7 @@ struct ContentView: View {
                           }
                           // Old sneak peek music
                           else if coordinator.sneakPeek.type == .music {
-                              if vm.notchState == .closed && !vm.hideOnClosed && Defaults[.sneakPeekStyles] == .standard {
+                              if vm.notchState == .closed && Defaults[.sneakPeekStyles] == .standard {
                                   HStack(alignment: .center) {
                                       Image(systemName: "music.note")
                                       GeometryReader { geo in
@@ -343,7 +361,7 @@ struct ContentView: View {
                       }
                   }
               }
-              .conditionalModifier((coordinator.sneakPeek.show && (coordinator.sneakPeek.type == .music) && vm.notchState == .closed && !vm.hideOnClosed && Defaults[.sneakPeekStyles] == .standard) || (coordinator.sneakPeek.show && (coordinator.sneakPeek.type != .music) && (vm.notchState == .closed))) { view in
+              .conditionalModifier((coordinator.sneakPeek.show && (coordinator.sneakPeek.type == .music) && vm.notchState == .closed && Defaults[.sneakPeekStyles] == .standard) || (coordinator.sneakPeek.show && (coordinator.sneakPeek.type != .music) && (vm.notchState == .closed))) { view in
                   view
                       .fixedSize()
               }
@@ -369,7 +387,6 @@ struct ContentView: View {
                 .transition(
                     .scale(scale: 0.8, anchor: .top)
                     .combined(with: .opacity)
-                    .animation(.smooth(duration: 0.35))
                 )
                 .zIndex(1)
                 .allowsHitTesting(vm.notchState == .open)
@@ -417,7 +434,7 @@ struct ContentView: View {
                 )
 
             Rectangle()
-                .fill(.black)
+                .fill(.clear)
                 .overlay(
                     HStack(alignment: .top) {
                         if coordinator.expandingView.show
@@ -519,7 +536,8 @@ struct ContentView: View {
 
     private func doOpen() {
         if coordinator.firstLaunch { return }
-        withAnimation(animationSpring) {
+        withAnimation(openAnimation) {
+            vm.isHoverRevealed = isHovering
             vm.open()
         }
     }
@@ -533,6 +551,7 @@ struct ContentView: View {
         if hovering {
             withAnimation(animationSpring) {
                 isHovering = true
+                vm.isHoverRevealed = true
             }
             
             if vm.notchState == .closed && Defaults[.enableHaptics] {
@@ -551,7 +570,6 @@ struct ContentView: View {
                     guard self.vm.notchState == .closed,
                           self.isHovering,
                           !self.coordinator.sneakPeek.show else { return }
-                    
                     self.doOpen()
                 }
             }
@@ -563,6 +581,7 @@ struct ContentView: View {
                 await MainActor.run {
                     withAnimation(animationSpring) {
                         self.isHovering = false
+                        self.vm.isHoverRevealed = false
                     }
 
                     let shouldStayOpenForClipboardPreview =

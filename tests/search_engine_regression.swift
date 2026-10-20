@@ -392,27 +392,31 @@ struct SearchEngineRegressionRunner {
             "search panel does not join all Spaces"
         )
         assertTrue(
-            SearchPanelSpacePolicy.shouldHideAfterResigningKey(isOnActiveSpace: true),
-            "search panel hides after same-Space focus loss"
+            SearchPanelSpacePolicy.shouldHideAfterResigningKey(isKeyWindow: false),
+            "search panel hides after focus loss, including a Space change"
         )
         assertTrue(
-            !SearchPanelSpacePolicy.shouldHideAfterResigningKey(isOnActiveSpace: false),
-            "search panel stays visible when its owning Space becomes inactive"
+            !SearchPanelSpacePolicy.shouldHideAfterResigningKey(isKeyWindow: true),
+            "a stale focus-loss notification does not dismiss a refocused panel"
         )
         assertTrue(
-            SearchPanelSpacePolicy.shouldHideOnToggle(isVisible: true, isOnActiveSpace: true, isHiding: false),
+            SearchPanelSpacePolicy.shouldHideOnToggle(isVisible: true, isOnActiveSpace: true, isKeyWindow: true, isHiding: false),
             "toggle hides a visible panel on the active Space"
         )
         assertTrue(
-            !SearchPanelSpacePolicy.shouldHideOnToggle(isVisible: true, isOnActiveSpace: false, isHiding: false),
+            !SearchPanelSpacePolicy.shouldHideOnToggle(isVisible: true, isOnActiveSpace: true, isKeyWindow: false, isHiding: false),
+            "toggle refocuses a visible panel that cannot receive keyboard input"
+        )
+        assertTrue(
+            !SearchPanelSpacePolicy.shouldHideOnToggle(isVisible: true, isOnActiveSpace: false, isKeyWindow: true, isHiding: false),
             "toggle shows a visible panel from an inactive Space"
         )
         assertTrue(
-            !SearchPanelSpacePolicy.shouldHideOnToggle(isVisible: false, isOnActiveSpace: false, isHiding: false),
+            !SearchPanelSpacePolicy.shouldHideOnToggle(isVisible: false, isOnActiveSpace: false, isKeyWindow: false, isHiding: false),
             "toggle shows a hidden panel"
         )
         assertTrue(
-            !SearchPanelSpacePolicy.shouldHideOnToggle(isVisible: true, isOnActiveSpace: true, isHiding: true),
+            !SearchPanelSpacePolicy.shouldHideOnToggle(isVisible: true, isOnActiveSpace: true, isKeyWindow: true, isHiding: true),
             "toggle reopens during an in-flight hide"
         )
     }

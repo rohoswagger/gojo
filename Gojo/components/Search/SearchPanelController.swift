@@ -66,6 +66,7 @@ final class SearchPanelController: NSObject {
         if SearchPanelSpacePolicy.shouldHideOnToggle(
             isVisible: isVisible,
             isOnActiveSpace: headerPanel?.isOnActiveSpace ?? false,
+            isKeyWindow: headerPanel?.isKeyWindow ?? false,
             isHiding: isHiding
         ) {
             hide()
@@ -194,7 +195,7 @@ final class SearchPanelController: NSObject {
             Task { @MainActor in
                 guard let self else { return }
                 guard SearchPanelSpacePolicy.shouldHideAfterResigningKey(
-                    isOnActiveSpace: headerPanel.isOnActiveSpace
+                    isKeyWindow: headerPanel.isKeyWindow
                 ) else {
                     return
                 }

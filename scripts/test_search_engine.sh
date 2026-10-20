@@ -19,13 +19,18 @@ if ! grep -Fq 'SearchPanelSpacePolicy.shouldHideAfterResigningKey(' Gojo/compone
   exit 1
 fi
 
-if ! grep -Fq 'isOnActiveSpace: headerPanel.isOnActiveSpace' Gojo/components/Search/SearchPanelController.swift; then
-  echo "SearchPanelController does not read the fixed header's active-Space state" >&2
+if ! grep -Fq 'isKeyWindow: headerPanel.isKeyWindow' Gojo/components/Search/SearchPanelController.swift; then
+  echo "SearchPanelController does not read the fixed header's keyboard-focus state" >&2
   exit 1
 fi
 
 if ! grep -Fq 'SearchPanelSpacePolicy.shouldHideOnToggle(' Gojo/components/Search/SearchPanelController.swift; then
   echo "SearchPanelController does not use SearchPanelSpacePolicy.shouldHideOnToggle" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'isKeyWindow: headerPanel?.isKeyWindow ?? false,' Gojo/components/Search/SearchPanelController.swift; then
+  echo "SearchPanelController toggle does not read the fixed header's keyboard-focus state" >&2
   exit 1
 fi
 
@@ -201,3 +206,5 @@ swiftc \
   tests/search_engine_regression.swift \
   -o "$BIN"
 "$BIN"
+
+bash tests/search_file_cancellation_regression.sh

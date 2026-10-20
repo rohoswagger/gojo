@@ -11,6 +11,7 @@ struct FileSearchProvider: SearchProvider {
     let sectionTitle = "Files"
 
     private static let maxResults = 10
+    private static let maxCandidates = 200
     private static let gatherTimeout: TimeInterval = 1.5
     private static let applicationBundleType = "com.apple.application-bundle"
 
@@ -65,19 +66,18 @@ struct FileSearchProvider: SearchProvider {
     /// closure that defines `finish` — can trigger the same completion path
     /// instead of only stopping the query and waiting out the timeout.
     private final class FinishBox: @unchecked Sendable {
-        var finish: (() -> Void)?
+        var finish: ((Bool) -> Void)?
     }
 
     @MainActor
-    private static func gatherMatches(query: String) async -> [URL] {
-        let metadataQuery = NSMetadataQuery()
+    static func gatherMatches(
+        query: String,
+        metadataQuery suppliedQuery: NSMetadataQuery? = nil
+    ) async -> [URL] {
+        guard !Task.isCancelled else { return [] }
+        let metadataQuery = suppliedQuery ?? NSMetadataQuery()
         metadataQuery.predicate = NSPredicate(format: "kMDItemDisplayName CONTAINS[cd] %@", query)
         metadataQuery.searchScopes = [NSMetadataQueryUserHomeScope]
-        metadataQuery.valueListAttributes = [
-            NSMetadataItemDisplayNameKey,
-            NSMetadataItemContentTypeTreeKey,
-            NSMetadataItemPathKey,
-        ]
 
         let finishBox = FinishBox()
 
@@ -86,13 +86,13 @@ struct FileSearchProvider: SearchProvider {
                 let completionGuard = CompletionGuard()
                 var observer: NSObjectProtocol?
 
-                let finish: () -> Void = {
+                let finish: (Bool) -> Void = { includeResults in
                     completionGuard.finishOnce {
                         metadataQuery.stop()
                         if let observer {
                             NotificationCenter.default.removeObserver(observer)
                         }
-                        let urls = Self.extractURLs(from: metadataQuery)
+                        let urls = includeResults ? Self.extractURLs(from: metadataQuery) : []
                         continuation.resume(returning: urls)
                     }
                 }
@@ -103,14 +103,14 @@ struct FileSearchProvider: SearchProvider {
                     object: metadataQuery,
                     queue: .main
                 ) { _ in
-                    finish()
+                    finish(true)
                 }
 
                 DispatchQueue.main.asyncAfter(deadline: .now() + gatherTimeout) {
-                    finish()
+                    finish(true)
                 }
 
-                metadataQuery.start()
+                if !metadataQuery.start() { finish(false) }
             }
         } onCancel: {
             // Runs off the cancelling thread; hop to main since `finish`
@@ -118,7 +118,7 @@ struct FileSearchProvider: SearchProvider {
             // `continuation`. `completionGuard` inside `finish` keeps this
             // safe if it races `DidFinishGathering`/the timeout.
             Task { @MainActor in
-                finishBox.finish?()
+                finishBox.finish?(false)
             }
         }
     }
@@ -128,7 +128,8 @@ struct FileSearchProvider: SearchProvider {
         defer { query.enableUpdates() }
 
         var urls: [URL] = []
-        for case let item as NSMetadataItem in query.results {
+        for index in 0..<min(query.resultCount, maxCandidates) {
+            guard let item = query.result(at: index) as? NSMetadataItem else { continue }
             guard let path = item.value(forAttribute: NSMetadataItemPathKey) as? String else { continue }
             if let typeTree = item.value(forAttribute: NSMetadataItemContentTypeTreeKey) as? [String],
                typeTree.contains(applicationBundleType) {

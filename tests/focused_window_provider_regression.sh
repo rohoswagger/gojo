@@ -15,3 +15,6 @@ assert "private func preferredTopWindowID(for pid: pid_t) -> CGWindowID?" in sou
 assert "windowID(of: $0) == preferredWindowID" in source, "AX window selection must match the top CGWindow ID when focused/main window is unavailable."
 assert source.index("if let preferredWindowID,") < source.index("let directCandidates = ["), "AX selection should prefer the top CGWindow before focused/main AX candidates so external-display top windows win."
 PY
+
+bash tests/window_shortcut_targeting_regression.sh
+bash tests/window_snap_identity_regression.sh

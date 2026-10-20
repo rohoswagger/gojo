@@ -65,6 +65,10 @@ test-dev-handshake:
 	python3 -B scripts/dev.py handshake "$(APP_PATH)"
 
 test-permissions:
+	bash ./tests/accessibility_authorization_flow_regression.sh
+	bash ./tests/hud_authorization_regression.sh
+	bash ./tests/dictation_event_tap_host_regression.sh
+	bash ./tests/text_insertion_xpc_regression.sh
 	bash ./tests/dictation_permission_settings_regression.sh
 	./tests/dictation_regression.sh
 	bash ./tests/dictation_microphone_diagnostic_service_regression.sh
@@ -116,7 +120,7 @@ test-search:
 test-accessibility-menu:
 	./tests/accessibility_authorization_flow_regression.sh
 
-test-dictation: build
+test-dictation:
 	bash ./tests/dictation_microphone_diagnostic_service_regression.sh
 	bash ./tests/dictation_microphone_permission_regression.sh
 	python3 -B tests/dev_signing_regression.py

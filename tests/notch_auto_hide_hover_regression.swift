@@ -104,12 +104,12 @@ private struct NotchAutoHideHoverRegression {
         let hidden = HoverFixture()
         hidden.handleHover(true)
         expect(hidden.isHovering, "Hover entry records pointer presence")
-        expect(hidden.vm.notchState == .closed && hidden.vm.isAutoHidden, "Auto-hidden hover stays closed and invisible immediately during dwell")
+        expect(hidden.vm.notchState == .closed && !hidden.vm.isAutoHidden && hidden.vm.isHoverRevealed, "Auto-hidden hover reveals the closed mini immediately during dwell")
         try? await Task.sleep(for: .milliseconds(40))
-        expect(hidden.vm.notchState == .closed && hidden.vm.isAutoHidden, "Auto-hidden hover stays closed and invisible before configured dwell completes")
+        expect(hidden.vm.notchState == .closed && !hidden.vm.isAutoHidden && hidden.vm.isHoverRevealed, "Auto-hidden hover keeps the mini visible before configured dwell completes")
         await hidden.hoverTask?.value
-        expect(hidden.vm.notchState == .open && !hidden.vm.isAutoHidden, "Dwell completion opens and reveals together")
-        expect(hidden.vm.wasHiddenAtOpen == false && hidden.vm.openTransaction != nil && hidden.vm.openTransaction == hidden.vm.revealTransaction, "Reveal and opening share one animation transaction")
+        expect(hidden.vm.notchState == .open && !hidden.vm.isAutoHidden, "Dwell completion expands the revealed mini")
+        expect(hidden.vm.wasHiddenAtOpen == false && hidden.vm.openCalls == 1, "Dwell completion expands the already visible mini exactly once")
 
         let cancelled = HoverFixture()
         cancelled.handleHover(true)

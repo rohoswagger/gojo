@@ -434,7 +434,7 @@ struct ContentView: View {
                 )
 
             Rectangle()
-                .fill(.black)
+                .fill(.clear)
                 .overlay(
                     HStack(alignment: .top) {
                         if coordinator.expandingView.show
@@ -549,21 +549,18 @@ struct ContentView: View {
         hoverTask?.cancel()
         
         if hovering {
-            let canAutoOpen = vm.notchState == .closed
-                && !coordinator.sneakPeek.show
-                && Defaults[.openNotchOnHover]
             withAnimation(animationSpring) {
                 isHovering = true
-                if !vm.isAutoHidden || !canAutoOpen {
-                    vm.isHoverRevealed = true
-                }
+                vm.isHoverRevealed = true
             }
             
             if vm.notchState == .closed && Defaults[.enableHaptics] {
                 haptics.toggle()
             }
             
-            guard canAutoOpen else { return }
+            guard vm.notchState == .closed,
+                  !coordinator.sneakPeek.show,
+                  Defaults[.openNotchOnHover] else { return }
             
             hoverTask = Task {
                 try? await Task.sleep(for: .seconds(Defaults[.minimumHoverDuration]))
@@ -571,15 +568,9 @@ struct ContentView: View {
                 
                 await MainActor.run {
                     guard self.vm.notchState == .closed,
-                          self.isHovering else { return }
-
-                    if self.coordinator.sneakPeek.show {
-                        withAnimation(self.animationSpring) {
-                            self.vm.isHoverRevealed = true
-                        }
-                    } else {
-                        self.doOpen()
-                    }
+                          self.isHovering,
+                          !self.coordinator.sneakPeek.show else { return }
+                    self.doOpen()
                 }
             }
         } else {

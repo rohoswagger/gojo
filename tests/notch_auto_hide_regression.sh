@@ -55,4 +55,5 @@ status=0
 "$scratch_dir/policy" || status=$?
 "$scratch_dir/layout" || status=$?
 "$repo_root/tests/notch_auto_hide_hover_regression.sh" || status=$?
+"$repo_root/tests/notch_music_spacer_paint_regression.sh" || status=$?
 exit "$status"

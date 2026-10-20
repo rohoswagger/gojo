@@ -24,12 +24,6 @@ import datetime
 import re
 import sys
 from pathlib import Path
-from xml.etree import ElementTree as ET
-
-
-SPARKLE_NS = "http://www.andymatuschak.org/xml-namespaces/sparkle"
-ET.register_namespace("sparkle", SPARKLE_NS)
-ET.register_namespace("dc", "http://purl.org/dc/elements/1.1/")
 
 
 def parse_args() -> argparse.Namespace:

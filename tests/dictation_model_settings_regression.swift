@@ -7,8 +7,6 @@ private struct ExpectedAction {
     let title: String
     let disabled: Bool
     var removal = false
-
-    var key: String { "\(model.rawValue)-\(removal ? "remove" : "select")" }
 }
 
 @MainActor
@@ -18,7 +16,6 @@ private final class FixtureDictation: ObservableObject {
     var switchingModel: DictationModelID?
     var removingModel: DictationModelID?
     var canChangeModel = true
-    var observedContrast: ColorSchemeContrast?
     var modelErrors: [DictationModelID: String] = [:]
 
     func isModelInstalled(_ model: DictationModelID) -> Bool {
@@ -33,11 +30,9 @@ private final class FixtureDictation: ObservableObject {
 private struct ModelSectionFixture: View {
     @ObservedObject var dictation: FixtureDictation
     @State private var modelToRemove: DictationModelID?
-    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
     let scheme: ColorScheme
 
     var body: some View {
-        let _ = dictation.observedContrast = colorSchemeContrast
         Form {
             /* PRODUCTION_MODEL_SECTION */
         }
@@ -138,7 +133,7 @@ private struct DictationModelSettingsRegression {
         return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
     }
 
-    private static func pixels(_ observation: VNRecognizedTextObservation, bitmap: NSBitmapImageRep, dark: Bool) -> ActionPixels {
+    private static func pixels(_ observation: VNRecognizedTextObservation, bitmap: NSBitmapImageRep, dark: Bool, scale: Int) -> ActionPixels {
         let box = observation.boundingBox
         let x0 = max(0, Int(box.minX * Double(bitmap.pixelsWide)))
         let x1 = min(bitmap.pixelsWide, Int(ceil(box.maxX * Double(bitmap.pixelsWide))))
@@ -151,8 +146,10 @@ private struct DictationModelSettingsRegression {
             }
         }
         values.sort()
-        let background = values[Int(Double(values.count - 1) * (dark ? 0.1 : 0.9))]
-        let foreground = values[Int(Double(values.count - 1) * (dark ? 0.95 : 0.05))]
+        let background = dark ? values.first! : values.last!
+        let coreCount = min(values.count, 3 * scale * scale)
+        let core = dark ? Array(values.suffix(coreCount)) : Array(values.prefix(coreCount))
+        let foreground = core.reduce(0, +) / Double(core.count)
         return ActionPixels(
             contrast: (max(foreground, background) + 0.05) / (min(foreground, background) + 0.05),
             foreground: foreground
@@ -175,13 +172,10 @@ private struct DictationModelSettingsRegression {
         failures += ModelSectionFixture(dictation: preparationProbe, scheme: .dark)
             .verifyHelpers(preparationExpectations).map { "preparation guard: \($0)" }
         for dark in [false, true] {
-            for increased in [false, true] {
-                var enabledPixels: [String: ActionPixels] = [:]
+            for scale in [1, 2] {
                 for state in ["enabled", "disabled", "preparing", "switching", "removing"] {
-                    let name = "\(dark ? "dark" : "light")-\(increased ? "increased" : "standard")-\(state)"
-                    let appearance: NSAppearance.Name = dark
-                        ? (increased ? .accessibilityHighContrastDarkAqua : .darkAqua)
-                        : (increased ? .accessibilityHighContrastAqua : .aqua)
+                    let name = "\(dark ? "dark" : "light")-\(scale)x-\(state)"
+                    let appearance: NSAppearance.Name = dark ? .darkAqua : .aqua
                     NSApp.appearance = NSAppearance(named: appearance)
                     let (dictation, expected) = scenario(state)
                     let fixture = ModelSectionFixture(dictation: dictation, scheme: dark ? .dark : .light)
@@ -192,9 +186,14 @@ private struct DictationModelSettingsRegression {
                     host.layoutSubtreeIfNeeded()
                     RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.1))
                     host.layoutSubtreeIfNeeded()
-                    guard let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds) else {
+                    guard let bitmap = NSBitmapImageRep(
+                        bitmapDataPlanes: nil, pixelsWide: 500 * scale, pixelsHigh: 440 * scale,
+                        bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                        colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
+                    ) else {
                         fatalError("Could not allocate the local view snapshot")
                     }
+                    bitmap.size = host.bounds.size
                     host.cacheDisplay(in: host.bounds, to: bitmap)
                     guard let image = bitmap.cgImage,
                           let png = bitmap.representation(using: .png, properties: [:]) else {
@@ -221,55 +220,37 @@ private struct DictationModelSettingsRegression {
                     }
                     if actions.count != expected.count { failures.append("\(name): expected six rendered action labels, found \(actions.count)") }
                     var measurements: [String] = []
-                    var currentPixels: [String: ActionPixels] = [:]
                     for (action, expectation) in zip(actions, expected) {
                         let title = action.topCandidates(1).first!.string
                         if normalized(title) != normalized(expectation.title) {
                             failures.append("\(name): expected rendered \(expectation.title), found \(title)")
                         }
-                        let measurement = pixels(action, bitmap: bitmap, dark: dark)
-                        currentPixels[expectation.key] = measurement
+                        let measurement = pixels(action, bitmap: bitmap, dark: dark, scale: scale)
                         let minimum = expectation.disabled ? 2.0 : 4.5
                         if measurement.contrast < minimum {
                             failures.append("\(name): \(title) contrast \(String(format: "%.2f", measurement.contrast)):1 is below \(minimum):1")
                         }
-                        if expectation.disabled {
-                            let counterpart = enabledPixels[expectation.key]
-                                ?? enabledPixels["\(DictationModelID.whisperSmallEnglish.rawValue)-select"]
-                                ?? currentPixels["\(DictationModelID.whisperSmallEnglish.rawValue)-select"]
-                            if let counterpart, measurement.contrast >= counterpart.contrast * 0.85 {
-                                failures.append("\(name): disabled \(title) must be visibly muted relative to enabled action text")
-                            }
-                        }
                         measurements.append("\(title): \(String(format: "%.2f", measurement.contrast)):1; disabled=\(expectation.disabled); glyph luminance=\(String(format: "%.3f", measurement.foreground))")
-                    }
-                    let selectedKey = "\(DictationModelID.parakeetUnifiedEnglish.rawValue)-select"
-                    let useKey = "\(DictationModelID.whisperSmallEnglish.rawValue)-select"
-                    if state == "enabled" {
-                        if let selected = currentPixels[selectedKey], let use = currentPixels[useKey], selected.contrast >= use.contrast * 0.85 {
-                            failures.append("\(name): disabled Selected must be visibly muted relative to enabled Use in the same capture")
-                        }
-                        enabledPixels = currentPixels.filter { key, _ in expected.contains { $0.key == key && !$0.disabled } }
                     }
                     try ("\(rendered)\n\nAction text pixels:\n\(measurements.joined(separator: "\n"))\n").write(
                         to: output.appendingPathComponent("\(name).txt"), atomically: true, encoding: .utf8
                     )
-                    evidence.append("- \(name): production titles and explicit expected helper outcomes checked; SwiftUI contrast environment \(String(describing: dictation.observedContrast)).\n  \(measurements.joined(separator: "; "))")
+                    evidence.append("- \(name): production titles, expected availability, and \(scale)x rendered text checked.\n  \(measurements.joined(separator: "; "))")
                 }
             }
         }
         let report = """
         # Speech models render regression
 
-        The test extracts the production Speech models section and its title/disabled helpers from SettingsView.swift. It compiles them with the real descriptors and renders an offscreen 500-point grouped Form. Fixtures cover selected, available, blocked, preparing, switching, and removing actions. Each primary action has an explicit expected title and disabled result. An additional preparation probe leaves canChangeModel true to independently check that an active preparation disables the model helpers. The extraction asserts that Remove retains its inline .disabled(!dictation.canChangeModel) predicate.
+        The test extracts the production Speech models section and its title/disabled helpers from SettingsView.swift. It compiles them with the real descriptors and renders an offscreen 500-point grouped Form in light and dark appearances at explicit 1x and 2x scales. Fixtures cover selected, available, blocked, preparing, switching, and removing actions. Each primary action has an explicit expected title and disabled result. An additional preparation probe leaves canChangeModel true to independently check that an active preparation disables the model helpers. Extraction checks both production disabled bindings, semantic primary/secondary label styling, and the action tint.
 
         \(evidence.joined(separator: "\n"))
 
-        Pixel contrast uses the 5th/95th-percentile glyph luminance and 10th/90th-percentile background luminance within Vision-recognized text boxes. Enabled action text must reach 4.5:1. Disabled text has a 2.0:1 readability guard, not a WCAG requirement. Selected must have at least 15% lower contrast than enabled Use in the same image; other blocked actions must have at least 15% lower contrast than their enabled counterparts. These comparisons preserve visible disabled affordances instead of requiring full-bright inactive labels.
+        Vision verifies the six action labels in each capture. Contrast compares the button background with the mean of the three most opaque glyph pixels per square point inside each recognized label. Sampling glyph cores avoids treating antialiasing coverage or OCR box area as the foreground color. Enabled action text must reach 4.5:1; disabled text retains a 2.0:1 readability guard. The production disabled predicates and semantic secondary styling preserve disabled affordances. No fixed dimming percentage is imposed because AppKit can increase inactive text contrast for accessibility.
 
         Action closures compile and render but are never invoked; fake select/download methods trap if called. Disabled-state assertions call the extracted production helpers; Remove's predicate is checked structurally. No live interaction or AX enabled-state assertion is claimed. Native enabled/disabled treatments are saved as PNGs.
 
-        The host is never shown. Aqua/Dark Aqua and accessibility-high-contrast NSAppearance are applied locally; the recorded SwiftUI contrast environment may remain standard. This does not exercise the system Increase Contrast preference. No system appearance, Night Shift, TCC, app data, microphone, network, inference, or model operation is accessed. Live navigation, real button activation, display calibration, and Night Shift's hardware transform are not tested.
+        The host is never shown. Aqua/Dark Aqua are applied locally. The current system Increase Contrast preference is \(NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast); this test honors it without changing it. Assigning an accessibility-high-contrast NSAppearance did not change SwiftUI's contrast environment, so no separate Increase Contrast coverage is claimed. No system appearance, Night Shift, TCC, app data, microphone, network, inference, or model operation is changed. Live navigation, real button activation, display calibration, and Night Shift's hardware transform are not tested.
 
         Result: \(failures.isEmpty ? "PASS" : "FAIL")
         \(failures.joined(separator: "\n"))

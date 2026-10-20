@@ -17,6 +17,10 @@ start = source.index('                Section {', source.index('            if d
 end = source.index('\n            }\n\n            Section {', start)
 section = source[start:end]
 assert 'Button(role: .destructive)' in section
+assert section.count('.disabled(modelButtonDisabled(for: model.id))') == 1, 'Model actions must retain the production disabled predicate'
+assert '.foregroundStyle(modelButtonDisabled(for: model.id) ? Color.secondary : Color.primary)' in section, 'Model action labels must use semantic enabled and disabled colors'
+assert '.foregroundStyle(!dictation.canChangeModel ? Color.secondary : Color.primary)' in section, 'Remove labels must use semantic enabled and disabled colors'
+assert '.tint(.primary)' in section, 'Action tint must adapt to the appearance'
 assert section.count('.disabled(!dictation.canChangeModel)') == 1, 'Remove must retain its production disabled predicate'
 helpers_start = source.index('    private func modelButtonTitle')
 helpers_end = source.index('\n}\n\nfunc comingSoonTag', helpers_start)

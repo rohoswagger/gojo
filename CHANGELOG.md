@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.1] — 2026-10-19
+
+### Added
+
+- **Microphone setup and testing.** Dictation settings can request microphone
+  access and run a short input test without transcribing or inserting text.
+
+### Changed
+
+- **The notch hides over full-height apps.** Move the pointer to its usual
+  location to reveal the compact notch before expanding it. Hiding and
+  revealing use smooth transitions.
+- **Permission status is more precise.** Settings distinguishes microphone
+  and Accessibility access from helper connection and shortcut readiness.
+
+### Fixed
+
+- **Dictation shortcuts recover after interruptions.** Helper reconnection,
+  wake and permission changes restore monitoring without repeated prompts.
+  Closing Settings no longer interrupts shortcut recovery.
+- **Microphone requests share one pending decision.** Canceled recordings
+  cannot start later when access is granted, and resumed capture rechecks
+  permission. Listening begins only after audio arrives.
+- **Idle microphones stay idle.** Audio configuration notifications no longer
+  repeatedly activate and deactivate unused input hardware.
+- **Saved HUD settings survive helper timeouts.** A connection failure no
+  longer clears the enabled preference.
+
 ## [1.6.0] — 2026-10-19
 
 Keep speaking between phrases with persistent voice dictation and a compact,

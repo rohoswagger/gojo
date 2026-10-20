@@ -9,7 +9,7 @@ import { PricingTabsProvider, PricingTabList, PricingPanels, PricingPanel } from
 import styles from "./home.module.css"
 import { coastalDisplay } from "@/lib/coastal-font"
 import { Button } from "@/components/ui/button"
-import { GOJO_RELEASE } from "@/lib/release"
+import { GOJO_RELEASE } from "@/lib/release.mjs"
 
 
 export const metadata: Metadata = {

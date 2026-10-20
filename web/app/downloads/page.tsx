@@ -4,7 +4,7 @@ import Link from "next/link";
 import { GojoFooter } from "@/components/gojo-footer";
 import { GojoHeader } from "@/components/gojo-header";
 import { Button } from "@/components/ui/button";
-import { GOJO_RELEASE } from "@/lib/release";
+import { GOJO_RELEASE } from "@/lib/release.mjs";
 
 const TITLE = "Download Gojo for Mac";
 const DESCRIPTION = `Download Gojo ${GOJO_RELEASE.version} for macOS. Developer ID signed and Apple notarized, with a full three day trial that needs no account and no card.`;

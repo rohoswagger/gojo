@@ -1,9 +1,9 @@
 export const GOJO_RELEASE = {
-  version: "1.6.0",
-  downloadUrl: "https://downloads.trygojo.com/Gojo-1.6.0.dmg",
-  fileName: "Gojo-1.6.0.dmg",
-  fileSizeBytes: 17_399_815,
-  fileSizeLabel: "17.4 MB",
+  version: "1.6.1",
+  downloadUrl: "https://downloads.trygojo.com/Gojo-1.6.1.dmg",
+  fileName: "Gojo-1.6.1.dmg",
+  fileSizeBytes: 17_531_834,
+  fileSizeLabel: "17.5 MB",
   minimumSystemVersion: "macOS 14 or later",
-  sha256: "65f3291ee7f613269ea550cf24dd5ab69f170f85c529771b62be3c3038a9da8a",
+  sha256: "999e35478736332aa247ed4a2e0e72fd7e28a6e544282835cc020aa6e7773ba2",
 };

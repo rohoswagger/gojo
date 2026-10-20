@@ -6,6 +6,41 @@
     <description>Most recent changes to Gojo, with download links.</description>
     <language>en</language>
     <item>
+      <title>Version 1.6.1</title>
+      <pubDate>Tue, 20 Oct 2026 05:31:36 +0000</pubDate>
+      <sparkle:version>1792474089</sparkle:version>
+      <sparkle:shortVersionString>1.6.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+<h4>Added</h4>
+<ul><li>**Microphone setup and testing.** Dictation settings can request microphone</li></ul>
+<p>  access and run a short input test without transcribing or inserting text.</p>
+<h4>Changed</h4>
+<ul><li>**The notch hides over full-height apps.** Move the pointer to its usual</li></ul>
+<p>  location to reveal the compact notch before expanding it. Hiding and</p>
+<p>  revealing use smooth transitions.</p>
+<ul><li>**Permission status is more precise.** Settings distinguishes microphone</li></ul>
+<p>  and Accessibility access from helper connection and shortcut readiness.</p>
+<h4>Fixed</h4>
+<ul><li>**Dictation shortcuts recover after interruptions.** Helper reconnection,</li></ul>
+<p>  wake and permission changes restore monitoring without repeated prompts.</p>
+<p>  Closing Settings no longer interrupts shortcut recovery.</p>
+<ul><li>**Microphone requests share one pending decision.** Canceled recordings</li></ul>
+<p>  cannot start later when access is granted, and resumed capture rechecks</p>
+<p>  permission. Listening begins only after audio arrives.</p>
+<ul><li>**Idle microphones stay idle.** Audio configuration notifications no longer</li></ul>
+<p>  repeatedly activate and deactivate unused input hardware.</p>
+<ul><li>**Saved HUD settings survive helper timeouts.** A connection failure no</li></ul>
+<p>  longer clears the enabled preference.</p>
+      ]]></description>
+      <enclosure
+        url="https://downloads.trygojo.com/Gojo-1.6.1.dmg"
+        sparkle:edSignature="OAygBzZIdoDsXUVQ1QuINQG+/82qLeeuErS3wAqu4zzvop9nhMU6KnFwl660lzZNBlwG34u9tJxpsjG3DLjUBg=="
+        length="17531834"
+        type="application/octet-stream" />
+    </item>
+
+    <item>
       <title>Version 1.6.0</title>
       <pubDate>Mon, 19 Oct 2026 18:31:28 +0000</pubDate>
       <sparkle:version>1792434465</sparkle:version>

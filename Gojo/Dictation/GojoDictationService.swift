@@ -391,7 +391,7 @@ final class GojoDictationService: ObservableObject {
                     }
                 }
             },
-            beforeCapture: { await MusicManager.shared.pauseForDictation() },
+            beforeCapture: { await DictationOutputSilencer.shared.quietForDictation() },
             acquireSessionResources: { [weak self, modelResidency] _ in
                 await self?.adjustSessionResources(by: 1)
                 let lease = await modelResidency.acquire()

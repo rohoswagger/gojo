@@ -40,7 +40,6 @@ class MusicManager: ObservableObject {
 
     // Active controller
     private var activeController: (any MediaControllerProtocol)?
-    private var dictationPause: (id: UUID, controller: any MediaControllerProtocol, bundleIdentifier: String?)?
 
     // Published properties for UI
     @Published var songTitle: String = "I'm Handsome"
@@ -613,24 +612,6 @@ class MusicManager: ObservableObject {
         Task {
             await activeController?.pause()
         }
-    }
-
-    @MainActor
-    func pauseForDictation() async -> (@Sendable () async -> Void)? {
-        guard isPlaying, let controller = activeController else { return nil }
-        let bundle = bundleIdentifier
-        await controller.pause()
-        let id = UUID()
-        dictationPause = (id, controller, bundle)
-        return { await MusicManager.shared.resumeAfterDictation(id) }
-    }
-
-    @MainActor
-    private func resumeAfterDictation(_ id: UUID) async {
-        guard let pause = dictationPause, pause.id == id else { return }
-        dictationPause = nil
-        guard bundleIdentifier == pause.bundleIdentifier else { return }
-        await pause.controller.play()
     }
 
     func toggleShuffle() {

@@ -500,12 +500,12 @@ body {
   }
 }
 
-.article-main :is([data-slot="section"], [data-slot="faq-accordion"], [data-slot="cta-band"]) {
+.article-main [data-slot="section"] {
   padding-block: 2.5rem;
   padding-inline: 0;
 }
 
-.article-main :is([data-slot="section"], [data-slot="faq-accordion"], [data-slot="cta-band"]) > div {
+.article-main [data-slot="section"] > div {
   max-width: var(--measure);
 }
 
@@ -517,11 +517,11 @@ body {
 
 /* .article-main already pads the top of the body; the first section adding its
    own padding on top of that was opening a ~104px hole under the hero. */
-.article-main > :is([data-slot="section"], [data-slot="faq-accordion"], [data-slot="cta-band"]):first-child {
+.article-main > [data-slot="section"]:first-child {
   padding-top: 0;
 }
 
-.article-main :is([data-slot="section"], [data-slot="faq-accordion"], [data-slot="cta-band"]) + [data-slot="section"] {
+.article-main [data-slot="section"] + [data-slot="section"] {
   border-top: 1px solid var(--rule-soft);
 }
 
@@ -540,7 +540,7 @@ body {
   margin-top: 1.5rem;
 }
 
-.article-main :is([data-slot="section"], [data-slot="faq-accordion"], [data-slot="cta-band"]) h2 {
+.article-main [data-slot="section"] h2 {
   margin: 2rem 0 0.75rem;
   font-family: var(--display);
   font-size: 1.625rem;
@@ -550,22 +550,14 @@ body {
   color: var(--ink-1);
 }
 
-.article-main :is([data-slot="section"], [data-slot="faq-accordion"], [data-slot="cta-band"]) > div > h2:first-child {
+.article-main [data-slot="section"] > div > h2:first-child {
   margin-top: 0;
 }
 
-.article-main :is([data-slot="section"], [data-slot="faq-accordion"], [data-slot="cta-band"]) p {
+.article-main [data-slot="section"] p {
   margin: 0 0 1rem;
   line-height: 1.7;
   color: var(--ink-2);
-}
-
-/* Flat surfaces inside articles: the skin uses hairline rules, not shadows. */
-.article-main [data-slot="card"],
-.article-main [data-slot="cta-band"] > div > div {
-  box-shadow: none;
-  background-image: none;
-  border-color: var(--rule);
 }
 
 .legal-content {

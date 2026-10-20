@@ -66,24 +66,31 @@ final class FocusedWindowProvider {
     }
 
     func focusedWindow(promptIfNeeded: Bool = false) async throws -> FocusedWindow {
-        let authorized = await XPCHelperClient.shared.ensureAccessibilityAuthorization(promptIfNeeded: promptIfNeeded)
-        guard authorized else { throw ProviderError.permissionMissing }
-
-        // Resolve the target here, in the main app — NOT via the helper's
-        // focusedWindowSnapshot. The helper is an XPC service whose NSWorkspace
-        // frontmost-app state goes stale (no real app lifecycle), so it kept
-        // returning whichever app was frontmost around helper launch. Live
-        // workspace state lives in this process; the helper is only used for
-        // AX writes addressed by pid+windowID.
         guard let app = targetApplication() else {
             throw ProviderError.noFocusedWindow
         }
+        let authorized = await XPCHelperClient.shared.ensureAccessibilityAuthorization(promptIfNeeded: promptIfNeeded)
+        guard authorized else { throw ProviderError.permissionMissing }
 
         rememberTargetApplicationIfNeeded(app)
 
-        // Main process holds no AX permission, so build the window from
-        // CGWindowList: the frontmost app's topmost on-screen window is its
-        // focused window for tiling purposes.
+        if let snapshot = await XPCHelperClient.shared.focusedWindow(forPID: app.processIdentifier) {
+            let normalFrame = snapshot.bounds.gojoScreenFlipped
+            if let screen = NSScreen.screen(containing: normalFrame) {
+                return FocusedWindow(
+                    element: nil,
+                    windowID: snapshot.windowID,
+                    pid: app.processIdentifier,
+                    appName: app.localizedName ?? "Focused app",
+                    bundleIdentifier: app.bundleIdentifier,
+                    title: nil,
+                    axFrame: snapshot.bounds,
+                    normalFrame: normalFrame,
+                    screen: screen
+                )
+            }
+        }
+
         if let snapshot = topWindowSnapshots().first(where: { $0.pid == app.processIdentifier }),
            !snapshot.bounds.isNull, snapshot.bounds.width > 0, snapshot.bounds.height > 0 {
             let normalFrame = snapshot.bounds.gojoScreenFlipped
@@ -203,6 +210,7 @@ final class FocusedWindowProvider {
     func resolveWindow(pid: pid_t, windowID: CGWindowID?, fallbackAppName: String, fallbackTitle: String? = nil) -> FocusedWindow? {
         let appElement = AXUIElementCreateApplication(pid)
         guard let windowElement = bestWindowElement(for: appElement, preferredWindowID: windowID),
+              windowID == nil || self.windowID(of: windowElement) == windowID,
               isUsableWindow(windowElement) else {
             return nil
         }

@@ -80,7 +80,7 @@ final class DictationPanelController {
         dismissalTask = nil
         suppressUntilInactive = false
         if !model.isPreview { synchronizePresentation() }
-        presentPanel()
+        presentPanel(onPointerDisplay: !isActive(service.state))
     }
 
     func dismiss() {
@@ -200,7 +200,7 @@ final class DictationPanelController {
             }
             return
         }
-        if state != .idle { presentPanel() }
+        if state != .idle { presentPanel(onPointerDisplay: isActive(state) && !isActive(previousState)) }
         resizePanel()
         if case .error = state {
             scheduleErrorDismissal()
@@ -291,7 +291,7 @@ final class DictationPanelController {
         }
     }
 
-    private func presentPanel() {
+    private func presentPanel(onPointerDisplay: Bool = false) {
         if panel == nil {
             panel = DictationFloatingPanel(rootView: DictationPanelView(
                 model: model,
@@ -299,7 +299,7 @@ final class DictationPanelController {
                 dragEnded: { [weak self] in self?.completeDrag() }
             ))
         }
-        if panel?.isVisible != true {
+        if onPointerDisplay || panel?.isVisible != true {
             placePanel(preferredDisplayID: preferences.preferredDisplayID)
         } else {
             resizePanel()
@@ -316,6 +316,7 @@ final class DictationPanelController {
         guard let placement = DictationPanelPlacement.restore(
             size: CGSize(width: DictationPanelPlacement.defaultSize.width, height: model.height),
             screens: screens,
+            pointerDisplayID: NSScreen.screenWithMouse?.displayUUID,
             preferredDisplayID: preferredDisplayID,
             fallbackDisplayID: sessionScreen()?.displayUUID,
             positions: preferences.positions

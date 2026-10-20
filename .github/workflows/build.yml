@@ -41,6 +41,9 @@ jobs:
       - name: Permission and recovery regressions
         run: make test-permissions
 
+      - name: Search regressions
+        run: make test-search
+
   build:
     name: Build (${{ matrix.configuration }})
     runs-on: macos-15

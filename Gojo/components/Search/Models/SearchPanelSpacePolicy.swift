@@ -7,11 +7,11 @@ enum SearchPanelSpacePolicy {
         .ignoresCycle,
     ]
 
-    static func shouldHideAfterResigningKey(isOnActiveSpace: Bool) -> Bool {
-        isOnActiveSpace
+    static func shouldHideAfterResigningKey(isKeyWindow: Bool) -> Bool {
+        !isKeyWindow
     }
 
-    static func shouldHideOnToggle(isVisible: Bool, isOnActiveSpace: Bool, isHiding: Bool) -> Bool {
-        isVisible && isOnActiveSpace && !isHiding
+    static func shouldHideOnToggle(isVisible: Bool, isOnActiveSpace: Bool, isKeyWindow: Bool, isHiding: Bool) -> Bool {
+        isVisible && isOnActiveSpace && isKeyWindow && !isHiding
     }
 }

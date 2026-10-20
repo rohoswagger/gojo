@@ -66,6 +66,7 @@ final class SearchPanelController: NSObject {
         if SearchPanelSpacePolicy.shouldHideOnToggle(
             isVisible: isVisible,
             isOnActiveSpace: headerPanel?.isOnActiveSpace ?? false,
+            isKeyWindow: headerPanel?.isKeyWindow ?? false,
             isHiding: isHiding
         ) {
             hide()
@@ -76,6 +77,9 @@ final class SearchPanelController: NSObject {
 
     func show() {
         let panels = panelsOrMake()
+        if panels.surface.parent !== panels.header {
+            panels.header.addChildWindow(panels.surface, ordered: .below)
+        }
 
         isHiding = false
         hideGeneration += 1
@@ -184,7 +188,6 @@ final class SearchPanelController: NSObject {
         let headerHostingView = NSHostingView(rootView: SearchHeaderView())
         SearchPanelHostingPolicy.configure(headerHostingView)
         headerPanel.contentView = headerHostingView
-        headerPanel.addChildWindow(surfacePanel, ordered: .below)
 
         resignKeyObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.didResignKeyNotification,
@@ -194,7 +197,7 @@ final class SearchPanelController: NSObject {
             Task { @MainActor in
                 guard let self else { return }
                 guard SearchPanelSpacePolicy.shouldHideAfterResigningKey(
-                    isOnActiveSpace: headerPanel.isOnActiveSpace
+                    isKeyWindow: headerPanel.isKeyWindow
                 ) else {
                     return
                 }

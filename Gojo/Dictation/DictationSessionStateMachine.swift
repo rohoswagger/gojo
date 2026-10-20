@@ -9,7 +9,6 @@ struct DictationSessionStateMachine: Sendable {
         case resumeRequested
         case finishRequested
         case captureStarted
-        case permissionDenied
         case audioTooShort
         case transcriptionCompleted(String)
         case insertionCompleted(String)
@@ -55,10 +54,6 @@ struct DictationSessionStateMachine: Sendable {
         case (.paused, .finishRequested), (.pausing, .finishRequested):
             state = .transcribing
             return .finishCapture
-
-        case (.requestingPermission, .permissionDenied):
-            state = .error(.microphonePermissionDenied)
-            return .none
 
         case (.listening, .hotKeyUp):
             state = .transcribing

@@ -17,10 +17,7 @@ final class ShelfItemViewModel: ObservableObject {
     @Published private(set) var item: ShelfItem
     @Published var thumbnail: NSImage?
     @Published var isDropTargeted: Bool = false
-    @Published var isRenaming: Bool = false
-    @Published var draftTitle: String = ""
     private var sharingLifecycle: SharingLifecycleDelegate?
-    private var quickShareLifecycle: SharingLifecycleDelegate?
     private var sharingAccessingURLs: [URL] = []
     private static var copiedURLs: [URL] = []
 
@@ -28,7 +25,6 @@ final class ShelfItemViewModel: ObservableObject {
 
     init(item: ShelfItem) {
         self.item = item
-        self.draftTitle = item.displayName
         Task { await loadThumbnail() }
     }
 
@@ -39,61 +35,6 @@ final class ShelfItemViewModel: ObservableObject {
         if let image = await ThumbnailService.shared.thumbnail(for: url, size: CGSize(width: 56, height: 56)) {
             self.thumbnail = image
         }
-    }
-
-    // MARK: - Drag & Drop helpers
-    func dragItemProvider() -> NSItemProvider {
-    let selectedItems = selection.selectedItems(in: ShelfStateViewModel.shared.items)
-        if selectedItems.count > 1 && selectedItems.contains(where: { $0.id == item.id }) {
-            return createMultiItemProvider(for: selectedItems)
-        }
-        return createItemProvider(for: item)
-    }
-
-    private func createItemProvider(for item: ShelfItem) -> NSItemProvider {
-        switch item.kind {
-        case .file:
-            let provider = NSItemProvider()
-            if let url = ShelfStateViewModel.shared.resolveAndUpdateBookmark(for: item) {
-                provider.registerObject(url as NSURL, visibility: .all)
-            } else {
-                provider.registerObject(item.displayName as NSString, visibility: .all)
-            }
-            return provider
-        case .text(let string):
-            return NSItemProvider(object: string as NSString)
-        case .link(let url):
-            return NSItemProvider(object: url as NSURL)
-        }
-    }
-
-    private func createMultiItemProvider(for items: [ShelfItem]) -> NSItemProvider {
-        let provider = NSItemProvider()
-        var urls: [URL] = []
-        var textItems: [String] = []
-        for item in items {
-            switch item.kind {
-            case .file:
-                if let url = ShelfStateViewModel.shared.resolveAndUpdateBookmark(for: item) {
-                    urls.append(url)
-                } else {
-                    textItems.append(item.displayName)
-                }
-            case .text(let string):
-                textItems.append(string)
-            case .link:
-                break
-            }
-        }
-        if !urls.isEmpty {
-            for url in urls {
-                provider.registerObject(url as NSURL, visibility: .all)
-            }
-        }
-        if !textItems.isEmpty {
-            provider.registerObject(textItems.joined(separator: "\n") as NSString, visibility: .all)
-        }
-        return provider
     }
 
     // MARK: - Actions
@@ -177,32 +118,6 @@ final class ShelfItemViewModel: ObservableObject {
     var onQuickLookRequest: (([URL]) -> Void)?
 
     // MARK: - Context Menu helpers (extracted from view)
-    func loadOpenWithApps() -> [URL] {
-        // Support both files and link items. For link items we ask NSWorkspace for apps that can open the URL (browsers).
-        if let fileURL = item.fileURL {
-            var results: [URL] = NSWorkspace.shared.urlsForApplications(toOpen: fileURL)
-            if results.isEmpty {
-                if let uti = try? fileURL.resourceValues(forKeys: [.contentTypeKey]).contentType {
-                    results = NSWorkspace.shared.urlsForApplications(toOpen: uti)
-                }
-            }
-            let unique = Array(Set(results))
-            let sorted = unique.sorted { appDisplayName(for: $0) < appDisplayName(for: $1) }
-            return sorted
-        } else if case .link(let url) = item.kind {
-            var results: [URL] = NSWorkspace.shared.urlsForApplications(toOpen: url)
-            if results.isEmpty {
-                if let uti = try? url.resourceValues(forKeys: [.contentTypeKey]).contentType {
-                    results = NSWorkspace.shared.urlsForApplications(toOpen: uti)
-                }
-            }
-            let unique = Array(Set(results))
-            let sorted = unique.sorted { appDisplayName(for: $0) < appDisplayName(for: $1) }
-            return sorted
-        }
-        return []
-    }
-
     private func ensureContextMenuSelection() {
         if !selection.isSelected(item.id) { selection.selectSingle(item) }
     }

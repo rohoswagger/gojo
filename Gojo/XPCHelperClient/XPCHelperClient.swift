@@ -591,11 +591,6 @@ final class XPCHelperClient: NSObject, @unchecked Sendable {
     }
     
     @MainActor
-    private func getRemoteService() -> RemoteXPCService<GojoXPCHelperProtocol>? {
-        remoteService
-    }
-    
-    @MainActor
     private func notifyAuthorizationChange(_ granted: Bool) {
         guard lastKnownAuthorization != granted else { return }
         lastKnownAuthorization = granted
@@ -627,11 +622,6 @@ final class XPCHelperClient: NSObject, @unchecked Sendable {
         monitoringTask = nil
     }
 
-    // Expose whether the client is actively monitoring (useful for tests/debug)
-    var isMonitoring: Bool {
-        return monitoringTask != nil
-    }
-    
     // MARK: - Accessibility
     
     nonisolated func requestAccessibilityAuthorization() {

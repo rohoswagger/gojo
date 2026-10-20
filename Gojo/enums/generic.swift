@@ -13,12 +13,6 @@ public enum Style {
     case floating
 }
 
-public enum ContentType: Int, Codable, Hashable, Equatable {
-    case normal
-    case menu
-    case settings
-}
-
 public enum NotchState {
     case closed
     case open

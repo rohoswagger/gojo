@@ -1,16 +1,10 @@
 import Cocoa
 import Defaults
 import Foundation
-import IOKit.ps
 import SwiftUI
 
 /// A view model that manages and monitors the battery status of the device
 class BatteryStatusViewModel: ObservableObject {
-
-    private var wasCharging: Bool = false
-    private var powerSourceChangedCallback: IOPowerSourceCallbackType?
-    private var runLoopSource: Unmanaged<CFRunLoopSource>?
-
     @ObservedObject var coordinator = GojoViewCoordinator.shared
 
     @Published private(set) var levelBattery: Float = 0.0
@@ -18,7 +12,6 @@ class BatteryStatusViewModel: ObservableObject {
     @Published private(set) var isPluggedIn: Bool = false
     @Published private(set) var isCharging: Bool = false
     @Published private(set) var isInLowPowerMode: Bool = false
-    @Published private(set) var isInitial: Bool = false
     @Published private(set) var timeToFullCharge: Int = 0
     @Published private(set) var statusText: String = ""
 
@@ -27,8 +20,6 @@ class BatteryStatusViewModel: ObservableObject {
 
     static let shared = BatteryStatusViewModel()
 
-    /// Initializes the view model with a given GojoViewModel instance
-    /// - Parameter vm: The GojoViewModel instance
     private init() {
         setupPowerStatus()
         setupMonitor()

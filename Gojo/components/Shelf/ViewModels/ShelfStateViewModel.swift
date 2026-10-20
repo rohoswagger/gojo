@@ -133,11 +133,4 @@ final class ShelfStateViewModel: ObservableObject {
         return result.url
     }
 
-    func resolveFileURLs(for items: [ShelfItem]) -> [URL] {
-        var urls: [URL] = []
-        for it in items {
-            if let u = resolveFileURL(for: it) { urls.append(u) }
-        }
-        return urls
-    }
 }

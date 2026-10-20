@@ -88,47 +88,17 @@ private final class OpenRouterURLProtocol: URLProtocol {
 }
 
 private actor BlockingOpenRouterClient: OpenRouterDictationClient {
-    enum Operation {
-        case transcription
-        case chat
-    }
-
-    private let operation: Operation
-    private let chatResult: String
     private var transcriptionCalls = 0
-    private var chatCalls = 0
-
-    init(operation: Operation, chatResult: String = "polished") {
-        self.operation = operation
-        self.chatResult = chatResult
-    }
 
     func listTranscriptionModels(apiKey: String?) async throws -> [OpenRouterTranscriptionModel] { [] }
 
     func transcribe(audio: Data, model: String, apiKey: String, language: String?) async throws -> String {
         transcriptionCalls += 1
-        if operation == .transcription {
-            try await Task.sleep(for: .seconds(10))
-        }
+        try await Task.sleep(for: .seconds(10))
         return "raw"
     }
 
-    func chatCompletion(
-        model: String,
-        apiKey: String,
-        messages: [OpenRouterMessage],
-        temperature: Double,
-        maxTokens: Int,
-        sort: String
-    ) async throws -> String {
-        chatCalls += 1
-        if operation == .chat {
-            try await Task.sleep(for: .seconds(10))
-        }
-        return chatResult
-    }
-
-    func counts() -> (Int, Int) { (transcriptionCalls, chatCalls) }
+    func count() -> Int { transcriptionCalls }
 }
 
 private func model(_ id: String, transcription: Bool = true) -> OpenRouterTranscriptionModel {
@@ -157,8 +127,7 @@ private func expectError(
              (.rateLimited, .rateLimited),
              (.serverUnavailable, .serverUnavailable),
              (.requestFailed, .requestFailed),
-             (.invalidResponse, .invalidResponse),
-             (.truncatedResponse, .truncatedResponse):
+             (.invalidResponse, .invalidResponse):
             return
         default:
             assertCondition(false, "\(message): unexpected error \(actual)")
@@ -173,10 +142,10 @@ struct OpenRouterDictationRegressionRunner {
     static func main() async {
         testWAVEncoding()
         testModelSelection()
-        testStylePrompts()
+        testWritingStyleLabel()
         await testAPIClientWireContractAndResponses()
         await testAPIClientErrorMapping()
-        await testAdaptersCancellationAndDisabledPolishing()
+        await testTranscriberCancellation()
         print("openrouter-dictation-regression-pass")
     }
 
@@ -281,42 +250,12 @@ struct OpenRouterDictationRegressionRunner {
         )
     }
 
-    static func testStylePrompts() {
+    static func testWritingStyleLabel() {
         assertEqual(
             DictationWritingStyle.punctuated.label,
             "Conversational",
             "the spoken-English default should be called Conversational"
         )
-        assertCondition(
-            DictationWritingStyle.casual.prompt.contains("all lowercase"),
-            "casual style should explicitly request lowercase text"
-        )
-        assertCondition(
-            DictationWritingStyle.punctuated.prompt.contains("conversational"),
-            "conversational style should explicitly preserve conversational English"
-        )
-        for style in DictationWritingStyle.allCases {
-            let prompt = OpenRouterDictationPolisher.systemPrompt(
-                style: style,
-                customInstructions: "  Keep emoji use minimal.  "
-            )
-            assertCondition(
-                prompt.contains("Return only the edited text, with no explanation, quotation marks, or preamble."),
-                "\(style.label) should strictly request output-only text"
-            )
-            assertCondition(
-                prompt.contains("Never invent details, summarize, answer questions, or turn a request into an answer."),
-                "\(style.label) should prohibit meaning-changing edits"
-            )
-            assertCondition(
-                prompt.contains("Style: \(style.label). \(style.prompt)"),
-                "\(style.label) should include its exact style contract"
-            )
-            assertCondition(
-                prompt.contains("Additional style instructions from the user: Keep emoji use minimal."),
-                "\(style.label) should trim and include custom instructions"
-            )
-        }
     }
 
     static func testAPIClientWireContractAndResponses() async {
@@ -366,35 +305,6 @@ struct OpenRouterDictationRegressionRunner {
         )
 
         OpenRouterURLProtocol.configure(
-            status: 201,
-            data: Data(#"{"choices":[{"message":{"content":"polished"}}]}"#.utf8)
-        )
-        do {
-            let result = try await client.chatCompletion(
-                model: "openai/gpt-5-nano",
-                apiKey: "test-key",
-                messages: [OpenRouterMessage(role: "user", content: "raw")],
-                temperature: 0,
-                maxTokens: 128,
-                sort: "latency"
-            )
-            assertEqual(result, "polished", "a successful chat response should decode content")
-        } catch {
-            assertCondition(false, "successful chat request should not throw: \(error)")
-        }
-        guard let chatRequest = OpenRouterURLProtocol.capturedRequests().first,
-              let chatBody = chatRequest.httpBody,
-              let chatJSON = try? JSONSerialization.jsonObject(with: chatBody) as? [String: Any],
-              let provider = chatJSON["provider"] as? [String: Any]
-        else {
-            assertCondition(false, "chat request should be captured with provider routing")
-            return
-        }
-        assertEqual(chatRequest.url?.path, "/api/v1/chat/completions", "polishing should use chat completions")
-        assertEqual(provider["sort"] as? String, "latency", "polishing should ask OpenRouter for latency routing")
-        assertEqual(chatJSON["stream"] as? Bool, false, "polishing should use a bounded non-streaming response")
-
-        OpenRouterURLProtocol.configure(
             status: 200,
             data: Data(#"{"data":[{"id":"good","name":"Good","architecture":{"output_modalities":["transcription"]}},{"id":"bad","architecture":{"output_modalities":["text"]}}]}"#.utf8)
         )
@@ -441,43 +351,18 @@ struct OpenRouterDictationRegressionRunner {
         await expectError(.invalidResponse, operation: {
             _ = try await client.transcribe(audio: Data(), model: "model", apiKey: "key", language: nil)
         }, message: "a malformed 2xx transcription payload should be rejected")
-        OpenRouterURLProtocol.configure(status: 200, data: Data(#"{"choices":[]}"#.utf8))
-        await expectError(.invalidResponse, operation: {
-            _ = try await client.chatCompletion(
-                model: "model",
-                apiKey: "key",
-                messages: [],
-                temperature: 0,
-                maxTokens: 1,
-                sort: "latency"
-            )
-        }, message: "a chat payload without content should be rejected")
-        OpenRouterURLProtocol.configure(
-            status: 200,
-            data: Data(#"{"choices":[{"finish_reason":"length","message":{"content":"partial"}}]}"#.utf8)
-        )
-        await expectError(.truncatedResponse, operation: {
-            _ = try await client.chatCompletion(
-                model: "model",
-                apiKey: "key",
-                messages: [],
-                temperature: 0,
-                maxTokens: 1,
-                sort: "latency"
-            )
-        }, message: "a valid but length-truncated cleanup must fall back to the raw transcript")
     }
 
-    static func testAdaptersCancellationAndDisabledPolishing() async {
+    static func testTranscriberCancellation() async {
         let audio = DictationAudio(samples: [0, 0, 0])
-        let transcriptionClient = BlockingOpenRouterClient(operation: .transcription)
+        let transcriptionClient = BlockingOpenRouterClient()
         let transcriber = OpenRouterDictationTranscriber(
             client: transcriptionClient,
             apiKeyProvider: { "key" },
             modelProvider: { "model" }
         )
         let transcriptionTask = Task { try await transcriber.transcribe(audio) }
-        for _ in 0..<100 where (await transcriptionClient.counts()).0 == 0 {
+        for _ in 0..<100 where (await transcriptionClient.count()) == 0 {
             try? await Task.sleep(for: .milliseconds(2))
         }
         await transcriber.cancelTranscription()
@@ -486,64 +371,6 @@ struct OpenRouterDictationRegressionRunner {
             break
         default:
             assertCondition(false, "cancelling the transcription adapter should cancel its in-flight client request")
-        }
-
-        let chatClient = BlockingOpenRouterClient(operation: .chat)
-        let polisher = OpenRouterDictationPolisher(
-            client: chatClient,
-            apiKeyProvider: { "key" },
-            styleProvider: { .punctuated },
-            customInstructionsProvider: { nil },
-            modelProvider: { "model" },
-            enabledProvider: { true }
-        )
-        let polishTask = Task { try await polisher.polish("raw") }
-        for _ in 0..<100 where (await chatClient.counts()).1 == 0 {
-            try? await Task.sleep(for: .milliseconds(2))
-        }
-        await polisher.cancelPolishing()
-        switch await polishTask.result {
-        case .failure(_ as CancellationError):
-            break
-        default:
-            assertCondition(false, "cancelling the polisher should cancel its in-flight client request")
-        }
-
-        let disabledClient = BlockingOpenRouterClient(operation: .chat)
-        let disabledPolisher = OpenRouterDictationPolisher(
-            client: disabledClient,
-            apiKeyProvider: { nil },
-            styleProvider: { .formal },
-            customInstructionsProvider: { nil },
-            modelProvider: { "model" },
-            enabledProvider: { false }
-        )
-        do {
-            let result = try await disabledPolisher.polish("  leave this alone  ")
-            assertEqual(result, "  leave this alone  ", "disabled polishing should be a no-op")
-        } catch {
-            assertCondition(false, "disabled polishing should never require an API key: \(error)")
-        }
-        let disabledCounts = await disabledClient.counts()
-        assertEqual(disabledCounts.1, 0, "disabled polishing must not call OpenRouter")
-
-        let casualClient = BlockingOpenRouterClient(
-            operation: .transcription,
-            chatResult: "Ready For Texting."
-        )
-        let casualPolisher = OpenRouterDictationPolisher(
-            client: casualClient,
-            apiKeyProvider: { "key" },
-            styleProvider: { .casual },
-            customInstructionsProvider: { nil },
-            modelProvider: { "model" },
-            enabledProvider: { true }
-        )
-        do {
-            let result = try await casualPolisher.polish("ready for texting")
-            assertEqual(result, "ready for texting.", "casual OpenRouter cleanup should always be lowercase")
-        } catch {
-            assertCondition(false, "casual OpenRouter cleanup should succeed: \(error)")
         }
     }
 }

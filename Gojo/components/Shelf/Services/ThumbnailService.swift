@@ -46,16 +46,6 @@ actor ThumbnailService {
         return await task.value
     }
     
-    func clearCache() {
-        cache.removeAll()
-        cacheOrder.removeAll()
-    }
-    
-    func clearCache(for url: URL) {
-        cache = cache.filter { !$0.key.starts(with: url.path) }
-        cacheOrder.removeAll { $0.starts(with: url.path) }
-    }
-    
     // MARK: - Private Methods
     
     private func generateQuickLookThumbnail(for url: URL, size: CGSize) async -> NSImage? {

@@ -14,7 +14,6 @@ struct Config: Equatable {
     var future: Int = 14
     var steps: Int = 1  // Each step is one day
     var spacing: CGFloat = 0
-    var showsText: Bool = true
     var offset: Int = 2  // Number of dates to the left of the selected date
 }
 

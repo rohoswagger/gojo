@@ -198,34 +198,6 @@ final class FocusedWindowProvider {
         }
     }
 
-    /// Raises a specific window owned by `pid` to the front via Accessibility — required for cross-app
-    /// window activation from a non-activating panel like the notch.
-    func raiseWindow(pid: pid_t, windowID: CGWindowID?) {
-        let appElement = AXUIElementCreateApplication(pid)
-        var targetElement: AXUIElement?
-
-        if let windowID,
-           let windows = copyElements(appElement, attribute: kAXWindowsAttribute) {
-            for window in windows {
-                if self.windowID(of: window) == windowID {
-                    targetElement = window
-                    break
-                }
-            }
-        }
-
-        if targetElement == nil {
-            targetElement = bestWindowElement(for: appElement, preferredWindowID: windowID)
-        }
-
-        if let element = targetElement {
-            AXUIElementPerformAction(element, kAXRaiseAction as CFString)
-            AXUIElementSetAttributeValue(element, kAXMainAttribute as CFString, kCFBooleanTrue)
-            AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue)
-        }
-        AXUIElementSetAttributeValue(appElement, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
-    }
-
     /// Resolves a `FocusedWindow` for a specific pid+windowID without depending on system focus state.
     /// Returns nil if AX cannot find the window.
     func resolveWindow(pid: pid_t, windowID: CGWindowID?, fallbackAppName: String, fallbackTitle: String? = nil) -> FocusedWindow? {

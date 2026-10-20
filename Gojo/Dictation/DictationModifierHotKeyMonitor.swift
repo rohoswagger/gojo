@@ -33,16 +33,6 @@ final class DictationModifierHotKeyMonitor {
         eventTapHost?.isEnabledSnapshot ?? false
     }
 
-    func setActivationMode(_ mode: DictationActivationMode) {
-        mode.save()
-        let action = machine.setMode(mode)
-        if action != .none {
-            activationTask?.cancel()
-            activationTask = nil
-        }
-        apply(action)
-    }
-
     func cancelCurrentSession() {
         activationTask?.cancel()
         activationTask = nil

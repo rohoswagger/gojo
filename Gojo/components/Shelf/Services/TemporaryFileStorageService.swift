@@ -12,7 +12,6 @@ import UniformTypeIdentifiers
 enum TempFileType {
     case data(Data, suggestedName: String?)
     case text(String)
-    case url(URL)
 }
 
 class TemporaryFileStorageService {
@@ -94,38 +93,9 @@ class TemporaryFileStorageService {
                 print("Error: \(error)")
                 return nil
             }
-            
-        case .url(let url):
-            let filename = "\(url.host ?? uuid).webloc"
-            let dirURL = tempDir.appendingPathComponent(uuid, isDirectory: true)
-            let fileURL = dirURL.appendingPathComponent(filename)
-            
-            let weblocContent = createWeblocContent(for: url)
-            guard let data = weblocContent.data(using: String.Encoding.utf8) else {
-                print("❌ Failed to create webloc data")
-                return nil
-            }
-            
-            do {
-                try FileManager.default.createDirectory(at: dirURL, withIntermediateDirectories: true)
-                try data.write(to: fileURL)
-                return fileURL
-            } catch {
-                print("Error: \(error)")
-                return nil
-            }
         }
     }
     
-    private func createFile(at url: URL, data: Data) -> URL? {
-        do {
-            try data.write(to: url)
-            return url
-        } catch {
-            print("❌ Failed to create temp file at \(url.path): \(error)")
-            return nil
-        }
-    }
     func createZip(from urls: [URL], suggestedName: String? = nil) async -> URL? {
         let tempDir = URL(fileURLWithPath: NSTemporaryDirectory())
         let uuid = UUID().uuidString
@@ -224,21 +194,5 @@ class TemporaryFileStorageService {
         } else {
             return nil
         }
-    }
-    
-    // MARK: - Content Creation Helpers
-    
-    
-    private func createWeblocContent(for url: URL) -> String {
-        return """
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-        <plist version="1.0">
-        <dict>
-            <key>URL</key>
-            <string>\(url.absoluteString)</string>
-        </dict>
-        </plist>
-        """
     }
 }

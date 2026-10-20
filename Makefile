@@ -107,6 +107,7 @@ smoke:
 
 test-window:
 	./tests/window_management_regression.sh
+	./tests/window_history_regression.sh
 
 test-window-ui:
 	./tests/window_power_view_regression.sh

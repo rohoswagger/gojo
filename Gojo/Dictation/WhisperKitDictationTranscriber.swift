@@ -16,7 +16,6 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
     }
 
     private struct ModelDescriptor: Sendable {
-        let model: WhisperDictationModel
         let maximumBytes: UInt64
         let sha256: [String: String]
     }
@@ -321,9 +320,9 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
     private static func descriptor(for model: WhisperDictationModel) -> ModelDescriptor {
         switch model {
         case .smallEnglish:
-            return ModelDescriptor(model: model, maximumBytes: 230_000_000, sha256: smallEnglishSHA256)
+            return ModelDescriptor(maximumBytes: 230_000_000, sha256: smallEnglishSHA256)
         case .largeV3:
-            return ModelDescriptor(model: model, maximumBytes: 626_718_238, sha256: largeV3SHA256)
+            return ModelDescriptor(maximumBytes: 626_718_238, sha256: largeV3SHA256)
         }
     }
 

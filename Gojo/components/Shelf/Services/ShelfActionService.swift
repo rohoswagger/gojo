@@ -33,14 +33,6 @@ enum ShelfActionService {
         }
     }
 
-    static func copyPath(_ item: ShelfItem) {
-        guard case .file(let bookmark) = item.kind else { return }
-        handleBookmarkedFile(bookmark) { url in
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(url.path, forType: .string)
-        }
-    }
-
     static func remove(_ item: ShelfItem) {
         ShelfStateViewModel.shared.remove(item)
     }

@@ -52,7 +52,6 @@ final class ImageProcessingService {
     static let shared = ImageProcessingService()
     
     private init() {}
-    private let ciContext = CIContext(options: nil)
     
     // MARK: - Remove Background
     

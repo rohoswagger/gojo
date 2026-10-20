@@ -48,7 +48,6 @@ struct ContentView: View {
             : .spring(response: 0.42, dampingFraction: 0.8, blendDuration: 0)
     }
 
-    private let extendedHoverPadding: CGFloat = 30
     private let zeroHeightHoverPadding: CGFloat = 10
 
     private var topCornerRadius: CGFloat {
@@ -623,26 +622,6 @@ struct ContentView: View {
             doOpen()
         }
     }
-}
-
-struct FullScreenDropDelegate: DropDelegate {
-    @Binding var isTargeted: Bool
-    let onDrop: () -> Void
-
-    func dropEntered(info _: DropInfo) {
-        isTargeted = true
-    }
-
-    func dropExited(info _: DropInfo) {
-        isTargeted = false
-    }
-
-    func performDrop(info _: DropInfo) -> Bool {
-        isTargeted = false
-        onDrop()
-        return true
-    }
-
 }
 
 struct GeneralDropTargetDelegate: DropDelegate {

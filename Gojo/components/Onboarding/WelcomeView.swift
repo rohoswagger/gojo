@@ -12,10 +12,8 @@ import SwiftUI
 /// for the background glows, the aperture aura and accents.
 extension Color {
     static let sunsetSky    = Color(red: 0.30, green: 0.46, blue: 0.95)  // sky blue
-    static let sunsetMauve  = Color(red: 0.66, green: 0.42, blue: 0.72)  // violet bridge
     static let sunsetPeach  = Color(red: 1.00, green: 0.55, blue: 0.20)  // orange
     static let sunsetCoral  = Color(red: 0.93, green: 0.27, blue: 0.30)  // red
-    static let sunsetButton = Color(red: 0.94, green: 0.43, blue: 0.43)  // coral (CTA/accent)
     static let onboardingControl = Color(red: 0.62, green: 0.61, blue: 0.66).opacity(0.85)  // soft translucent slate (buttons)
 }
 

@@ -73,17 +73,6 @@ final class VolumeManager: NSObject, ObservableObject {
     
     func refresh() { fetchCurrentVolume() }
 
-    func adjustRelative(delta: Float32) {
-        if isMutedInternal() { toggleMuteInternal() }
-        guard let current = readVolumeInternal() else {
-            fetchCurrentVolume()
-            return
-        }
-        let target = max(0, min(1, current + delta))
-        writeVolumeInternal(target)  
-        publish(volume: target, muted: isMutedInternal(), touchDate: true)
-    }
-
     @MainActor func setAbsolute(_ value: Float32) {
         let clamped = max(0, min(1, value))
         let currentlyMuted = isMutedInternal()

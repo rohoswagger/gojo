@@ -17,6 +17,36 @@ private final class FixtureDictation: ObservableObject {
     var removingModel: DictationModelID?
     var canChangeModel = true
     var modelErrors: [DictationModelID: String] = [:]
+    var activePracticeFieldID: UUID?
+    var state = DictationState.idle
+    var selectedIntent = DictationSessionIntent.standard
+    var spokenCommandMode = DictationSpokenCommandMode.off
+    var commandLanguage = DictationCommandLanguage.english
+    var currentModelCapabilities: DictationModelCapabilities? = DictationModelDescriptor.descriptor(for: .parakeetUnifiedEnglish).capabilities
+    var recognitionLanguage = DictationLanguageSelection.fixed("en")
+    var translatesToEnglish = false
+    var previewEnabled = false
+    var cuesEnabled = false
+    var residencyPolicy = DictationResidencyPolicy.keepWarm
+    var inputDevices = [DictationInputDevice(id: "test-microphone", name: "Built-in microphone")]
+    var selectedInput = DictationInputSelection.systemDefault
+    var currentInputName: String?
+    var adaptiveSpeech = true
+
+    func setIntent(_ value: DictationSessionIntent) { fatalError("Render must not change intent") }
+    func setSpokenCommandMode(_ value: DictationSpokenCommandMode) { fatalError("Render must not change commands") }
+    func setCommandLanguage(_ value: DictationCommandLanguage) { fatalError("Render must not change language") }
+    func setRecognitionLanguage(_ value: DictationLanguageSelection) { fatalError("Render must not change recognition") }
+    func setTranslatesToEnglish(_ value: Bool) { fatalError("Render must not change translation") }
+    func setPreviewEnabled(_ value: Bool) { fatalError("Render must not change preview") }
+    func setCuesEnabled(_ value: Bool) { fatalError("Render must not change cues") }
+    func setResidencyPolicy(_ value: DictationResidencyPolicy) { fatalError("Render must not change residency") }
+    func setInput(_ value: DictationInputSelection) { fatalError("Render must not change input") }
+    func setAdaptiveSpeech(_ value: Bool) { fatalError("Render must not change speech gate") }
+    func beginPractice(fieldID: UUID) { fatalError("Render must not start recording") }
+    func cancelPractice(fieldID: UUID) {}
+    func finishVoiceMode() { fatalError("Render must not finish recording") }
+    func refreshInputDevices() {}
 
     func isModelInstalled(_ model: DictationModelID) -> Bool {
         [.parakeetUnifiedEnglish, .whisperSmallEnglish].contains(model)
@@ -24,6 +54,28 @@ private final class FixtureDictation: ObservableObject {
 
     func selectModel(_ model: DictationModelID) { fatalError("Render test must not select a model") }
     func downloadModel(_ model: DictationModelID) { fatalError("Render test must not download a model") }
+}
+
+@MainActor
+private struct ExperienceSectionsFixture: View {
+    @ObservedObject var dictation: FixtureDictation
+    @State private var practiceFieldID = UUID()
+    let scheme: ColorScheme
+
+    var body: some View {
+        Form {
+            practiceSection
+            experienceSection
+            inputSection
+        }
+        .formStyle(.grouped)
+        .frame(width: 620, height: 1500)
+        .background(Color(NSColor.windowBackgroundColor))
+        .tint(Color(nsColor: .controlAccentColor))
+        .preferredColorScheme(scheme)
+    }
+
+    /* PRODUCTION_EXPERIENCE_SECTIONS */
 }
 
 @MainActor
@@ -239,6 +291,64 @@ private struct DictationModelSettingsRegression {
                 }
             }
         }
+        for dark in [false, true] {
+            for state in ["unified", "whisper", "v3", "english", "literal", "cloud"] {
+                let service = FixtureDictation()
+                var required = ["Try dictation", "Dictation behavior", "Audio input", "Intent", "Quiet sound feedback", "Local model memory", "Microphone", "Adapt to quiet speech"]
+                var absent: [String] = []
+                switch state {
+                case "whisper":
+                    service.currentModelCapabilities = DictationModelDescriptor.descriptor(for: .whisperLargeV3).capabilities
+                    service.recognitionLanguage = .automatic
+                    service.spokenCommandMode = .punctuationAndCode
+                    required += ["Automatic detection", "Translate to English", "Command language"]
+                    absent += ["Draft preview"]
+                case "v3":
+                    service.currentModelCapabilities = DictationModelDescriptor.descriptor(for: .parakeetV3Multilingual).capabilities
+                    service.recognitionLanguage = .automatic
+                    required += ["Automatic detection"]
+                    absent += ["Translate to English", "Draft preview"]
+                case "english":
+                    service.currentModelCapabilities = DictationModelDescriptor.descriptor(for: .whisperSmallEnglish).capabilities
+                    required += ["English"]
+                    absent += ["Translate to English", "Draft preview", "Automatic detection"]
+                case "literal":
+                    service.selectedIntent = .literal
+                    service.spokenCommandMode = .punctuation
+                    required += ["Literal", "Draft preview"]
+                    absent += ["Command language", "Translate to English"]
+                case "cloud":
+                    service.currentModelCapabilities = nil
+                    absent += ["Recognition language", "Translate to English", "Draft preview"]
+                default:
+                    required += ["Draft preview", "English"]
+                    absent += ["Translate to English", "Automatic detection"]
+                }
+                let name = "experience-\(dark ? "dark" : "light")-\(state)"
+                let appearance: NSAppearance.Name = dark ? .darkAqua : .aqua
+                NSApp.appearance = NSAppearance(named: appearance)
+                let host = NSHostingView(rootView: ExperienceSectionsFixture(dictation: service, scheme: dark ? .dark : .light))
+                host.appearance = NSAppearance(named: appearance)
+                host.frame = CGRect(x: 0, y: 0, width: 620, height: 1500)
+                host.layoutSubtreeIfNeeded()
+                RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.1))
+                host.layoutSubtreeIfNeeded()
+                guard let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { fatalError("Could not allocate experience snapshot") }
+                host.cacheDisplay(in: host.bounds, to: bitmap)
+                guard let image = bitmap.cgImage, let png = bitmap.representation(using: .png, properties: [:]) else { fatalError("Could not encode experience snapshot") }
+                try png.write(to: output.appendingPathComponent(name + ".png"))
+                let recognition = VNRecognizeTextRequest()
+                recognition.recognitionLevel = .accurate
+                recognition.usesLanguageCorrection = false
+                try VNImageRequestHandler(cgImage: image).perform([recognition])
+                let rendered = (recognition.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
+                for text in required where !rendered.localizedCaseInsensitiveContains(text) { failures.append("\(name): missing \(text)") }
+                let renderedLines = rendered.components(separatedBy: .newlines).map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
+                for text in absent where renderedLines.contains(text.lowercased()) { failures.append("\(name): unsupported control \(text) was visible") }
+                try rendered.write(to: output.appendingPathComponent(name + ".txt"), atomically: true, encoding: .utf8)
+                evidence.append("- \(name): production practice, behavior, input, and capability controls rendered and checked.")
+            }
+        }
         let report = """
         # Speech models render regression
 
@@ -250,6 +360,8 @@ private struct DictationModelSettingsRegression {
 
         Action closures compile and render but are never invoked; fake select/download methods trap if called. Disabled-state assertions call the extracted production helpers; Remove's predicate is checked structurally. No live interaction or AX enabled-state assertion is claimed. Native enabled/disabled treatments are saved as PNGs.
 
+        Twelve additional light and dark captures extract the production practice, behavior, and audio input sections. They cover Unified draft preview, Whisper language selection and translation, v3 automatic detection, fixed English, Literal command restrictions, and cloud capabilities. OCR checks required labels and the absence of unsupported control labels. These captures use the real empty NSTextView practice field. No mocked transcript or recording operation runs.
+
         The host is never shown. Aqua/Dark Aqua are applied locally. The current system Increase Contrast preference is \(NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast); this test honors it without changing it. Assigning an accessibility-high-contrast NSAppearance did not change SwiftUI's contrast environment, so no separate Increase Contrast coverage is claimed. No system appearance, Night Shift, TCC, app data, microphone, network, inference, or model operation is changed. Live navigation, real button activation, display calibration, and Night Shift's hardware transform are not tested.
 
         Result: \(failures.isEmpty ? "PASS" : "FAIL")
@@ -260,6 +372,6 @@ private struct DictationModelSettingsRegression {
             failures.forEach { print($0) }
             exit(1)
         }
-        print("Speech models production render regression passed in 20 states. Artifacts: \(output.path)")
+        print("Production Settings render regression passed in 20 model states and 12 experience states. Artifacts: \(output.path)")
     }
 }

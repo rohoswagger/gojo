@@ -11,6 +11,11 @@ final class DictationPanelModel: ObservableObject {
     @Published var activationMode = DictationActivationMode.saved()
     @Published var isPreview = false
     @Published var showsDetails = false
+    @Published var provisionalPreview: DictationProvisionalPreview?
+    @Published var activeIntent: DictationSessionIntent?
+    @Published var automaticallyOpensDraft = true
+    @Published var emptyCompletion: DictationEmptyReason?
+    @Published var completionAttentionID: UUID?
     @Published private(set) var errorPresentationID = UUID()
 
     func present(_ state: DictationState) {
@@ -21,6 +26,8 @@ final class DictationPanelModel: ObservableObject {
     var attentionIdentity: String? {
         if !recoveryText.isEmpty { return "recovery:" + recoveryText }
         if case .error = state { return errorPresentationID.uuidString }
+        if emptyCompletion != nil, let id = completionAttentionID { return "empty:" + id.uuidString }
+        if let preview = provisionalPreview { return "draft:" + preview.sessionID.uuidString }
         return nil
     }
 
@@ -29,13 +36,14 @@ final class DictationPanelModel: ObservableObject {
         self.recoveryText = recoveryText
         self.recoveryMessage = recoveryMessage
         showsDetails = false
+        provisionalPreview = nil
         clearWaveform()
     }
 
     var isHandsFree: Bool { activationMode == .voiceMode }
 
     var shouldHideWhenFinished: Bool {
-        guard recoveryText.isEmpty else { return false }
+        guard recoveryText.isEmpty, emptyCompletion == nil else { return false }
         if case .error = state { return true }
         guard !isHandsFree else { return false }
         switch state {
@@ -45,6 +53,7 @@ final class DictationPanelModel: ObservableObject {
     }
 
     var title: String {
+        if let emptyCompletionMessage { return emptyCompletionMessage }
         switch state {
         case .idle: return "Ready to dictate"
         case .requestingPermission: return "Getting ready"
@@ -68,6 +77,15 @@ final class DictationPanelModel: ObservableObject {
     var errorMessage: String? {
         guard case .error(let failure) = state else { return nil }
         return failure.localizedDescription
+    }
+
+    var emptyCompletionMessage: String? {
+        switch emptyCompletion {
+        case .tooShort: return "Recording too short"
+        case .noSpeech: return "No speech detected"
+        case .noWordsRecognized: return "No words recognized"
+        case nil: return nil
+        }
     }
 
     var size: CGSize {
@@ -147,6 +165,7 @@ struct DictationPanelView: View {
     @State private var copiedRecoveryText: String?
     @State private var detailsHovered = false
     @State private var dismissedErrorID: UUID?
+    @State private var openedDraftSessionID: UUID?
 
     var body: some View {
         capsule
@@ -168,7 +187,15 @@ struct DictationPanelView: View {
                 model.showsDetails = false
                 return
             }
-            guard !model.recoveryText.isEmpty || dismissedErrorID != model.errorPresentationID else { return }
+            if model.recoveryText.isEmpty, model.errorMessage != nil,
+               dismissedErrorID == model.errorPresentationID { return }
+            if model.recoveryText.isEmpty, model.errorMessage == nil, model.emptyCompletion == nil,
+               let preview = model.provisionalPreview {
+                guard model.automaticallyOpensDraft, openedDraftSessionID != preview.sessionID else { return }
+                openedDraftSessionID = preview.sessionID
+                model.showsDetails = true
+                return
+            }
             model.showsDetails = true
             guard model.recoveryText.isEmpty else { return }
             do {
@@ -261,7 +288,7 @@ struct DictationPanelView: View {
         }
         .buttonStyle(.plain)
         .disabled(!needsAttention && model.state != .paused && !(model.state == .listening && model.isHandsFree))
-        .help(model.errorMessage ?? (needsAttention ? "View saved text" : model.state == .paused ? "Resume listening" : model.isHandsFree ? "Pause listening" : model.title))
+        .help(model.errorMessage ?? (needsAttention ? "View dictation details" : model.state == .paused ? "Resume listening" : model.isHandsFree ? "Pause listening" : model.title))
         .accessibilityLabel(needsAttention ? "View dictation details" : model.state == .paused ? "Resume voice mode" : model.isHandsFree ? "Pause voice mode" : "Microphone waveform")
         .accessibilityValue(model.isPreview ? "Preview · " + model.title : model.title)
     }
@@ -300,12 +327,42 @@ struct DictationPanelView: View {
         Group {
             if !model.recoveryText.isEmpty {
                 recovery
+            } else if model.errorMessage == nil, model.emptyCompletion == nil,
+                      let preview = model.provisionalPreview {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text(preview.isWindowed ? "Recent speech" : "Draft preview")
+                            .font(.system(size: 12, weight: .semibold))
+                        Spacer()
+                        if let intent = model.activeIntent {
+                            Text(intent.label).font(.system(size: 11))
+                        }
+                    }
+                    .foregroundStyle(DictationPanelInk.secondary)
+                    ScrollView(.vertical) {
+                        Text(preview.text)
+                            .font(.system(size: 12))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(height: 160)
+                    Text("Your full recording is transcribed when you finish.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(DictationPanelInk.secondary)
+                        .frame(height: 26)
+                }
+                .padding(16)
+                .frame(width: 312)
             } else {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text(model.permissionSettingsURL == nil ? "Dictation needs attention" : "Permission needed")
+                    Text(model.emptyCompletionMessage ?? (model.permissionSettingsURL == nil ? "Dictation needs attention" : "Permission needed"))
                         .font(.system(size: 13, weight: .semibold))
                     if let message = model.errorMessage {
                         Text(message).font(.system(size: 12)).fixedSize(horizontal: false, vertical: true)
+                    }
+                    if model.emptyCompletion != nil {
+                        Text("Try again and speak a little longer.")
+                            .font(.system(size: 12))
                     }
                     if model.permissionSettingsURL != nil {
                         detailButton("Open Settings") { model.showsDetails = false; command(.settings) }
@@ -372,6 +429,7 @@ struct DictationPanelView: View {
             }
             .font(.system(size: 11, weight: .medium))
             .buttonStyle(.plain)
+            .frame(height: 26)
         }
         .foregroundStyle(DictationPanelInk.text)
         .padding(16)

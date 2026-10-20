@@ -11,9 +11,13 @@ swiftc \
   -warnings-as-errors \
   -target "$(uname -m)-apple-macosx14.0" \
   Gojo/Dictation/DictationModels.swift \
+  Gojo/Dictation/DictationSessionPlan.swift \
   Gojo/Dictation/DictationProtocols.swift \
   Gojo/Dictation/DictationUtteranceSegmenter.swift \
   Gojo/Dictation/AVAudioEngineCaptureService.swift \
+  Gojo/Dictation/DictationPreviewAudioBuffer.swift \
+  Gojo/Dictation/DictationInputDevices.swift \
+  Gojo/Dictation/DictationSpeechGate.swift \
   Gojo/components/Settings/DictationMicrophonePermission.swift \
   tests/dictation_microphone_permission_regression.swift \
   -o "$binary_path"

@@ -11,7 +11,11 @@ swiftc \
   -warnings-as-errors \
   -target "$(uname -m)-apple-macosx14.0" \
   Gojo/Dictation/DictationModels.swift \
+  Gojo/Dictation/DictationSessionPlan.swift \
   Gojo/Dictation/DictationProtocols.swift \
+  Gojo/Dictation/DictationSpeechGate.swift \
+  Gojo/Dictation/DictationInputDevices.swift \
+  Gojo/Dictation/DictationPreviewAudioBuffer.swift \
   Gojo/Dictation/DictationUtteranceSegmenter.swift \
   Gojo/components/Settings/DictationMicrophonePermission.swift \
   Gojo/Dictation/AVAudioEngineCaptureService.swift \

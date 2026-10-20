@@ -11,6 +11,7 @@ swiftc \
   -warnings-as-errors \
   -target arm64-apple-macosx14.0 \
   Gojo/Dictation/DictationModels.swift \
+  Gojo/Dictation/DictationSessionPlan.swift \
   Gojo/Dictation/DictationVocabularyImport.swift \
   tests/dictation_vocabulary_import_regression.swift \
   -o "$binary_path"

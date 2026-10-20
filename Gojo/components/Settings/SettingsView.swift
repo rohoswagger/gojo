@@ -1425,6 +1425,7 @@ struct DictationSettings: View {
     @State private var vocabularyImportOperation: VocabularyImportOperation?
     @State private var vocabularyImportFeedback: VocabularyImportFeedback?
     @State private var vocabularyImportLifetime: UUID?
+    @State private var practiceFieldID = UUID()
 
     init(settingsWindow: NSWindow? = nil) {
         self.settingsWindow = settingsWindow
@@ -1442,6 +1443,8 @@ struct DictationSettings: View {
             }
 
             permissionSection
+
+            practiceSection
 
             Section {
                 Picker("Insert after a pause", selection: $dictationPauseDurationRawValue) {
@@ -1482,6 +1485,8 @@ struct DictationSettings: View {
             } footer: {
                 Text("Text goes into the focused field between phrases. Drag the floating controls to move them; their position is saved for each display.")
             }
+
+            inputSection
 
             Section {
                 Picker("Provider", selection: dictationProviderBinding) {
@@ -1646,6 +1651,8 @@ struct DictationSettings: View {
                 }
             }
 
+            experienceSection
+
             Section {
                 Toggle("Polish English dictated text", isOn: cleanupEnabledBinding)
                     .disabled(
@@ -1731,6 +1738,9 @@ struct DictationSettings: View {
             }
 
             Section {
+                Toggle("Use personal vocabulary", isOn: Binding(
+                    get: { dictation.usesVocabulary }, set: { dictation.setUsesVocabulary($0) }
+                ))
                 VStack(alignment: .leading, spacing: 4) {
                     Toggle("Learn from my corrections", isOn: learnsCorrectionsBinding)
                     Text("On by default. Gojo watches edits in the same text field for up to 30 seconds after dictation and learns a correction after you make it twice. This stays on this Mac. Learned entries appear below, where you can edit or delete them.")
@@ -1840,7 +1850,7 @@ struct DictationSettings: View {
             } header: {
                 Text("Vocabulary")
             } footer: {
-                Text("Whisper uses saved words as recognition hints. All models preserve their spelling and apply learned corrections locally. Parakeet recognition hints are not supported yet.")
+                Text("When enabled, Whisper uses saved words as recognition hints. All models preserve their spelling and apply learned corrections locally. Parakeet recognition hints are not supported yet.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -1896,10 +1906,12 @@ struct DictationSettings: View {
         .onDisappear { dictation.cancelMicrophoneTest() }
         .onAppear { vocabularyImportLifetime = UUID() }
         .modifier(SettingsWindowCloseObserver(window: settingsWindow) {
+            endPractice()
             vocabularyImportPresentation = nil
             cancelVocabularyImport()
         })
         .onDisappear {
+            endPractice()
             vocabularyImportLifetime = nil
             vocabularyImportPresentation = nil
             cancelVocabularyImport()
@@ -2033,6 +2045,175 @@ struct DictationSettings: View {
             return "Microphone access is restricted on this Mac. Review Screen Time or device management restrictions."
         }
         return "Allow Gojo in System Settings > Privacy & Security > Microphone."
+    }
+
+    private var practiceSection: some View {
+        Section {
+            Text("Click the field and hold Control–Option to dictate. Press Space while holding to lock the microphone, then repeat the shortcut to finish.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            DictationPracticeField(fieldID: practiceFieldID)
+                .frame(height: 100)
+            HStack {
+                Button {
+                    if dictation.activePracticeFieldID == practiceFieldID {
+                        dictation.finishVoiceMode()
+                    } else {
+                        dictation.beginPractice(fieldID: practiceFieldID)
+                    }
+                } label: {
+                    Text(dictation.activePracticeFieldID == practiceFieldID ? "Finish" : "Start")
+                        .frame(width: 52)
+                }
+                .disabled(dictation.activePracticeFieldID == nil && !dictation.canChangeModel)
+                Button("Cancel") { dictation.cancelPractice(fieldID: practiceFieldID) }
+                    .disabled(dictation.activePracticeFieldID != practiceFieldID)
+                Spacer()
+                Text(dictation.activePracticeFieldID == practiceFieldID
+                     ? DictationSettingsStatus.title(for: dictation.state) : "Ready to practice")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(height: 28)
+        } header: {
+            Text("Try dictation")
+        } footer: {
+            Text("Practice text stays in this field and is never saved. This checks dictation inside Gojo. Accessibility delivery to other apps is checked separately.")
+        }
+    }
+
+    private var experienceSection: some View {
+        Section {
+            Picker("Intent", selection: Binding(
+                get: { dictation.selectedIntent }, set: { dictation.setIntent($0) }
+            )) {
+                ForEach(DictationSessionIntent.allCases) { intent in
+                    Text(intent.label).tag(intent)
+                }
+            }
+            Text(intentDescription)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Picker("Spoken commands", selection: Binding(
+                get: { dictation.spokenCommandMode }, set: { dictation.setSpokenCommandMode($0) }
+            )) {
+                Text("Off").tag(DictationSpokenCommandMode.off)
+                Text("Punctuation").tag(DictationSpokenCommandMode.punctuation)
+                Text("Punctuation and code").tag(DictationSpokenCommandMode.punctuationAndCode)
+            }
+            .disabled(dictation.selectedIntent == .literal)
+            if dictation.spokenCommandMode != .off, dictation.selectedIntent != .literal {
+                Picker("Command language", selection: Binding(
+                    get: { dictation.commandLanguage }, set: { dictation.setCommandLanguage($0) }
+                )) {
+                    Text("English").tag(DictationCommandLanguage.english)
+                    Text("Spanish").tag(DictationCommandLanguage.spanish)
+                    Text("Portuguese").tag(DictationCommandLanguage.portuguese)
+                }
+                Text("Say commands in the selected language. Say literal before a command to keep its words.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            if let capabilities = dictation.currentModelCapabilities {
+                switch capabilities.language {
+                case .fixedEnglish:
+                    LabeledContent("Recognition language", value: "English")
+                case .automaticOnly:
+                    LabeledContent("Recognition language", value: "Automatic detection")
+                case .selectable(let languages):
+                    Picker("Recognition language", selection: recognitionLanguageCodeBinding) {
+                        Text("Automatic detection").tag("auto")
+                        ForEach(languages.sorted(), id: \.self) { code in
+                            Text(Locale.current.localizedString(forLanguageCode: code) ?? code).tag(code)
+                        }
+                    }
+                }
+                if capabilities.supportsTranslationToEnglish {
+                    Toggle("Translate to English", isOn: Binding(
+                        get: { dictation.translatesToEnglish }, set: { dictation.setTranslatesToEnglish($0) }
+                    ))
+                }
+                if capabilities.supportsRecognizedPreview {
+                    Toggle("Draft preview", isOn: Binding(
+                        get: { dictation.previewEnabled }, set: { dictation.setPreviewEnabled($0) }
+                    ))
+                    Text("Shows recent recognized speech while holding the shortcut. The full recording is transcribed again when you finish. Available with local Parakeet Unified only.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Toggle("Quiet sound feedback", isOn: Binding(
+                get: { dictation.cuesEnabled }, set: { dictation.setCuesEnabled($0) }
+            ))
+            Picker("Local model memory", selection: Binding(
+                get: { dictation.residencyPolicy }, set: { dictation.setResidencyPolicy($0) }
+            )) {
+                Text("Keep ready").tag(DictationResidencyPolicy.keepWarm)
+                Text("Release after idle").tag(DictationResidencyPolicy.releaseAfterIdle)
+            }
+        } header: {
+            Text("Dictation behavior")
+        } footer: {
+            Text("Changes apply to your next dictation. Literal preserves recognized wording and disables spoken commands and cleanup. Code skips cleanup. English cleanup runs only when the recognition language or translation guarantees English output.")
+        }
+    }
+
+    private var inputSection: some View {
+        Section {
+            HStack {
+                Picker("Microphone", selection: inputDeviceUIDBinding) {
+                    Text("System default").tag("")
+                    ForEach(dictation.inputDevices) { device in
+                        Text(device.name).tag(device.id)
+                    }
+                    if case .deviceUID(let uid) = dictation.selectedInput,
+                       !dictation.inputDevices.contains(where: { $0.id == uid }) {
+                        Text("Selected microphone unavailable").tag(uid)
+                    }
+                }
+                Button("Refresh") { dictation.refreshInputDevices() }
+            }
+            LabeledContent("Current input", value: dictation.currentInputName ?? "Not recording")
+            Toggle("Adapt to quiet speech", isOn: Binding(
+                get: { dictation.adaptiveSpeech }, set: { dictation.setAdaptiveSpeech($0) }
+            ))
+        } header: {
+            Text("Audio input")
+        } footer: {
+            Text("Microphone changes apply to the next recording. If a selected microphone disconnects, recording stops so you can choose an available input.")
+        }
+        .onAppear { dictation.refreshInputDevices() }
+    }
+
+    private var intentDescription: String {
+        switch dictation.selectedIntent {
+        case .standard: return "Use your normal cleanup and writing style."
+        case .literal: return "Keep recognized wording, paragraph breaks, and personal vocabulary spelling."
+        case .code: return "Keep symbols and formatting without prose cleanup."
+        case .chat: return "Use conversational text with your selected cleanup style."
+        }
+    }
+
+    private var recognitionLanguageCodeBinding: Binding<String> {
+        Binding(
+            get: { dictation.recognitionLanguage.persistedCode },
+            set: { dictation.setRecognitionLanguage($0 == "auto" ? .automatic : .fixed($0)) }
+        )
+    }
+
+    private var inputDeviceUIDBinding: Binding<String> {
+        Binding(
+            get: {
+                if case .deviceUID(let uid) = dictation.selectedInput { return uid }
+                return ""
+            },
+            set: { dictation.setInput($0.isEmpty ? .systemDefault : .deviceUID($0)) }
+        )
+    }
+
+    private func endPractice() {
+        DictationPracticeRegistry.shared.invalidate(fieldID: practiceFieldID)
+        dictation.cancelPractice(fieldID: practiceFieldID)
     }
 
     private var dictationProviderBinding: Binding<DictationProvider> {

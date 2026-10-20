@@ -141,13 +141,6 @@ struct ClipboardCollection {
             .map(\.0)
     }
 
-    mutating func replaceItems(with items: [ClipboardItem]) {
-        self.items = items
-        normalizePinOrderIfNeeded()
-        sortItems()
-        applyEntryLimit()
-    }
-
     mutating func setMaxStoredItems(_ value: Int) {
         maxStoredItems = max(1, value)
         applyEntryLimit()

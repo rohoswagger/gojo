@@ -61,8 +61,6 @@ enum EventStatus: Equatable {
 }
 
 extension EventType {
-    var isEvent: Bool { if case .event = self { return true } else { return false } }
-    var isBirthday: Bool { self ~= .birthday }
     var isReminder: Bool { if case .reminder = self { return true } else { return false } }
 }
 
@@ -79,8 +77,6 @@ extension EventModel {
     }
         
     var attendance: AttendanceStatus { if case .event(let attendance) = type { return attendance } else { return .unknown } }
-
-    var isMeeting: Bool { !participants.isEmpty }
 
     func calendarAppURL() -> URL? {
 

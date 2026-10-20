@@ -36,8 +36,6 @@ final class ClipboardStateViewModel: ObservableObject {
     private var hoverPreviewPanel: ClipboardHoverPreviewPanel?
     private var showPreviewWorkItem: DispatchWorkItem?
     private var hidePreviewWorkItem: DispatchWorkItem?
-    private var isPointerOverHoveredRow = false
-    private var isPointerOverPreviewPanel = false
     private var didStart = false
     // One-shot sha256 marker so a copy-back picked up by the poller isn't
     // re-registered as a fresh capture from an unrelated frontmost app.
@@ -102,7 +100,7 @@ final class ClipboardStateViewModel: ObservableObject {
             pasteboard.clearContents()
             pasteboard.setString(item.content, forType: .string)
             monitor.syncChangeCountToCurrentPasteboard()
-            presentCopiedFeedback(message: "Copied to clipboard")
+            presentCopiedFeedback()
             presentCopiedRowFeedback(for: item.id)
         case .image:
             guard let image = item.image else { return }
@@ -131,7 +129,7 @@ final class ClipboardStateViewModel: ObservableObject {
                     pasteboard.setData(tiff, forType: .tiff)
                 }
                 self.monitor.syncChangeCountToCurrentPasteboard()
-                self.presentCopiedFeedback(message: "Copied to clipboard")
+                self.presentCopiedFeedback()
                 self.presentCopiedRowFeedback(for: item.id)
             }
         }
@@ -171,13 +169,11 @@ final class ClipboardStateViewModel: ObservableObject {
             showPreviewWorkItem?.cancel()
             showPreviewWorkItem = nil
         }
-        isPointerOverHoveredRow = isHovering
         interactionState.setPointerOverHoveredRow(isHovering)
         updatePreviewVisibility()
     }
 
     func setPointerOverPreviewPanel(_ isHovering: Bool) {
-        isPointerOverPreviewPanel = isHovering
         interactionState.setPointerOverPreviewPanel(isHovering)
         updatePreviewVisibility()
     }
@@ -221,8 +217,6 @@ final class ClipboardStateViewModel: ObservableObject {
         hidePreviewWorkItem?.cancel()
         hoverPreviewPanel?.orderOut(nil)
         interactionState.resetPreviewHover()
-        isPointerOverHoveredRow = interactionState.isPointerOverHoveredRow
-        isPointerOverPreviewPanel = interactionState.isPointerOverPreviewPanel
         if force {
             keepsNotchOpenOnHoverExit = false
         } else {
@@ -346,7 +340,7 @@ final class ClipboardStateViewModel: ObservableObject {
     private func finishCaptureRegistration() {
         syncItemsFromCollection()
         persistItems()
-        presentCopiedFeedback(message: "Copied to clipboard")
+        presentCopiedFeedback()
     }
 
     private func persistItems() {
@@ -367,7 +361,7 @@ final class ClipboardStateViewModel: ObservableObject {
         items = collection.orderedItems
     }
 
-    private func presentCopiedFeedback(message _: String) {
+    private func presentCopiedFeedback() {
         showCopiedFlash = true
         flashTask?.cancel()
         flashTask = Task { [weak self] in

@@ -181,7 +181,6 @@
 		C2B000000000000000203 /* WindowPowerState.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2B000000000000000000103 /* WindowPowerState.swift */; };
 		C2B000000000000000204 /* FocusedWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2B000000000000000000104 /* FocusedWindow.swift */; };
 		C2B000000000000000205 /* FocusedWindowProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2B000000000000000000105 /* FocusedWindowProvider.swift */; };
-		C2B000000000000000206 /* WindowGeometryCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2B000000000000000000106 /* WindowGeometryCalculator.swift */; };
 		C2B000000000000000207 /* WindowHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2B000000000000000000107 /* WindowHistoryStore.swift */; };
 		C2B000000000000000208 /* WindowActionExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2B000000000000000000108 /* WindowActionExecutor.swift */; };
 		C2B000000000000000209 /* WindowShortcutController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2B000000000000000000109 /* WindowShortcutController.swift */; };
@@ -398,7 +397,6 @@
 		C2B000000000000000000103 /* WindowPowerState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowPowerState.swift; sourceTree = "<group>"; };
 		C2B000000000000000000104 /* FocusedWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusedWindow.swift; sourceTree = "<group>"; };
 		C2B000000000000000000105 /* FocusedWindowProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusedWindowProvider.swift; sourceTree = "<group>"; };
-		C2B000000000000000000106 /* WindowGeometryCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowGeometryCalculator.swift; sourceTree = "<group>"; };
 		C2B000000000000000000107 /* WindowHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowHistoryStore.swift; sourceTree = "<group>"; };
 		C2B000000000000000000108 /* WindowActionExecutor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowActionExecutor.swift; sourceTree = "<group>"; };
 		C2B000000000000000000109 /* WindowShortcutController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowShortcutController.swift; sourceTree = "<group>"; };
@@ -999,7 +997,6 @@
 				C2B000000000000000000104 /* FocusedWindow.swift */,
 				C2B000000000000000000105 /* FocusedWindowProvider.swift */,
 				C2B000000000000000000111 /* WindowTargetResolver.swift */,
-				C2B000000000000000000106 /* WindowGeometryCalculator.swift */,
 				C2B000000000000000000112 /* WindowFrameCalculator.swift */,
 				C2B000000000000000000107 /* WindowHistoryStore.swift */,
 				C2B000000000000000000108 /* WindowActionExecutor.swift */,
@@ -1216,7 +1213,6 @@
 				C2B000000000000000204 /* FocusedWindow.swift in Sources */,
 				C2B000000000000000205 /* FocusedWindowProvider.swift in Sources */,
 				C2B000000000000000211 /* WindowTargetResolver.swift in Sources */,
-				C2B000000000000000206 /* WindowGeometryCalculator.swift in Sources */,
 				C2B000000000000000212 /* WindowFrameCalculator.swift in Sources */,
 				C2B000000000000000207 /* WindowHistoryStore.swift in Sources */,
 				C2B000000000000000208 /* WindowActionExecutor.swift in Sources */,

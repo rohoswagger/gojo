@@ -50,19 +50,11 @@ final class WindowPowerState: ObservableObject {
 
     init() {}
 
-    func setIdle() {
-        title = "Windows"
-        detail = "Use shortcuts to move the focused window."
-        preview = .neutral
-        statusKind = .idle
-        lastAction = nil
-    }
-
     func setFocusedWindow(_ window: FocusedWindow) {
         appName = window.appName
         windowTitle = window.title
         displayName = window.screen.localizedName
-        lastAction = WindowGeometryCalculator().matchingAction(for: window)
+        lastAction = WindowFrameCalculator.matchingAction(for: window.normalFrame, in: window.screen.visibleFrame)
         title = window.appName
         detail = window.title ?? ""
         statusKind = .idle

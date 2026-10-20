@@ -8,11 +8,6 @@
 import Foundation
 import Combine
 
-private let _shelfTypeAnchor: Bool = {
-    _ = String(describing: ShelfItem.self)
-    return true
-}()
-
 @MainActor
 final class ShelfSelectionModel: ObservableObject {
     static let shared = ShelfSelectionModel()
@@ -23,13 +18,6 @@ final class ShelfSelectionModel: ObservableObject {
     private var lastAnchorID: UUID? = nil
 
     func isSelected(_ id: UUID) -> Bool { selectedIDs.contains(id) }
-
-    var hasSelection: Bool { !selectedIDs.isEmpty }
-
-    var firstSelectedItem: ShelfItem? {
-        guard let firstID = selectedIDs.first else { return nil }
-        return ShelfStateViewModel.shared.items.first(where: { $0.id == firstID })
-    }
 
     func selectedItems(in allItems: [ShelfItem]) -> [ShelfItem] {
         allItems.filter { selectedIDs.contains($0.id) }
@@ -66,13 +54,6 @@ final class ShelfSelectionModel: ObservableObject {
     func clear() {
         selectedIDs.removeAll()
         lastAnchorID = nil
-    }
-
-    // Keep anchor sane if items array changed drastically (optional helper)
-    func ensureValidAnchor(in allItems: [ShelfItem]) {
-        if let anchor = lastAnchorID, !allItems.contains(where: { $0.id == anchor }) {
-            lastAnchorID = selectedIDs.first
-        }
     }
 
     @Published private(set) var isDragging: Bool = false

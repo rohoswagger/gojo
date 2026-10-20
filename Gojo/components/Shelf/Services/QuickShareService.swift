@@ -146,10 +146,6 @@ class QuickShareService: ObservableObject {
         }
         sharingAccessingURLs.removeAll()
     }
-// MARK: - SharingServiceDelegate
-
-private class SharingServiceDelegate: NSObject {}
-    
     func shareDroppedFiles(_ providers: [NSItemProvider], using shareProvider: QuickShareProvider, from view: NSView?) async {
         var itemsToShare: [Any] = []
         var foundText: String?

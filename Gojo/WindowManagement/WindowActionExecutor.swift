@@ -5,7 +5,6 @@ final class WindowActionExecutor {
     static let shared = WindowActionExecutor()
 
     private let provider = FocusedWindowProvider()
-    private let calculator = WindowGeometryCalculator()
     private let history = WindowHistoryStore()
 
     private init() {}
@@ -84,17 +83,6 @@ final class WindowActionExecutor {
         }
     }
 
-    /// Visually selects `summary` in the stage strip — no AX raise. Snap chips operate on this target.
-    func focus(_ summary: WindowSummary, screenUUID: String?, state: WindowPowerState) async {
-        state.focusedWindowID = summary.id
-        state.appName = summary.appName
-        state.title = summary.appName
-        state.windowTitle = summary.title
-        state.lastAction = summary.currentAction
-        state.preview = summary.currentAction.map(WindowLayoutPreview.init(action:)) ?? .neutral
-        state.statusKind = .idle
-    }
-
     func execute(
         _ action: WindowAction,
         target: WindowSummary? = nil,
@@ -129,7 +117,7 @@ final class WindowActionExecutor {
             if action == .maximize,
                let entry = history.entry(for: window),
                entry.lastAction == .maximize {
-                let restoreFrame = calculator.clampedRestoreFrame(entry.restoreFrame, for: window.screen)
+                let restoreFrame = WindowFrameCalculator.clampedRestoreFrame(entry.restoreFrame, in: window.screen.visibleFrame)
                 guard await provider.setFrame(restoreFrame, for: window) else {
                     state.setFailure("Previous position unavailable", detail: "macOS would not restore this window.")
                     return
@@ -140,13 +128,13 @@ final class WindowActionExecutor {
             }
 
             history.ensureRestoreFrame(for: window, action: action)
-            let targetFrame = calculator.targetFrame(for: action, window: window)
+            let targetFrame = WindowFrameCalculator.targetFrame(for: action, in: window.screen.visibleFrame)
             guard await provider.setFrame(targetFrame, for: window) else {
                 state.setFailure("This window cannot be resized", detail: "Some windows cannot be moved by Gojo.")
                 return
             }
 
-            history.updateLastAction(action, for: window)
+            history.ensureRestoreFrame(for: window, action: action)
 
             let refreshedWindow = provider.resolveWindow(
                 pid: window.pid,
@@ -246,43 +234,6 @@ final class WindowActionExecutor {
         }
     }
 
-    private func enumerateWindowsViaHelper(on screen: NSScreen) async -> [WindowSummary] {
-        let dicts = await XPCHelperClient.shared.enumerateWindows(screenUUID: screen.displayUUID)
-        guard !dicts.isEmpty else { return [] }
-        let targetUUID = screen.displayUUID
-        let visibleFrame = screen.visibleFrame
-        var seen: Set<String> = []
-
-        return dicts.compactMap { dict -> WindowSummary? in
-            guard let pid = (dict["pid"] as? NSNumber)?.int32Value else { return nil }
-            let windowID = (dict["windowID"] as? NSNumber).map { CGWindowID(truncating: $0) }
-            let appName = dict["appName"] as? String ?? "App"
-            let bundleIdentifier = (dict["bundleIdentifier"] as? String).flatMap { $0.isEmpty ? nil : $0 }
-            let normalFrame = (dict["normalFrame"] as? NSDictionary)
-                .flatMap { CGRect(dictionaryRepresentation: $0 as CFDictionary) } ?? .zero
-
-            // Helper returns windows from all displays; filter to this screen.
-            if let uuid = targetUUID,
-               NSScreen.screen(containing: normalFrame)?.displayUUID != uuid {
-                return nil
-            }
-
-            let id = windowID.map { "win-\($0)" } ?? "pid-\(pid)-\(Int(normalFrame.origin.x))-\(Int(normalFrame.origin.y))"
-            guard seen.insert(id).inserted else { return nil }
-
-            return WindowSummary(
-                id: id,
-                pid: pid,
-                windowID: windowID,
-                appName: appName,
-                bundleIdentifier: bundleIdentifier,
-                icon: NSRunningApplication(processIdentifier: pid)?.icon,
-                title: nil,
-                normalFrame: normalFrame,
-                currentAction: WindowFrameCalculator.matchingAction(for: normalFrame, in: visibleFrame)
-            )
-        }
-    }
 }
 
 /// Resolves which notch `WindowPowerState` shortcuts and drag handlers should target.

@@ -34,7 +34,6 @@ final class SearchHotkeyInterceptor {
     private(set) var isActive = false
 
     private var observer: NSObjectProtocol?
-    private var startTask: Task<Void, Never>?
 
     /// The per-start token most recently handed to the helper. The toggle
     /// notification's userInfo is compared against this before acting on it,

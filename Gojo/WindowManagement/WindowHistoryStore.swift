@@ -21,14 +21,6 @@ final class WindowHistoryStore {
         }
     }
 
-    func updateLastAction(_ action: WindowAction, for window: FocusedWindow) {
-        if entries[window.identity] == nil {
-            entries[window.identity] = WindowHistoryEntry(restoreFrame: window.normalFrame, lastAction: action)
-        } else {
-            entries[window.identity]?.lastAction = action
-        }
-    }
-
     func clear(for window: FocusedWindow) {
         entries.removeValue(forKey: window.identity)
     }

@@ -202,6 +202,7 @@ final class GojoDictationService: ObservableObject {
     }
 
     @Published private(set) var state: DictationState = .idle
+    @Published private(set) var microphoneTestState: DictationMicrophoneDiagnosticState = .idle
     @Published private(set) var selectedModel: DictationModelID
     @Published private(set) var selectedProvider: DictationProvider
     @Published private(set) var availableOpenRouterModels: [OpenRouterTranscriptionModel] = []
@@ -233,11 +234,13 @@ final class GojoDictationService: ObservableObject {
     private let openRouterClient: OpenRouterAPIClient
     private var controller: Controller?
     private var audioCapture: AVAudioEngineCaptureService?
+    private var microphoneTestTask: Task<Void, Never>?
     private var initialModelStatusTask: Task<Set<DictationModelID>, Never>?
     private var s1MiniOperationTask: Task<Void, Never>?
     private var s1MiniOperationID: UUID?
     private var hasLoadedInitialModelStatus = false
-    private var shortcutPreflighting = false
+    @Published private var shortcutPreflighting = false
+    @Published private var awaitingControllerStart = false
     private var shortcutGeneration: UInt = 0
     private var shortcutSessionGate = DictationShortcutSessionGate()
     private var transcriberWarmGeneration: UInt = 0
@@ -440,7 +443,11 @@ final class GojoDictationService: ObservableObject {
     }
 
     var canChangeModel: Bool {
-        modelOperation == nil && !shortcutPreflighting && isDictationInactive
+        modelOperation == nil && !shortcutPreflighting && !awaitingControllerStart && isDictationInactive
+    }
+
+    var canTestMicrophone: Bool {
+        microphoneTestTask == nil && !shortcutPreflighting && !awaitingControllerStart && isDictationInactive
     }
 
     private var isDictationInactive: Bool {
@@ -479,6 +486,10 @@ final class GojoDictationService: ObservableObject {
         guard let controller else { return }
         switch event {
         case .keyDown, .startVoiceMode:
+            if let microphoneTestTask {
+                microphoneTestTask.cancel()
+                await microphoneTestTask.value
+            }
             let requestsVoiceMode: Bool
             if case .startVoiceMode = event { requestsVoiceMode = true } else { requestsVoiceMode = false }
             shortcutGeneration &+= 1
@@ -576,6 +587,7 @@ final class GojoDictationService: ObservableObject {
             }
             let mode: DictationCaptureMode = requestsVoiceMode
                 ? .continuous : .singleUtterance
+            awaitingControllerStart = true
             if await controller.hotKeyDown(
                 mode: mode,
                 pauseDuration: DictationPauseDuration.saved().seconds,
@@ -615,6 +627,7 @@ final class GojoDictationService: ObservableObject {
         case .clearRecoveryText:
             await controller.clearRecoveryText()
         case .cancel:
+            cancelMicrophoneTest()
             DictationModifierHotKeyMonitor.shared.rejectCurrentDictationStart()
             shortcutSessionGate.reset()
             await controller.cancel()
@@ -625,6 +638,27 @@ final class GojoDictationService: ObservableObject {
     private func rejectShortcutStart() {
         shortcutSessionGate.reset()
         DictationModifierHotKeyMonitor.shared.rejectCurrentDictationStart()
+    }
+
+    func testMicrophone() {
+        guard canTestMicrophone, let audioCapture else { return }
+        microphoneTestState = .testing
+        microphoneTestTask = Task { [weak self] in
+            do {
+                try await audioCapture.runMicrophoneDiagnostic()
+                try Task.checkCancellation()
+                self?.microphoneTestState = .passed
+            } catch is CancellationError {
+                self?.microphoneTestState = .idle
+            } catch {
+                self?.microphoneTestState = .failed(error.localizedDescription)
+            }
+            self?.microphoneTestTask = nil
+        }
+    }
+
+    func cancelMicrophoneTest() {
+        microphoneTestTask?.cancel()
     }
 
     func cancel() { Self.sendShortcutEvent(.cancel) }
@@ -643,12 +677,16 @@ final class GojoDictationService: ObservableObject {
     func finishVoiceMode() { Self.sendShortcutEvent(.finishVoiceMode) }
     func clearRecoveryText() { Self.sendShortcutEvent(.clearRecoveryText) }
 
-    func terminate() { Self.sendShortcutEvent(.cancel) }
+    func terminate() {
+        cancelMicrophoneTest()
+        Self.sendShortcutEvent(.cancel)
+    }
 
     /// The prewarmed capture engine binds to pre-sleep audio hardware and can
     /// start without delivering buffers after wake, so wake discards it and
     /// re-prepares after the HAL has settled.
     func handleSystemWake() {
+        DictationMicrophonePermission.shared.refresh()
         guard let audioCapture else { return }
         Task {
             await audioCapture.discardPreparedCapture()
@@ -755,6 +793,7 @@ final class GojoDictationService: ObservableObject {
     }
 
     private func receive(_ newState: DictationState) {
+        awaitingControllerStart = false
         if DictationShortcutStatePolicy.shouldRearm(after: newState, isStartingShortcut: shortcutPreflighting) {
             shortcutSessionGate.reset()
             DictationModifierHotKeyMonitor.shared.rejectCurrentDictationStart()
@@ -1058,8 +1097,8 @@ extension DictationFailure: LocalizedError {
             return "Gojo does not dictate into password fields."
         case .targetUnavailable(let detail):
             return detail
-        case .captureFailed:
-            return "Gojo could not use the microphone. Check your microphone and try again."
+        case .captureFailed(let detail):
+            return detail
         case .transcriptionFailed(let detail):
             return detail
         case .transcriptionReturnedNoText:

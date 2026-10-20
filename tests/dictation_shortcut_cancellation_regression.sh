@@ -11,6 +11,7 @@ swiftc \
   -warnings-as-errors \
   -target "$(uname -m)-apple-macosx14.0" \
   Gojo/Dictation/DictationModels.swift \
+  Gojo/Dictation/DictationHelperReadiness.swift \
   Gojo/Dictation/DictationModifierShortcutStateMachine.swift \
   Gojo/Dictation/DictationModifierHotKeyMonitor.swift \
   tests/dictation_shortcut_cancellation_regression.swift \

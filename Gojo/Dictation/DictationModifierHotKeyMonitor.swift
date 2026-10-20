@@ -1,37 +1,57 @@
-import ApplicationServices
-@preconcurrency import CoreGraphics
+import Combine
 import Foundation
 import os
 
 @MainActor
-final class DictationModifierHotKeyMonitor {
-    static let shared = DictationModifierHotKeyMonitor()
+final class DictationModifierHotKeyMonitor: ObservableObject {
+    static let shared = DictationModifierHotKeyMonitor(transport: XPCHelperClient.shared)
 
-    private let logger = Logger(
-        subsystem: "rohoswagger.gojo.dictation",
-        category: "shortcut"
-    )
+    @Published private(set) var helperState: DictationHelperState = .checking
+    @Published private(set) var accessibilityState: DictationAccessibilityState = .unknown
+    @Published private(set) var shortcutReadiness: DictationShortcutReadiness = .stopped
+
+    private let logger = Logger(subsystem: "rohoswagger.gojo.dictation", category: "shortcut")
     private let activationDelay: Duration = .milliseconds(75)
-
-    private var eventTapHost: DictationModifierEventTapHost?
-    private var eventTapGeneration: UInt64 = 0
+    private let transport: any DictationHotkeyTransport
+    private let sleepForRecovery: @Sendable (Duration) async throws -> Void
+    private var observers: [NSObjectProtocol] = []
+    private var desiredEnabled = false
+    private var active = false
+    private var eventGate = DictationTapEventGate()
+    private var reconciliationTask: Task<Void, Never>?
+    private var reconciliationGeneration: UInt64 = 0
     private var activationTask: Task<Void, Never>?
     private var recoveryTask: Task<Void, Never>?
     private var recoveryPolicy = DictationEventTapRecoveryPolicy()
     private var startRequests = DictationEventTapStartRequestPolicy()
-    private var machine = DictationModifierShortcutStateMachine(
-        mode: .holdToTalk
-    )
+    private var machine = DictationModifierShortcutStateMachine(mode: .holdToTalk)
 
-    private init() {}
-
-    var activationMode: DictationActivationMode {
-        machine.isVoiceLocked ? .voiceMode : machine.mode
+    init(transport: any DictationHotkeyTransport, observeConnectionChanges: Bool = true,
+         sleepForRecovery: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }) {
+        self.transport = transport
+        self.sleepForRecovery = sleepForRecovery
+        transport.dictationInputHandler = { [weak self] event in self?.handleEventTapInput(event) }
+        if observeConnectionChanges {
+            observers.append(NotificationCenter.default.addObserver(forName: .helperConnectionStateChanged,
+                object: nil, queue: .main) { [weak self] notification in
+                let failure = notification.userInfo?["failure"] as? HelperConnectionFailure
+                Task { @MainActor in
+                    guard let self else { return }
+                    if let failure { self.helperConnectionLost(failure) }
+                    else { await self.refreshReadiness() }
+                }
+            })
+            observers.append(NotificationCenter.default.addObserver(forName: .accessibilityAuthorizationChanged,
+                object: nil, queue: .main) { [weak self] _ in
+                Task { @MainActor in await self?.refreshReadiness() }
+            })
+        }
     }
 
-    var isMonitoring: Bool {
-        eventTapHost?.isEnabledSnapshot ?? false
-    }
+    deinit { observers.forEach { NotificationCenter.default.removeObserver($0) } }
+
+    var activationMode: DictationActivationMode { machine.isVoiceLocked ? .voiceMode : machine.mode }
+    var isMonitoring: Bool { active }
 
     func cancelCurrentSession() {
         activationTask?.cancel()
@@ -53,180 +73,222 @@ final class DictationModifierHotKeyMonitor {
         _ = machine.setMode(.holdToTalk)
     }
 
-    /// A negative authorization notification can be emitted by the very check
-    /// that is about to show the first-use prompt. Do not let that notification
-    /// cancel the in-flight prompting request; a completed start attempt will
-    /// leave no tap behind if authorization remains unavailable.
     func accessibilityAuthorizationWasRevoked() {
-        guard !startRequests.isRunning else { return }
-        stop()
+        guard accessibilityState != .requesting else { return }
+        recoveryPolicy.invalidateStartAttempts()
+        recoveryTask?.cancel()
+        recoveryTask = nil
+        invalidateLease()
+        cancelCurrentSession()
+        accessibilityState = .notTrusted
+        shortcutReadiness = .awaitingAccessibility
+        if desiredEnabled { scheduleRecovery(reason: "accessibility required") }
     }
 
     #if DEBUG
-    var consumedVoiceLockPresses: UInt64 { eventTapHost?.consumedVoiceLockPresses ?? 0 }
+    func consumedVoiceLockPressesForTesting() async -> UInt64 {
+        guard let request = eventGate.requestID else { return 0 }
+        let result = try? await transport.dictationTapDiagnostics(requestID: request, recoverDisabled: false)
+        guard request == eventGate.requestID else { return 0 }
+        return result?.consumed ?? 0
+    }
 
-    /// Allows the live shortcut regression to verify recovery from the same
-    /// disabled-tap state macOS can leave behind after sleep or a timeout.
-    func recoverDisabledEventTapForTesting() -> Bool {
-        guard let eventTapHost else { return false }
-        guard eventTapHost.disableAndRecoverForTesting() else { return false }
-        recoverFromDisabledEventTap()
+    func recoverDisabledEventTapForTesting() async -> Bool {
+        guard let request = eventGate.requestID else { return false }
+        let result = try? await transport.dictationTapDiagnostics(requestID: request, recoverDisabled: true)
+        guard request == eventGate.requestID else { return false }
+        if result?.enabled == true { resetShortcutState(preservingVoiceMode: true) }
+        await refreshReadiness()
         return isMonitoring
     }
     #endif
 
     func start(promptIfNeeded: Bool = false) async {
-        if eventTapHost?.isEnabledSnapshot == true {
-            recoveryTask?.cancel()
-            recoveryTask = nil
-            recoveryPolicy.recordSuccess()
-            return
+        guard !Task.isCancelled else { return }
+        desiredEnabled = true
+        if startRequests.enqueue(promptIfNeeded: promptIfNeeded) {
+            reconciliationGeneration &+= 1
+            let generation = reconciliationGeneration
+            reconciliationTask = Task { [weak self] in
+                guard let self else { return }
+                while self.reconciliationGeneration == generation,
+                      let prompt = self.startRequests.nextRequest() {
+                    await self.performStart(promptIfNeeded: prompt)
+                }
+                if self.reconciliationGeneration == generation { self.reconciliationTask = nil }
+            }
         }
+        await reconciliationTask?.value
+    }
 
-        guard startRequests.enqueue(promptIfNeeded: promptIfNeeded) else { return }
-        while let pendingPromptIfNeeded = startRequests.nextRequest() {
-            await performStart(promptIfNeeded: pendingPromptIfNeeded)
+    func refreshReadiness() async {
+        guard !Task.isCancelled else { return }
+        if desiredEnabled { await start(promptIfNeeded: false); return }
+        let generation = recoveryPolicy.startGeneration
+        do {
+            let status = try await transport.helperPermissionStatus()
+            guard !Task.isCancelled, recoveryPolicy.ownsStartAttempt(generation) else { return }
+            record(status)
+        } catch is CancellationError {
+            return
+        } catch {
+            guard !Task.isCancelled, recoveryPolicy.ownsStartAttempt(generation) else { return }
+            helperState = .unavailable(.wrapping(error))
         }
+    }
+
+    func finishAccessibilityRequest() async {
+        if accessibilityState == .requesting { accessibilityState = .notTrusted }
+        await recoverIfNeeded()
     }
 
     private func performStart(promptIfNeeded: Bool) async {
-        if eventTapHost?.isEnabledSnapshot == true {
-            recoveryTask?.cancel()
-            recoveryTask = nil
-            recoveryPolicy.recordSuccess()
-            return
-        }
+        guard desiredEnabled else { return }
         recoveryTask?.cancel()
         recoveryTask = nil
-        if eventTapHost != nil {
-            logger.error("monitor found a disabled event tap; recreating")
-            resetShortcutState(preservingVoiceMode: true)
-            tearDownEventTap()
-        }
-
         let generation = recoveryPolicy.beginStartAttempt()
-
-        let authorized = await XPCHelperClient.shared.isAccessibilityAuthorized()
-        guard recoveryPolicy.ownsStartAttempt(generation) else { return }
-        if !authorized {
-            guard promptIfNeeded else {
-                logger.error("monitor start failed: accessibility permission missing")
+        if !active { shortcutReadiness = .checking }
+        do {
+            var permission = try await transport.helperPermissionStatus()
+            guard owns(generation) else { return }
+            if let previous = eventGate.helperInstanceID, previous != permission.instanceID {
+                invalidateLease()
+                cancelCurrentSession()
+            }
+            record(permission)
+            if !permission.accessibilityAuthorized, promptIfNeeded, accessibilityState != .requesting {
+                accessibilityState = .requesting
+                permission = try await transport.requestHelperAccessibility()
+                guard owns(generation) else { return }
+                record(permission)
+            }
+            guard permission.accessibilityAuthorized else {
+                invalidateLease()
+                shortcutReadiness = .awaitingAccessibility
+                scheduleRecovery(reason: "awaiting accessibility")
                 return
             }
-            let granted = await XPCHelperClient.shared.ensureAccessibilityAuthorization(promptIfNeeded: true)
-            guard recoveryPolicy.ownsStartAttempt(generation) else { return }
-            guard granted else {
-                logger.error("monitor start failed: accessibility permission denied")
+            if let request = eventGate.requestID {
+                let status = try await transport.dictationTapStatus(requestID: request)
+                guard owns(generation), request == eventGate.requestID else { return }
+                if status.helper.instanceID == permission.instanceID, status.state == .enabled {
+                    active = true
+                    shortcutReadiness = .ready
+                    recoveryPolicy.recordSuccess()
+                    return
+                }
+                invalidateLease()
+                if status.state == .stopped || status.helper.instanceID != permission.instanceID {
+                    cancelCurrentSession()
+                } else {
+                    resetShortcutState(preservingVoiceMode: true)
+                }
+            }
+            let request = UUID()
+            eventGate.begin(requestID: request, helperInstanceID: permission.instanceID)
+            let result = try await transport.startDictationTap(requestID: request)
+            guard owns(generation), eventGate.requestID == request else {
+                try? await transport.stopDictationTap(requestID: request)
                 return
             }
+            record(result.helper)
+            guard result.helper.instanceID == permission.instanceID else { throw HelperConnectionFailure.invalidated }
+            guard result.state == .enabled else {
+                invalidateLease()
+                shortcutReadiness = result.state == .accessibilityRequired ? .awaitingAccessibility : .unavailable(.tap(result.state))
+                scheduleRecovery(reason: "helper tap unavailable")
+                return
+            }
+            active = true
+            shortcutReadiness = .ready
+            logger.notice("monitor started chord=control+option owner=helper")
+            recoveryPolicy.recordSuccess()
+        } catch is CancellationError {
+            guard owns(generation) else { return }
+            scheduleRecovery(reason: "shortcut check cancelled")
+        } catch {
+            guard owns(generation) else { return }
+            let failure = HelperConnectionFailure.wrapping(error)
+            if failure == .timedOut {
+                if !active {
+                    invalidateLease()
+                    helperState = .unavailable(failure)
+                    shortcutReadiness = .unavailable(.helper(failure))
+                }
+                scheduleRecovery(reason: "helper status timed out")
+            } else {
+                helperConnectionLost(failure)
+            }
         }
-
-        guard eventTapHost == nil, recoveryPolicy.ownsStartAttempt(generation) else { return }
-        let startResult = await createEventTap()
-        guard startResult == .started else {
-            scheduleRecovery(reason: "event tap unavailable")
-            return
-        }
-        recoveryPolicy.recordSuccess()
     }
 
-    /// Revalidates the tap after lifecycle transitions where macOS can silently
-    /// invalidate CGEvent taps (app activation, screen unlock, and system wake).
     func recoverIfNeeded() async {
         resetShortcutState(preservingVoiceMode: true)
-        if let eventTapHost {
-            if eventTapHost.isEnabledSnapshot {
-                recoveryTask?.cancel()
-                recoveryTask = nil
-                recoveryPolicy.recordSuccess()
-                return
-            }
-
-            if await eventTapHost.enable() {
-                recoveryTask?.cancel()
-                recoveryTask = nil
-                recoveryPolicy.recordSuccess()
-                logger.notice("monitor recovered by re-enabling event tap")
-                return
-            }
-
-            logger.error("monitor recovery could not re-enable event tap; recreating")
-            tearDownEventTap()
-        }
-
-        await start(promptIfNeeded: false)
+        await refreshReadiness()
     }
 
     func stop() {
+        desiredEnabled = false
         recoveryPolicy.invalidateStartAttempts()
-        startRequests.cancelPendingRequests()
+        reconciliationGeneration &+= 1
+        reconciliationTask?.cancel()
+        reconciliationTask = nil
+        startRequests = DictationEventTapStartRequestPolicy()
         recoveryTask?.cancel()
         recoveryTask = nil
         recoveryPolicy.recordSuccess()
         cancelCurrentSession()
-        tearDownEventTap()
+        invalidateLease()
+        shortcutReadiness = .stopped
     }
 
-    private enum EventTapStartResult {
-        case started
-        case failed
+    private func owns(_ generation: UInt) -> Bool {
+        desiredEnabled && recoveryPolicy.ownsStartAttempt(generation)
     }
 
-    private func createEventTap() async -> EventTapStartResult {
-        eventTapGeneration &+= 1
-        let generation = eventTapGeneration
-        let host = DictationModifierEventTapHost(
-            generation: generation,
-            logger: logger
-        ) { [weak self] generation, input in
-            DispatchQueue.main.async { [weak self] in
-                self?.handleEventTapInput(input, generation: generation)
+    private func record(_ permission: HelperPermissionStatus) {
+        helperState = .available(permission)
+        if permission.accessibilityAuthorized { accessibilityState = .trusted }
+        else if accessibilityState != .requesting { accessibilityState = .notTrusted }
+    }
+
+    private func helperConnectionLost(_ failure: HelperConnectionFailure) {
+        recoveryPolicy.invalidateStartAttempts()
+        recoveryTask?.cancel()
+        recoveryTask = nil
+        invalidateLease()
+        cancelCurrentSession()
+        helperState = .unavailable(failure)
+        shortcutReadiness = .unavailable(.helper(failure))
+        if desiredEnabled { scheduleRecovery(reason: "helper connection unavailable") }
+    }
+
+    private func invalidateLease() {
+        let request = eventGate.requestID
+        eventGate.invalidate()
+        active = false
+        if let request { Task { [transport] in try? await transport.stopDictationTap(requestID: request) } }
+    }
+
+    private func handleEventTapInput(_ event: DictationTapEvent) {
+        guard desiredEnabled, let contiguous = eventGate.accept(event) else { return }
+        guard contiguous else {
+            resetShortcutState(preservingVoiceMode: true)
+            Task { [weak self] in await self?.refreshReadiness() }
+            return
+        }
+        switch event.input {
+        case .tapDisabled(let reenabled):
+            resetShortcutState(preservingVoiceMode: true)
+            if !reenabled {
+                invalidateLease()
+                shortcutReadiness = .unavailable(.tap(.enableFailed))
+                scheduleRecovery(reason: "helper tap remained disabled")
             }
-        }
-        eventTapHost = host
-        switch await host.start() {
-        case .started:
-            logger.notice("monitor started chord=control+option")
-            return .started
-        case .tapUnavailable:
-            eventTapHost = nil
-            logger.error("monitor start failed: event tap unavailable")
-            return .failed
-        case .runLoopSourceUnavailable:
-            eventTapHost = nil
-            logger.error("monitor start failed: run loop source unavailable")
-            return .failed
-        case .enableFailed:
-            eventTapHost = nil
-            logger.error("monitor start failed: event tap did not enable")
-            return .failed
-        }
-    }
-
-    private func handleEventTapInput(
-        _ input: DictationModifierEventTapInput,
-        generation: UInt64
-    ) {
-        guard generation == eventTapGeneration else { return }
-        switch input {
-        case .tapDisabled:
-            recoverFromDisabledEventTap()
-
-        case .flagsChanged(
-            let isExactChord,
-            let anyTriggerModifierDown,
-            let hasDisallowedModifiers
-        ):
-            apply(machine.handle(.flagsChanged(
-                isExactChord: isExactChord,
-                anyTriggerModifierDown: anyTriggerModifierDown,
-                hasDisallowedModifiers: hasDisallowedModifiers
-            )))
-
-        case .lockToggle:
-            apply(machine.toggleVoiceLock())
-        case .keyDown:
-            apply(machine.handle(.keyDown))
+        case .flagsChanged(let exact, let down, let disallowed):
+            apply(machine.handle(.flagsChanged(isExactChord: exact, anyTriggerModifierDown: down, hasDisallowedModifiers: disallowed)))
+        case .lockToggle: apply(machine.toggleVoiceLock())
+        case .keyDown: apply(machine.handle(.keyDown))
         }
     }
 
@@ -285,411 +347,17 @@ final class DictationModifierHotKeyMonitor {
         apply(action)
     }
 
-    private func recoverFromDisabledEventTap() {
-        resetShortcutState(preservingVoiceMode: true)
-        if let eventTapHost {
-            if eventTapHost.isEnabledSnapshot {
-                recoveryPolicy.recordSuccess()
-                logger.notice("monitor recovered from disabled event tap")
-            } else {
-                logger.error("monitor could not re-enable disabled event tap")
-                // Do not invalidate the Mach port while Core Graphics may still
-                // be executing its callback. Recreate it on the next actor turn.
-                Task { [weak self] in
-                    guard let self else { return }
-                    self.tearDownEventTap()
-                    self.scheduleRecovery(reason: "event tap remained disabled")
-                }
-            }
-        } else {
-            scheduleRecovery(reason: "event tap callback lost its tap")
-        }
-    }
-
     private func scheduleRecovery(reason: String) {
-        guard recoveryTask == nil else { return }
-        let delayMilliseconds = recoveryPolicy.nextRetryDelayMilliseconds()
+        guard desiredEnabled, recoveryTask == nil else { return }
+        let delay = recoveryPolicy.nextRetryDelayMilliseconds()
         let generation = recoveryPolicy.startGeneration
-        logger.error(
-            "monitor retry scheduled reason=\(reason, privacy: .public) delayMs=\(delayMilliseconds, privacy: .public)"
-        )
+        logger.debug("shortcut retry reason=\(reason, privacy: .public) delayMs=\(delay, privacy: .public)")
+        let sleepForRecovery = sleepForRecovery
         recoveryTask = Task { [weak self] in
-            do {
-                try await Task.sleep(for: .milliseconds(Int64(delayMilliseconds)))
-            } catch {
-                return
-            }
-            guard let self, self.recoveryPolicy.ownsStartAttempt(generation) else { return }
+            do { try await sleepForRecovery(.milliseconds(Int64(delay))) } catch { return }
+            guard let self, self.desiredEnabled, self.recoveryPolicy.ownsStartAttempt(generation) else { return }
             self.recoveryTask = nil
             await self.start(promptIfNeeded: false)
         }
     }
-
-    private func tearDownEventTap() {
-        eventTapGeneration &+= 1
-        eventTapHost?.stop()
-        eventTapHost = nil
-    }
-}
-
-private enum DictationModifierEventTapInput: Sendable {
-    case tapDisabled
-    case flagsChanged(
-        isExactChord: Bool,
-        anyTriggerModifierDown: Bool,
-        hasDisallowedModifiers: Bool
-    )
-    case keyDown
-    case lockToggle
-}
-
-private final class DictationModifierEventTapContext: @unchecked Sendable {
-    let generation: UInt64
-    private let logger: Logger
-    private let forwardInput: @Sendable (UInt64, DictationModifierEventTapInput) -> Void
-    private let lock = NSLock()
-    private var eventTap: CFMachPort?
-    private var enabled = false
-    private var suppressSpaceUp = false
-    #if DEBUG
-    private var consumedLockPresses: UInt64 = 0
-    var consumedVoiceLockPresses: UInt64 { lock.withLock { consumedLockPresses } }
-    #endif
-
-    init(
-        generation: UInt64,
-        logger: Logger,
-        forwardInput: @escaping @Sendable (UInt64, DictationModifierEventTapInput) -> Void
-    ) {
-        self.generation = generation
-        self.logger = logger
-        self.forwardInput = forwardInput
-    }
-
-    var isEnabledSnapshot: Bool {
-        lock.withLock { enabled }
-    }
-
-    func setEventTap(_ eventTap: CFMachPort?) {
-        lock.withLock {
-            self.eventTap = eventTap
-        }
-    }
-
-    func setEnabled(_ enabled: Bool) {
-        lock.withLock {
-            self.enabled = enabled
-        }
-    }
-
-    func reenableEventTapImmediately() {
-        let tap = lock.withLock { eventTap }
-        guard let tap else { return }
-        CGEvent.tapEnable(tap: tap, enable: true)
-        let isEnabled = CGEvent.tapIsEnabled(tap: tap)
-        setEnabled(isEnabled)
-        if isEnabled {
-            logger.notice("monitor event tap re-enabled inside disabled callback")
-        } else {
-            logger.error("monitor event tap did not re-enable inside disabled callback")
-        }
-    }
-
-    func consumeSpace(type: CGEventType, event: CGEvent) -> Bool {
-        guard event.getIntegerValueField(.keyboardEventKeycode) == 49 else { return false }
-        if type == .keyUp {
-            let suppressed = suppressSpaceUp
-            suppressSpaceUp = false
-            return suppressed
-        }
-        if suppressSpaceUp { return true }
-        let modifiers = event.flags.intersection([.maskControl, .maskAlternate, .maskCommand, .maskShift, .maskSecondaryFn])
-        guard modifiers == [.maskControl, .maskAlternate] else { return false }
-        if !suppressSpaceUp, event.getIntegerValueField(.keyboardEventAutorepeat) == 0 {
-            #if DEBUG
-            lock.withLock { consumedLockPresses &+= 1 }
-            #endif
-            forward(.lockToggle)
-        }
-        suppressSpaceUp = true
-        return true
-    }
-
-    func forward(_ input: DictationModifierEventTapInput) {
-        forwardInput(generation, input)
-    }
-}
-
-private final class DictationModifierEventTapHost: @unchecked Sendable {
-    enum StartResult {
-        case started
-        case tapUnavailable
-        case runLoopSourceUnavailable
-        case enableFailed
-    }
-
-    private let context: DictationModifierEventTapContext
-    private let logger: Logger
-    private let stateLock = NSLock()
-    private var thread: Thread?
-    private var runLoop: CFRunLoop?
-    private var eventTap: CFMachPort?
-    private var runLoopSource: CFRunLoopSource?
-    private var startContinuation: CheckedContinuation<StartResult, Never>?
-    private var shouldStop = false
-
-    init(
-        generation: UInt64,
-        logger: Logger,
-        forwardInput: @escaping @Sendable (UInt64, DictationModifierEventTapInput) -> Void
-    ) {
-        self.logger = logger
-        self.context = DictationModifierEventTapContext(
-            generation: generation,
-            logger: logger,
-            forwardInput: forwardInput
-        )
-    }
-
-    #if DEBUG
-    var consumedVoiceLockPresses: UInt64 { context.consumedVoiceLockPresses }
-    #endif
-
-    var isEnabledSnapshot: Bool {
-        context.isEnabledSnapshot
-    }
-
-    func start() async -> StartResult {
-        await withCheckedContinuation { continuation in
-            stateLock.withLock {
-                startContinuation = continuation
-                let thread = Thread { [weak self] in
-                    self?.runLoopThreadMain()
-                }
-                thread.name = "gojo.dictation.modifier-event-tap"
-                thread.qualityOfService = .userInteractive
-                self.thread = thread
-                thread.start()
-            }
-        }
-    }
-
-    func enable() async -> Bool {
-        await performOnRunLoop { host in
-            guard let eventTap = host.eventTap else {
-                host.context.setEnabled(false)
-                return false
-            }
-            CGEvent.tapEnable(tap: eventTap, enable: true)
-            let isEnabled = CGEvent.tapIsEnabled(tap: eventTap)
-            host.context.setEnabled(isEnabled)
-            return isEnabled
-        } ?? false
-    }
-
-    func stop() {
-        let runLoop = stateLock.withLock { () -> CFRunLoop? in
-            shouldStop = true
-            return self.runLoop
-        }
-        guard let runLoop else { return }
-        CFRunLoopPerformBlock(runLoop, CFRunLoopMode.commonModes.rawValue) { [self] in
-            tearDownOnRunLoop()
-            CFRunLoopStop(CFRunLoopGetCurrent())
-        }
-        CFRunLoopWakeUp(runLoop)
-    }
-
-    #if DEBUG
-    func disableAndRecoverForTesting() -> Bool {
-        performOnRunLoopSync { host in
-            guard let eventTap = host.eventTap else {
-                host.context.setEnabled(false)
-                return false
-            }
-            CGEvent.tapEnable(tap: eventTap, enable: false)
-            guard !CGEvent.tapIsEnabled(tap: eventTap) else { return false }
-            host.context.reenableEventTapImmediately()
-            return host.context.isEnabledSnapshot
-        } ?? false
-    }
-    #endif
-
-    private func runLoopThreadMain() {
-        let currentRunLoop = CFRunLoopGetCurrent()
-        stateLock.withLock {
-            runLoop = currentRunLoop
-        }
-        let result = createOnRunLoop()
-        let continuation = stateLock.withLock { () -> CheckedContinuation<StartResult, Never>? in
-            let continuation = startContinuation
-            startContinuation = nil
-            return continuation
-        }
-        continuation?.resume(returning: result)
-
-        guard result == .started else {
-            tearDownOnRunLoop()
-            return
-        }
-
-        if stateLock.withLock({ shouldStop }) {
-            tearDownOnRunLoop()
-            return
-        }
-
-        CFRunLoopRun()
-        tearDownOnRunLoop()
-    }
-
-    private func createOnRunLoop() -> StartResult {
-        let mask = CGEventMask(
-            (1 << CGEventType.flagsChanged.rawValue)
-                | (1 << CGEventType.keyDown.rawValue)
-                | (1 << CGEventType.keyUp.rawValue)
-        )
-        guard let createdEventTap = CGEvent.tapCreate(
-            tap: .cghidEventTap,
-            place: .headInsertEventTap,
-            options: .defaultTap,
-            eventsOfInterest: mask,
-            callback: dictationModifierEventTapCallback,
-            userInfo: UnsafeMutableRawPointer(Unmanaged.passUnretained(context).toOpaque())
-        ) else {
-            return .tapUnavailable
-        }
-
-        guard let createdRunLoopSource = CFMachPortCreateRunLoopSource(
-            kCFAllocatorDefault,
-            createdEventTap,
-            0
-        ) else {
-            CGEvent.tapEnable(tap: createdEventTap, enable: false)
-            CFMachPortInvalidate(createdEventTap)
-            return .runLoopSourceUnavailable
-        }
-
-        context.setEventTap(createdEventTap)
-        eventTap = createdEventTap
-        runLoopSource = createdRunLoopSource
-        CFRunLoopAddSource(CFRunLoopGetCurrent(), createdRunLoopSource, .commonModes)
-        CGEvent.tapEnable(tap: createdEventTap, enable: true)
-        let isEnabled = CGEvent.tapIsEnabled(tap: createdEventTap)
-        context.setEnabled(isEnabled)
-        return isEnabled ? .started : .enableFailed
-    }
-
-    private func performOnRunLoop<T: Sendable>(
-        _ operation: @escaping @Sendable (DictationModifierEventTapHost) -> T
-    ) async -> T? {
-        await withCheckedContinuation { continuation in
-            guard let runLoop = stateLock.withLock({ self.runLoop }) else {
-                continuation.resume(returning: nil)
-                return
-            }
-            CFRunLoopPerformBlock(runLoop, CFRunLoopMode.commonModes.rawValue) { [weak self] in
-                guard let self else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                continuation.resume(returning: operation(self))
-            }
-            CFRunLoopWakeUp(runLoop)
-        }
-    }
-
-    private func performOnRunLoopSync<T>(
-        _ operation: @escaping (DictationModifierEventTapHost) -> T
-    ) -> T? {
-        let semaphore = DispatchSemaphore(value: 0)
-        let box = OptionalLockedBox<T>()
-        guard let runLoop = stateLock.withLock({ self.runLoop }) else { return nil }
-        CFRunLoopPerformBlock(runLoop, CFRunLoopMode.commonModes.rawValue) { [weak self] in
-            if let self {
-                box.set(operation(self))
-            }
-            semaphore.signal()
-        }
-        CFRunLoopWakeUp(runLoop)
-        semaphore.wait()
-        return box.value
-    }
-
-    private func tearDownOnRunLoop() {
-        if let runLoopSource {
-            CFRunLoopRemoveSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
-            self.runLoopSource = nil
-        }
-        if let eventTap {
-            CGEvent.tapEnable(tap: eventTap, enable: false)
-            context.setEnabled(false)
-            context.setEventTap(nil)
-            CFMachPortInvalidate(eventTap)
-            self.eventTap = nil
-        }
-        stateLock.withLock {
-            runLoop = nil
-        }
-    }
-}
-
-private final class OptionalLockedBox<Value>: @unchecked Sendable {
-    private let lock = NSLock()
-    private var storedValue: Value?
-
-    init(_ value: Value? = nil) {
-        storedValue = value
-    }
-
-    var value: Value? {
-        lock.withLock { storedValue }
-    }
-
-    func set(_ value: Value) {
-        lock.withLock {
-            storedValue = value
-        }
-    }
-}
-
-private func dictationModifierEventTapCallback(
-    proxy: CGEventTapProxy,
-    type: CGEventType,
-    event: CGEvent,
-    userInfo: UnsafeMutableRawPointer?
-) -> Unmanaged<CGEvent>? {
-    guard let userInfo else { return Unmanaged.passUnretained(event) }
-    let context = Unmanaged<DictationModifierEventTapContext>
-        .fromOpaque(userInfo)
-        .takeUnretainedValue()
-
-    if (type == .keyDown || type == .keyUp), context.consumeSpace(type: type, event: event) {
-        return nil
-    }
-
-    switch type {
-    case .tapDisabledByTimeout, .tapDisabledByUserInput:
-        context.reenableEventTapImmediately()
-        context.forward(.tapDisabled)
-
-    case .flagsChanged:
-        let flags = event.flags
-        let controlDown = flags.contains(.maskControl)
-        let optionDown = flags.contains(.maskAlternate)
-        let disallowedFlags: CGEventFlags = [.maskCommand, .maskShift, .maskSecondaryFn]
-        let hasDisallowedModifiers = !flags.intersection(disallowedFlags).isEmpty
-        context.forward(.flagsChanged(
-            isExactChord: controlDown && optionDown && !hasDisallowedModifiers,
-            anyTriggerModifierDown: controlDown || optionDown,
-            hasDisallowedModifiers: hasDisallowedModifiers
-        ))
-
-    case .keyDown:
-        context.forward(.keyDown)
-
-    default:
-        break
-    }
-
-    return Unmanaged.passUnretained(event)
 }

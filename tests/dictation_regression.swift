@@ -372,13 +372,30 @@ actor ContinuousAudioCapture: DictationAudioCapturing {
     private var promotionContinuation: CheckedContinuation<Void, Never>?
     private var tail: DictationAudio?
     private var permissionGranted = true
+    private var permissionFailure: DictationMicrophoneAuthorizationFailure?
+    private var permissionGate: CheckedContinuation<Void, Never>?
+    private var permissionIsGated = false
+    private(set) var permissionRequests = 0
     private(set) var starts = 0
     private(set) var stops = 0
     private(set) var cancellations = 0
     private(set) var pauseDuration: TimeInterval?
 
-    func requestPermission() async -> Bool { permissionGranted }
+    func requestPermission() async throws -> Bool {
+        permissionRequests += 1
+        if permissionIsGated { await withCheckedContinuation { permissionGate = $0 } }
+        if let permissionFailure { throw permissionFailure }
+        return permissionGranted
+    }
     func setPermission(_ granted: Bool) { permissionGranted = granted }
+    func setPermissionFailure(_ failure: DictationMicrophoneAuthorizationFailure?) { permissionFailure = failure }
+    func gatePermission() { permissionIsGated = true }
+    func permissionWaiting() -> Bool { permissionGate != nil }
+    func releasePermission() {
+        permissionIsGated = false
+        permissionGate?.resume()
+        permissionGate = nil
+    }
     func startCapture() async throws { starts += 1 }
     func stopCapture() async throws -> DictationAudio { Self.audio(2) }
 
@@ -617,6 +634,9 @@ struct DictationRegressionRunner {
         await testContinuousStartupStopAndCancel()
         await testContinuousSessionLimit()
         await testVoicePauseResumeAndFinish()
+        await testRevokedMicrophoneBlocksVoiceResume()
+        await testCanceledPendingPermissionCannotStartCapture()
+        await testPermissionFailurePreservesRepairAction()
         await testVoiceStartupIntents()
         await testFollowFocusCapturesBeforeInferenceAndSpacesPerField()
         await testFollowFocusCancellationReleasesAllTargets()
@@ -2772,6 +2792,71 @@ struct DictationRegressionRunner {
         assertEqual(await audio.starts, 2, "finish while paused must not restart the microphone")
         assertEqual(await audio.stops, 2, "finish while paused must not flush capture again")
         assertEqual(await inserter.releases, ["focused-field"], "finish while paused must release the retained field")
+    }
+
+    static func testRevokedMicrophoneBlocksVoiceResume() async {
+        let audio = ContinuousAudioCapture()
+        let target = FakeTargetProvider(log: EventLog())
+        let inserter = RetainedInserter()
+        let controller = DictationController(
+            targetProvider: target, audioCapture: audio,
+            transcriber: ContinuousTranscriber([]),
+            polisher: FakePolisher(log: EventLog()), inserter: inserter
+        )
+        await controller.hotKeyDown(mode: .continuous)
+        await waitForState(.listening, controller: controller, message: "voice should start with microphone access")
+        await controller.pauseVoiceMode()
+        await waitForState(.paused, controller: controller, message: "voice should pause before revocation")
+        await audio.setPermissionFailure(.denied)
+        await controller.resumeVoiceMode()
+        await waitForState(.error(.microphonePermissionDenied), controller: controller,
+                           message: "revoked microphone must preserve the Settings repair action on resume")
+        assertEqual(await audio.starts, 1, "revoked resume must not start another microphone engine")
+        assertEqual(await audio.permissionRequests, 2, "resume must recheck authorization")
+        assertEqual(await target.captures, 1, "authorization checks must preserve the existing target")
+        await waitForCondition("failed resume must release its target") { await inserter.releases == ["focused-field"] }
+    }
+
+    static func testCanceledPendingPermissionCannotStartCapture() async {
+        let audio = ContinuousAudioCapture()
+        await audio.gatePermission()
+        let target = FakeTargetProvider(log: EventLog())
+        let inserter = RetainedInserter()
+        let controller = DictationController(
+            targetProvider: target, audioCapture: audio,
+            transcriber: ContinuousTranscriber([]),
+            polisher: FakePolisher(log: EventLog()), inserter: inserter
+        )
+        await controller.hotKeyDown(mode: .continuous)
+        await waitForCondition("the OS microphone request should remain pending") { await audio.permissionWaiting() }
+        assertEqual(await target.captures, 1, "the target must be captured before the permission prompt")
+        assertEqual(await audio.starts, 0, "pending authorization must not start audio")
+        await controller.cancel()
+        await audio.releasePermission()
+        await waitForCondition("canceling the pending prompt must release the original target") {
+            await inserter.releases == ["focused-field"]
+        }
+        assertEqual(await controller.state, .idle, "a late grant must preserve session cancellation")
+        assertEqual(await audio.starts, 0, "a late grant must not restart a canceled session")
+        assertEqual(await inserter.chunks, [], "a canceled permission request must not insert text")
+    }
+
+    static func testPermissionFailurePreservesRepairAction() async {
+        for failure in [DictationMicrophoneAuthorizationFailure.denied, .restricted, .unknown(923)] {
+            let audio = ContinuousAudioCapture()
+            await audio.setPermissionFailure(failure)
+            let controller = DictationController(
+                targetProvider: FakeTargetProvider(log: EventLog()), audioCapture: audio,
+                transcriber: ContinuousTranscriber([]),
+                polisher: FakePolisher(log: EventLog()), inserter: RetainedInserter()
+            )
+            await controller.hotKeyDown(mode: .continuous)
+            let expected: DictationFailure = failure == .denied
+                ? .microphonePermissionDenied : .captureFailed(failure.localizedDescription)
+            await waitForState(.error(expected), controller: controller,
+                               message: "permission failures must preserve their own recovery guidance")
+            assertEqual(await audio.starts, 0, "refused authorization must not start capture")
+        }
     }
 
     static func testVoiceStartupIntents() async {

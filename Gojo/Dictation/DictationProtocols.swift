@@ -17,7 +17,7 @@ extension DictationTargetCapturing {
 }
 
 protocol DictationAudioCapturing: Sendable {
-    func requestPermission() async -> Bool
+    func requestPermission() async throws -> Bool
     func startCapture() async throws
     func stopCapture() async throws -> DictationAudio
     func cancelCapture() async

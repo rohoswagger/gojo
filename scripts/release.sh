@@ -254,6 +254,11 @@ codesign --verify --deep --strict --verbose=2 "$APP_PATH" 2>/dev/null \
 scripts/verify-sparkle-entitlements.sh "$APP_PATH" \
   || die "Sparkle sandbox entitlements are not valid on $APP_PATH"
 
+if [ "$ADHOC" != "1" ]; then
+  python3 -B scripts/dev.py handshake "$APP_PATH" \
+    || die "Signed app could not complete its helper handshake"
+fi
+
 ok "Signature verified"
 
 # -------- 3. Notarize app --------

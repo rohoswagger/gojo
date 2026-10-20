@@ -546,6 +546,10 @@ final class XPCHelperClient: NSObject, @unchecked Sendable {
     
     private var remoteService: RemoteXPCService<GojoXPCHelperProtocol>?
     private var connection: NSXPCConnection?
+    @MainActor private var connectionGeneration = HelperConnectionGeneration()
+    @MainActor private var lastPermissionStatus: HelperPermissionStatus?
+    @MainActor private var pendingHelperReplies: [UUID: (HelperConnectionFailure) -> Void] = [:]
+    @MainActor var dictationInputHandler: (@MainActor (DictationTapEvent) -> Void)?
     private var lastKnownAuthorization: Bool?
     private var monitoringTask: Task<Void, Never>?
     
@@ -564,20 +568,20 @@ final class XPCHelperClient: NSObject, @unchecked Sendable {
         
         let conn = NSXPCConnection(serviceName: serviceName)
         
+        let generation = connectionGeneration.next()
+        let receiver = DictationHelperInputReceiver { [weak self] event in
+            guard let self, self.connectionGeneration.owns(generation), self.connection != nil else { return }
+            self.dictationInputHandler?(event)
+        }
+        conn.exportedInterface = NSXPCInterface(with: GojoXPCHelperInputProtocol.self)
+        conn.exportedObject = receiver
         conn.interruptionHandler = { [weak self] in
-            Task { @MainActor in
-                self?.connection = nil
-                self?.remoteService = nil
-            }
+            Task { @MainActor in self?.connectionDidEnd(generation: generation, failure: .interrupted) }
         }
-        
         conn.invalidationHandler = { [weak self] in
-            Task { @MainActor in
-                self?.connection = nil
-                self?.remoteService = nil
-            }
+            Task { @MainActor in self?.connectionDidEnd(generation: generation, failure: .invalidated) }
         }
-        
+
         conn.resume()
         
         let service = RemoteXPCService<GojoXPCHelperProtocol>(
@@ -590,6 +594,100 @@ final class XPCHelperClient: NSObject, @unchecked Sendable {
         return service
     }
     
+    @MainActor
+    private func connectionDidEnd(generation: UInt64, failure: HelperConnectionFailure) {
+        guard connectionGeneration.owns(generation), connection != nil else { return }
+        let oldConnection = connection
+        connection = nil
+        remoteService = nil
+        lastPermissionStatus = nil
+        _ = connectionGeneration.next()
+        let pending = pendingHelperReplies.values
+        pendingHelperReplies.removeAll()
+        pending.forEach { $0(failure) }
+        NotificationCenter.default.post(name: .helperConnectionStateChanged, object: self,
+            userInfo: ["failure": failure])
+        oldConnection?.invalidate()
+    }
+
+    @MainActor
+    private func helperRequest(_ send: (GojoXPCHelperProtocol, @escaping (NSDictionary) -> Void) -> Void) async throws -> HelperWireReply {
+        try Task.checkCancellation()
+        _ = ensureRemoteService()
+        guard let connection else { throw HelperConnectionFailure.invalidated }
+        let generation = connectionGeneration.value
+        let identifier = UUID()
+        let waiter = HelperReplyWaiter()
+        defer { pendingHelperReplies.removeValue(forKey: identifier) }
+        let value = try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                waiter.install(continuation)
+                pendingHelperReplies[identifier] = { failure in waiter.finish(.failure(failure)) }
+                guard let proxy = connection.remoteObjectProxyWithErrorHandler({ error in
+                    waiter.finish(.failure(HelperConnectionFailure.wrapping(error)))
+                }) as? GojoXPCHelperProtocol else {
+                    waiter.finish(.failure(HelperConnectionFailure.invalidated)); return
+                }
+                DispatchQueue.global().asyncAfter(deadline: .now() + 4) {
+                    waiter.finish(.failure(HelperConnectionFailure.timedOut))
+                }
+                send(proxy) { dictionary in waiter.finish(.success(HelperWireReply(dictionary: dictionary, generation: generation))) }
+            }
+        } onCancel: { waiter.finish(.failure(CancellationError())) }
+        guard connectionGeneration.owns(generation), self.connection != nil else { throw HelperConnectionFailure.invalidated }
+        try Task.checkCancellation()
+        return value
+    }
+
+    nonisolated func helperPermissionStatus() async throws -> HelperPermissionStatus {
+        let reply = try await helperRequest { $0.helperPermissionStatus(with: $1) }
+        let status = try HelperPermissionStatus(reply: reply.dictionary)
+        try await recordPermissionStatus(status, generation: reply.generation)
+        return status
+    }
+
+    nonisolated func requestHelperAccessibility() async throws -> HelperPermissionStatus {
+        let reply = try await helperRequest { $0.requestHelperAccessibility(with: $1) }
+        let status = try HelperPermissionStatus(reply: reply.dictionary)
+        try await recordPermissionStatus(status, generation: reply.generation)
+        return status
+    }
+
+    @MainActor
+    private func recordPermissionStatus(_ status: HelperPermissionStatus, generation: UInt64) throws {
+        guard connectionGeneration.owns(generation), connection != nil else { throw HelperConnectionFailure.invalidated }
+        let instanceChanged = lastPermissionStatus?.instanceID != status.instanceID
+        lastPermissionStatus = status
+        notifyAuthorizationChange(status.accessibilityAuthorized)
+        if instanceChanged { NotificationCenter.default.post(name: .helperConnectionStateChanged, object: self) }
+    }
+
+    nonisolated func startDictationTap(requestID: UUID) async throws -> DictationTapStatus {
+        let reply = try await helperRequest { $0.startDictationHotkey(requestID.uuidString, with: $1) }
+        let status = try DictationTapStatus(reply: reply.dictionary)
+        guard status.requestID == requestID else { throw HelperConnectionFailure.malformedReply }
+        return status
+    }
+
+    nonisolated func stopDictationTap(requestID: UUID) async throws {
+        _ = try await helperRequest { service, reply in service.stopDictationHotkey(requestID.uuidString) { reply([:]) } }
+    }
+
+    nonisolated func dictationTapStatus(requestID: UUID) async throws -> DictationTapStatus {
+        let reply = try await helperRequest { $0.dictationHotkeyStatus(requestID.uuidString, with: $1) }
+        let status = try DictationTapStatus(reply: reply.dictionary)
+        guard status.requestID == requestID else { throw HelperConnectionFailure.malformedReply }
+        return status
+    }
+
+    #if DEBUG
+    nonisolated func dictationTapDiagnostics(requestID: UUID, recoverDisabled: Bool) async throws -> (enabled: Bool, consumed: UInt64) {
+        let reply = try await helperRequest { $0.dictationHotkeyDiagnostics(requestID.uuidString, recoverDisabled: recoverDisabled, with: $1) }
+        guard let enabled = reply.dictionary["enabled"] as? Bool, let consumed = reply.dictionary["consumed"] as? NSNumber else { throw HelperConnectionFailure.malformedReply }
+        return (enabled, consumed.uint64Value)
+    }
+    #endif
+
     @MainActor
     private func notifyAuthorizationChange(_ granted: Bool) {
         guard lastKnownAuthorization != granted else { return }
@@ -625,52 +723,16 @@ final class XPCHelperClient: NSObject, @unchecked Sendable {
     // MARK: - Accessibility
     
     nonisolated func requestAccessibilityAuthorization() {
-        Task {
-            let service = await MainActor.run {
-                ensureRemoteService()
-            }
-            try? await service.withService { service in
-                service.requestAccessibilityAuthorization()
-            }
-        }
+        Task { _ = try? await requestHelperAccessibility() }
     }
-    
+
     nonisolated func isAccessibilityAuthorized() async -> Bool {
-        do {
-            let service = await MainActor.run {
-                ensureRemoteService()
-            }
-            let result: Bool = try await service.withContinuation { service, continuation in
-                service.isAccessibilityAuthorized { authorized in
-                    continuation.resume(returning: authorized)
-                }
-            }
-            await MainActor.run {
-                notifyAuthorizationChange(result)
-            }
-            return result
-        } catch {
-            return false
-        }
+        (try? await helperPermissionStatus().accessibilityAuthorized) ?? false
     }
-    
+
     nonisolated func ensureAccessibilityAuthorization(promptIfNeeded: Bool) async -> Bool {
-        do {
-            let service = await MainActor.run {
-                ensureRemoteService()
-            }
-            let result: Bool = try await service.withContinuation { service, continuation in
-                service.ensureAccessibilityAuthorization(promptIfNeeded) { authorized in
-                    continuation.resume(returning: authorized)
-                }
-            }
-            await MainActor.run {
-                notifyAuthorizationChange(result)
-            }
-            return result
-        } catch {
-            return false
-        }
+        if promptIfNeeded { return (try? await requestHelperAccessibility().accessibilityAuthorized) ?? false }
+        return await isAccessibilityAuthorized()
     }
 
     // MARK: - Search Hotkey Interception
@@ -1221,3 +1283,27 @@ final class XPCHelperClient: NSObject, @unchecked Sendable {
 extension Notification.Name {
     static let accessibilityAuthorizationChanged = Notification.Name("accessibilityAuthorizationChanged")
 }
+
+private final class DictationHelperInputReceiver: NSObject, GojoXPCHelperInputProtocol {
+    private let receive: @MainActor (DictationTapEvent) -> Void
+    private let queue = DispatchQueue(label: "gojo.dictation.client-input")
+
+    init(receive: @escaping @MainActor (DictationTapEvent) -> Void) { self.receive = receive }
+
+    func dictationHotkeyInput(_ requestID: String, helperInstanceID: String, sequence: UInt64,
+        kind: Int, exactChord: Bool, triggerDown: Bool, disallowed: Bool, reenabled: Bool, with reply: @escaping () -> Void) {
+        guard let request = UUID(uuidString: requestID), let instance = UUID(uuidString: helperInstanceID), sequence > 0 else { reply(); return }
+        let input: DictationModifierEventTapInput
+        switch kind {
+        case 0: input = .flagsChanged(isExactChord: exactChord, anyTriggerModifierDown: triggerDown, hasDisallowedModifiers: disallowed)
+        case 1: input = .keyDown
+        case 2: input = .lockToggle
+        case 3: input = .tapDisabled(reenabled: reenabled)
+        default: reply(); return
+        }
+        let event = DictationTapEvent(requestID: request, helperInstanceID: instance, sequence: sequence, input: input)
+        queue.async { [receive] in DispatchQueue.main.async { receive(event); reply() } }
+    }
+}
+
+extension XPCHelperClient: DictationHotkeyTransport {}

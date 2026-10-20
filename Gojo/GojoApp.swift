@@ -13,7 +13,6 @@ import os
 import Sparkle
 import SwiftUI
 
-@main
 struct DynamicNotchApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @Default(.menubarIcon) var showMenuBarIcon
@@ -105,8 +104,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidBecomeActive(_ notification: Notification) {
+        DictationMicrophonePermission.shared.refresh()
         Task { @MainActor in
-            await DictationModifierHotKeyMonitor.shared.recoverIfNeeded()
+            await DictationModifierHotKeyMonitor.shared.finishAccessibilityRequest()
         }
     }
 
@@ -731,17 +731,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             let granted = notification.userInfo?["granted"] as? Bool ?? false
             Task { @MainActor in
                 if granted {
-                    await DictationModifierHotKeyMonitor.shared.start()
+                    await DictationModifierHotKeyMonitor.shared.refreshReadiness()
                 } else {
                     DictationModifierHotKeyMonitor.shared.accessibilityAuthorizationWasRevoked()
                 }
             }
         }
         XPCHelperClient.shared.startMonitoringAccessibilityAuthorization()
-        // Prompt here rather than failing quietly: without Accessibility the
-        // event tap is never created, so the dictation chord does nothing and
-        // the user gets no indication why.
-        Task { await DictationModifierHotKeyMonitor.shared.start(promptIfNeeded: true) }
+        Task { await DictationModifierHotKeyMonitor.shared.start() }
 
         dictationEscapeGlobalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
             if event.keyCode == 53 {
@@ -923,7 +920,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let recoverySucceeded = monitor.recoverDisabledEventTapForTesting()
+        let recoverySucceeded = await monitor.recoverDisabledEventTapForTesting()
 
         let hold = await exerciseDictationEventTap(lockVoiceMode: false)
         let locked = await exerciseDictationEventTap(lockVoiceMode: true)
@@ -970,7 +967,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let startMilliseconds = Int(
             ((ProcessInfo.processInfo.systemUptime - startTime) * 1_000).rounded()
         )
-        let consumedBefore = monitor.consumedVoiceLockPresses
+        let consumedBefore = await monitor.consumedVoiceLockPressesForTesting()
         var locked = false
         if started, lockVoiceMode {
             postVoiceLockSpace()
@@ -1002,7 +999,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 try? await Task.sleep(for: .milliseconds(25))
             }
         }
-        let spaceConsumed = monitor.consumedVoiceLockPresses >= consumedBefore + 2
+        let spaceConsumed = await monitor.consumedVoiceLockPressesForTesting() >= consumedBefore + 2
         monitor.cancelCurrentSession()
         GojoDictationService.shared.cancel()
         try? await Task.sleep(for: .milliseconds(150))

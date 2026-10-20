@@ -210,7 +210,7 @@ where TargetProvider: DictationTargetCapturing,
         } catch {
             guard sessionID == expectedSession else { return }
             invalidateSessionAndScheduleCleanup()
-            transition(.failed(.captureFailed(Self.userFacingDetail(for: error))))
+            transition(.failed(Self.captureFailure(for: error)))
         }
     }
 
@@ -298,7 +298,7 @@ where TargetProvider: DictationTargetCapturing,
         publishState()
 
         do {
-            let permissionGranted = await audioCapture.requestPermission()
+            let permissionGranted = try await audioCapture.requestPermission()
             try checkSession(expectedSession)
             guard permissionGranted else {
                 failCaptureStartup(.microphonePermissionDenied)
@@ -363,7 +363,7 @@ where TargetProvider: DictationTargetCapturing,
             return
         } catch {
             guard isCurrent(expectedSession, state: .requestingPermission) else { return }
-            failCaptureStartup(.captureFailed(Self.userFacingDetail(for: error)))
+            failCaptureStartup(Self.captureFailure(for: error))
         }
     }
 
@@ -483,6 +483,12 @@ where TargetProvider: DictationTargetCapturing,
     private func resumeContinuousCapture(sessionID expectedSession: UUID) async {
         guard expectedSession == sessionID, let session = continuousSession else { return }
         do {
+            let permissionGranted = try await audioCapture.requestPermission()
+            try checkSession(expectedSession)
+            guard permissionGranted else {
+                failContinuousSession(.microphonePermissionDenied)
+                return
+            }
             let stream = try await audioCapture.startContinuousCapture(pauseDuration: session.pauseDuration)
             try checkSession(expectedSession)
             guard case .starting(let pendingIntent) = continuousSession?.capturePhase else { return }
@@ -499,7 +505,7 @@ where TargetProvider: DictationTargetCapturing,
             return
         } catch {
             guard expectedSession == sessionID else { return }
-            failContinuousSession(.captureFailed(Self.userFacingDetail(for: error)))
+            failContinuousSession(Self.captureFailure(for: error))
         }
     }
 
@@ -669,7 +675,7 @@ where TargetProvider: DictationTargetCapturing,
             return
         } catch {
             guard expectedSession == sessionID else { return }
-            failContinuousSession(.captureFailed(Self.userFacingDetail(for: error)))
+            failContinuousSession(Self.captureFailure(for: error))
         }
     }
 
@@ -691,7 +697,7 @@ where TargetProvider: DictationTargetCapturing,
 
     private func continuousCaptureFailed(_ error: Error, sessionID expectedSession: UUID) {
         guard expectedSession == sessionID, continuousSession != nil else { return }
-        failContinuousSession(.captureFailed(Self.userFacingDetail(for: error)))
+        failContinuousSession(Self.captureFailure(for: error))
     }
 
     private func completeContinuousSessionIfDrained(sessionID expectedSession: UUID) async {
@@ -748,7 +754,7 @@ where TargetProvider: DictationTargetCapturing,
     private func failure(for error: Error, stage: PipelineStage) -> DictationFailure {
         if error as? DictationFailure == .transcriptionReturnedNoText { return .transcriptionReturnedNoText }
         switch stage {
-        case .capture: return .captureFailed(Self.userFacingDetail(for: error))
+        case .capture: return Self.captureFailure(for: error)
         case .transcription: return .transcriptionFailed(Self.userFacingDetail(for: error))
         case .insertion: return .insertionFailed(Self.userFacingDetail(for: error))
         }
@@ -838,6 +844,13 @@ where TargetProvider: DictationTargetCapturing,
         publishState()
         cancelCaptureWatchdog()
         return true
+    }
+
+    private static func captureFailure(for error: Error) -> DictationFailure {
+        if error as? DictationMicrophoneAuthorizationFailure == .denied {
+            return .microphonePermissionDenied
+        }
+        return .captureFailed(userFacingDetail(for: error))
     }
 
     private static func userFacingDetail(for error: Error) -> String {

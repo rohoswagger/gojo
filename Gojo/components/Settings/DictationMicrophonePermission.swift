@@ -10,6 +10,7 @@ final class DictationMicrophonePermission: ObservableObject {
 
     private let authorizationStatus: () -> AVAuthorizationStatus
     private let requestAccess: () async -> Bool
+    private var requestTask: Task<AVAuthorizationStatus, Never>?
 
     init(
         authorizationStatus: @escaping () -> AVAuthorizationStatus = {
@@ -24,17 +25,30 @@ final class DictationMicrophonePermission: ObservableObject {
         status = authorizationStatus()
     }
 
-    func refresh() {
+    @discardableResult
+    func refresh() -> AVAuthorizationStatus {
         status = authorizationStatus()
+        return status
+    }
+
+    func requestAuthorization() async -> AVAuthorizationStatus {
+        if let requestTask { return await requestTask.value }
+        let current = refresh()
+        guard current == .notDetermined, !Task.isCancelled else { return current }
+
+        isRequesting = true
+        let task = Task { @MainActor in
+            _ = await requestAccess()
+            let result = refresh()
+            isRequesting = false
+            requestTask = nil
+            return result
+        }
+        requestTask = task
+        return await task.value
     }
 
     func requestIfNeeded() async {
-        refresh()
-        guard status == .notDetermined, !isRequesting, !Task.isCancelled else { return }
-
-        isRequesting = true
-        _ = await requestAccess()
-        refresh()
-        isRequesting = false
+        _ = await requestAuthorization()
     }
 }

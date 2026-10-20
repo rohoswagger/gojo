@@ -13,6 +13,7 @@ swiftc \
   Gojo/Dictation/DictationModels.swift \
   Gojo/Dictation/DictationProtocols.swift \
   Gojo/Dictation/DictationUtteranceSegmenter.swift \
+  Gojo/components/Settings/DictationMicrophonePermission.swift \
   Gojo/Dictation/AVAudioEngineCaptureService.swift \
   tests/dictation_capture_liveness_regression.swift \
   -o "$binary_path"

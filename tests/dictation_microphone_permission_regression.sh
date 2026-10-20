@@ -10,6 +10,10 @@ swiftc \
   -swift-version 5 \
   -warnings-as-errors \
   -target "$(uname -m)-apple-macosx14.0" \
+  Gojo/Dictation/DictationModels.swift \
+  Gojo/Dictation/DictationProtocols.swift \
+  Gojo/Dictation/DictationUtteranceSegmenter.swift \
+  Gojo/Dictation/AVAudioEngineCaptureService.swift \
   Gojo/components/Settings/DictationMicrophonePermission.swift \
   tests/dictation_microphone_permission_regression.swift \
   -o "$binary_path"

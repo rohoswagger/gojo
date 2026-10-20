@@ -165,11 +165,12 @@ class GojoViewCoordinator: ObservableObject {
             // helloAnimationRunning = firstLaunch
 
             if Defaults[.hudReplacement] {
-                let authorized = await XPCHelperClient.shared.isAccessibilityAuthorized()
-                if !authorized {
-                    Defaults[.hudReplacement] = false
-                } else {
-                    await MediaKeyInterceptor.shared.start(promptIfNeeded: false)
+                if let status = try? await XPCHelperClient.shared.helperPermissionStatus() {
+                    if status.accessibilityAuthorized {
+                        await MediaKeyInterceptor.shared.start(promptIfNeeded: false)
+                    } else {
+                        Defaults[.hudReplacement] = false
+                    }
                 }
             }
         }

@@ -8,7 +8,20 @@
 import Foundation
 
 /// The protocol that this service will vend as its API. This protocol will also need to be visible to the process hosting the service.
+@objc protocol GojoXPCHelperInputProtocol {
+    func dictationHotkeyInput(_ requestID: String, helperInstanceID: String, sequence: UInt64,
+        kind: Int, exactChord: Bool, triggerDown: Bool, disallowed: Bool, reenabled: Bool, with reply: @escaping () -> Void)
+}
+
 @objc protocol GojoXPCHelperProtocol {
+    func helperPermissionStatus(with reply: @escaping (NSDictionary) -> Void)
+    func requestHelperAccessibility(with reply: @escaping (NSDictionary) -> Void)
+    func startDictationHotkey(_ requestID: String, with reply: @escaping (NSDictionary) -> Void)
+    func stopDictationHotkey(_ requestID: String, with reply: @escaping () -> Void)
+    func dictationHotkeyStatus(_ requestID: String, with reply: @escaping (NSDictionary) -> Void)
+    #if DEBUG
+    func dictationHotkeyDiagnostics(_ requestID: String, recoverDisabled: Bool, with reply: @escaping (NSDictionary) -> Void)
+    #endif
     func isAccessibilityAuthorized(with reply: @escaping (Bool) -> Void)
     func requestAccessibilityAuthorization()
     func ensureAccessibilityAuthorization(_ promptIfNeeded: Bool, with reply: @escaping (Bool) -> Void)

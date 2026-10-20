@@ -83,6 +83,18 @@ final class WindowActionExecutor {
         }
     }
 
+    func executeShortcut(_ action: WindowAction) async {
+        do {
+            let window = try await provider.focusedWindow(promptIfNeeded: true)
+            let state = WindowPowerSession.state(for: window.screen)
+            await executeFocusedWindow(action, window: window, state: state)
+        } catch {
+            let screen = provider.activeScreen() ?? NSScreen.main ?? NSScreen.screens.first
+            let state = screen.map { WindowPowerSession.state(for: $0) } ?? WindowPowerState.shared
+            setFailure(error, state: state)
+        }
+    }
+
     func execute(
         _ action: WindowAction,
         target: WindowSummary? = nil,
@@ -97,64 +109,77 @@ final class WindowActionExecutor {
             return
         }
 
-        // Focused-window path (no explicit target): keeps existing keyboard-shortcut behavior.
         do {
             let window = try await provider.focusedWindow(for: notchScreen, promptIfNeeded: true)
+            await executeFocusedWindow(action, window: window, state: state)
+        } catch {
+            setFailure(error, state: state)
+        }
+    }
 
-            if action == .zoom {
-                let success = await XPCHelperClient.shared.performZoom(pid: window.pid, windowID: window.windowID).success
-                if success {
-                    state.lastAction = .zoom
-                    state.preview = .zoom
-                    state.statusKind = .success
-                    await refreshWindowList(state: state, focusedWindow: nil, screen: notchScreen)
-                } else {
-                    state.setFailure("Cannot reset \(window.appName)", detail: "macOS would not zoom this window.")
-                }
+    private func executeFocusedWindow(
+        _ action: WindowAction,
+        window: FocusedWindow,
+        state: WindowPowerState
+    ) async {
+        if action == .zoom {
+            let success = await XPCHelperClient.shared.performZoom(pid: window.pid, windowID: window.windowID).success
+            if success {
+                state.lastAction = .zoom
+                state.preview = .zoom
+                state.statusKind = .success
+                await refreshWindowList(state: state, focusedWindow: nil, screen: window.screen)
+            } else {
+                state.setFailure("Cannot reset \(window.appName)", detail: "macOS would not zoom this window.")
+            }
+            return
+        }
+
+        if action == .maximize,
+           let entry = history.entry(for: window),
+           entry.lastAction == .maximize {
+            let restoreFrame = WindowFrameCalculator.clampedRestoreFrame(entry.restoreFrame, in: window.screen.visibleFrame)
+            guard await provider.setFrame(restoreFrame, for: window) else {
+                state.setFailure("Previous position unavailable", detail: "macOS would not restore this window.")
                 return
             }
+            history.clear(for: window)
+            state.setSuccess(action: action, window: window, restored: true)
+            return
+        }
 
-            if action == .maximize,
-               let entry = history.entry(for: window),
-               entry.lastAction == .maximize {
-                let restoreFrame = WindowFrameCalculator.clampedRestoreFrame(entry.restoreFrame, in: window.screen.visibleFrame)
-                guard await provider.setFrame(restoreFrame, for: window) else {
-                    state.setFailure("Previous position unavailable", detail: "macOS would not restore this window.")
-                    return
-                }
-                history.clear(for: window)
-                state.setSuccess(action: action, window: window, restored: true)
-                return
-            }
+        history.ensureRestoreFrame(for: window, action: action)
+        let targetFrame = WindowFrameCalculator.targetFrame(for: action, in: window.screen.visibleFrame)
+        guard await provider.setFrame(targetFrame, for: window) else {
+            state.setFailure("This window cannot be resized", detail: "Some windows cannot be moved by Gojo.")
+            return
+        }
 
-            history.ensureRestoreFrame(for: window, action: action)
-            let targetFrame = WindowFrameCalculator.targetFrame(for: action, in: window.screen.visibleFrame)
-            guard await provider.setFrame(targetFrame, for: window) else {
-                state.setFailure("This window cannot be resized", detail: "Some windows cannot be moved by Gojo.")
-                return
-            }
+        history.ensureRestoreFrame(for: window, action: action)
 
-            history.ensureRestoreFrame(for: window, action: action)
+        let refreshedWindow = provider.resolveWindow(
+            pid: window.pid,
+            windowID: window.windowID,
+            fallbackAppName: window.appName,
+            fallbackTitle: window.title
+        ) ?? window
+        let constrained = !refreshedWindow.normalFrame.approximatelyEquals(targetFrame, tolerance: 4)
+        state.setSuccess(action: action, window: refreshedWindow, constrained: constrained)
+        await refreshWindowList(state: state, focusedWindow: refreshedWindow, screen: window.screen)
+    }
 
-            let refreshedWindow = provider.resolveWindow(
-                pid: window.pid,
-                windowID: window.windowID,
-                fallbackAppName: window.appName,
-                fallbackTitle: window.title
-            ) ?? window
-            let constrained = !refreshedWindow.normalFrame.approximatelyEquals(targetFrame, tolerance: 4)
-            state.setSuccess(action: action, window: refreshedWindow, constrained: constrained)
-            await refreshWindowList(state: state, focusedWindow: refreshedWindow, screen: notchScreen)
-        } catch FocusedWindowProvider.ProviderError.permissionMissing {
+    private func setFailure(_ error: Error, state: WindowPowerState) {
+        switch error {
+        case FocusedWindowProvider.ProviderError.permissionMissing:
             gojoDebug("executor: caught permissionMissing")
             state.setPermissionMissing()
-        } catch FocusedWindowProvider.ProviderError.noFocusedWindowOnScreen {
+        case FocusedWindowProvider.ProviderError.noFocusedWindowOnScreen:
             gojoDebug("executor: caught noFocusedWindowOnScreen → setNoWindow")
             state.setNoWindow()
-        } catch FocusedWindowProvider.ProviderError.noFocusedWindow {
+        case FocusedWindowProvider.ProviderError.noFocusedWindow:
             gojoDebug("executor: caught noFocusedWindow → setNoWindow")
             state.setNoWindow()
-        } catch {
+        default:
             gojoDebug("executor: caught \(error)")
             state.setFailure("Window unavailable", detail: "Focus a normal app window, then try again.")
         }
@@ -166,13 +191,14 @@ final class WindowActionExecutor {
         notchScreen: NSScreen?,
         state: WindowPowerState
     ) async {
-        // Bring the target to front via the helper (which has AX), so the user sees the window appear.
-        _ = await XPCHelperClient.shared.raiseWindow(
+        guard await XPCHelperClient.shared.raiseWindow(
             pid: target.pid,
             windowID: target.windowID,
-            allowApplicationFallback: true
-        )
-        NSRunningApplication(processIdentifier: target.pid)?.activate(options: [])
+            allowApplicationFallback: false
+        ) else {
+            state.setFailure("Window unavailable", detail: "Select an available window, then try again.")
+            return
+        }
 
         // Display the target window lands on; also where we judge the resulting position.
         let targetScreen = NSScreen.screen(containing: target.normalFrame) ?? notchScreen ?? NSScreen.main
@@ -234,20 +260,18 @@ final class WindowActionExecutor {
         }
     }
 
+
 }
 
-/// Resolves which notch `WindowPowerState` shortcuts and drag handlers should target.
 @MainActor
 enum WindowPowerSession {
-    static func contextForMouseLocation() -> (screenUUID: String?, state: WindowPowerState) {
-        // NSApp.delegate is SwiftUI's adaptor wrapper, not our AppDelegate — the
-        // direct cast always fails under @NSApplicationDelegateAdaptor. Use the
-        // explicit shared reference, keeping the cast as a belt-and-braces fallback.
+    static func state(for screen: NSScreen) -> WindowPowerState {
+        let screenUUID = screen.displayUUID
         guard let delegate = AppDelegate.shared ?? (NSApp.delegate as? AppDelegate) else {
-            gojoDebug("contextForMouseLocation: AppDelegate unavailable → global fallback")
-            return (nil, WindowPowerState.shared)
+            return WindowPowerState.shared
         }
-        let viewModel = delegate.viewModelForCurrentMouseLocation()
-        return (viewModel.screenUUID, viewModel.windowPowerState)
+        let viewModel = screenUUID.flatMap { delegate.viewModels[$0] }
+            ?? (delegate.vm.screenUUID == screenUUID ? delegate.vm : nil)
+        return viewModel?.windowPowerState ?? WindowPowerState.shared
     }
 }

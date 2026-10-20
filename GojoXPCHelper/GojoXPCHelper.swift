@@ -633,6 +633,28 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
         }
     }
 
+    @objc func focusedWindowSnapshot(forPID pid: NSNumber, with reply: @escaping (NSDictionary) -> Void) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self, AXIsProcessTrusted() else {
+                reply([:])
+                return
+            }
+            let app = AXUIElementCreateApplication(pid_t(truncating: pid))
+            guard let window = self.copyElement(app, attribute: kAXFocusedWindowAttribute),
+                  self.isUsableWindow(window),
+                  let windowID = self.windowID(of: window),
+                  let frame = self.frame(of: window) else {
+                reply([:])
+                return
+            }
+            reply([
+                "pid": pid,
+                "windowID": NSNumber(value: windowID),
+                "axFrame": frame.dictionaryRepresentation as NSDictionary
+            ])
+        }
+    }
+
     @objc func setFocusedWindowFrame(_ normalFrame: NSDictionary, windowID: NSNumber?, with reply: @escaping (Bool) -> Void) {
         DispatchQueue.main.async { [weak self] in
             guard let self,
@@ -673,8 +695,11 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
             let pidValue = pid_t(truncating: pid)
             let appElement = AXUIElementCreateApplication(pidValue)
             let cgID = windowID.map { CGWindowID(truncating: $0) }
-            guard let windowElement = self.windowElement(for: appElement, exactWindowID: cgID)
-                ?? self.bestWindowElement(for: appElement, preferredWindowID: cgID) else {
+            guard let windowElement = WindowTargetResolver.windowActivationTarget(
+                requestedWindowID: cgID,
+                exactMatch: self.windowElement(for: appElement, exactWindowID: cgID),
+                fallback: self.bestWindowElement(for: appElement)
+            ) else {
                 helperDebug("setWindowFrame: no AX window for pid=\(pidValue) windowID=\(cgID.map(String.init(describing:)) ?? "nil")")
                 reply(["success": false])
                 return
@@ -694,8 +719,11 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
             let pidValue = pid_t(truncating: pid)
             let appElement = AXUIElementCreateApplication(pidValue)
             let cgID = windowID.map { CGWindowID(truncating: $0) }
-            guard let windowElement = self.windowElement(for: appElement, exactWindowID: cgID)
-                ?? self.bestWindowElement(for: appElement, preferredWindowID: cgID) else {
+            guard let windowElement = WindowTargetResolver.windowActivationTarget(
+                requestedWindowID: cgID,
+                exactMatch: self.windowElement(for: appElement, exactWindowID: cgID),
+                fallback: self.bestWindowElement(for: appElement)
+            ) else {
                 reply(["success": false])
                 return
             }

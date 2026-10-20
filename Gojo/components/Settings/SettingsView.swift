@@ -1595,25 +1595,29 @@ struct DictationSettings: View {
                             }
                             Spacer(minLength: 8)
                             HStack(spacing: 8) {
-                                Button(modelButtonTitle(for: model.id)) {
+                                Button {
                                     if dictation.isModelInstalled(model.id) {
                                         dictation.selectModel(model.id)
                                     } else {
                                         dictation.downloadModel(model.id)
                                     }
+                                } label: {
+                                    Text(modelButtonTitle(for: model.id))
+                                        .foregroundStyle(modelButtonDisabled(for: model.id) ? Color.secondary : Color.primary)
                                 }
                                 .disabled(modelButtonDisabled(for: model.id))
                                 if dictation.isModelInstalled(model.id) {
-                                    Button(
-                                        dictation.removingModel == model.id ? "Removing…" : "Remove",
-                                        role: .destructive
-                                    ) {
+                                    Button(role: .destructive) {
                                         modelToRemove = model.id
+                                    } label: {
+                                        Text(dictation.removingModel == model.id ? "Removing…" : "Remove")
+                                            .foregroundStyle(!dictation.canChangeModel ? Color.secondary : Color.primary)
                                     }
                                     .disabled(!dictation.canChangeModel)
                                 }
                             }
                             .controlSize(.small)
+                            .tint(.primary)
                         }
                         .padding(.vertical, 4)
                     }

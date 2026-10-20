@@ -45,12 +45,12 @@ protocol LocalDictationTranscribing: Sendable {
     func cancelTranscription() async
     /// Loads whatever `transcribe` would otherwise load on first use. Called
     /// when a session starts so the cost overlaps with the user speaking.
-    func prepare() async
+    func prepare() async throws
 }
 
 extension LocalDictationTranscribing {
     func cancelTranscription() async {}
-    func prepare() async {}
+    func prepare() async throws {}
 }
 
 /// Optionally refines an already-transcribed utterance before it is inserted.

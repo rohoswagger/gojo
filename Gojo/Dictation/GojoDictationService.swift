@@ -78,9 +78,9 @@ private actor DictationTranscriberRouter: LocalDictationTranscribing {
         }
     }
 
-    func prepare() async {
+    func prepare() async throws {
         guard provider() == .local else { return }
-        await local.prepare()
+        try await local.prepare()
     }
 
     func cancelTranscription() async {
@@ -369,6 +369,7 @@ final class GojoDictationService: ObservableObject {
         guard selectedProvider == .local else { return }
         transcriberWarmGeneration &+= 1
         let generation = transcriberWarmGeneration
+        let model = selectedModel
         isPreparingTranscriber = true
         Task(priority: .utility) { [weak self, localTranscriber, warmupSequencer] in
             await self?.loadInitialModelStatusIfNeeded()
@@ -385,7 +386,15 @@ final class GojoDictationService: ObservableObject {
                     #if DEBUG
                     let warmStart = ProcessInfo.processInfo.systemUptime
                     #endif
-                    await localTranscriber.prepare()
+                    do {
+                        try await localTranscriber.prepare()
+                        await self.recordModelPreparationResult(nil, model: model, generation: generation)
+                    } catch is CancellationError {
+                        return
+                    } catch {
+                        let detail = DictationModelPreparationError.userFacingDetail(for: error)
+                        await self.recordModelPreparationResult(detail, model: model, generation: generation)
+                    }
                     #if DEBUG
                     dictationLatencyLogger.notice(
                         "stage=transcriberWarm ms=\(Int(((ProcessInfo.processInfo.systemUptime - warmStart) * 1_000).rounded()), privacy: .public)"
@@ -405,6 +414,15 @@ final class GojoDictationService: ObservableObject {
         }
     }
 
+    private func recordModelPreparationResult(_ failure: String?, model: DictationModelID, generation: UInt) {
+        guard generation == transcriberWarmGeneration,
+              selectedProvider == .local, selectedModel == model else { return }
+        modelErrors[model] = failure
+        if let failure {
+            dictationPipelineLogger.error("stage=modelPreparation reason=\(failure, privacy: .public)")
+        }
+    }
+
     private func finishTranscriberWarmupIfCurrent(generation: UInt) {
         guard generation == transcriberWarmGeneration else { return }
         isPreparingTranscriber = false
@@ -420,6 +438,7 @@ final class GojoDictationService: ObservableObject {
         generation == transcriberWarmGeneration
             && cleanupEnabled
             && s1MiniInstalled
+            && modelErrors[selectedModel] == nil
     }
 
     var stateDetail: String? {
@@ -701,6 +720,12 @@ final class GojoDictationService: ObservableObject {
     }
     #endif
 
+    private func modelOperationError(_ error: Error, fallback: String) -> String {
+        let failure = DictationModelPreparationError.classify(error)
+        if case .failed = failure { return fallback }
+        return failure.localizedDescription
+    }
+
     func downloadModel(_ model: DictationModelID) {
         guard canChangeModel, !installedModels.contains(model) else { return }
         let operation = DictationModelOperation.installing(model)
@@ -711,7 +736,7 @@ final class GojoDictationService: ObservableObject {
                 try await localTranscriber.install(model)
                 installedModels.insert(model)
             } catch {
-                modelErrors[model] = "Could not download this model. Check your connection and try again."
+                modelErrors[model] = modelOperationError(error, fallback: "Could not download this model. Check your connection and try again.")
             }
             if modelOperation == operation {
                 modelOperation = nil
@@ -733,7 +758,7 @@ final class GojoDictationService: ObservableObject {
                 UserDefaults.standard.set(model.rawValue, forKey: Self.selectedModelKey)
                 warmSelectedTranscriber()
             } catch {
-                modelErrors[model] = "Gojo could not switch models. Try again."
+                modelErrors[model] = modelOperationError(error, fallback: "Gojo could not switch models. Try again.")
             }
             if modelOperation == operation {
                 modelOperation = nil
@@ -751,7 +776,7 @@ final class GojoDictationService: ObservableObject {
             do {
                 try await localTranscriber.removeModel(model)
             } catch {
-                removalError = "Gojo could not remove this model. Try again."
+                removalError = modelOperationError(error, fallback: "Gojo could not remove this model. Try again.")
             }
             let isStillInstalled = await localTranscriber.isModelInstalled(model)
             if isStillInstalled {
@@ -806,6 +831,7 @@ final class GojoDictationService: ObservableObject {
             let reason = failure.errorDescription ?? String(describing: failure)
             dictationPipelineLogger.error("state=error reason=\(reason, privacy: .public)")
         } else if case .succeeded = newState {
+            if selectedProvider == .local { modelErrors[selectedModel] = nil }
             dictationPipelineLogger.notice("state=succeeded")
         }
     }

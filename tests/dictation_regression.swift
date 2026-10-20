@@ -99,6 +99,16 @@ actor FakeTranscriber: LocalDictationTranscribing {
     }
 }
 
+actor FailingPreparationTranscriber: LocalDictationTranscribing {
+    func prepare() async throws {
+        throw DictationModelPreparationError.insufficientStorage
+    }
+
+    func transcribe(_ audio: DictationAudio) async throws -> String {
+        throw DictationModelPreparationError.insufficientStorage
+    }
+}
+
 actor GatedAudioCapture: DictationAudioCapturing {
     let log: EventLog
     var audio = DictationAudio(samples: Array(repeating: 0.25, count: 3_200))
@@ -607,6 +617,7 @@ struct DictationRegressionRunner {
         await testShortcutEventOrdering()
         await testTargetCapturedBeforeHUDStatePublication()
         await testSuccessfulControllerFlow()
+        await testModelPreparationFailureMessage()
         await testStartupReleaseFinishesAfterCaptureStarts()
         await testStartupReleaseLatchResetsOnCancel()
         await testStartupReleaseLatchResetsOnFailure()
@@ -1752,6 +1763,25 @@ struct DictationRegressionRunner {
             .beginDictation,
             "a rejected tap should re-arm immediately instead of consuming the next tap"
         )
+    }
+
+    static func testModelPreparationFailureMessage() async {
+        let log = EventLog()
+        let inserter = FakeInserter(log: log)
+        let controller = DictationController(
+            targetProvider: FakeTargetProvider(log: log),
+            audioCapture: FakeAudioCapture(log: log),
+            transcriber: FailingPreparationTranscriber(),
+            polisher: FakePolisher(log: log),
+            inserter: inserter
+        )
+        await controller.hotKeyDown()
+        await waitForState(.listening, controller: controller, message: "recording should retain its normal lifecycle")
+        await controller.hotKeyUp()
+        let message = DictationModelPreparationError.insufficientStorage.localizedDescription
+        await waitForState(.error(.transcriptionFailed(message)), controller: controller,
+                           message: "the existing recording error state should show the model storage failure")
+        assertEqual(await inserter.insertionCount(), 0, "a failed model must never insert text")
     }
 
     static func testSuccessfulControllerFlow() async {

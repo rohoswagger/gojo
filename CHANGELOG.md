@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Speech model preparation errors, including low disk space, appear in
+  Dictation settings and recording feedback.
+
 ## [1.6.1] — 2026-10-19
 
 ### Added

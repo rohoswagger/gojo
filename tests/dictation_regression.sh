@@ -14,6 +14,7 @@ swiftc \
   Gojo/Dictation/DictationProtocols.swift \
   Gojo/Dictation/DictationSessionStateMachine.swift \
   Gojo/Dictation/DictationModifierShortcutStateMachine.swift \
+  Gojo/Dictation/DictationModelPreparation.swift \
   Gojo/Dictation/DictationController.swift \
   Gojo/Dictation/DictationUtteranceSegmenter.swift \
   Gojo/components/Settings/DictationMicrophonePermission.swift \

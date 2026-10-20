@@ -130,8 +130,8 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
         return try await task.value
     }
 
-    func prepare() async {
-        _ = try? await loadSelectedModel()
+    func prepare() async throws {
+        _ = try await loadSelectedModel()
     }
 
     func cancelTranscription() async {
@@ -179,9 +179,12 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
         let requestedModel = selectedModel
         if let model, model.identifier == requestedModel { return model.value }
         if let modelTask, modelTask.identifier == requestedModel {
-            return try await modelTask.task.value.value
+            do { return try await modelTask.task.value.value }
+            catch is CancellationError { throw CancellationError() }
+            catch { throw DictationModelPreparationError.classify(error) }
         }
 
+        try DictationModelPreparationError.checkStorage()
         modelTask?.task.cancel()
         modelTaskGeneration &+= 1
         let generation = modelTaskGeneration
@@ -213,7 +216,8 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
             if modelTask?.generation == generation {
                 modelTask = nil
             }
-            throw error
+            if error is CancellationError { throw error }
+            throw DictationModelPreparationError.classify(error)
         }
     }
 

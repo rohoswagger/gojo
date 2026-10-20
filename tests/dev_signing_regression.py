@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import plistlib
+import select
 import shutil
 import signal
 import subprocess
@@ -365,26 +366,41 @@ class StopRunnerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="gojo-stop-test-") as directory:
             apps = [Path(directory) / name / "Gojo.app" for name in ["Own Build", "Other Build"]]
             children = []
+            fixture_source = r"""#include <signal.h>
+#include <unistd.h>
+int main(void) {
+    signal(SIGTERM, SIG_IGN);
+    if (write(STDOUT_FILENO, "ready\n", 6) != 6) return 1;
+    for (;;) pause();
+}
+"""
+            def compile_fixture(executable):
+                subprocess.run(
+                    ["/usr/bin/cc", "-x", "c", "-", "-o", str(executable)],
+                    input=fixture_source, text=True, check=True, capture_output=True,
+                )
+
             try:
                 executables = []
                 for app in apps:
                     executable = app / "Contents/MacOS/Gojo"
                     executable.parent.mkdir(parents=True)
-                    shutil.copy("/bin/sleep", executable)
+                    compile_fixture(executable)
                     with (app / "Contents/Info.plist").open("wb") as stream:
                         plistlib.dump({"CFBundleIdentifier": dev.APP_ID, "CFBundleExecutable": "Gojo"}, stream)
                     executables.append(executable)
                 helper = apps[0] / "Contents/XPCServices/GojoXPCHelper.xpc/Contents/MacOS/GojoXPCHelper"
                 helper.parent.mkdir(parents=True)
-                shutil.copy("/bin/sleep", helper)
+                compile_fixture(helper)
                 with (helper.parent.parent / "Info.plist").open("wb") as stream:
                     plistlib.dump({"CFBundleIdentifier": dev.APP_ID + ".GojoXPCHelper", "CFBundleExecutable": "GojoXPCHelper"}, stream)
                 for bundle in [helper.parents[2], *apps]:
                     subprocess.run(["/usr/bin/codesign", "--force", "--sign", "-", str(bundle)], check=True, capture_output=True)
-                children = [subprocess.Popen(
-                    [str(executable), "60"],
-                    preexec_fn=lambda: signal.signal(signal.SIGTERM, signal.SIG_IGN),
-                ) for executable in [*executables, helper]]
+                children = [subprocess.Popen([str(executable)], stdout=subprocess.PIPE)
+                            for executable in [*executables, helper]]
+                for child in children:
+                    self.assertTrue(select.select([child.stdout], [], [], 2)[0], "Fixture never reported readiness")
+                    self.assertEqual(child.stdout.readline(), b"ready\n", f"Fixture exited before readiness: {child.poll()}")
                 deadline = time.monotonic() + 2
                 while True:
                     self.assertTrue(all(child.poll() is None for child in children), "Fixture exited before stop")
@@ -410,6 +426,7 @@ class StopRunnerTests(unittest.TestCase):
                     if child.poll() is None:
                         child.kill()
                     child.wait(timeout=2)
+                    child.stdout.close()
 
 
 @unittest.skipUnless(sys.platform == "darwin", "Requires macOS code signing")

@@ -14,3 +14,8 @@ swiftc \
   tests/accessibility_authorization_flow_regression.swift \
   -o "$binary_path"
 "$binary_path"
+
+if grep -q 'isAccessibilityAuthorized()' Gojo/components/Onboarding/PermissionsRequestView.swift Gojo/components/Settings/SettingsView.swift; then
+  echo "Permission screens must distinguish helper failures from a negative authorization reply" >&2
+  exit 1
+fi

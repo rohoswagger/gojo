@@ -1,58 +1,40 @@
 #!/usr/bin/env bash
 set -euo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+python3 - <<'PY'
+from pathlib import Path
+import re
+host = Path('GojoXPCHelper/DictationHotkeyTapService.swift').read_text()
+monitor = Path('Gojo/Dictation/DictationModifierHotKeyMonitor.swift').read_text()
+client = Path('Gojo/XPCHelperClient/XPCHelperClient.swift').read_text()
+main = Path('GojoXPCHelper/main.swift').read_text()
+helper = Path('GojoXPCHelper/GojoXPCHelper.swift').read_text()
+assert 'CGEvent.tapCreate(' not in monitor, 'The sandboxed app must not own the intercepting tap'
+assert 'CFRunLoopGetMain()' not in host
+assert 'MainActor.assumeIsolated' not in host
+assert 'Thread {' in host and 'CFRunLoopRun()' in host
+assert 'thread.qualityOfService = .userInteractive' in host
+callback = re.search(r'private func dictationModifierEventTapCallback\([\s\S]*?\n\}', host).group()
+assert 'handleEventTapInput' not in callback and 'Task {' not in callback
+start = callback.index('case .tapDisabledByTimeout, .tapDisabledByUserInput:')
+disabled = callback[start:callback.index('case .flagsChanged:', start)]
+assert disabled.index('context.reenableEventTapImmediately()') < disabled.index('context.forward(.tapDisabled(')
+assert 'context.consumeSpace(type: type, event: event)' in callback
+assert 'suppressSpaceUp' in host and 'keyboardEventAutorepeat' in host
+assert 'deliveryQueue.async' in host, 'Tap delivery must not wait on the app'
+assert 'guard desiredEnabled, let contiguous = eventGate.accept(event)' in monitor
+assert 'connectionGeneration.owns(generation)' in client
+assert 'conn.exportedObject = receiver' in client
+assert 'newConnection.remoteObjectInterface = NSXPCInterface(with: GojoXPCHelperInputProtocol.self)' in main
+assert 'exportedObject.attach(connection: newConnection)' in main
+assert main.count('exportedObject?.connectionDidEnd()') == 2
+assert 'remoteObjectProxyWithErrorHandler({ _ in acknowledge(false) })' in helper, 'Reverse-send errors must fail the current delivery'
+assert 'reenabled: reenabled, with: { acknowledge(true) })' in helper, 'App reply must acknowledge successful delivery'
+assert 'DistributedNotificationCenter' not in host, 'Dictation input must stay on the authenticated connection'
+assert 'DispatchSemaphore' not in host, 'Tap diagnostics must not block the caller thread'
+PY
+bash tests/dictation_helper_lease_regression.sh
+printf 'dictation event tap host structural and injected lifecycle regressions passed\n'
 
-monitor="Gojo/Dictation/DictationModifierHotKeyMonitor.swift"
-
-fail() {
-    printf 'Assertion failed: %s\n' "$1" >&2
-    exit 1
-}
-
-[[ -f "$monitor" ]] || fail "missing $monitor"
-
-if grep -q 'CFRunLoopGetMain()' "$monitor"; then
-    fail "dictation event tap must not be hosted on the main run loop"
-fi
-
-if grep -q 'MainActor.assumeIsolated' "$monitor"; then
-    fail "event tap callback must not assume MainActor isolation"
-fi
-
-grep -q 'Thread {' "$monitor" \
-    || fail "event tap host must create a dedicated thread"
-grep -q 'CFRunLoopRun()' "$monitor" \
-    || fail "event tap host must keep a dedicated run loop alive"
-grep -q 'thread.qualityOfService = .userInteractive' "$monitor" \
-    || fail "event tap host thread must run at interactive priority"
-grep -q 'DictationModifierEventTapHost' "$monitor" \
-    || fail "event tap host type is missing"
-grep -q 'DictationModifierEventTapInput: Sendable' "$monitor" \
-    || fail "callback must decode into a small Sendable semantic input"
-
-ruby <<'RUBY'
-monitor = "Gojo/Dictation/DictationModifierHotKeyMonitor.swift"
-source = File.read(monitor)
-
-callback = source[/private func dictationModifierEventTapCallback\([\s\S]*?\n\}/]
-abort("Assertion failed: missing dictation event tap callback") unless callback
-abort("Assertion failed: callback must not call monitor methods directly") if callback.include?("handleEventTapInput")
-abort("Assertion failed: callback must not create Tasks") if callback.include?("Task {")
-
-disabled_case = callback[/case \.tapDisabledByTimeout, \.tapDisabledByUserInput:[\s\S]*?\n\n/]
-abort("Assertion failed: missing disabled-tap callback path") unless disabled_case
-enable_index = disabled_case.index("context.reenableEventTapImmediately()")
-forward_index = disabled_case.index("context.forward(.tapDisabled)")
-abort("Assertion failed: disabled-tap path must re-enable immediately") unless enable_index
-abort("Assertion failed: disabled-tap path must forward disabled semantic input") unless forward_index
-abort("Assertion failed: disabled-tap path must re-enable before forwarding") unless enable_index < forward_index
-
-create = source[/private func createEventTap\(\) async -> EventTapStartResult[\s\S]*?private func handleEventTapInput/]
-abort("Assertion failed: missing async createEventTap bridge") unless create
-abort("Assertion failed: callback bridge must enqueue onto DispatchQueue.main") unless create.include?("DispatchQueue.main.async")
-abort("Assertion failed: callback bridge must generation-gate forwarded inputs") unless source.include?("guard generation == eventTapGeneration else { return }")
-
-forward_count = source.scan(/forwardInput\(generation, input\)/).length
-abort("Assertion failed: semantic inputs must use one forwarding channel") unless forward_count == 1
-RUBY
-
-printf 'dictation event tap host regression passed\n'
+grep -Fq 'monitor started chord=control+option' Gojo/Dictation/DictationModifierHotKeyMonitor.swift \
+  || fail "live dictation harnesses require the actual-ready startup marker"

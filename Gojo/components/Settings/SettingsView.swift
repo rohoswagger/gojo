@@ -398,7 +398,7 @@ struct Charge: View {
         }
         .onAppear {
             Task { @MainActor in
-                await XPCHelperClient.shared.isAccessibilityAuthorized()
+                _ = try? await XPCHelperClient.shared.helperPermissionStatus()
             }
         }
         .accentColor(.effectiveAccent)
@@ -413,7 +413,13 @@ struct HUD: View {
     @Default(.optionKeyAction) var optionKeyAction
     @Default(.hudReplacement) var hudReplacement
     @ObservedObject var coordinator = GojoViewCoordinator.shared
-    @State private var accessibilityAuthorized = false
+    @ObservedObject private var shortcutMonitor = DictationModifierHotKeyMonitor.shared
+
+    private var accessibilityAuthorized: Bool {
+        guard case .available = shortcutMonitor.helperState else { return false }
+        return shortcutMonitor.accessibilityState == .trusted
+    }
+
     
     var body: some View {
         Form {
@@ -435,7 +441,14 @@ struct HUD: View {
                     .disabled(!accessibilityAuthorized)
                 }
                 
-                if !accessibilityAuthorized {
+                if case .unavailable = shortcutMonitor.helperState {
+                    Text("Gojo could not connect to its background helper. Retry the connection before changing Accessibility access.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Button("Retry connection") {
+                        Task { await shortcutMonitor.start() }
+                    }
+                } else if !accessibilityAuthorized {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Accessibility access is required to replace the system HUD.")
                             .font(.subheadline)
@@ -443,7 +456,7 @@ struct HUD: View {
 
                         HStack(spacing: 12) {
                             Button("Request Accessibility") {
-                                XPCHelperClient.shared.requestAccessibilityAuthorization()
+                                Task { await shortcutMonitor.start(promptIfNeeded: true) }
                             }
                             .buttonStyle(.borderedProminent)
                         }
@@ -519,12 +532,7 @@ struct HUD: View {
         .accentColor(.effectiveAccent)
         .navigationTitle("HUDs")
         .task {
-            accessibilityAuthorized = await XPCHelperClient.shared.isAccessibilityAuthorized()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .accessibilityAuthorizationChanged)) { notification in
-            if let granted = notification.userInfo?["granted"] as? Bool {
-                accessibilityAuthorized = granted
-            }
+            await shortcutMonitor.refreshReadiness()
         }
     }
 }
@@ -1396,7 +1404,7 @@ struct DictationSettings: View {
     @AppStorage(DictationPauseDuration.defaultsKey)
     private var dictationPauseDurationRawValue = DictationPauseDuration.natural.rawValue
     @ObservedObject private var microphonePermission = DictationMicrophonePermission.shared
-    @State private var accessibilityAuthorized = false
+    @ObservedObject private var shortcutMonitor = DictationModifierHotKeyMonitor.shared
     @State private var modelToRemove: DictationModelID?
     @State private var openRouterAPIKeyDraft = ""
     @State private var isReplacingOpenRouterKey = false
@@ -1417,31 +1425,7 @@ struct DictationSettings: View {
                 Text("Release Control–Option to insert text. Press Space while holding both keys to keep listening. Repeat the shortcut to finish; Escape cancels.")
             }
 
-            Section {
-                LabeledContent("Microphone", value: microphoneStatusLabel)
-                if microphonePermission.status == .notDetermined {
-                    Button("Request microphone access") {
-                        Task { await microphonePermission.requestIfNeeded() }
-                    }
-                    .disabled(microphonePermission.isRequesting)
-                } else if microphonePermission.status == .denied || microphonePermission.status == .restricted {
-                    Text(microphonePermissionGuidance)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Button("Open Microphone Settings") {
-                        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")!)
-                    }
-                }
-
-                LabeledContent("Accessibility", value: accessibilityAuthorized ? "Allowed" : "Required")
-                if !accessibilityAuthorized {
-                    Button("Open Accessibility Settings") {
-                        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
-                    }
-                }
-            } header: {
-                Text("Permissions")
-            }
+            permissionSection
 
             Section {
                 Picker("Insert after a pause", selection: $dictationPauseDurationRawValue) {
@@ -1828,17 +1812,117 @@ struct DictationSettings: View {
         } message: {
             Text("English transcript cleanup will turn off. Vocabulary corrections will keep working, and you can download the model again later.")
         }
+        .onDisappear { dictation.cancelMicrophoneTest() }
         .task {
             await microphonePermission.requestIfNeeded()
         }
         .task {
-            accessibilityAuthorized = await XPCHelperClient.shared.isAccessibilityAuthorized()
+            await shortcutMonitor.refreshReadiness()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             microphonePermission.refresh()
             Task {
-                accessibilityAuthorized = await XPCHelperClient.shared.isAccessibilityAuthorized()
+                await shortcutMonitor.refreshReadiness()
             }
+        }
+    }
+
+    private var permissionSection: some View {
+        Section {
+            LabeledContent("Microphone", value: microphoneStatusLabel)
+            if microphonePermission.status == .notDetermined {
+                Button("Request microphone access") {
+                    Task { await microphonePermission.requestIfNeeded() }
+                }
+                .disabled(microphonePermission.isRequesting)
+            } else if microphonePermission.status == .denied || microphonePermission.status == .restricted {
+                Text(microphonePermissionGuidance)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Button("Open Microphone Settings") {
+                    NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")!)
+                }
+            }
+
+            LabeledContent("Gojo helper", value: helperStatusLabel)
+            if case .unavailable = shortcutMonitor.helperState {
+                Text("Gojo could not connect to its background helper. Restart Gojo if retrying does not restore the connection.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Button("Retry connection") {
+                    Task { await shortcutMonitor.start() }
+                }
+            }
+            LabeledContent("Accessibility", value: accessibilityStatusLabel)
+            if case .available = shortcutMonitor.helperState,
+               shortcutMonitor.accessibilityState != .trusted {
+                Button("Enable Accessibility") {
+                    Task { await shortcutMonitor.start(promptIfNeeded: true) }
+                }
+                .disabled(shortcutMonitor.accessibilityState == .requesting)
+                Button("Open Accessibility Settings") {
+                    NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+                }
+            }
+            LabeledContent("Dictation shortcut", value: shortcutStatusLabel)
+            if case .unavailable(.tap) = shortcutMonitor.shortcutReadiness {
+                Text("Gojo could not activate the dictation shortcut. Retry after checking Accessibility access.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Button("Retry shortcut") {
+                    Task { await shortcutMonitor.start() }
+                }
+            }
+            LabeledContent("Microphone test", value: microphoneTestLabel)
+            if dictation.microphoneTestState == .testing {
+                Button("Cancel microphone test") { dictation.cancelMicrophoneTest() }
+            } else {
+                Button("Test microphone") { dictation.testMicrophone() }
+                    .disabled(microphonePermission.status != .authorized || !dictation.canTestMicrophone)
+            }
+            if case .failed(let detail) = dictation.microphoneTestState {
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("Permissions")
+        }
+    }
+
+    private var helperStatusLabel: String {
+        switch shortcutMonitor.helperState {
+        case .checking: return "Checking…"
+        case .available: return "Connected"
+        case .unavailable: return "Unavailable"
+        }
+    }
+
+    private var accessibilityStatusLabel: String {
+        switch shortcutMonitor.accessibilityState {
+        case .unknown: return "Not checked"
+        case .notTrusted: return "Required"
+        case .requesting: return "Waiting for permission…"
+        case .trusted: return "Allowed"
+        }
+    }
+
+    private var shortcutStatusLabel: String {
+        switch shortcutMonitor.shortcutReadiness {
+        case .stopped: return "Inactive"
+        case .checking: return "Checking…"
+        case .awaitingAccessibility: return "Waiting for Accessibility"
+        case .ready: return "Active"
+        case .unavailable: return "Unavailable"
+        }
+    }
+
+    private var microphoneTestLabel: String {
+        switch dictation.microphoneTestState {
+        case .idle: return "Not tested"
+        case .testing: return "Checking audio input…"
+        case .passed: return "Audio received"
+        case .failed: return "Unavailable"
         }
     }
 

@@ -58,6 +58,9 @@ struct DictationMicrophonePermissionRegression {
         }
         defer { timeout.cancel() }
 
+        await settingsAndCaptureShareOneDecision()
+        await captureCancellationDoesNotCancelTheSharedDecision()
+        await concurrentWaitersRemainPending()
         await firstEntryRequestsAndCompletionUpdatesStatus()
         await grantedPermissionSkipsThePrompt()
         await refusedPermissionsRemainAvailableForSettingsRecovery()
@@ -65,6 +68,82 @@ struct DictationMicrophonePermissionRegression {
         await cancelledEntryDoesNotStartAPrompt()
         activationRefreshReadsSystemSettingsChanges()
         print("Dictation microphone permission regression passed")
+    }
+
+    @MainActor
+    private static func settingsAndCaptureShareOneDecision() async {
+        let system = MicrophoneAuthorizationStub(status: .notDetermined)
+        let permission = system.makePermission()
+        let capture = AVAudioEngineCaptureService(
+            authorizationStatus: { .notDetermined },
+            requestAuthorization: { await permission.requestAuthorization() }
+        )
+        let settings = Task { await permission.requestAuthorization() }
+        await system.waitForRequest()
+        var captureFinished = false
+        let dictation = Task { () -> DictationMicrophoneAuthorizationFailure? in
+            defer { captureFinished = true }
+            do { _ = try await capture.requestPermission(); return nil }
+            catch { return error as? DictationMicrophoneAuthorizationFailure }
+        }
+        for _ in 0..<10 { await Task.yield() }
+        require(!captureFinished, "capture must share Settings' unresolved OS decision")
+        require(system.requestCount == 1, "Settings and capture must request access exactly once")
+        system.resolve(with: .restricted)
+        let settingsStatus = await settings.value
+        let captureFailure = await dictation.value
+        require(settingsStatus == .restricted && captureFailure == .restricted,
+                "Settings and capture must both retain the actual restricted result")
+    }
+
+    @MainActor
+    private static func captureCancellationDoesNotCancelTheSharedDecision() async {
+        let system = MicrophoneAuthorizationStub(status: .notDetermined)
+        let permission = system.makePermission()
+        let capture = AVAudioEngineCaptureService(
+            authorizationStatus: { .notDetermined },
+            requestAuthorization: { await permission.requestAuthorization() }
+        )
+        var cancellationReturned = false
+        let dictation = Task {
+            defer { cancellationReturned = true }
+            return try await capture.requestPermission()
+        }
+        await system.waitForRequest()
+        dictation.cancel()
+        for _ in 0..<100 { await Task.yield() }
+        require(cancellationReturned, "canceled capture must finish without waiting for the OS prompt")
+        let settings = Task { await permission.requestAuthorization() }
+        system.resolve(with: .authorized)
+        do {
+            _ = try await dictation.value
+            require(false, "a canceled capture must reject a late microphone grant")
+        } catch is CancellationError {} catch {
+            require(false, "capture cancellation must remain cancellation")
+        }
+        let status = await settings.value
+        require(status == .authorized && permission.status == .authorized,
+                "the shared owner must still publish a grant after capture cancellation")
+        require(system.requestCount == 1 && !permission.isRequesting,
+                "cancellation must neither duplicate the prompt nor leave it pending")
+    }
+
+    @MainActor
+    private static func concurrentWaitersRemainPending() async {
+        let system = MicrophoneAuthorizationStub(status: .notDetermined)
+        let permission = system.makePermission()
+        let first = Task { await permission.requestIfNeeded() }
+        await system.waitForRequest()
+        var secondFinished = false
+        let second = Task {
+            await permission.requestIfNeeded()
+            secondFinished = true
+        }
+        for _ in 0..<10 { await Task.yield() }
+        require(!secondFinished, "a second caller must await the actual OS decision")
+        system.resolve(with: .restricted)
+        await first.value
+        await second.value
     }
 
     @MainActor
@@ -76,11 +155,13 @@ struct DictationMicrophonePermissionRegression {
 
         require(permission.status == .notDetermined, "an unanswered prompt must not claim microphone access")
         require(permission.isRequesting, "the request button must be disabled while the system prompt is pending")
-        await permission.requestIfNeeded()
+        let manual = Task { await permission.requestIfNeeded() }
+        await Task.yield()
         require(system.requestCount == 1, "automatic entry and a manual request must share one pending prompt")
 
         system.resolve(with: .authorized)
         await entry.value
+        await manual.value
         require(permission.status == .authorized, "granting the prompt must immediately show microphone access")
         require(!permission.isRequesting, "completing the prompt must clear the pending state")
 
@@ -120,12 +201,14 @@ struct DictationMicrophonePermissionRegression {
         await system.waitForRequest()
         firstEntry.cancel()
 
-        await permission.requestIfNeeded()
+        let returningEntry = Task { await permission.requestIfNeeded() }
+        await Task.yield()
         require(permission.isRequesting, "leaving and returning must retain the pending system prompt")
         require(system.requestCount == 1, "view task cancellation must not allow a duplicate request")
 
         system.resolve(with: .denied)
         await firstEntry.value
+        await returningEntry.value
         require(permission.status == .denied, "a cancelled view task must still publish the user's microphone decision")
         require(!permission.isRequesting, "a decision after leaving the tab must release the request guard")
 

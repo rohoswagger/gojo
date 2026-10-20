@@ -1,5 +1,32 @@
 import Foundation
 
+enum DictationMicrophoneAuthorizationFailure: Error, Equatable, Sendable, LocalizedError {
+    case denied
+    case restricted
+    case notDetermined
+    case unknown(Int)
+
+    var errorDescription: String? {
+        switch self {
+        case .denied:
+            return "Allow Gojo to use the microphone in System Settings, then try again."
+        case .restricted:
+            return "Microphone access is restricted on this Mac. Check its privacy or device management settings."
+        case .notDetermined:
+            return "Microphone permission has not been decided. Allow access before starting dictation."
+        case .unknown:
+            return "Gojo could not determine microphone access. Reopen Gojo and try again."
+        }
+    }
+}
+
+enum DictationMicrophoneDiagnosticState: Equatable, Sendable {
+    case idle
+    case testing
+    case passed
+    case failed(String)
+}
+
 enum DictationCaptureMode: Sendable {
     case singleUtterance
     case continuous

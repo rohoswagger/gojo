@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D1CF000000000000000000B3 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1CF000000000000000000A2 /* main.swift */; };
+		D1CF000000000000000000B1 /* DictationHelperReadiness.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1CF000000000000000000A1 /* DictationHelperReadiness.swift */; };
+		D1CF000000000000000000B2 /* DictationHelperReadiness.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1CF000000000000000000A1 /* DictationHelperReadiness.swift */; };
 		A07900000000000000000001 /* NotchAutoHidePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = A07900000000000000000002 /* NotchAutoHidePolicy.swift */; };
 		1100290C2E847E2800035A57 /* NSItemProvider+LoadHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1100290B2E847E2800035A57 /* NSItemProvider+LoadHelpers.swift */; };
 		110029272E84FD4C00035A57 /* TemporaryFileStorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 110029262E84FD4C00035A57 /* TemporaryFileStorageService.swift */; };
@@ -236,6 +239,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		D1CF000000000000000000A2 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		D1CF000000000000000000A1 /* DictationHelperReadiness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationHelperReadiness.swift; sourceTree = "<group>"; };
 		A07900000000000000000002 /* NotchAutoHidePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchAutoHidePolicy.swift; sourceTree = "<group>"; };
 		D1CA000000000000000000A1 /* DictationModelValidationCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationModelValidationCache.swift; sourceTree = "<group>"; };
 		D1C7000000000000000000A1 /* DictationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationModels.swift; sourceTree = "<group>"; };
@@ -501,6 +506,7 @@
 		D1C7000000000000000000E1 /* Dictation */ = {
 			isa = PBXGroup;
 			children = (
+				D1CF000000000000000000A1 /* DictationHelperReadiness.swift */,
 				D1C7000000000000000000A1 /* DictationModels.swift */,
 				D1CA000000000000000000A1 /* DictationModelValidationCache.swift */,
 				D1C7000000000000000000A2 /* DictationProtocols.swift */,
@@ -755,6 +761,7 @@
 				B15063502C63D3F600EBB0E3 /* extensions */,
 				1471639B2C5D362F0068B555 /* components */,
 				14CEF4152C5CAED300855D72 /* GojoApp.swift */,
+				D1CF000000000000000000A2 /* main.swift */,
 				14CEF4172C5CAED300855D72 /* ContentView.swift */,
 				B17266E02C6532560031BA0D /* Localizable.xcstrings */,
 				14CEF4192C5CAED400855D72 /* Assets.xcassets */,
@@ -1178,6 +1185,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D1CF000000000000000000B2 /* DictationHelperReadiness.swift in Sources */,
 				C2B000000000000000213 /* WindowTargetResolver.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1186,6 +1194,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D1CF000000000000000000B3 /* main.swift in Sources */,
+				D1CF000000000000000000B1 /* DictationHelperReadiness.swift in Sources */,
 				D1C7000000000000000000B2 /* DictationModels.swift in Sources */,
 				D1CA000000000000000000B1 /* DictationModelValidationCache.swift in Sources */,
 				D1C7000000000000000000B3 /* DictationProtocols.swift in Sources */,

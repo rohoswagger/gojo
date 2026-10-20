@@ -29,9 +29,20 @@ private final class EngineFactoryProbe: @unchecked Sendable {
 @main
 private struct DictationAudioConfigurationRegression {
     static func main() async {
+        await deniedStartDoesNotCreateAudioEngine()
         await configurationChangesDoNotPrepareIdleAudio()
         await unauthorizedPreparationDoesNotCreateAudioEngine()
         print("Dictation audio configuration regression tests passed")
+    }
+
+    private static func deniedStartDoesNotCreateAudioEngine() async {
+        let factory = EngineFactoryProbe()
+        let capture = AVAudioEngineCaptureService(
+            authorizationStatus: { .denied },
+            makeAudioEngine: { try factory.makeEngine() }
+        )
+        do { try await capture.startCapture() } catch {}
+        assertEqual(factory.count, 0, "Denied capture must not construct an engine")
     }
 
     private static func configurationChangesDoNotPrepareIdleAudio() async {

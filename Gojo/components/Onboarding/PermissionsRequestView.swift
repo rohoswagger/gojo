@@ -112,6 +112,8 @@ struct AccessibilityRequestView: View {
 
     @State private var appeared = false
     @State private var handedOff = false
+    @State private var helperChecked = false
+    @State private var helperUnavailable = false
     @State private var pollTask: Task<Void, Never>?
     @State private var host: NSWindow?
     @StateObject private var companion = AccessibilityDragPanel()
@@ -134,7 +136,7 @@ struct AccessibilityRequestView: View {
                         .font(.title)
                         .fontWeight(.semibold)
 
-                    Text("Gojo needs Accessibility to snap your windows and replace the volume and brightness HUDs. We'll open Settings so you can switch it on.")
+                    Text("Gojo needs Accessibility for dictation shortcuts, inserting text, window controls, and the volume and brightness HUDs. We'll open Settings so you can switch it on.")
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.secondary)
                         .padding(.horizontal)
@@ -142,12 +144,18 @@ struct AccessibilityRequestView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "lock.shield")
                             .foregroundColor(.secondary)
-                        Text("Only used for window control and the HUDs.")
+                        Text("Used for shortcuts, text insertion, window controls, and HUDs.")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.leading)
                     }
                     .padding(.horizontal)
+                    if helperUnavailable {
+                        Text("Gojo could not connect to its background helper. Restart Gojo and try again.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal)
+                    }
                 }
                 .padding(.top, OnboardingLayout.titleGap)
                 .opacity(appeared ? 1 : 0)
@@ -160,6 +168,7 @@ struct AccessibilityRequestView: View {
                         .buttonStyle(.bordered)
                     Button("Open Settings") { handOff() }
                         .buttonStyle(GlassButtonStyle())
+                        .disabled(!helperChecked || helperUnavailable)
                 }
                 .padding(.bottom, OnboardingLayout.actionsBottom)
                 .opacity(appeared ? 1 : 0)
@@ -225,17 +234,35 @@ struct AccessibilityRequestView: View {
 
     private func startPolling() {
         pollTask?.cancel()
-        pollTask = Task {
+        pollTask = Task { @MainActor in
             while !Task.isCancelled {
-                if await XPCHelperClient.shared.isAccessibilityAuthorized() {
-                    let celebrate = companion.isVisible
-                    await MainActor.run { if celebrate { companion.markGranted() } }
-                    // Brief flash of the confirmation, then advance snappily.
-                    try? await Task.sleep(for: .seconds(celebrate ? 0.45 : 0.05))
-                    finish(onGranted)
+                do {
+                    let status = try await XPCHelperClient.shared.helperPermissionStatus()
+                    try Task.checkCancellation()
+                    helperChecked = true
+                    helperUnavailable = false
+                    if status.accessibilityAuthorized {
+                        let celebrate = companion.isVisible
+                        if celebrate { companion.markGranted() }
+                        try await Task.sleep(for: .seconds(celebrate ? 0.45 : 0.05))
+                        guard !Task.isCancelled else { return }
+                        finish(onGranted)
+                        return
+                    }
+                } catch is CancellationError {
                     return
+                } catch {
+                    guard !Task.isCancelled else { return }
+                    helperChecked = true
+                    helperUnavailable = true
+                    if handedOff {
+                        companion.hide()
+                        stepAside(false)
+                        handedOff = false
+                    }
                 }
-                try? await Task.sleep(for: .seconds(1))
+                do { try await Task.sleep(for: .seconds(1)) }
+                catch { return }
             }
         }
     }
@@ -269,29 +296,45 @@ final class MenuBarAccessibilityAuthorizationFlow: ObservableObject {
         acceptedDrag = false
         companion.onSkip = { [weak self] in self?.stop() }
         companion.onAcceptedDrop = { [weak self] in self?.acceptedDrag = true }
-        NSWorkspace.shared.open(Self.settingsURL)
-        companion.show()
         pollTask = Task { [weak self] in
             guard let self else { return }
-            let wasAuthorizedAtStart = await XPCHelperClient.shared.isAccessibilityAuthorized()
-            var observedUnauthorized = !wasAuthorizedAtStart
-            while !Task.isCancelled {
-                guard self.flowID == flowID else { return }
-                let isAuthorizedNow = await XPCHelperClient.shared.isAccessibilityAuthorized()
-                if !isAuthorizedNow { observedUnauthorized = true }
-                if AccessibilityAuthorizationFlowPolicy.shouldComplete(
-                    wasAuthorizedAtStart: wasAuthorizedAtStart,
-                    isAuthorizedNow: isAuthorizedNow,
-                    acceptedDrag: acceptedDrag,
-                    observedUnauthorized: observedUnauthorized
-                ) {
-                    companion.markGranted()
-                    try? await Task.sleep(for: .seconds(0.45))
+            do {
+                let initial = try await XPCHelperClient.shared.helperPermissionStatus()
+                guard !Task.isCancelled, self.flowID == flowID else { return }
+                let wasAuthorizedAtStart = initial.accessibilityAuthorized
+                var observedUnauthorized = !wasAuthorizedAtStart
+                NSWorkspace.shared.open(Self.settingsURL)
+                companion.show()
+                while !Task.isCancelled {
+                    let status = try await XPCHelperClient.shared.helperPermissionStatus()
                     guard !Task.isCancelled, self.flowID == flowID else { return }
-                    stop()
-                    return
+                    let isAuthorizedNow = status.accessibilityAuthorized
+                    if !isAuthorizedNow { observedUnauthorized = true }
+                    if AccessibilityAuthorizationFlowPolicy.shouldComplete(
+                        wasAuthorizedAtStart: wasAuthorizedAtStart,
+                        isAuthorizedNow: isAuthorizedNow,
+                        acceptedDrag: acceptedDrag,
+                        observedUnauthorized: observedUnauthorized
+                    ) {
+                        companion.markGranted()
+                        try await Task.sleep(for: .seconds(0.45))
+                        guard !Task.isCancelled, self.flowID == flowID else { return }
+                        stop()
+                        return
+                    }
+                    try await Task.sleep(for: .seconds(1))
                 }
-                try? await Task.sleep(for: .seconds(1))
+            } catch is CancellationError {
+                return
+            } catch {
+                guard !Task.isCancelled, self.flowID == flowID else { return }
+                stop()
+                let alert = NSAlert()
+                alert.alertStyle = .warning
+                alert.messageText = "Gojo helper unavailable"
+                alert.informativeText = "Gojo could not connect to its background helper. Restart Gojo and try again before changing Accessibility access."
+                alert.addButton(withTitle: "OK")
+                alert.runModal()
             }
         }
     }

@@ -9,13 +9,14 @@ cd "$repo_root"
 swiftc \
   -swift-version 5 \
   -warnings-as-errors \
-  -target arm64-apple-macosx14.0 \
+  -target "$(uname -m)-apple-macosx14.0" \
   Gojo/Dictation/DictationModels.swift \
   Gojo/Dictation/DictationProtocols.swift \
   Gojo/Dictation/DictationSessionStateMachine.swift \
   Gojo/Dictation/DictationModifierShortcutStateMachine.swift \
   Gojo/Dictation/DictationController.swift \
   Gojo/Dictation/DictationUtteranceSegmenter.swift \
+  Gojo/components/Settings/DictationMicrophonePermission.swift \
   Gojo/Dictation/AVAudioEngineCaptureService.swift \
   tests/dictation_regression.swift \
   -o "$binary_path"

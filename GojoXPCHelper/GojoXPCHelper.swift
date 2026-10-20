@@ -76,7 +76,88 @@ private struct PasteboardSnapshot {
 @_silgen_name("_AXUIElementGetWindow")
 private func _AXUIElementGetWindow(_ element: AXUIElement, _ identifier: UnsafeMutablePointer<CGWindowID>) -> AXError
 
+// NSXPCConnection permits calls from any thread. This endpoint never owns the connection.
+private final class DictationClientEndpoint: @unchecked Sendable {
+    private weak var connection: NSXPCConnection?
+
+    init(connection: NSXPCConnection) { self.connection = connection }
+
+    func invalidate() { connection?.invalidate() }
+
+    func send(_ event: DictationTapEvent, acknowledge: @escaping @Sendable (Bool) -> Void) {
+        guard let proxy = connection?.remoteObjectProxyWithErrorHandler({ _ in acknowledge(false) }) as? GojoXPCHelperInputProtocol else {
+            acknowledge(false)
+            return
+        }
+        let kind: Int
+        var exact = false, down = false, disallowed = false, reenabled = false
+        switch event.input {
+        case .flagsChanged(let e, let d, let x): kind = 0; exact = e; down = d; disallowed = x
+        case .keyDown: kind = 1
+        case .lockToggle: kind = 2
+        case .tapDisabled(let enabled): kind = 3; reenabled = enabled
+        }
+        proxy.dictationHotkeyInput(event.requestID.uuidString, helperInstanceID: event.helperInstanceID.uuidString,
+            sequence: event.sequence, kind: kind, exactChord: exact, triggerDown: down,
+            disallowed: disallowed, reenabled: reenabled, with: { acknowledge(true) })
+    }
+}
+
 class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
+    private let dictationOwner = UUID()
+    private var clientEndpoint: DictationClientEndpoint?
+
+    func attach(connection: NSXPCConnection) {
+        let endpoint = DictationClientEndpoint(connection: connection)
+        clientEndpoint = endpoint
+        DictationHotkeyTapService.shared.register(owner: dictationOwner) { endpoint.invalidate() }
+    }
+
+    func connectionDidEnd() {
+        DictationHotkeyTapService.shared.invalidate(owner: dictationOwner)
+    }
+
+    @objc func helperPermissionStatus(with reply: @escaping (NSDictionary) -> Void) {
+        reply(DictationHotkeyTapService.shared.permissionStatus.dictionary)
+    }
+
+    @objc func requestHelperAccessibility(with reply: @escaping (NSDictionary) -> Void) {
+        requestAccessibilityAuthorization()
+        helperPermissionStatus(with: reply)
+    }
+
+    @objc func startDictationHotkey(_ requestID: String, with reply: @escaping (NSDictionary) -> Void) {
+        guard let request = UUID(uuidString: requestID), let endpoint = clientEndpoint else {
+            reply([:]); return
+        }
+        let owner = dictationOwner
+        Task {
+            let result = await DictationHotkeyTapService.shared.start(owner: owner, request: request) { event, acknowledge in
+                endpoint.send(event, acknowledge: acknowledge)
+            }
+            reply(result.dictionary)
+        }
+    }
+
+    @objc func stopDictationHotkey(_ requestID: String, with reply: @escaping () -> Void) {
+        if let request = UUID(uuidString: requestID) { DictationHotkeyTapService.shared.stop(owner: dictationOwner, request: request) }
+        reply()
+    }
+
+    @objc func dictationHotkeyStatus(_ requestID: String, with reply: @escaping (NSDictionary) -> Void) {
+        guard let request = UUID(uuidString: requestID) else { reply([:]); return }
+        let owner = dictationOwner
+        Task { reply(await DictationHotkeyTapService.shared.status(owner: owner, request: request).dictionary) }
+    }
+
+    #if DEBUG
+    @objc func dictationHotkeyDiagnostics(_ requestID: String, recoverDisabled: Bool, with reply: @escaping (NSDictionary) -> Void) {
+        guard let request = UUID(uuidString: requestID) else { reply([:]); return }
+        let owner = dictationOwner
+        Task { reply(await DictationHotkeyTapService.shared.diagnostics(owner: owner, request: request, recoverDisabled: recoverDisabled)) }
+    }
+    #endif
+
     private enum TextTargetResolution {
         case editable(AXUIElement, allowsPasteFallback: Bool)
         case secure
@@ -115,6 +196,7 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
     }
 
     deinit {
+        connectionDidEnd()
         if let activationObserver {
             NSWorkspace.shared.notificationCenter.removeObserver(activationObserver)
         }
@@ -139,9 +221,7 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
             requestAccessibilityAuthorization()
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            reply(AXIsProcessTrusted())
-        }
+        reply(AXIsProcessTrusted())
     }
 
     @objc func startSearchHotkeyInterception(_ token: String, with reply: @escaping (Bool) -> Void) {

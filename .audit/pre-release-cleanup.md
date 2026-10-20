@@ -4,6 +4,8 @@ Base: `7f0f97d`, after PRs #69, #70 and #71. The original working checkout and i
 
 The audit covered the tracked native UI/lifecycle, dictation/XPC, utility features, website and release tooling. Changes remove unreachable code and reuse the existing window frame calculator, history operation and release literal. They add no dependencies. The website also drops its unused motion dependency.
 
+Native PR: https://github.com/rohoswagger/gojo/pull/72. Website/tooling PR: https://github.com/rohoswagger/gojo/pull/73. They are independent main-based changes.
+
 ## Review units
 
 - Native UI: delete ten unreachable files and unused members, retaining dynamic selectors, observers, previews and preference values.
@@ -24,8 +26,16 @@ The first integrated build caught a mistaken deletion of `GojoViewModel.animatio
 
 ## Retained risks and deferrals
 
-Existing native compiler warnings remain. Tests do not exercise every native interaction, physical display, real microphone/model inference, Shelf drag, Quick Look, EventKit permission, viewport or web interactive state. Production signing, notarization, packaging and publishing were not performed.
+Existing native compiler warnings remain; comparison against the baseline found no new warning categories. Tests do not exercise every native interaction, physical display, real microphone/model inference, Shelf drag, Quick Look, EventKit permission, viewport or web interactive state. Production signing, notarization, packaging and publishing were not performed.
 
 Published preview state, the Shelf view wrapper, dragged-slot writes, Calendar fetch repetition, availability fallbacks, live cleanup-model predicates, XPC compatibility and a security-scoped folder filter remain. Their removal needs stronger behavior evidence than static reachability. Unsafe clipboard-history smoke scripts were not run against real user data.
 
 The append-only TSV records decisions and corrections. Its `.omx/cleanup/` evidence references are local run artifacts in `/tmp/gojo-pre-release-cleanup`; commands above and committed regression scripts are the rerunnable PR evidence.
+
+## Final review follow-up
+
+Claude Opus 5.5 found no web/tooling code blocker, but caught an unintended app launch during inspection. Selecting Gojo by name started the installed app alongside the original dev build. The initial termination attempt did not quit it. The installed app was then quit through its menu, but the following CUA inspection apparently relaunched it under new PIDs. A fixed-PID check missed that restart. Root stopped the new processes directly without further CUA access; repeated scans by installed application path were empty while the original dev instance remained alive. This check provided no additional native UI coverage.
+
+The review also prompted removal of remaining dead article selectors, filename/URL consistency checks for release metadata, appcast regression wiring into the existing release-signing target, and removal of stale current-version wording in the public dictation architecture record. The trail records the model-routing fallback, project record edits, dependency pruning, negative controls and retained candidates.
+
+Claude Opus 5.5 approved the follow-up code in round two. Its remaining process-state flag was resolved by direct cleanup and repeated path-based absence checks, superseding the earlier fixed-PID claim. Both PRs are open for review. Native CI Debug, Release and signing checks passed before this audit-only update. Website CI signing passed and its builds were still in progress at the final status check; all local gates passed. No merge or tag was performed.

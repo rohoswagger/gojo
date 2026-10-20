@@ -20,6 +20,7 @@ final class DictationPanelController {
     private var subscriptions = Set<AnyCancellable>()
     private var isObserving = false
     private var suppressUntilInactive = false
+    private var explicitlyDismissed = false
     private var isPanelStartPending = false
     private var displayedOnID: String?
     private var dismissalTask: Task<Void, Never>?
@@ -65,7 +66,13 @@ final class DictationPanelController {
                 guard let self, !self.model.isPreview else { return }
                 self.model.recoveryText = text
                 self.model.recoveryMessage = message
+                if !text.isEmpty {
+                    self.dismissalTask?.cancel()
+                    self.dismissalTask = nil
+                    if !self.explicitlyDismissed, !self.suppressUntilInactive { self.presentPanel() }
+                }
                 self.resizePanel()
+                if text.isEmpty, case .error = self.model.state { self.scheduleErrorDismissal() }
             }
             .store(in: &subscriptions)
         NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
@@ -79,11 +86,13 @@ final class DictationPanelController {
         dismissalTask?.cancel()
         dismissalTask = nil
         suppressUntilInactive = false
+        explicitlyDismissed = false
         if !model.isPreview { synchronizePresentation() }
         presentPanel(onPointerDisplay: !isActive(service.state))
     }
 
     func dismiss() {
+        explicitlyDismissed = true
         dismissalTask?.cancel()
         dismissalTask = nil
         if model.isPreview {
@@ -95,6 +104,7 @@ final class DictationPanelController {
                 self?.suppressUntilInactive = false
             }
         }
+        model.showsDetails = false
         panel?.orderOut(nil)
         model.clearWaveform()
     }
@@ -144,6 +154,7 @@ final class DictationPanelController {
         guard !isActive(service.state) else { return }
         startObserving()
         dismissalTask?.cancel()
+        explicitlyDismissed = false
         model.isPreview = true
         model.present(state)
         model.activationMode = .voiceMode
@@ -189,6 +200,8 @@ final class DictationPanelController {
             if !isActive(state) { suppressUntilInactive = false }
             return
         }
+        if isActive(state) { explicitlyDismissed = false }
+        guard !explicitlyDismissed else { return }
         if state == .idle, previousState != .idle, model.shouldHideWhenFinished {
             model.state = previousState
             dismissalTask = Task { [weak self] in
@@ -219,6 +232,8 @@ final class DictationPanelController {
     }
 
     private func scheduleErrorDismissal() {
+        guard model.recoveryText.isEmpty, !explicitlyDismissed else { return }
+        dismissalTask?.cancel()
         dismissalTask = Task { [weak self] in
             do {
                 try await Task.sleep(for: .seconds(2))
@@ -229,7 +244,8 @@ final class DictationPanelController {
                     }
                     try await Task.sleep(for: .milliseconds(180))
                 } while self.model.showsDetails
-                guard !Task.isCancelled, case .error = self.model.state else { return }
+                guard !Task.isCancelled, case .error = self.model.state,
+                      self.model.recoveryText.isEmpty else { return }
                 await self.fadeOutPanel()
                 guard !Task.isCancelled else { return }
                 self.dismissalTask = nil
@@ -238,7 +254,7 @@ final class DictationPanelController {
     }
 
     private func fadeOutPanel() async {
-        guard !Task.isCancelled, let panel, panel.isVisible else { return }
+        guard !Task.isCancelled, model.recoveryText.isEmpty, let panel, panel.isVisible else { return }
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? 0.08 : 0.32
@@ -248,7 +264,10 @@ final class DictationPanelController {
                 continuation.resume()
             }
         }
-        guard !Task.isCancelled else { return }
+        guard !Task.isCancelled, model.recoveryText.isEmpty else {
+            if !explicitlyDismissed, panel.isVisible { panel.alphaValue = 1 }
+            return
+        }
         panel.orderOut(nil)
     }
 
@@ -314,7 +333,7 @@ final class DictationPanelController {
     private func placePanel(preferredDisplayID: String?) {
         let screens = screenDescriptions()
         guard let placement = DictationPanelPlacement.restore(
-            size: CGSize(width: DictationPanelPlacement.defaultSize.width, height: model.height),
+            size: model.size,
             screens: screens,
             pointerDisplayID: NSScreen.screenWithMouse?.displayUUID,
             preferredDisplayID: preferredDisplayID,
@@ -329,7 +348,7 @@ final class DictationPanelController {
     private func resizePanel() {
         guard let panel, panel.isVisible,
               let screen = screenDescriptions().first(where: { $0.id == displayedOnID }) else { return }
-        let frame = CGRect(origin: panel.frame.origin, size: CGSize(width: DictationPanelPlacement.defaultSize.width, height: model.height))
+        let frame = CGRect(origin: panel.frame.origin, size: model.size)
         panel.setFrame(DictationPanelPlacement.clamped(frame, to: screen.visibleFrame), display: true)
     }
 
@@ -360,7 +379,7 @@ final class DictationPanelController {
             positions[oldScreen.id] = position
         }
         guard let placement = DictationPanelPlacement.restore(
-            size: CGSize(width: DictationPanelPlacement.defaultSize.width, height: model.height),
+            size: model.size,
             screens: screens,
             preferredDisplayID: displayedOnID,
             fallbackDisplayID: sessionScreen()?.displayUUID,

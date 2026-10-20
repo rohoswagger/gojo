@@ -42,13 +42,26 @@ Recent clipboard items, browsable from the notch. Pin entries, search, paste bac
 
 ### Dictation
 
-Choose a speech model in **Settings > Dictation**, then click **Download**. Gojo never downloads a model by itself. Hold **Control+Option**, speak, and release either key to type into the field you selected. While holding both keys, press **Space** to lock voice mode on, then release the keys and keep talking. Press **Control+Option**, then **Space** again to finish.
+Choose a speech model in **Settings > Dictation**, then click **Download**. Gojo never downloads a model by itself. Hold **Control+Option**, speak, and release either key to type into the field you selected. While holding both keys, press **Space** to lock voice mode on, then release the keys and keep talking. Press **Control+Option**, then **Space** again to finish. Recording pauses any media that is playing and resumes it when the mic stops, including on cancel or a voice-mode pause. Media that was already paused stays paused.
 
-Open **Voice controls** from Dictation settings or the notch waveform button. The small floating capsule remembers where you drag it on each display. Voice mode keeps listening between phrases and follows the focused field at each phrase boundary. Click the waveform to pause, the play icon to resume, the checkmark to finish, or the cross to cancel. Hover for tooltips. The pause setting offers 0.6, 0.9, or 1.5 seconds. There is no automatic voice-session timeout. Sleep and screen lock cancel recording.
+Open **Voice controls** from Dictation settings or the notch waveform button. The small floating capsule remembers where you drag it on each display. You can record without selecting a text field. If no editable destination is selected, insertion fails, or the app cannot confirm receipt, a popover shows the full transcript. Click the capsule's center to reopen it. Use **Copy** to copy the text or **Discard** to remove it. Saved text stays available until you discard it, including across new sessions and canceling. Password fields and missing permissions still block recording. Voice mode keeps listening between phrases and follows the focused field at each phrase boundary. Click the waveform to pause, the play icon to resume, the checkmark to finish, or the cross to cancel. Hover for tooltips. The pause setting offers 0.6, 0.9, or 1.5 seconds. There is no automatic voice-session timeout. Sleep and screen lock cancel recording.
 
 Pause detection uses microphone volume. Sustained background noise can delay a phrase boundary, and very quiet speech can be missed. If Gojo cannot keep up with queued phrases, it stops with an error rather than silently skipping speech.
 
 Parakeet Unified handles English with punctuation and capitalization. Parakeet v3 covers 25 European languages. Whisper Small and Whisper Large v3 are English options. Downloaded models recognize speech on this Mac without an API key or cloud fallback. Optional S1-mini cleanup and vocabulary replacements also run locally. Selecting **OpenRouter** instead sends audio to the configured cloud model and requires an API key.
+
+Add names, code symbols, or jargon under **Settings > Dictation > Vocabulary**. A word on its own is enough: no spoken alias is required. Whisper models use saved words as recognition hints, Parakeet models don't support hints yet, and every model preserves a word's exact spelling. S1-mini does not receive the vocabulary as a prompt. **Learn from my corrections** is on by default: after you make the same similar-spelling fix twice in a readable text field within about 30 seconds of dictating, Gojo adds a local replacement you can edit or delete. Apps that don't expose their text are skipped, and Gojo does not log keystrokes or save full documents.
+
+Use **Import file…** to append words from a UTF-8 JSON, CSV, or text file up to 1 MiB. Existing words and aliases stay. Gojo skips duplicates and invalid terms, then reports how many words fit within the 250-entry limit. Use **Paste list…** for one word or phrase per line.
+
+JSON accepts a string array such as `["Kubernetes", "PostgreSQL"]`, objects such as `[{"word":"Kubernetes"}]`, or a `{"words":["Kubernetes"]}` wrapper. CSV accepts words in each cell, such as `Kubernetes,PostgreSQL`. A first-row `word`, `words`, or `term` header selects that column and ignores metadata columns. To import the literal word `word` first, use JSON or text. Text files keep one word or phrase per line, with commas and quotes treated literally.
+
+For a text file or **Paste list…**, enter:
+
+```text
+Kubernetes
+PostgreSQL
+```
 
 Gojo refuses password fields. In voice mode, a phrase targeting a password field stops recording without transcribing or saving that phrase. Previously accepted phrases finish normally. Each completed phrase stays tied to its captured field while processing. If the field changes or cannot be verified, voice mode keeps the text available for copying instead of redirecting it. The Control and Option shortcut is fixed so it is always easy to remember.
 

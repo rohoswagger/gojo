@@ -27,6 +27,47 @@ enum DictationMicrophoneDiagnosticState: Equatable, Sendable {
     case failed(String)
 }
 
+enum DictationTargetResolution<Target: Sendable>: Sendable {
+    case captured(Target)
+    case copyOnly(DictationCopyOnlyReason)
+
+    var capturedTarget: Target? {
+        guard case .captured(let target) = self else { return nil }
+        return target
+    }
+
+    var copyOnlyReason: DictationCopyOnlyReason? {
+        guard case .copyOnly(let reason) = self else { return nil }
+        return reason
+    }
+}
+
+enum DictationCopyOnlyReason: CaseIterable, Equatable, Sendable {
+    case noFocusedTextField
+    case nonEditableTarget
+
+    var message: String {
+        switch self {
+        case .noFocusedTextField:
+            return "No text field was selected. Your text is saved for copying."
+        case .nonEditableTarget:
+            return "The selected control cannot accept text. Your text is saved for copying."
+        }
+    }
+}
+
+enum DictationInsertionOutcome: Equatable, Sendable {
+    case verified
+    case unverified
+
+    var recoveryMessage: String? {
+        switch self {
+        case .verified: return nil
+        case .unverified: return "The app did not confirm receiving this text. It is saved for copying."
+        }
+    }
+}
+
 enum DictationCaptureMode: Sendable {
     case singleUtterance
     case continuous
@@ -171,6 +212,25 @@ enum DictationVocabularyPolicy {
         return result
     }
 
+    static func load() -> [DictationVocabularyEntry] {
+        guard let data = UserDefaults.standard.data(forKey: defaultsKey),
+              let entries = try? JSONDecoder().decode([DictationVocabularyEntry].self, from: data) else {
+            return []
+        }
+        return sanitized(entries)
+    }
+
+    static func recognitionTerms(_ entries: [DictationVocabularyEntry]) -> [String] {
+        var seen = Set<String>()
+        return sanitized(entries).compactMap { entry in
+            let key = entry.replacement.folding(
+                options: [.caseInsensitive],
+                locale: Locale(identifier: "en_US_POSIX")
+            )
+            return seen.insert(key).inserted ? entry.replacement : nil
+        }
+    }
+
     static func apply(_ entries: [DictationVocabularyEntry], to transcript: String) -> String {
         let candidates = sanitized(entries).enumerated().sorted {
             if $0.element.spoken.utf16.count == $1.element.spoken.utf16.count {
@@ -218,6 +278,196 @@ enum DictationVocabularyPolicy {
         character.unicodeScalars.allSatisfy {
             CharacterSet.alphanumerics.contains($0) || $0 == "_"
         }
+    }
+}
+
+enum DictationCorrectionLearningPolicy {
+    static let defaultsKey = "gojo.dictation.learnCorrections"
+    static let maximumTextLength = 4_000
+    static let maximumSegmentTokens = 3
+    static let maximumPhraseLength = 60
+
+    static func candidate(original: String, edited: String) -> DictationVocabularyEntry? {
+        let originalText = original.trimmingCharacters(in: .whitespacesAndNewlines)
+        let editedText = edited.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !originalText.isEmpty,
+              !editedText.isEmpty,
+              originalText.count <= maximumTextLength,
+              editedText.count <= maximumTextLength,
+              !originalText.contains(where: \.isNewline),
+              !editedText.contains(where: \.isNewline) else {
+            return nil
+        }
+
+        let originalTokens = tokens(originalText)
+        let editedTokens = tokens(editedText)
+        let shared = min(originalTokens.count, editedTokens.count)
+        var prefix = 0
+        while prefix < shared, originalTokens[prefix] == editedTokens[prefix] {
+            prefix += 1
+        }
+        var suffix = 0
+        while suffix < shared - prefix,
+              originalTokens[originalTokens.count - 1 - suffix]
+                  == editedTokens[editedTokens.count - 1 - suffix] {
+            suffix += 1
+        }
+
+        let originalSegment = originalTokens[prefix..<(originalTokens.count - suffix)]
+        let editedSegment = editedTokens[prefix..<(editedTokens.count - suffix)]
+        guard !originalSegment.isEmpty,
+              !editedSegment.isEmpty,
+              originalSegment.count <= maximumSegmentTokens,
+              editedSegment.count <= maximumSegmentTokens,
+              let spoken = trimmedPhrase(originalSegment),
+              let replacement = trimmedPhrase(editedSegment),
+              spoken.count <= maximumPhraseLength,
+              replacement.count <= maximumPhraseLength,
+              spoken.contains(where: \.isLetter),
+              replacement.contains(where: \.isLetter) else {
+            return nil
+        }
+
+        guard wordsAndSpaces(spoken) != wordsAndSpaces(replacement) else { return nil }
+
+        if isFirstLetterCaseChange(from: spoken, to: replacement),
+           isSentenceStart(afterTokens: originalTokens.prefix(prefix)) {
+            return nil
+        }
+
+        let spokenKey = foldedAlphanumerics(spoken)
+        let replacementKey = foldedAlphanumerics(replacement)
+        let longest = max(spokenKey.count, replacementKey.count)
+        guard longest <= maximumPhraseLength,
+              editDistance(spokenKey, replacementKey) <= max(2, longest / 3) else {
+            return nil
+        }
+        if originalSegment.count != editedSegment.count,
+           spokenKey != replacementKey,
+           !spokenKey.isEmpty,
+           !replacementKey.isEmpty {
+            let (longer, shorter) = spokenKey.count > replacementKey.count
+                ? (spokenKey, replacementKey)
+                : (replacementKey, spokenKey)
+            if longer.starts(with: shorter) || longer.reversed().starts(with: shorter.reversed()) {
+                return nil
+            }
+        }
+        return DictationVocabularyEntry(spoken: spoken, replacement: replacement)
+    }
+
+    private static func tokens(_ text: String) -> [String] {
+        text.split(whereSeparator: \.isWhitespace).map(String.init)
+    }
+
+    private static func trimmedPhrase(_ tokens: ArraySlice<String>) -> String? {
+        let characters = Array(tokens.joined(separator: " "))
+        var start = 0
+        var end = characters.count
+        while start < end, isEdgePunctuation(characters[start]) { start += 1 }
+        while end > start, isEdgePunctuation(characters[end - 1]) { end -= 1 }
+        return start < end ? String(characters[start..<end]) : nil
+    }
+
+    private static let meaningfulEdgeCharacters = Set<Unicode.Scalar>(["_", "@", "#"])
+
+    private static func isEdgePunctuation(_ character: Character) -> Bool {
+        character.unicodeScalars.allSatisfy {
+            CharacterSet.punctuationCharacters.contains($0) && !meaningfulEdgeCharacters.contains($0)
+        }
+    }
+
+    private static func wordsAndSpaces(_ text: String) -> String {
+        text.filter { $0.isLetter || $0.isNumber || $0.isWhitespace }
+    }
+
+    private static func foldedAlphanumerics(_ text: String) -> [Character] {
+        Array(text.filter { $0.isLetter || $0.isNumber }.lowercased())
+    }
+
+    private static func isFirstLetterCaseChange(from spoken: String, to replacement: String) -> Bool {
+        let before = Array(spoken)
+        let after = Array(replacement)
+        guard before.count == after.count,
+              let first = before.first,
+              let newFirst = after.first,
+              first != newFirst,
+              String(first).lowercased() == String(newFirst).lowercased() else {
+            return false
+        }
+        return before.dropFirst().elementsEqual(after.dropFirst())
+    }
+
+    private static func isSentenceStart(afterTokens preceding: ArraySlice<String>) -> Bool {
+        guard let last = preceding.last else { return true }
+        let closers = Set<Character>(["\"", "'", ")", "]", "}", "\u{201D}", "\u{2019}", "\u{00BB}"])
+        guard let terminal = last.last(where: { !closers.contains($0) }) else { return false }
+        return ".!?\u{2026}".contains(terminal)
+    }
+
+    private static func editDistance(_ lhs: [Character], _ rhs: [Character]) -> Int {
+        if lhs.isEmpty { return rhs.count }
+        if rhs.isEmpty { return lhs.count }
+        var previous = Array(0...rhs.count)
+        for (row, left) in lhs.enumerated() {
+            var current = [row + 1]
+            for (column, right) in rhs.enumerated() {
+                current.append(min(
+                    previous[column + 1] + 1,
+                    current[column] + 1,
+                    previous[column] + (left == right ? 0 : 1)
+                ))
+            }
+            previous = current
+        }
+        return previous[rhs.count]
+    }
+}
+
+struct DictationCorrectionLearner: Sendable {
+    static let maximumCandidates = 250
+
+    private struct Candidate: Sendable {
+        let aliasKey: String
+        let replacement: String
+    }
+
+    private var candidates: [Candidate] = []
+
+    mutating func observe(_ entry: DictationVocabularyEntry) -> DictationVocabularyEntry? {
+        guard let normalized = entry.normalized else { return nil }
+        let aliasKey = Self.collapsed(normalized.spoken).folding(
+            options: [.caseInsensitive],
+            locale: Locale(identifier: "en_US_POSIX")
+        )
+        let replacement = Self.collapsed(normalized.replacement)
+
+        guard let index = candidates.firstIndex(where: { $0.aliasKey == aliasKey }) else {
+            append(Candidate(aliasKey: aliasKey, replacement: replacement))
+            return nil
+        }
+        if candidates[index].replacement == replacement {
+            candidates.remove(at: index)
+            return normalized
+        }
+        candidates.remove(at: index)
+        append(Candidate(aliasKey: aliasKey, replacement: replacement))
+        return nil
+    }
+
+    mutating func reset() {
+        candidates.removeAll()
+    }
+
+    private mutating func append(_ candidate: Candidate) {
+        candidates.append(candidate)
+        if candidates.count > Self.maximumCandidates {
+            candidates.removeFirst(candidates.count - Self.maximumCandidates)
+        }
+    }
+
+    private static func collapsed(_ text: String) -> String {
+        text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
     }
 }
 
@@ -276,7 +526,8 @@ enum S1MiniVocabularyPipeline {
     static func finalize(
         correctedRawTranscript: String,
         polishedTranscript: String,
-        vocabulary: [DictationVocabularyEntry]
+        vocabulary: [DictationVocabularyEntry],
+        style: DictationWritingStyle = .punctuated
     ) -> String {
         let protectedTerms = vocabulary.compactMap { entry in
             correctedRawTranscript.range(of: entry.replacement, options: [.caseInsensitive]) == nil
@@ -297,7 +548,10 @@ enum S1MiniVocabularyPipeline {
         let canonicalTerms = vocabulary.map {
             DictationVocabularyEntry(spoken: $0.replacement, replacement: $0.replacement)
         }
-        return DictationVocabularyPolicy.apply(canonicalTerms, to: polishedTranscript)
+        return DictationVocabularyPolicy.apply(
+            canonicalTerms,
+            to: style.applyOutputConventions(to: polishedTranscript)
+        )
     }
 }
 

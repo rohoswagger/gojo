@@ -134,6 +134,8 @@ test-dictation:
 	bash ./tests/dictation_model_settings_regression.sh
 	./tests/dictation_regression.sh
 	bash ./tests/dictation_audio_configuration_regression.sh
+	bash ./tests/dictation_vocabulary_import_regression.sh
+	bash ./tests/settings_vocabulary_import_close_regression.sh
 	bash ./tests/dictation_pause_segmentation_regression.sh
 	bash ./tests/dictation_capture_liveness_regression.sh
 	bash ./tests/dictation_panel_regression.sh

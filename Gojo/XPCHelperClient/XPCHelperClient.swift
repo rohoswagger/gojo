@@ -940,6 +940,39 @@ final class XPCHelperClient: NSObject, @unchecked Sendable {
         } catch {}
     }
 
+    nonisolated func observeDictationCorrection(
+        _ text: String,
+        targetIdentity: String
+    ) async -> NSDictionary {
+        do {
+            try Task.checkCancellation()
+            let service = await MainActor.run {
+                ensureRemoteService()
+            }
+            try Task.checkCancellation()
+            return try await service.withContinuation { service, continuation in
+                service.observeDictationCorrection(text, targetIdentity: targetIdentity) { result in
+                    continuation.resume(returning: result)
+                }
+            }
+        } catch {
+            return [:]
+        }
+    }
+
+    nonisolated func cancelDictationCorrectionObservation() async {
+        do {
+            let service = await MainActor.run {
+                ensureRemoteService()
+            }
+            let _: Void = try await service.withContinuation { service, continuation in
+                service.cancelDictationCorrectionObservation {
+                    continuation.resume(returning: ())
+                }
+            }
+        } catch {}
+    }
+
     private nonisolated func performTextInsertion(
         _ text: String,
         token: String,

@@ -13,15 +13,22 @@ import LaunchAtLogin
 import Sparkle
 import SwiftUI
 import SwiftUIIntrospect
+import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @State private var selectedTab: String
     @State private var accentColorUpdateTrigger = UUID()
 
     let updaterController: SPUStandardUpdaterController?
+    private weak var settingsWindow: NSWindow?
 
-    init(updaterController: SPUStandardUpdaterController? = nil, initialTab: String = "General") {
+    init(
+        updaterController: SPUStandardUpdaterController? = nil,
+        initialTab: String = "General",
+        settingsWindow: NSWindow? = nil
+    ) {
         self.updaterController = updaterController
+        self.settingsWindow = settingsWindow
         _selectedTab = State(initialValue: initialTab)
     }
 
@@ -109,7 +116,7 @@ struct SettingsView: View {
                 case "Search":
                     SearchSettings()
                 case "Dictation":
-                    DictationSettings()
+                    DictationSettings(settingsWindow: settingsWindow)
                 case "Window Switcher":
                     AltTabSettings()
                 case "Shortcuts":
@@ -1400,6 +1407,7 @@ struct Shortcuts: View {
 }
 
 struct DictationSettings: View {
+    private weak var settingsWindow: NSWindow?
     @ObservedObject private var dictation = GojoDictationService.shared
     @AppStorage(DictationPauseDuration.defaultsKey)
     private var dictationPauseDurationRawValue = DictationPauseDuration.natural.rawValue
@@ -1413,6 +1421,14 @@ struct DictationSettings: View {
     @State private var vocabularyReplacementDraft = ""
     @State private var editingVocabularyID: UUID?
     @State private var vocabularyError: String?
+    @State private var vocabularyImportPresentation: VocabularyImportPresentation?
+    @State private var vocabularyImportOperation: VocabularyImportOperation?
+    @State private var vocabularyImportFeedback: VocabularyImportFeedback?
+    @State private var vocabularyImportLifetime: UUID?
+
+    init(settingsWindow: NSWindow? = nil) {
+        self.settingsWindow = settingsWindow
+    }
 
     var body: some View {
         Form {
@@ -1715,14 +1731,17 @@ struct DictationSettings: View {
             }
 
             Section {
-                TextField("When Gojo hears…", text: $vocabularySpokenDraft)
-                    .accessibilityLabel("Spoken phrase")
-                    .accessibilityHint("For example, g p t five point six sol.")
-                    .onSubmit(saveVocabularyDraft)
+                VStack(alignment: .leading, spacing: 4) {
+                    Toggle("Learn from my corrections", isOn: learnsCorrectionsBinding)
+                    Text("On by default. Gojo watches edits in the same text field for up to 30 seconds after dictation and learns a correction after you make it twice. This stays on this Mac. Learned entries appear below, where you can edit or delete them.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 3)
 
-                TextField("Replace it with…", text: $vocabularyReplacementDraft)
-                    .accessibilityLabel("Preferred spelling")
-                    .accessibilityHint("For example, gpt-5.6-sol.")
+                TextField("Word or phrase", text: $vocabularyReplacementDraft)
+                    .accessibilityLabel("Word or phrase")
+                    .accessibilityHint("The spelling Gojo should use, for example gpt-5.6-sol.")
                     .onSubmit(saveVocabularyDraft)
 
                 HStack {
@@ -1730,8 +1749,7 @@ struct DictationSettings: View {
                         saveVocabularyDraft()
                     }
                     .disabled(
-                        vocabularySpokenDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                            || vocabularyReplacementDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        vocabularyReplacementDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                     )
 
                     if editingVocabularyID != nil {
@@ -1739,7 +1757,24 @@ struct DictationSettings: View {
                             clearVocabularyDraft()
                         }
                     }
+
+                    Spacer()
+
+                    Button("Import file…") {
+                        vocabularyImportPresentation = .file
+                    }
+                    .disabled(vocabularyImportOperation != nil || vocabularyImportPresentation != nil)
+
+                    Button("Paste list…") {
+                        vocabularyImportFeedback = nil
+                        vocabularyImportPresentation = .paste
+                    }
+                    .disabled(vocabularyImportOperation != nil || vocabularyImportPresentation != nil)
                 }
+
+                Text("Import UTF-8 JSON, CSV, or text files up to 1 MiB. CSV treats a first-row word, words, or term column as a header.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
 
                 if let vocabularyError {
                     Label(vocabularyError, systemImage: "exclamationmark.circle.fill")
@@ -1747,29 +1782,46 @@ struct DictationSettings: View {
                         .foregroundStyle(.orange)
                 }
 
+                if let vocabularyImportFeedback {
+                    Text(vocabularyImportFeedback.message)
+                        .font(.caption)
+                        .foregroundStyle(vocabularyImportFeedback.errorMessage == nil ? Color.secondary : Color.orange)
+                        .textSelection(.enabled)
+                }
+
+                if vocabularyImportOperation != nil, vocabularyImportPresentation != .paste {
+                    HStack {
+                        ProgressView().controlSize(.small)
+                        Text("Importing words…").font(.caption)
+                        Button("Cancel import") { cancelVocabularyImport() }
+                    }
+                }
+
                 if dictation.vocabulary.isEmpty {
-                    Text("No custom terms yet. Add names, code symbols, or technical jargon Gojo should spell exactly.")
+                    Text("No words yet. Add names, code symbols, or technical jargon Gojo should spell exactly.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(dictation.vocabulary) { entry in
                         HStack(spacing: 10) {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(entry.spoken)
                                 Text(entry.replacement)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
                                     .textSelection(.enabled)
+                                if entry.spoken != entry.replacement {
+                                    Text("Also corrects: \(entry.spoken)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                             Spacer()
                             Button("Edit") {
                                 editingVocabularyID = entry.id
-                                vocabularySpokenDraft = entry.spoken
+                                vocabularySpokenDraft = entry.spoken == entry.replacement ? "" : entry.spoken
                                 vocabularyReplacementDraft = entry.replacement
                                 vocabularyError = nil
                             }
                             .buttonStyle(.borderless)
-                            .accessibilityLabel("Edit vocabulary entry for \(entry.spoken)")
+                            .accessibilityLabel("Edit vocabulary entry for \(entry.replacement)")
 
                             Button(role: .destructive) {
                                 dictation.removeVocabularyEntry(entry.id)
@@ -1780,7 +1832,7 @@ struct DictationSettings: View {
                                 Image(systemName: "trash")
                             }
                             .buttonStyle(.borderless)
-                            .accessibilityLabel("Delete vocabulary entry for \(entry.spoken)")
+                            .accessibilityLabel("Delete vocabulary entry for \(entry.replacement)")
                         }
                         .padding(.vertical, 2)
                     }
@@ -1788,12 +1840,37 @@ struct DictationSettings: View {
             } header: {
                 Text("Vocabulary")
             } footer: {
-                Text("Vocabulary replacements run on this Mac for every provider, even when AI cleanup is off or unavailable. Longer matching phrases take priority.")
+                Text("Whisper uses saved words as recognition hints. All models preserve their spelling and apply learned corrections locally. Parakeet recognition hints are not supported yet.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
         .navigationTitle("Dictation")
+        .fileImporter(
+            isPresented: vocabularyImportPresentationBinding(.file),
+            allowedContentTypes: [.text],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                if let url = urls.first { beginVocabularyImport(.file(url)) }
+            case .failure(let error):
+                if (error as? CocoaError)?.code != .userCancelled {
+                    vocabularyImportFeedback = .failure(error.localizedDescription)
+                }
+            }
+        }
+        .sheet(isPresented: vocabularyImportPresentationBinding(.paste), onDismiss: cancelVocabularyImport) {
+            VocabularyPasteSheet(
+                isImporting: vocabularyImportOperation != nil,
+                errorMessage: vocabularyImportFeedback?.errorMessage,
+                onImport: { beginVocabularyImport(.paste($0)) },
+                onCancel: {
+                    cancelVocabularyImport()
+                    vocabularyImportPresentation = nil
+                }
+            )
+        }
         .alert(item: $modelToRemove) { model in
             let descriptor = DictationModelDescriptor.descriptor(for: model)
             return Alert(
@@ -1817,6 +1894,16 @@ struct DictationSettings: View {
             Text("English transcript cleanup will turn off. Vocabulary corrections will keep working, and you can download the model again later.")
         }
         .onDisappear { dictation.cancelMicrophoneTest() }
+        .onAppear { vocabularyImportLifetime = UUID() }
+        .modifier(SettingsWindowCloseObserver(window: settingsWindow) {
+            vocabularyImportPresentation = nil
+            cancelVocabularyImport()
+        })
+        .onDisappear {
+            vocabularyImportLifetime = nil
+            vocabularyImportPresentation = nil
+            cancelVocabularyImport()
+        }
         .task {
             await microphonePermission.requestIfNeeded()
         }
@@ -1971,6 +2058,13 @@ struct DictationSettings: View {
         )
     }
 
+    private var learnsCorrectionsBinding: Binding<Bool> {
+        Binding(
+            get: { dictation.learnsCorrections },
+            set: { dictation.setLearnsCorrections($0) }
+        )
+    }
+
     private var writingStyleBinding: Binding<DictationWritingStyle> {
         Binding(
             get: { dictation.writingStyle },
@@ -1993,6 +2087,146 @@ struct DictationSettings: View {
             return "Download S1-mini by Superwhisper to add private, on-device English transcript cleanup."
         }
         return "Turn on AI polish to clean transcripts locally with your preferred writing style."
+    }
+
+    private enum VocabularyImportPresentation {
+        case file
+        case paste
+    }
+
+    private struct VocabularyImportOperation {
+        let id: UUID
+        let task: Task<Void, Never>
+    }
+
+    private enum VocabularyImportSource: Sendable {
+        case file(URL)
+        case paste(String)
+    }
+
+    private enum VocabularyImportFeedback {
+        case report(DictationVocabularyImport.Report)
+        case failure(String)
+
+        var message: String {
+            switch self {
+            case .report(let report):
+                return "Added \(report.added) \(report.added == 1 ? "word" : "words"). Skipped \(report.duplicates) \(report.duplicates == 1 ? "duplicate" : "duplicates"), \(report.invalid) invalid \(report.invalid == 1 ? "word" : "words"), and \(report.overLimit) beyond the \(DictationVocabularyEntry.maximumEntries)-entry limit."
+            case .failure(let detail):
+                return "Import failed. \(detail) No words imported."
+            }
+        }
+
+        var errorMessage: String? {
+            if case .failure = self { return message }
+            return nil
+        }
+    }
+
+    private enum VocabularyImportFileFailure: LocalizedError {
+        case notRegularFile
+        case unsupportedType
+
+        var errorDescription: String? {
+            switch self {
+            case .notRegularFile: return "Choose a regular file on this Mac."
+            case .unsupportedType: return "Choose a JSON, CSV, or plain text file."
+            }
+        }
+    }
+
+    private func vocabularyImportPresentationBinding(_ presentation: VocabularyImportPresentation) -> Binding<Bool> {
+        Binding(
+            get: { vocabularyImportPresentation == presentation },
+            set: { isPresented in
+                if isPresented {
+                    vocabularyImportPresentation = presentation
+                } else if vocabularyImportPresentation == presentation {
+                    vocabularyImportPresentation = nil
+                }
+            }
+        )
+    }
+
+    @MainActor
+    private func beginVocabularyImport(_ source: VocabularyImportSource) {
+        guard settingsWindow?.isVisible == true,
+              vocabularyImportOperation == nil, let lifetime = vocabularyImportLifetime else { return }
+        vocabularyImportFeedback = nil
+        let id = UUID()
+        let worker = Task.detached(priority: .userInitiated) {
+            try Self.readVocabularyImport(source)
+        }
+        let task = Task { @MainActor in
+            defer {
+                if vocabularyImportOperation?.id == id { vocabularyImportOperation = nil }
+            }
+            do {
+                let document = try await withTaskCancellationHandler {
+                    try await worker.value
+                } onCancel: {
+                    worker.cancel()
+                }
+                try Task.checkCancellation()
+                guard vocabularyImportOperation?.id == id, vocabularyImportLifetime == lifetime else { return }
+                vocabularyImportFeedback = .report(dictation.importVocabulary(document))
+                if vocabularyImportPresentation == .paste { vocabularyImportPresentation = nil }
+            } catch is CancellationError {
+            } catch {
+                guard !Task.isCancelled,
+                      vocabularyImportOperation?.id == id,
+                      vocabularyImportLifetime == lifetime else { return }
+                vocabularyImportFeedback = .failure(error.localizedDescription)
+            }
+        }
+        vocabularyImportOperation = VocabularyImportOperation(id: id, task: task)
+    }
+
+    private func cancelVocabularyImport() {
+        vocabularyImportOperation?.task.cancel()
+        vocabularyImportOperation = nil
+    }
+
+    nonisolated private static func readVocabularyImport(
+        _ source: VocabularyImportSource
+    ) throws -> DictationVocabularyImport.Document {
+        try Task.checkCancellation()
+        switch source {
+        case .paste(let text):
+            guard text.utf8.count <= DictationVocabularyImport.maximumBytes else {
+                throw DictationVocabularyImport.Failure.tooLarge
+            }
+            return try DictationVocabularyImport.parse(Data(text.utf8), format: .wordList)
+        case .file(let url):
+            guard url.isFileURL else { throw VocabularyImportFileFailure.notRegularFile }
+            return try url.accessSecurityScopedResource { scopedURL in
+                let values = try scopedURL.resourceValues(forKeys: [.isRegularFileKey, .contentTypeKey])
+                guard values.isRegularFile == true else { throw VocabularyImportFileFailure.notRegularFile }
+                let format: DictationVocabularyImport.Format
+                switch scopedURL.pathExtension.lowercased() {
+                case "json": format = .json
+                case "csv": format = .csv
+                default:
+                    guard values.contentType?.conforms(to: .plainText) == true else {
+                        throw VocabularyImportFileFailure.unsupportedType
+                    }
+                    format = .wordList
+                }
+                let handle = try FileHandle(forReadingFrom: scopedURL)
+                defer { try? handle.close() }
+                var data = Data()
+                while data.count <= DictationVocabularyImport.maximumBytes {
+                    try Task.checkCancellation()
+                    let remaining = DictationVocabularyImport.maximumBytes + 1 - data.count
+                    guard let chunk = try handle.read(upToCount: min(65_536, remaining)), !chunk.isEmpty else { break }
+                    data.append(chunk)
+                    if data.count > DictationVocabularyImport.maximumBytes {
+                        throw DictationVocabularyImport.Failure.tooLarge
+                    }
+                }
+                return try DictationVocabularyImport.parse(data, format: format)
+            }
+        }
     }
 
     private func saveVocabularyDraft() {
@@ -2042,6 +2276,47 @@ struct DictationSettings: View {
         if dictation.preparingModel != nil { return true }
         if !dictation.canChangeModel { return true }
         return dictation.selectedModel == model && dictation.isModelInstalled(model)
+    }
+}
+
+private struct VocabularyPasteSheet: View {
+    @State private var draft = ""
+    let isImporting: Bool
+    let errorMessage: String?
+    let onImport: (String) -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Paste vocabulary").font(.headline)
+            Text("Enter one word or phrase per line. Existing words stay, and duplicates are skipped.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            TextEditor(text: $draft)
+                .font(.body)
+                .border(Color.secondary.opacity(0.3))
+                .accessibilityLabel("Words to import")
+                .disabled(isImporting)
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
+            HStack {
+                if isImporting {
+                    ProgressView().controlSize(.small)
+                    Text("Importing words…").font(.caption)
+                }
+                Spacer()
+                Button("Cancel", action: onCancel).keyboardShortcut(.cancelAction)
+                Button("Import") { onImport(draft) }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(isImporting)
+            }
+        }
+        .padding(20)
+        .frame(width: 500, height: 360)
+        .interactiveDismissDisabled(isImporting)
     }
 }
 

@@ -3,15 +3,15 @@ import Foundation
 protocol DictationTargetCapturing: Sendable {
     associatedtype Target: Sendable
 
-    func captureTarget() async throws -> Target
-    func captureAdditionalTarget() async throws -> Target
+    func captureTarget() async throws -> DictationTargetResolution<Target>
+    func captureAdditionalTarget() async throws -> DictationTargetResolution<Target>
     func destinationIdentifier(for target: Target) -> String?
 }
 
 extension DictationTargetCapturing {
     func destinationIdentifier(for target: Target) -> String? { nil }
 
-    func captureAdditionalTarget() async throws -> Target {
+    func captureAdditionalTarget() async throws -> DictationTargetResolution<Target> {
         try await captureTarget()
     }
 }
@@ -64,13 +64,13 @@ protocol DictationTextPolishing: Sendable {
 protocol DictationTextInserting: Sendable {
     associatedtype Target: Sendable
 
-    func insert(_ text: String, into target: Target) async throws
-    func insertRetainingTarget(_ text: String, into target: Target) async throws
+    func insert(_ text: String, into target: Target) async throws -> DictationInsertionOutcome
+    func insertRetainingTarget(_ text: String, into target: Target) async throws -> DictationInsertionOutcome
     func releaseTarget(_ target: Target) async
 }
 
 extension DictationTextInserting {
-    func insertRetainingTarget(_ text: String, into target: Target) async throws {
+    func insertRetainingTarget(_ text: String, into target: Target) async throws -> DictationInsertionOutcome {
         try await insert(text, into: target)
     }
 

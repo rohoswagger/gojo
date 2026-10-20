@@ -369,11 +369,7 @@ actor S1MiniDictationPolisher: DictationTextPolishing {
             ) ?? "") ?? .punctuated
         },
         vocabularyProvider: @escaping @Sendable () -> [DictationVocabularyEntry] = {
-            guard let data = UserDefaults.standard.data(forKey: DictationVocabularyPolicy.defaultsKey),
-                  let entries = try? JSONDecoder().decode([DictationVocabularyEntry].self, from: data) else {
-                return []
-            }
-            return DictationVocabularyPolicy.sanitized(entries)
+            DictationVocabularyPolicy.load()
         }
     ) {
         self.enabledProvider = enabledProvider
@@ -398,12 +394,12 @@ actor S1MiniDictationPolisher: DictationTextPolishing {
         defer { polishingTask = nil }
         do {
             let polished = try await task.value
-            let finalized = S1MiniVocabularyPipeline.finalize(
+            return S1MiniVocabularyPipeline.finalize(
                 correctedRawTranscript: correctedRaw,
                 polishedTranscript: polished,
-                vocabulary: vocabulary
+                vocabulary: vocabulary,
+                style: style
             )
-            return style.applyOutputConventions(to: finalized)
         } catch is CancellationError {
             throw CancellationError()
         } catch {

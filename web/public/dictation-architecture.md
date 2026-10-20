@@ -2,7 +2,7 @@
 
 Status: v1 local-mode architecture and evaluation record, originally reviewed 2026-07-23. Public distribution facts checked 2026-10-12.
 
-Gojo 1.5.1 also offers optional OpenRouter cloud dictation. This document’s local-processing guarantees apply only to local mode; selecting cloud mode sends audio to the chosen provider using the user’s API key. Local mode has no automatic cloud fallback.
+Gojo also offers optional OpenRouter cloud dictation. This document’s local-processing guarantees apply only to local mode; selecting cloud mode sends audio to the chosen provider using the user’s API key. Local mode has no automatic cloud fallback.
 
 ## Decision
 
@@ -117,7 +117,7 @@ Copy upstream copyright and notice material into Gojo's shipped notices when an 
 - Accessibility insertion unsupported: an explicitly enabled clipboard-paste fallback may be used, with atomic clipboard save/restore and clear failure reporting.
 - Accessibility-opaque terminal: a reviewed bundle may use direct Unicode keyboard events. Gojo must keep the captured process and window active, recheck them before every chunk, and never enable this path globally.
 
-There is no cloud fallback in the local dictation feature. Gojo 1.5.1 also includes a separate opt-in OpenRouter mode that sends audio to the selected provider. It is outside this local-mode architecture record.
+There is no cloud fallback in the local dictation feature. Gojo also includes a separate opt-in OpenRouter mode that sends audio to the selected provider. It is outside this local-mode architecture record.
 
 ## Delivery sequence
 
@@ -152,7 +152,7 @@ The engine decision is revisited when a candidate beats the current default on t
 - Accessibility insertion verifies the resulting value before reporting success. The browser compatibility path cannot read the resulting DOM value through AX, so it reports `verified=false`, restores the clipboard after the paste event, and is covered by a fixture that checks the actual received text.
 - Unicode-event insertion also reports `verified=false` because an AX-opaque terminal does not expose its resulting value. It can stop before the next chunk if focus changes, but text already delivered before that change cannot be rolled back. Such failures are marked `partialInsertion` so the app does not tell the user that nothing was added.
 - Input-device changes during an utterance still rely on the recorder/watchdog failure path. Add explicit route-change testing across built-in microphones, headsets, sleep/wake, and 1,000 start/stop cycles.
-- The current published 1.5.1 app binary is arm64 only. Intel compatibility is not verified for the signed download; local-model performance has only been measured on Apple Silicon.
+- Intel compatibility is not verified for the signed download; local-model performance has only been measured on Apple Silicon.
 
 ## Future screen awareness
 

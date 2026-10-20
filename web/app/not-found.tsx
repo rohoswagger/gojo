@@ -4,7 +4,7 @@ import { GojoFooter } from "@/components/gojo-footer";
 import { GojoHeader } from "@/components/gojo-header";
 import { Section } from "@/components/section";
 import { Button } from "@/components/ui/button";
-import { GOJO_RELEASE } from "@/lib/release";
+import { GOJO_RELEASE } from "@/lib/release.mjs";
 
 export default function NotFound() {
   return (

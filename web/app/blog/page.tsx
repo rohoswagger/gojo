@@ -5,7 +5,7 @@ import Link from "next/link";
 import { GojoFooter } from "@/components/gojo-footer";
 import { GojoHeader } from "@/components/gojo-header";
 import { Button } from "@/components/ui/button";
-import { GOJO_RELEASE } from "@/lib/release";
+import { GOJO_RELEASE } from "@/lib/release.mjs";
 import { loadHub } from "./lib";
 
 const hub = loadHub();

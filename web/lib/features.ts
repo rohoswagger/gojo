@@ -31,10 +31,6 @@ export function getFeature(slug: string): Feature | undefined {
   return data.features.find((feature) => feature.slug === slug)
 }
 
-export function getFeaturesUpdated(): string {
-  return data.updated
-}
-
 const featureVisuals: Partial<Record<string, { src: string; width: number; height: number; alt: string; caption: string }>> = {
   "local-dictation": {
     src: "/screenshots/dictation-models.png",

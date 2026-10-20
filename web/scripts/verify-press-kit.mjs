@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import { existsSync, readFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { parse } from "node-html-parser"
+import { GOJO_RELEASE } from "../lib/release.mjs"
 
 const read = (path) => readFileSync(resolve(path), "utf8")
 const compact = (value) => value.replace(/\s+/g, " ").trim()
@@ -12,6 +13,9 @@ const releaseVersions = new Set(
 )
 assert.equal(releaseVersions.size, 1, "All app targets must share one release version")
 const [releaseVersion] = releaseVersions
+assert.equal(GOJO_RELEASE.version, releaseVersion, "Web release must match the native release version")
+assert.equal(GOJO_RELEASE.fileName, `Gojo-${releaseVersion}.dmg`, "Artifact filename must match the release version")
+assert.ok(GOJO_RELEASE.downloadUrl.endsWith(`/${GOJO_RELEASE.fileName}`), "Download URL must identify the versioned artifact")
 
 const pressHtml = read("out/press/index.html")
 const pressCss = read("app/press.css")
@@ -75,8 +79,8 @@ for (const asset of ["out/assets/demo.mp4", "out/assets/demo-poster.jpg", "out/a
 assert.ok(homepageText.includes("$9.99 one time"))
 assert.ok(homepageText.includes("$19.99 one time"))
 assert.ok(downloadText.includes(`Version ${releaseVersion}`))
-assert.ok(downloadText.includes("17.2 MB"))
-assert.ok(downloadText.includes("510c5e9d8c3732a1cd8c91925d2c4a15d586d51e5468a985632bd2ada1a3b814"))
+assert.ok(downloadText.includes(GOJO_RELEASE.fileSizeLabel))
+assert.ok(downloadText.includes(GOJO_RELEASE.sha256))
 
 const sitemap = read("out/sitemap.xml")
 const pressEntry = [...sitemap.matchAll(/<url>\s*([\s\S]*?)\s*<\/url>/g)]

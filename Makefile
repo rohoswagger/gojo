@@ -101,6 +101,7 @@ run-onboarding: reset-onboarding run
 
 test-release-signing:
 	./tests/release_signing_regression.sh
+	python3 -B .github/scripts/test_update_appcast.py
 
 smoke:
 	./tests/gojo_smoke.sh

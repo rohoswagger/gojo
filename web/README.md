@@ -28,7 +28,7 @@ The route crawl validates local assets, fragments, landmarks, canonicals and dow
 
 ## Update release details
 
-`lib/release.ts` pairs the download page's version, immutable artifact URL, byte
+`lib/release.mjs` pairs the download page's version, immutable artifact URL, byte
 size and SHA-256. The homepage also uses this release record for its version.
 Keep the versioned URL and checksum together. The mutable `Gojo.dmg` alias can
 change after a release.
@@ -37,16 +37,17 @@ Before updating the record, compare `../appcast.xml` with the release tag and
 download the versioned artifact. Read the actual byte count and SHA-256.
 
 ```sh
-curl --fail --location --output /tmp/Gojo-1.5.1.dmg https://downloads.trygojo.com/Gojo-1.5.1.dmg
-wc -c < /tmp/Gojo-1.5.1.dmg
-shasum -a 256 /tmp/Gojo-1.5.1.dmg
+curl --fail --location --output /tmp/Gojo-1.6.0.dmg https://downloads.trygojo.com/Gojo-1.6.0.dmg
+wc -c < /tmp/Gojo-1.6.0.dmg
+shasum -a 256 /tmp/Gojo-1.6.0.dmg
 ```
 
-The published artifact was checked on 2026-10-16. The GET returned HTTP 200 at
-`https://downloads.trygojo.com/Gojo-1.5.1.dmg`. Its 17,217,841 bytes match the
-appcast enclosure. Tag `v1.5.1` sets the app's marketing version to `1.5.1`.
-Its SHA-256 is
-`510c5e9d8c3732a1cd8c91925d2c4a15d586d51e5468a985632bd2ada1a3b814`.
+The published 1.6.0 artifact was downloaded for the cleanup audit and measured
+again locally on 2026-10-19. Its 17,399,815 bytes match the published appcast
+enclosure. Its SHA-256 is
+`65f3291ee7f613269ea550cf24dd5ab69f170f85c529771b62be3c3038a9da8a`.
+The press verifier imports this record and independently checks the native
+project's marketing version.
 
 ## Preserve page behavior
 

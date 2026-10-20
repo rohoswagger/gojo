@@ -1,10 +1,6 @@
 /**
  * Marks for the alternatives.
  *
- * Only four of the twelve ship a logo in public/assets/utilities/. The rest
- * fall back to a monogram tile so the versus layout is complete either way —
- * dropping a file in and adding a line below is all it takes to upgrade one.
- *
  * These are third-party marks used for identification in comparison content;
  * every page carries the "not affiliated with or endorsed by" note.
  */

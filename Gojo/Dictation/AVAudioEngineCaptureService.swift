@@ -59,16 +59,26 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
     private var preparedContext: CaptureContext?
     private var continuousContext: ContinuousCaptureContext?
     private var continuousPump: Task<Void, Never>?
+    private let authorizationStatus: @Sendable () -> AVAuthorizationStatus
+    private let makeAudioEngine: @Sendable () throws -> AVAudioEngine
     private let levelObserver: LevelObserver
     private var livenessWatchdog: Task<Void, Never>?
     private var configurationChangeObserver: (any NSObjectProtocol)?
 
-    init(levelObserver: @escaping LevelObserver = { _ in }) {
+    init(
+        authorizationStatus: @escaping @Sendable () -> AVAuthorizationStatus = {
+            AVCaptureDevice.authorizationStatus(for: .audio)
+        },
+        makeAudioEngine: @escaping @Sendable () throws -> AVAudioEngine = { AVAudioEngine() },
+        levelObserver: @escaping LevelObserver = { _ in }
+    ) {
+        self.authorizationStatus = authorizationStatus
+        self.makeAudioEngine = makeAudioEngine
         self.levelObserver = levelObserver
     }
 
     func requestPermission() async -> Bool {
-        switch AVCaptureDevice.authorizationStatus(for: .audio) {
+        switch authorizationStatus() {
         case .authorized:
             return true
         case .notDetermined:
@@ -86,7 +96,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
 
     func prepareForCaptureIfAuthorized() async {
         observeConfigurationChangesIfNeeded()
-        guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized,
+        guard authorizationStatus() == .authorized,
               context == nil,
               continuousContext == nil,
               preparedContext == nil else { return }
@@ -152,7 +162,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
         }
         discardPreparedCapture()
 
-        let engine = existingCapture?.engine ?? AVAudioEngine()
+        let engine = try existingCapture?.engine ?? makeAudioEngine()
         let inputNode = existingCapture?.inputNode ?? engine.inputNode
         let tapFormat = try Self.tapFormat(for: inputNode)
         let segmenter = try DictationUtteranceSegmenter(
@@ -315,7 +325,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
         }
     }
 
-    private func handleConfigurationChange(engineID: ObjectIdentifier) async {
+    func handleConfigurationChange(engineID: ObjectIdentifier) async {
         if let preparedContext, ObjectIdentifier(preparedContext.engine) == engineID {
             discardPreparedCapture()
         }
@@ -328,7 +338,6 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
                 throwing: AVAudioEngineCaptureError.inputConfigurationChanged
             )
         }
-        await prepareForCaptureIfAuthorized()
     }
 
     private static func tapFormat(for inputNode: AVAudioInputNode) throws -> AVAudioFormat {
@@ -353,7 +362,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
         #if DEBUG
         let startTime = ProcessInfo.processInfo.systemUptime
         #endif
-        let engine = AVAudioEngine()
+        let engine = try makeAudioEngine()
         let inputNode = engine.inputNode
         let hardwareFormat = inputNode.outputFormat(forBus: 0)
         #if DEBUG

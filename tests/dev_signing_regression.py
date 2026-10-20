@@ -381,11 +381,29 @@ class StopRunnerTests(unittest.TestCase):
                     plistlib.dump({"CFBundleIdentifier": dev.APP_ID + ".GojoXPCHelper", "CFBundleExecutable": "GojoXPCHelper"}, stream)
                 for bundle in [helper.parents[2], *apps]:
                     subprocess.run(["/usr/bin/codesign", "--force", "--sign", "-", str(bundle)], check=True, capture_output=True)
-                children = [subprocess.Popen([str(executable), "60"]) for executable in [*executables, helper]]
-                with contextlib.redirect_stdout(io.StringIO()):
-                    dev.stop(apps[0], timeout=0.3)
-                self.assertEqual(children[0].wait(timeout=2), -signal.SIGTERM)
-                self.assertEqual(children[2].wait(timeout=2), -signal.SIGTERM)
+                children = [subprocess.Popen(
+                    [str(executable), "60"],
+                    preexec_fn=lambda: signal.signal(signal.SIGTERM, signal.SIG_IGN),
+                ) for executable in [*executables, helper]]
+                deadline = time.monotonic() + 2
+                while True:
+                    self.assertTrue(all(child.poll() is None for child in children), "Fixture exited before stop")
+                    processes = dev.process_snapshot()
+                    if all(child.pid in processes and Path(processes[child.pid].executable).resolve() == path.resolve()
+                           for child, path in zip(children, [*executables, helper])):
+                        break
+                    self.assertLess(time.monotonic(), deadline, "Fixture processes did not become observable")
+                    time.sleep(0.01)
+                with patch.object(dev.os, "kill", wraps=os.kill) as kill:
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        dev.stop(apps[0], timeout=0.3)
+                own_pids = {children[0].pid, children[2].pid}
+                self.assertEqual({call.args[0] for call in kill.call_args_list}, own_pids)
+                for pid in own_pids:
+                    actions = [call.args[1] for call in kill.call_args_list if call.args[0] == pid]
+                    self.assertEqual(actions, [signal.SIGTERM, signal.SIGKILL])
+                for child in [children[0], children[2]]:
+                    self.assertEqual(child.wait(timeout=2), -signal.SIGKILL)
                 self.assertIsNone(children[1].poll())
             finally:
                 for child in children:

@@ -208,3 +208,5 @@ swiftc \
 "$BIN"
 
 bash tests/search_file_cancellation_regression.sh
+
+bash tests/search_panel_lifecycle_regression.sh

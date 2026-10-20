@@ -294,7 +294,7 @@ where TargetProvider: DictationTargetCapturing,
         targetSnapshot = capturedTarget
         targetObserver?(capturedTarget)
 
-        Task { [transcriber] in await transcriber.prepare() }
+        Task { [transcriber] in try? await transcriber.prepare() }
         publishState()
 
         do {

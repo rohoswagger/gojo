@@ -78,14 +78,14 @@ actor LocalDictationTranscriber: LocalDictationTranscribing {
         }
     }
 
-    func prepare() async {
+    func prepare() async throws {
         switch selectedModel {
         case .whisperSmallEnglish, .whisperLargeV3:
-            await whisper.prepare()
+            try await whisper.prepare()
         case .parakeetUnifiedEnglish:
-            await parakeet.prepare()
+            try await parakeet.prepare()
         case .parakeetV3Multilingual:
-            await parakeetV3.prepare()
+            try await parakeetV3.prepare()
         }
     }
 

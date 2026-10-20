@@ -90,8 +90,8 @@ actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
         return transcript
     }
 
-    func prepare() async {
-        _ = try? await loadManager()
+    func prepare() async throws {
+        _ = try await loadManager()
     }
 
     func cancelTranscription() async {
@@ -127,8 +127,13 @@ actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
 
     private func loadManager() async throws -> AsrManager {
         if let manager { return manager }
-        if let loadTask { return try await loadTask.task.value }
+        if let loadTask {
+            do { return try await loadTask.task.value }
+            catch is CancellationError { throw CancellationError() }
+            catch { throw DictationModelPreparationError.classify(error) }
+        }
 
+        try DictationModelPreparationError.checkStorage()
         guard let snapshot = installedModelFolder() else {
             throw WhisperKitDictationError.modelNotInstalled
         }
@@ -156,7 +161,8 @@ actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
             if loadTask?.generation == generation {
                 loadTask = nil
             }
-            throw error
+            if error is CancellationError { throw error }
+            throw DictationModelPreparationError.classify(error)
         }
     }
 

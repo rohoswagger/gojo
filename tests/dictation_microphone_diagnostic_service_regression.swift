@@ -138,6 +138,7 @@ private final class GojoDictationService {
     private var modelOperation: Int?
     private var selectedProvider = DictationProvider.local
     private var selectedModel = DictationModelID.whisperSmallEnglish
+    private var modelErrors: [DictationModelID: String] = [:]
     private var installedModels: Set<DictationModelID> = [.whisperSmallEnglish]
     private var hasOpenRouterAPIKey = false
     private var hasVerifiedOpenRouterModel = false

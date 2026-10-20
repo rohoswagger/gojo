@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D1E1000000000000000000B1 /* DictationModelPreparation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1E1000000000000000000A1 /* DictationModelPreparation.swift */; };
 		D1CF000000000000000000B3 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1CF000000000000000000A2 /* main.swift */; };
 		D1CF000000000000000000B1 /* DictationHelperReadiness.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1CF000000000000000000A1 /* DictationHelperReadiness.swift */; };
 		D1CF000000000000000000B2 /* DictationHelperReadiness.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1CF000000000000000000A1 /* DictationHelperReadiness.swift */; };
@@ -239,6 +240,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		D1E1000000000000000000A1 /* DictationModelPreparation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationModelPreparation.swift; sourceTree = "<group>"; };
 		D1CF000000000000000000A2 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		D1CF000000000000000000A1 /* DictationHelperReadiness.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationHelperReadiness.swift; sourceTree = "<group>"; };
 		A07900000000000000000002 /* NotchAutoHidePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchAutoHidePolicy.swift; sourceTree = "<group>"; };
@@ -506,6 +508,7 @@
 		D1C7000000000000000000E1 /* Dictation */ = {
 			isa = PBXGroup;
 			children = (
+				D1E1000000000000000000A1 /* DictationModelPreparation.swift */,
 				D1CF000000000000000000A1 /* DictationHelperReadiness.swift */,
 				D1C7000000000000000000A1 /* DictationModels.swift */,
 				D1CA000000000000000000A1 /* DictationModelValidationCache.swift */,
@@ -1195,6 +1198,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D1CF000000000000000000B3 /* main.swift in Sources */,
+				D1E1000000000000000000B1 /* DictationModelPreparation.swift in Sources */,
 				D1CF000000000000000000B1 /* DictationHelperReadiness.swift in Sources */,
 				D1C7000000000000000000B2 /* DictationModels.swift in Sources */,
 				D1CA000000000000000000B1 /* DictationModelValidationCache.swift in Sources */,

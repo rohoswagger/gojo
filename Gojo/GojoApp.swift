@@ -71,8 +71,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let vm: GojoViewModel = .init()
     @ObservedObject var coordinator = GojoViewCoordinator.shared
     var quickShareService = QuickShareService.shared
-    var whatsNewWindow: NSWindow?
-    var timer: Timer?
     var closeNotchTask: Task<Void, Never>?
     private var previousScreens: [NSScreen]?
     private var onboardingWindowController: NSWindowController?
@@ -1367,17 +1365,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         return viewModels.first(where: { $0.value === viewModel }).flatMap { windows[$0.key] }
-    }
-
-    func deviceHasNotch() -> Bool {
-        if #available(macOS 12.0, *) {
-            for screen in NSScreen.screens {
-                if screen.safeAreaInsets.top > 0 {
-                    return true
-                }
-            }
-        }
-        return false
     }
 
     @objc func screenConfigurationDidChange() {

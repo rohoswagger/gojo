@@ -91,35 +91,6 @@ extension NSImage {
         
     }
     
-    func getBrightness() -> CGFloat {
-        guard let cgImage = self.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
-            return 0
-        }
-        
-        let inputImage = CIImage(cgImage: cgImage)
-        
-        let filter = CIFilter.areaAverage()
-        filter.inputImage = inputImage
-        filter.extent = inputImage.extent
-        
-        guard let outputImage = filter.outputImage else {
-            return 0
-        }
-        
-        let context = CIContext(options: nil)
-        
-        var bitmap = [UInt8](repeating: 0, count: 4)
-        context.render(outputImage,
-                       toBitmap: &bitmap,
-                       rowBytes: 4,
-                       bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
-                       format: .RGBA8,
-                       colorSpace: CGColorSpaceCreateDeviceRGB())
-        
-        let brightness = (0.2126 * CGFloat(bitmap[0]) + 0.7152 * CGFloat(bitmap[1]) + 0.0722 * CGFloat(bitmap[2])) / 255.0
-        
-        return brightness
-    }
 }
 
 extension Color {

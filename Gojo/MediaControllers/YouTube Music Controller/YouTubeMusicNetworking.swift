@@ -67,10 +67,6 @@ final class YouTubeMusicHTTPClient: ObservableObject {
         return try await sendCommand(endpoint: "/like", method: "POST", token: token)
     }
 
-    func toggleDislike(token: String) async throws -> Data {
-        return try await sendCommand(endpoint: "/dislike", method: "POST", token: token)
-    }
-    
     // MARK: - Commands
     func sendCommand(
         endpoint: String,
@@ -136,8 +132,6 @@ actor YouTubeMusicWebSocketClient {
     private let session: URLSession
     private let onMessage: @Sendable (Data) async -> Void
     private let onDisconnect: @Sendable () async -> Void
-    
-    var isConnected: Bool { task != nil }
     
     init(
         onMessage: @escaping @Sendable (Data) async -> Void,

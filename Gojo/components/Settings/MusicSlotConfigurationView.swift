@@ -165,47 +165,6 @@ struct MusicSlotConfigurationView: View {
         }
     }
 
-    private func slotConfigRow(for index: Int) -> some View {
-        let currentSlot = slotValue(at: index)
-
-        return HStack(spacing: 12) {
-            Text("\(index + 1)")
-                .font(.system(size: 14, weight: .medium, design: .monospaced))
-                .foregroundStyle(.secondary)
-                .frame(width: 20)
-
-            Group {
-                if currentSlot != .none {
-                    slotPreview(for: currentSlot)
-                        .frame(height: 32)
-                        .onDrag {
-                            DispatchQueue.main.async { draggedSlot = currentSlot }
-                            return NSItemProvider(object: NSString(string: "slot:\(index)"))
-                        }
-                        .onDrop(of: [UTType.plainText.identifier], isTargeted: nil) { providers in
-                            let handled = handleDrop(providers, toIndex: index)
-                            DispatchQueue.main.async { draggedSlot = nil }
-                            return handled
-                        }
-                } else {
-                    // empty slot: allow drops but not dragging
-                    slotPreview(for: currentSlot)
-                        .frame(height: 32)
-                        .onDrop(of: [UTType.plainText.identifier], isTargeted: nil) { providers in
-                            let handled = handleDrop(providers, toIndex: index)
-                            DispatchQueue.main.async { draggedSlot = nil }
-                            return handled
-                        }
-                }
-            }
-
-            Spacer()
-        }
-        .padding(8)
-        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
-        .cornerRadius(6)
-    }
-
     @ViewBuilder
     private func slotPreview(for slot: MusicControlButton) -> some View {
         ZStack {
@@ -248,13 +207,6 @@ struct MusicSlotConfigurationView: View {
         guard target > musicControlSlots.count else { return }
         let missing = target - musicControlSlots.count
         musicControlSlots.append(contentsOf: Array(repeating: .none, count: missing))
-    }
-
-    private func slotBinding(for index: Int) -> Binding<MusicControlButton> {
-        Binding(
-            get: { slotValue(at: index) },
-            set: { newValue in updateSlot(newValue, at: index) }
-        )
     }
 
     private func slotValue(at index: Int) -> MusicControlButton {

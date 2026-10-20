@@ -37,29 +37,6 @@ class WebcamManager: NSObject, ObservableObject {
 
     private let sessionQueue = DispatchQueue(label: "Gojo.WebcamManager.SessionQueue", qos: .userInitiated)
     
-    private var isCleaningUp: Bool = false
-    
-    // MARK: - Constants
-    
-    enum WebcamError: Error, LocalizedError {
-        case deviceUnavailable
-        case accessDenied
-        case configurationFailed(String)
-        
-        var errorDescription: String? {
-            switch self {
-            case .deviceUnavailable:
-                return "No camera devices available"
-            case .accessDenied:
-                return "Camera access denied"
-            case .configurationFailed(let message):
-                return "Camera configuration failed: \(message)"
-            }
-        }
-    }
-    
-    // MARK: - Properties
-    
     private override init() {
         super.init()
         NotificationCenter.default.addObserver(self, selector: #selector(deviceWasDisconnected), name: .AVCaptureDeviceWasDisconnected, object: nil)

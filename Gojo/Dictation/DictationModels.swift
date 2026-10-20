@@ -65,17 +65,6 @@ enum DictationWritingStyle: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    var prompt: String {
-        switch self {
-        case .casual:
-            return "Use all lowercase. Keep the wording conversational and natural, like a text message. Preserve contractions and use only the punctuation needed for clarity."
-        case .punctuated:
-            return "Keep the wording conversational and natural, with standard capitalization and light punctuation as needed for clarity."
-        case .formal:
-            return "Use polished, professional wording and complete punctuation without changing the meaning or adding information."
-        }
-    }
-
     var s1MiniStyle: String {
         switch self {
         case .casual: return "semi-casual"
@@ -622,7 +611,6 @@ enum DictationFailure: Error, Equatable, Sendable {
     case targetUnavailable(String)
     case captureFailed(String)
     case transcriptionFailed(String)
-    case emptyTranscript
     case transcriptionReturnedNoText
     case insertionFailed(String)
 }

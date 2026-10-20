@@ -264,8 +264,6 @@ where TargetProvider: DictationTargetCapturing,
         return true
     }
 
-    func terminate() { cancel() }
-
     private func beginCapture(
         sessionID expectedSession: UUID,
         mode: DictationCaptureMode,

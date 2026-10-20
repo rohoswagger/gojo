@@ -75,12 +75,6 @@ final class SearchHotkeyTapService {
 
     private init() {}
 
-    var isActive: Bool {
-        stateLock.lock()
-        defer { stateLock.unlock() }
-        return eventTap != nil
-    }
-
     private final class TapCreationResult {
         var succeeded = false
     }

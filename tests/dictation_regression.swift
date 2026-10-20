@@ -2051,8 +2051,8 @@ struct DictationRegressionRunner {
 
         await controller.hotKeyDown()
         await waitForState(.listening, controller: controller, message: "second session should listen")
-        await controller.terminate()
-        await waitForState(.idle, controller: controller, message: "termination should return to idle")
+        await controller.cancel()
+        await waitForState(.idle, controller: controller, message: "cancellation should return to idle")
         for _ in 0..<100 {
             if await audio.cancellations > 0, await polisher.cancellations > 0 {
                 break
@@ -2061,10 +2061,10 @@ struct DictationRegressionRunner {
         }
         let cancellationCount = await audio.cancellations
         let polisherCancellationCount = await polisher.cancellations
-        assertCondition(cancellationCount > 0, "termination should cancel active audio")
+        assertCondition(cancellationCount > 0, "cancellation should cancel active audio")
         assertCondition(
             polisherCancellationCount > 0,
-            "termination should cancel the polisher alongside audio and transcription"
+            "cancellation should cancel the polisher alongside audio and transcription"
         )
     }
 

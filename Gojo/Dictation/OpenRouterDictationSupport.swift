@@ -21,12 +21,9 @@ enum DictationProvider: String, CaseIterable, Identifiable, Sendable {
 
 enum DictationOpenRouterSettings {
     static let modelDefaultsKey = "gojo.dictation.openRouterModel"
-    static let cleanupModelDefaultsKey = "gojo.dictation.cleanupModel"
     static let polishingEnabledDefaultsKey = "gojo.dictation.polishingEnabled"
-    static let customInstructionsDefaultsKey = "gojo.dictation.customInstructions"
     static let defaultTranscriptionModel = "soniox/stt-rt-v5"
     static let fallbackTranscriptionModel = "deepgram/nova-3"
-    static let defaultCleanupModel = "openai/gpt-oss-20b"
 }
 
 // MARK: - Keychain
@@ -46,18 +43,6 @@ enum DictationKeychainError: LocalizedError, Sendable {
 enum DictationKeychain {
     private static let service = "rohoswagger.gojo.dictation"
     private static let account = "openrouter-api-key"
-
-    static func save(_ key: String) throws {
-        try saveOpenRouterAPIKey(key)
-    }
-
-    static func load() throws -> String? {
-        try loadOpenRouterAPIKey()
-    }
-
-    static func delete() throws {
-        try deleteOpenRouterAPIKey()
-    }
 
     static func saveOpenRouterAPIKey(_ key: String) throws {
         guard !key.isEmpty, let value = key.data(using: .utf8) else {
@@ -194,12 +179,6 @@ enum DictationWAVEncoder {
     }
 }
 
-extension DictationAudio {
-    func pcm16WAVData() throws -> Data {
-        try DictationWAVEncoder.encode(self)
-    }
-}
-
 // MARK: - OpenRouter wire types and client
 
 struct OpenRouterTranscriptionModel: Codable, Equatable, Sendable, Identifiable {
@@ -229,11 +208,6 @@ struct OpenRouterTranscriptionModel: Codable, Equatable, Sendable, Identifiable 
     }
 }
 
-struct OpenRouterMessage: Codable, Equatable, Sendable {
-    let role: String
-    let content: String
-}
-
 struct OpenRouterTranscriptionRequest: Encodable, Equatable, Sendable {
     let model: String
     let inputAudio: InputAudio
@@ -253,24 +227,6 @@ struct OpenRouterTranscriptionRequest: Encodable, Equatable, Sendable {
     }
 }
 
-struct OpenRouterChatRequest: Encodable, Equatable, Sendable {
-    let model: String
-    let messages: [OpenRouterMessage]
-    let temperature: Double
-    let maxTokens: Int
-    let stream: Bool
-    let provider: Provider?
-
-    struct Provider: Encodable, Equatable, Sendable {
-        let sort: String
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case model, messages, temperature, stream, provider
-        case maxTokens = "max_tokens"
-    }
-}
-
 enum OpenRouterDictationError: LocalizedError, Sendable {
     case missingAPIKey
     case unauthorized
@@ -281,7 +237,6 @@ enum OpenRouterDictationError: LocalizedError, Sendable {
     case invalidResponse
     case unsupportedModel
     case emptyResponse
-    case truncatedResponse
 
     var errorDescription: String? {
         switch self {
@@ -294,7 +249,6 @@ enum OpenRouterDictationError: LocalizedError, Sendable {
         case .invalidResponse: return "OpenRouter returned an invalid dictation response."
         case .unsupportedModel: return "No supported OpenRouter transcription model is available."
         case .emptyResponse: return "OpenRouter returned an empty dictation response."
-        case .truncatedResponse: return "OpenRouter could not safely finish polishing this transcript."
         }
     }
 }
@@ -302,14 +256,6 @@ enum OpenRouterDictationError: LocalizedError, Sendable {
 protocol OpenRouterDictationClient: Sendable {
     func listTranscriptionModels(apiKey: String?) async throws -> [OpenRouterTranscriptionModel]
     func transcribe(audio: Data, model: String, apiKey: String, language: String?) async throws -> String
-    func chatCompletion(
-        model: String,
-        apiKey: String,
-        messages: [OpenRouterMessage],
-        temperature: Double,
-        maxTokens: Int,
-        sort: String
-    ) async throws -> String
 }
 
 actor OpenRouterAPIClient: OpenRouterDictationClient {
@@ -370,48 +316,6 @@ actor OpenRouterAPIClient: OpenRouterDictationClient {
         return result.text
     }
 
-    func chatCompletion(
-        model: String,
-        apiKey: String,
-        messages: [OpenRouterMessage],
-        temperature: Double,
-        maxTokens: Int,
-        sort: String = "latency"
-    ) async throws -> String {
-        try Task.checkCancellation()
-        let requestBody = OpenRouterChatRequest(
-            model: model,
-            messages: messages,
-            temperature: temperature,
-            maxTokens: maxTokens,
-            stream: false,
-            provider: .init(sort: sort)
-        )
-        var request = URLRequest(url: baseURL.appendingPathComponent("chat/completions"))
-        request.httpMethod = "POST"
-        request.httpBody = try encoder.encode(requestBody)
-        addHeaders(to: &request, apiKey: apiKey, contentType: "application/json")
-        let (data, response) = try await send(request)
-        try validate(response)
-        try Task.checkCancellation()
-        let result: ChatResponse
-        do {
-            result = try decoder.decode(ChatResponse.self, from: data)
-        } catch {
-            throw OpenRouterDictationError.invalidResponse
-        }
-        guard let choice = result.choices.first else {
-            throw OpenRouterDictationError.invalidResponse
-        }
-        if choice.finishReason == "length" {
-            throw OpenRouterDictationError.truncatedResponse
-        }
-        guard let content = choice.message.content else {
-            throw OpenRouterDictationError.invalidResponse
-        }
-        return content
-    }
-
     private func addHeaders(to request: inout URLRequest, apiKey: String?, contentType: String?) {
         if let apiKey {
             request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
@@ -457,24 +361,6 @@ actor OpenRouterAPIClient: OpenRouterDictationClient {
 
     private struct TranscriptionResponse: Decodable {
         let text: String
-    }
-
-    private struct ChatResponse: Decodable {
-        let choices: [Choice]
-
-        struct Choice: Decodable {
-            let message: Message
-            let finishReason: String?
-
-            enum CodingKeys: String, CodingKey {
-                case message
-                case finishReason = "finish_reason"
-            }
-        }
-
-        struct Message: Decodable {
-            let content: String?
-        }
     }
 }
 
@@ -569,130 +455,5 @@ actor OpenRouterDictationTranscriber: LocalDictationTranscribing {
             transcriptionTask = nil
             transcriptionID = nil
         }
-    }
-}
-
-// MARK: - LLM polishing adapter
-
-actor OpenRouterDictationPolisher: DictationTextPolishing {
-    private let client: OpenRouterDictationClient
-    private let apiKeyProvider: @Sendable () -> String?
-    private let styleProvider: @Sendable () -> DictationWritingStyle
-    private let customInstructionsProvider: @Sendable () -> String?
-    private let modelProvider: @Sendable () -> String
-    private let enabledProvider: @Sendable () -> Bool
-    private var polishingTask: Task<String, Error>?
-    private var polishingID: UUID?
-
-    init(
-        client: OpenRouterDictationClient = OpenRouterAPIClient(),
-        apiKeyProvider: @escaping @Sendable () -> String? = {
-            try? DictationKeychain.loadOpenRouterAPIKey()
-        },
-        styleProvider: @escaping @Sendable () -> DictationWritingStyle = {
-            DictationWritingStyle(rawValue: UserDefaults.standard.string(
-                forKey: DictationWritingStyle.defaultsKey
-            ) ?? "") ?? .punctuated
-        },
-        customInstructionsProvider: @escaping @Sendable () -> String? = {
-            UserDefaults.standard.string(forKey: DictationOpenRouterSettings.customInstructionsDefaultsKey)
-        },
-        modelProvider: @escaping @Sendable () -> String = {
-            UserDefaults.standard.string(forKey: DictationOpenRouterSettings.cleanupModelDefaultsKey)
-                ?? DictationOpenRouterSettings.defaultCleanupModel
-        },
-        enabledProvider: @escaping @Sendable () -> Bool = {
-            let provider = DictationProvider(
-                rawValue: UserDefaults.standard.string(forKey: DictationProvider.defaultsKey) ?? ""
-            ) ?? .local
-            let enabled = UserDefaults.standard.object(
-                forKey: DictationOpenRouterSettings.polishingEnabledDefaultsKey
-            ) as? Bool ?? false
-            return provider == .openRouter && enabled
-        }
-    ) {
-        self.client = client
-        self.apiKeyProvider = apiKeyProvider
-        self.styleProvider = styleProvider
-        self.customInstructionsProvider = customInstructionsProvider
-        self.modelProvider = modelProvider
-        self.enabledProvider = enabledProvider
-    }
-
-    func polish(_ transcript: String) async throws -> String {
-        guard enabledProvider(), !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return transcript
-        }
-        polishingTask?.cancel()
-        let client = self.client
-        let apiKeyProvider = self.apiKeyProvider
-        let styleProvider = self.styleProvider
-        let customInstructionsProvider = self.customInstructionsProvider
-        let modelProvider = self.modelProvider
-        let requestID = UUID()
-        let task = Task<String, Error> {
-            try Task.checkCancellation()
-            guard let apiKey = apiKeyProvider(), !apiKey.isEmpty else {
-                throw OpenRouterDictationError.missingAPIKey
-            }
-            let style = styleProvider()
-            let systemPrompt = Self.systemPrompt(style: style, customInstructions: customInstructionsProvider())
-            let result = try await client.chatCompletion(
-                model: modelProvider(),
-                apiKey: apiKey,
-                messages: [
-                    OpenRouterMessage(role: "system", content: systemPrompt),
-                    OpenRouterMessage(role: "user", content: transcript),
-                ],
-                temperature: 0,
-                maxTokens: Self.outputTokenBudget(for: transcript),
-                sort: "latency"
-            )
-            guard !result.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                throw OpenRouterDictationError.emptyResponse
-            }
-            return style.applyOutputConventions(to: result)
-        }
-        polishingTask = task
-        polishingID = requestID
-        defer {
-            if polishingID == requestID {
-                polishingTask = nil
-                polishingID = nil
-            }
-        }
-        return try await task.value
-    }
-
-    func cancelPolishing() async {
-        let task = polishingTask
-        let requestID = polishingID
-        task?.cancel()
-        if let task {
-            _ = await task.result
-        }
-        if polishingID == requestID {
-            polishingTask = nil
-            polishingID = nil
-        }
-    }
-
-    static func systemPrompt(style: DictationWritingStyle, customInstructions: String?) -> String {
-        var prompt = """
-        You are Gojo's dictation editor. Return only the edited text, with no explanation, quotation marks, or preamble.
-        Preserve the speaker's meaning, facts, names, numbers, URLs, code, and ordering. Remove only obvious filler words, false starts, and accidental repetition. Never invent details, summarize, answer questions, or turn a request into an answer.
-        Style: \(style.label). \(style.prompt)
-        """
-        if let customInstructions {
-            let trimmed = customInstructions.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !trimmed.isEmpty {
-                prompt += "\nAdditional style instructions from the user: \(trimmed)"
-            }
-        }
-        return prompt
-    }
-
-    static func outputTokenBudget(for transcript: String) -> Int {
-        min(4_096, max(1_024, transcript.utf8.count))
     }
 }

@@ -124,9 +124,8 @@ def completion(
         "model": model,
         "messages": messages(case, prompt_format),
         "temperature": 0,
-        # Match OpenRouterDictationPolisher.outputTokenBudget exactly. Some
-        # reasoning-capable models consume part of this budget before emitting
-        # visible text, even for a short cleanup request.
+        # Some reasoning-capable models consume part of this budget before
+        # emitting visible text, even for a short cleanup request.
         "max_tokens": min(4_096, max(1_024, len(case["transcript"].encode("utf-8")))),
         "stream": False,
     }

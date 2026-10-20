@@ -424,10 +424,6 @@ final class GojoDictationService: ObservableObject {
         return failure.localizedDescription
     }
 
-    var isModelReady: Bool {
-        installedModels.contains(selectedModel)
-    }
-
     var preparingModel: DictationModelID? {
         guard case .installing(let model) = modelOperation else { return nil }
         return model
@@ -645,7 +641,6 @@ final class GojoDictationService: ObservableObject {
     func pauseVoiceMode() { Self.sendShortcutEvent(.pauseVoiceMode) }
     func resumeVoiceMode() { Self.sendShortcutEvent(.resumeVoiceMode) }
     func finishVoiceMode() { Self.sendShortcutEvent(.finishVoiceMode) }
-    func stopVoiceMode() { finishVoiceMode() }
     func clearRecoveryText() { Self.sendShortcutEvent(.clearRecoveryText) }
 
     func terminate() { Self.sendShortcutEvent(.cancel) }
@@ -1067,8 +1062,6 @@ extension DictationFailure: LocalizedError {
             return "Gojo could not use the microphone. Check your microphone and try again."
         case .transcriptionFailed(let detail):
             return detail
-        case .emptyTranscript:
-            return "Gojo did not hear anything."
         case .transcriptionReturnedNoText:
             return "Gojo recorded audio but could not recognize speech. Try speaking a little longer."
         case .insertionFailed(let detail):

@@ -84,6 +84,25 @@ final class XPCHelperClient: DictationHotkeyTransport {
     #endif
 }
 
+actor ControlledRecoverySleep {
+    private var sleepers: [(Int, CheckedContinuation<Void, Never>)] = []
+    private(set) var scheduledCount = 0
+    private(set) var cancelledOnWake: Set<Int> = []
+    var pendingCount: Int { sleepers.count }
+    func sleep() async {
+        scheduledCount += 1
+        let identifier = scheduledCount
+        await withCheckedContinuation { sleepers.append((identifier, $0)) }
+        if Task.isCancelled { cancelledOnWake.insert(identifier) }
+    }
+    func releaseFirst() { if !sleepers.isEmpty { sleepers.removeFirst().1.resume() } }
+    func releaseAll() {
+        let pending = sleepers
+        sleepers.removeAll()
+        pending.forEach { $0.1.resume() }
+    }
+}
+
 @main
 struct DictationShortcutCancellationRegression {
     @MainActor
@@ -222,6 +241,8 @@ struct DictationShortcutCancellationRegression {
         await cancellationMonitor.refreshReadiness()
         expect(cancellationMonitor.isMonitoring && cancellation.stops.isEmpty,
             "A status timeout must preserve a valid active lease")
+        expect(cancellationMonitor.shortcutReadiness == .ready && cancellationMonitor.helperState == .available(cancellation.permission),
+            "An active timeout retains the last confirmed operational state while retrying")
         expectCommands([], "A status timeout must not cancel active capture")
         cancellation.statusFailure = nil
         await cancellationMonitor.refreshReadiness()
@@ -239,6 +260,71 @@ struct DictationShortcutCancellationRegression {
         await cancelledPassiveRefresh.value
         expect(stoppedMonitor.helperState == .checking && stoppedMonitor.shortcutReadiness == .stopped,
             "Cancellation of a stopped passive refresh must not manufacture a helper failure")
+
+        let retryTransport = XPCHelperClient()
+        retryTransport.permission = HelperPermissionStatus(instanceID: UUID(), accessibilityAuthorized: true)
+        retryTransport.failure = .timedOut
+        let retrySleep = ControlledRecoverySleep()
+        let retryMonitor = DictationModifierHotKeyMonitor(transport: retryTransport,
+            sleepForRecovery: { _ in await retrySleep.sleep() })
+        await retryMonitor.start()
+        for _ in 0..<1_000 {
+            if await retrySleep.pendingCount == 1 { break }
+            await Task.yield()
+        }
+        expect(await retrySleep.pendingCount == 1, "Timeout schedules the monitor's own backoff")
+        NotificationCenter.default.post(name: .helperConnectionStateChanged, object: nil,
+            userInfo: ["failure": HelperConnectionFailure.interrupted])
+        for _ in 0..<1_000 {
+            if retryMonitor.helperState == .unavailable(.interrupted) { break }
+            await Task.yield()
+        }
+        expect(retryMonitor.helperState == .unavailable(.interrupted), "The real connection observer processes interruption")
+        retryTransport.failure = nil
+        for _ in 0..<1_000 {
+            if await retrySleep.pendingCount == 2 { break }
+            await Task.yield()
+        }
+        await retrySleep.releaseFirst()
+        for _ in 0..<100 { await Task.yield() }
+        expect(retryTransport.authorizationChecks == 1 && !retryMonitor.isMonitoring,
+            "A stale timeout wake cannot consume the replacement retry")
+        await retrySleep.releaseAll()
+        for _ in 0..<1_000 {
+            if retryMonitor.shortcutReadiness == .ready { break }
+            await Task.yield()
+        }
+        expect(retryMonitor.shortcutReadiness == .ready && retryMonitor.isMonitoring,
+            "Timeout followed by interruption must autonomously recover without an external refresh")
+        expect(retryTransport.authorizationChecks == 2 && retryTransport.starts.count == 1,
+            "Only the monitor's replacement retry probes and starts the recovered transport")
+        retryTransport.statusFailure = .timedOut
+        await retryMonitor.refreshReadiness()
+        expect(retryMonitor.isMonitoring && retryMonitor.shortcutReadiness == .ready,
+            "A slow active helper keeps its confirmed shortcut readiness")
+        for _ in 0..<1_000 {
+            if await retrySleep.pendingCount == 1 { break }
+            await Task.yield()
+        }
+        NotificationCenter.default.post(name: .helperConnectionStateChanged, object: nil,
+            userInfo: ["failure": HelperConnectionFailure.interrupted])
+        for _ in 0..<1_000 {
+            if await retrySleep.pendingCount == 2 { break }
+            await Task.yield()
+        }
+        expect(!retryMonitor.isMonitoring && retryMonitor.shortcutReadiness == .unavailable(.helper(.interrupted)),
+            "A true interruption invalidates an active lease even after a slow status probe")
+        await retrySleep.releaseFirst()
+        for _ in 0..<100 { await Task.yield() }
+        let currentRetryID = await retrySleep.scheduledCount
+        retryMonitor.stop()
+        await retrySleep.releaseAll()
+        for _ in 0..<1_000 {
+            if await retrySleep.cancelledOnWake.contains(currentRetryID) { break }
+            await Task.yield()
+        }
+        expect(await retrySleep.cancelledOnWake.contains(currentRetryID),
+            "The stale task must not clear the newer recovery task: Stop still cancels that exact retry")
 
         let pending = XPCHelperClient()
         let pendingMonitor = DictationModifierHotKeyMonitor(transport: pending, observeConnectionChanges: false)

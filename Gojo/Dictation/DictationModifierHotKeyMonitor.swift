@@ -13,6 +13,7 @@ final class DictationModifierHotKeyMonitor: ObservableObject {
     private let logger = Logger(subsystem: "rohoswagger.gojo.dictation", category: "shortcut")
     private let activationDelay: Duration = .milliseconds(75)
     private let transport: any DictationHotkeyTransport
+    private let sleepForRecovery: @Sendable (Duration) async throws -> Void
     private var observers: [NSObjectProtocol] = []
     private var desiredEnabled = false
     private var active = false
@@ -25,8 +26,10 @@ final class DictationModifierHotKeyMonitor: ObservableObject {
     private var startRequests = DictationEventTapStartRequestPolicy()
     private var machine = DictationModifierShortcutStateMachine(mode: .holdToTalk)
 
-    init(transport: any DictationHotkeyTransport, observeConnectionChanges: Bool = true) {
+    init(transport: any DictationHotkeyTransport, observeConnectionChanges: Bool = true,
+         sleepForRecovery: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }) {
         self.transport = transport
+        self.sleepForRecovery = sleepForRecovery
         transport.dictationInputHandler = { [weak self] event in self?.handleEventTapInput(event) }
         if observeConnectionChanges {
             observers.append(NotificationCenter.default.addObserver(forName: .helperConnectionStateChanged,
@@ -73,6 +76,8 @@ final class DictationModifierHotKeyMonitor: ObservableObject {
     func accessibilityAuthorizationWasRevoked() {
         guard accessibilityState != .requesting else { return }
         recoveryPolicy.invalidateStartAttempts()
+        recoveryTask?.cancel()
+        recoveryTask = nil
         invalidateLease()
         cancelCurrentSession()
         accessibilityState = .notTrusted
@@ -205,9 +210,11 @@ final class DictationModifierHotKeyMonitor: ObservableObject {
             guard owns(generation) else { return }
             let failure = HelperConnectionFailure.wrapping(error)
             if failure == .timedOut {
-                if !active { invalidateLease() }
-                helperState = .unavailable(failure)
-                shortcutReadiness = .unavailable(.helper(failure))
+                if !active {
+                    invalidateLease()
+                    helperState = .unavailable(failure)
+                    shortcutReadiness = .unavailable(.helper(failure))
+                }
                 scheduleRecovery(reason: "helper status timed out")
             } else {
                 helperConnectionLost(failure)
@@ -247,6 +254,8 @@ final class DictationModifierHotKeyMonitor: ObservableObject {
 
     private func helperConnectionLost(_ failure: HelperConnectionFailure) {
         recoveryPolicy.invalidateStartAttempts()
+        recoveryTask?.cancel()
+        recoveryTask = nil
         invalidateLease()
         cancelCurrentSession()
         helperState = .unavailable(failure)
@@ -343,8 +352,9 @@ final class DictationModifierHotKeyMonitor: ObservableObject {
         let delay = recoveryPolicy.nextRetryDelayMilliseconds()
         let generation = recoveryPolicy.startGeneration
         logger.debug("shortcut retry reason=\(reason, privacy: .public) delayMs=\(delay, privacy: .public)")
+        let sleepForRecovery = sleepForRecovery
         recoveryTask = Task { [weak self] in
-            do { try await Task.sleep(for: .milliseconds(Int64(delay))) } catch { return }
+            do { try await sleepForRecovery(.milliseconds(Int64(delay))) } catch { return }
             guard let self, self.desiredEnabled, self.recoveryPolicy.ownsStartAttempt(generation) else { return }
             self.recoveryTask = nil
             await self.start(promptIfNeeded: false)

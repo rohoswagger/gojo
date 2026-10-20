@@ -51,6 +51,13 @@ import Foundation
     func insertText(_ text: String, token: String, with reply: @escaping (NSDictionary) -> Void)
     func insertTextRetainingTarget(_ text: String, token: String, with reply: @escaping (NSDictionary) -> Void)
     func releaseTextTarget(_ token: String, with reply: @escaping () -> Void)
+    /// Watches the field that just received `text` for a user correction and
+    /// replies once with `original` and `edited` (the edited span only), or an
+    /// empty dictionary when nothing usable was observed. Read-only; replaces
+    /// any earlier observation.
+    func observeDictationCorrection(_ text: String, targetIdentity: String, with reply: @escaping (NSDictionary) -> Void)
+    /// Ends the active correction observation, replying empty to its caller.
+    func cancelDictationCorrectionObservation(with reply: @escaping () -> Void)
     func focusedWindowSnapshot(_ promptIfNeeded: Bool, with reply: @escaping (NSDictionary) -> Void)
     func setFocusedWindowFrame(_ normalFrame: NSDictionary, windowID: NSNumber?, with reply: @escaping (Bool) -> Void)
     /// Replies with a dict: `{"success": Bool, "frame": NSDictionary?}` where `frame`

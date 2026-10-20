@@ -63,6 +63,7 @@
 		1194E9402EACC652009C82D6 /* Color+AccentColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1194E93F2EACC652009C82D6 /* Color+AccentColor.swift */; };
 		11A45C792E34E63100CEB175 /* MediaChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A45C782E34E63100CEB175 /* MediaChecker.swift */; };
 		11C5E3132DFE85970065821E /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11C5E3112DFE85970065821E /* SettingsWindowController.swift */; };
+		D1C7000000000000000000FB /* SettingsWindowCloseObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C7000000000000000000FA /* SettingsWindowCloseObserver.swift */; };
 		11C5E3162DFE88510065821E /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11C5E3152DFE88510065821E /* SettingsView.swift */; };
 		11CC44A22CEE614100C7244B /* GojoViewCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11CC44A12CEE614100C7244B /* GojoViewCoordinator.swift */; };
 		11CFC65B2E097E9D00748C80 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11CFC65A2E097E9D00748C80 /* WelcomeView.swift */; };
@@ -139,6 +140,7 @@
 		D1C8000000000000000000B1 /* FluidAudio in Frameworks */ = {isa = PBXBuildFile; productRef = D1C8000000000000000000D1 /* FluidAudio */; };
 		D1CA000000000000000000B1 /* DictationModelValidationCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1CA000000000000000000A1 /* DictationModelValidationCache.swift */; };
 		D1C7000000000000000000B2 /* DictationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C7000000000000000000A1 /* DictationModels.swift */; };
+		D1C7000000000000000000F9 /* DictationVocabularyImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C7000000000000000000F8 /* DictationVocabularyImport.swift */; };
 		D1C7000000000000000000B3 /* DictationProtocols.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C7000000000000000000A2 /* DictationProtocols.swift */; };
 		D1C7000000000000000000B4 /* DictationSessionStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C7000000000000000000A3 /* DictationSessionStateMachine.swift */; };
 		D1C7000000000000000000B5 /* DictationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C7000000000000000000A4 /* DictationController.swift */; };
@@ -246,6 +248,7 @@
 		A07900000000000000000002 /* NotchAutoHidePolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchAutoHidePolicy.swift; sourceTree = "<group>"; };
 		D1CA000000000000000000A1 /* DictationModelValidationCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationModelValidationCache.swift; sourceTree = "<group>"; };
 		D1C7000000000000000000A1 /* DictationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationModels.swift; sourceTree = "<group>"; };
+		D1C7000000000000000000F8 /* DictationVocabularyImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationVocabularyImport.swift; sourceTree = "<group>"; };
 		D1C7000000000000000000A2 /* DictationProtocols.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationProtocols.swift; sourceTree = "<group>"; };
 		D1C7000000000000000000A3 /* DictationSessionStateMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationSessionStateMachine.swift; sourceTree = "<group>"; };
 		D1C7000000000000000000A4 /* DictationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationController.swift; sourceTree = "<group>"; };
@@ -316,6 +319,7 @@
 		1194E93F2EACC652009C82D6 /* Color+AccentColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+AccentColor.swift"; sourceTree = "<group>"; };
 		11A45C782E34E63100CEB175 /* MediaChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaChecker.swift; sourceTree = "<group>"; };
 		11C5E3112DFE85970065821E /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
+		D1C7000000000000000000FA /* SettingsWindowCloseObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowCloseObserver.swift; sourceTree = "<group>"; };
 		11C5E3152DFE88510065821E /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		11CC44A12CEE614100C7244B /* GojoViewCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GojoViewCoordinator.swift; sourceTree = "<group>"; };
 		11CFC65A2E097E9D00748C80 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
@@ -511,6 +515,7 @@
 				D1E1000000000000000000A1 /* DictationModelPreparation.swift */,
 				D1CF000000000000000000A1 /* DictationHelperReadiness.swift */,
 				D1C7000000000000000000A1 /* DictationModels.swift */,
+				D1C7000000000000000000F8 /* DictationVocabularyImport.swift */,
 				D1CA000000000000000000A1 /* DictationModelValidationCache.swift */,
 				D1C7000000000000000000A2 /* DictationProtocols.swift */,
 				D1C7000000000000000000A3 /* DictationSessionStateMachine.swift */,
@@ -918,6 +923,7 @@
 				11C5E3152DFE88510065821E /* SettingsView.swift */,
 				D1CE000000000000000000A1 /* DictationMicrophonePermission.swift */,
 				11C5E3112DFE85970065821E /* SettingsWindowController.swift */,
+				D1C7000000000000000000FA /* SettingsWindowCloseObserver.swift */,
 				B1D6FD422C6603730015F173 /* SoftwareUpdater.swift */,
 				B1B112902C6A572100093D8F /* EditPanelView.swift */,
 				DD09AFCAE39B309BDF403278 /* AltTabSettings.swift */,
@@ -1201,6 +1207,7 @@
 				D1E1000000000000000000B1 /* DictationModelPreparation.swift in Sources */,
 				D1CF000000000000000000B1 /* DictationHelperReadiness.swift in Sources */,
 				D1C7000000000000000000B2 /* DictationModels.swift in Sources */,
+				D1C7000000000000000000F9 /* DictationVocabularyImport.swift in Sources */,
 				D1CA000000000000000000B1 /* DictationModelValidationCache.swift in Sources */,
 				D1C7000000000000000000B3 /* DictationProtocols.swift in Sources */,
 				D1C7000000000000000000B4 /* DictationSessionStateMachine.swift in Sources */,
@@ -1311,6 +1318,7 @@
 				F1AC100000000000000000B8 /* FluxTemperatureEditor.swift in Sources */,
 				1153BD932D986E4300979FB0 /* AppleMusicController.swift in Sources */,
 				11C5E3132DFE85970065821E /* SettingsWindowController.swift in Sources */,
+				D1C7000000000000000000FB /* SettingsWindowCloseObserver.swift in Sources */,
 				110029272E84FD4C00035A57 /* TemporaryFileStorageService.swift in Sources */,
 				11CFC6652E09C7B300748C80 /* OnboardingFinishView.swift in Sources */,
 				507266DB2C908E2E00A2D00D /* HoverButton.swift in Sources */,

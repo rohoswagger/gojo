@@ -199,6 +199,25 @@ assert 'result["displayID"] as? NSNumber' in service
 assert "await controller.targetSnapshot == target" in service
 assert "self.sessionDisplayID = target.displayID" in service
 assert "service.sessionDisplayID" in panel
+provider = service[
+    service.index("private struct XPCTargetProvider"):
+    service.index("private struct XPCTextInserter")
+]
+assert "DictationTargetResolution<DictationTextTarget>" in provider
+assert 'case "noFocusedTextTarget": return .copyOnly(.noFocusedTextField)' in provider
+assert 'case "nonEditableTarget": return .copyOnly(.nonEditableTarget)' in provider
+assert 'case "permissionMissing": throw DictationFailure.accessibilityPermissionDenied' in provider
+assert 'default: throw DictationXPCError(code: code)' in provider
+assert provider.count("return .copyOnly(") == 2, "Only confirmed missing or non-editable destinations may start copy-only recording."
+assert 'return .captured(DictationTextTarget(' in provider
+assert 'result["token"] as? String' in provider
+assert "localizedDescription" not in provider, "Capture resolution must use helper error codes instead of localized messages."
+inserter = service[
+    service.index("private struct XPCTextInserter"):
+    service.index("private struct DictationXPCError")
+]
+assert inserter.count("async throws -> DictationInsertionOutcome") == 2
+assert inserter.count('return (result["verified"] as? NSNumber)?.boolValue == true ? .verified : .unverified') == 2, "Only explicit app confirmation may discard the recovery copy."
 shortcut_key_down = service[
     service.index("case .keyDown, .startVoiceMode:"):
     service.index("case .keyUp:")

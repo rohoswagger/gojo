@@ -99,52 +99,68 @@ private struct DictationTextTarget: Sendable, Equatable {
 }
 
 private struct XPCTargetProvider: DictationTargetCapturing {
-    func captureTarget() async throws -> DictationTextTarget {
+    func captureTarget() async throws -> DictationTargetResolution<DictationTextTarget> {
         let result = await XPCHelperClient.shared.captureFocusedTextTarget(promptIfNeeded: true)
         return try capturedTarget(from: result)
     }
 
-    func captureAdditionalTarget() async throws -> DictationTextTarget {
+    func captureAdditionalTarget() async throws -> DictationTargetResolution<DictationTextTarget> {
         let result = await XPCHelperClient.shared.captureAdditionalFocusedTextTarget(promptIfNeeded: false)
         return try capturedTarget(from: result)
     }
 
     func destinationIdentifier(for target: DictationTextTarget) -> String? { target.identity }
 
-    private func capturedTarget(from result: NSDictionary) throws -> DictationTextTarget {
+    private func capturedTarget(from result: NSDictionary) throws -> DictationTargetResolution<DictationTextTarget> {
         guard (result["success"] as? NSNumber)?.boolValue == true,
               let token = result["token"] as? String else {
             let code = result["error"] as? String ?? "targetUnavailable"
             dictationTargetLogger.error("capture success=false error=\(code, privacy: .public)")
-            if code == "permissionMissing" { throw DictationFailure.accessibilityPermissionDenied }
-            if code == "secureTextTarget" { throw DictationFailure.secureTextTarget }
-            throw DictationXPCError(code: code)
+            switch code {
+            case "noFocusedTextTarget": return .copyOnly(.noFocusedTextField)
+            case "nonEditableTarget": return .copyOnly(.nonEditableTarget)
+            case "permissionMissing": throw DictationFailure.accessibilityPermissionDenied
+            case "secureTextTarget": throw DictationFailure.secureTextTarget
+            default: throw DictationXPCError(code: code)
+            }
         }
         dictationTargetLogger.notice("capture success=true")
-        return DictationTextTarget(
+        return .captured(DictationTextTarget(
             token: token,
             identity: result["targetIdentity"] as? String,
             processID: ((result["processID"] ?? result["pid"]) as? NSNumber).map { pid_t($0.int32Value) },
             displayID: (result["displayID"] as? NSNumber).map { CGDirectDisplayID($0.uint32Value) }
-        )
+        ))
     }
 }
 
 private struct XPCTextInserter: DictationTextInserting {
-    func insert(_ text: String, into target: DictationTextTarget) async throws {
+    func insert(_ text: String, into target: DictationTextTarget) async throws -> DictationInsertionOutcome {
+        await GojoDictationService.shared.cancelCorrectionObservation()
         let result = await XPCHelperClient.shared.insertText(text, token: target.token)
         guard (result["success"] as? NSNumber)?.boolValue == true else {
             let code = result["error"] as? String ?? "insertionFailed"
             dictationTargetLogger.error("insert success=false error=\(code, privacy: .public)")
             throw DictationXPCError(code: code)
         }
+        await GojoDictationService.shared.observeCorrections(
+            to: text,
+            targetIdentity: target.identity
+        )
+        return (result["verified"] as? NSNumber)?.boolValue == true ? .verified : .unverified
     }
 
-    func insertRetainingTarget(_ text: String, into target: DictationTextTarget) async throws {
+    func insertRetainingTarget(_ text: String, into target: DictationTextTarget) async throws -> DictationInsertionOutcome {
+        await GojoDictationService.shared.cancelCorrectionObservation()
         let result = await XPCHelperClient.shared.insertTextRetainingTarget(text, token: target.token)
         guard (result["success"] as? NSNumber)?.boolValue == true else {
             throw DictationXPCError(code: result["error"] as? String ?? "insertionFailed")
         }
+        await GojoDictationService.shared.observeCorrections(
+            to: text,
+            targetIdentity: target.identity
+        )
+        return (result["verified"] as? NSNumber)?.boolValue == true ? .verified : .unverified
     }
 
     func releaseTarget(_ target: DictationTextTarget) async {
@@ -216,6 +232,7 @@ final class GojoDictationService: ObservableObject {
     @Published private(set) var cleanupEnabled: Bool
     @Published private(set) var writingStyle: DictationWritingStyle
     @Published private(set) var vocabulary: [DictationVocabularyEntry]
+    @Published private(set) var learnsCorrections: Bool
     @Published private(set) var s1MiniInstalled = false
     @Published private(set) var s1MiniOperation: S1MiniModelOperation?
     @Published private(set) var s1MiniError: String?
@@ -239,6 +256,9 @@ final class GojoDictationService: ObservableObject {
     private var s1MiniOperationTask: Task<Void, Never>?
     private var s1MiniOperationID: UUID?
     private var hasLoadedInitialModelStatus = false
+    private var correctionLearner = DictationCorrectionLearner()
+    private var correctionObservationTask: Task<Void, Never>?
+    private var correctionObservationGeneration = UUID()
     @Published private var shortcutPreflighting = false
     @Published private var awaitingControllerStart = false
     private var shortcutGeneration: UInt = 0
@@ -267,15 +287,10 @@ final class GojoDictationService: ObservableObject {
         writingStyle = DictationWritingStyle(
             rawValue: UserDefaults.standard.string(forKey: DictationWritingStyle.defaultsKey) ?? ""
         ) ?? .punctuated
-        if let data = UserDefaults.standard.data(forKey: DictationVocabularyPolicy.defaultsKey),
-           let savedVocabulary = try? JSONDecoder().decode(
-               [DictationVocabularyEntry].self,
-               from: data
-           ) {
-            vocabulary = DictationVocabularyPolicy.sanitized(savedVocabulary)
-        } else {
-            vocabulary = []
-        }
+        vocabulary = DictationVocabularyPolicy.load()
+        learnsCorrections = UserDefaults.standard.object(
+            forKey: DictationCorrectionLearningPolicy.defaultsKey
+        ) as? Bool ?? true
 
         let localTranscriber = LocalDictationTranscriber(selectedModel: initialModel)
         let openRouterClient = OpenRouterAPIClient()
@@ -335,7 +350,8 @@ final class GojoDictationService: ObservableObject {
                         NSRunningApplication(processIdentifier: $0)?.localizedName
                     }
                 }
-            }
+            },
+            beforeCapture: { await MusicManager.shared.pauseForDictation() }
         )
         self.audioCapture = audioCapture
         Task { await audioCapture.prepareForCaptureIfAuthorized() }
@@ -1045,13 +1061,111 @@ final class GojoDictationService: ObservableObject {
 
     @discardableResult
     func saveVocabularyEntry(id: UUID?, spoken: String, replacement: String) -> String? {
-        let cleanSpoken = spoken.trimmingCharacters(in: .whitespacesAndNewlines)
-        let cleanReplacement = replacement.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanSpoken.isEmpty, !cleanReplacement.isEmpty else {
-            return "Enter both the spoken phrase and its replacement."
+        let error = storeVocabularyEntry(id: id, spoken: spoken, replacement: replacement)
+        if error == nil { resetCorrectionLearning() }
+        return error
+    }
+
+    func removeVocabularyEntry(_ id: UUID) {
+        vocabulary.removeAll { $0.id == id }
+        persistVocabulary()
+        resetCorrectionLearning()
+    }
+
+    @discardableResult
+    func importVocabulary(_ document: DictationVocabularyImport.Document) -> DictationVocabularyImport.Report {
+        let result = document.merging(into: vocabulary)
+        if result.report.added > 0 {
+            vocabulary = result.entries
+            persistVocabulary()
+            resetCorrectionLearning()
         }
+        return result.report
+    }
+
+    func setLearnsCorrections(_ enabled: Bool) {
+        guard enabled != learnsCorrections else { return }
+        learnsCorrections = enabled
+        UserDefaults.standard.set(enabled, forKey: DictationCorrectionLearningPolicy.defaultsKey)
+        resetCorrectionLearning()
+    }
+
+    func cancelCorrectionObservation() async {
+        let wasObserving = correctionObservationTask != nil
+        cancelCorrectionObservationTask()
+        guard wasObserving || learnsCorrections else { return }
+        await XPCHelperClient.shared.cancelDictationCorrectionObservation()
+    }
+
+    func observeCorrections(to text: String, targetIdentity: String?) {
+        cancelCorrectionObservationTask()
+        guard learnsCorrections,
+              !text.isEmpty,
+              let targetIdentity,
+              targetIdentity.hasSuffix(":accessibility") else { return }
+        let generation = UUID()
+        correctionObservationGeneration = generation
+        correctionObservationTask = Task { [weak self] in
+            guard !Task.isCancelled,
+                  self?.correctionObservationGeneration == generation else { return }
+            let reply = await XPCHelperClient.shared.observeDictationCorrection(
+                text,
+                targetIdentity: targetIdentity
+            )
+            guard !Task.isCancelled else { return }
+            self?.finishCorrectionObservation(reply: reply, generation: generation)
+        }
+    }
+
+    private func finishCorrectionObservation(reply: NSDictionary, generation: UUID) {
+        guard generation == correctionObservationGeneration else { return }
+        correctionObservationTask = nil
+        guard learnsCorrections,
+              let original = reply["original"] as? String,
+              let edited = reply["edited"] as? String,
+              let candidate = DictationCorrectionLearningPolicy.candidate(
+                  original: original,
+                  edited: edited
+              ) else { return }
+        let foldedSpoken = Self.foldedVocabularyKey(candidate.spoken)
+        guard !vocabulary.contains(where: { Self.foldedVocabularyKey($0.spoken) == foldedSpoken }),
+              let learned = correctionLearner.observe(candidate) else { return }
+        _ = storeVocabularyEntry(id: nil, spoken: learned.spoken, replacement: learned.replacement)
+    }
+
+    private func cancelCorrectionObservationTask() {
+        correctionObservationGeneration = UUID()
+        correctionObservationTask?.cancel()
+        correctionObservationTask = nil
+    }
+
+    private func resetCorrectionLearning() {
+        correctionLearner.reset()
+        let wasObserving = correctionObservationTask != nil
+        cancelCorrectionObservationTask()
+        guard wasObserving else { return }
+        let generation = correctionObservationGeneration
+        Task { [weak self] in
+            guard self?.correctionObservationGeneration == generation else { return }
+            await XPCHelperClient.shared.cancelDictationCorrectionObservation()
+        }
+    }
+
+    private static func foldedVocabularyKey(_ value: String) -> String {
+        value.folding(options: [.caseInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+    }
+
+    private func storeVocabularyEntry(id: UUID?, spoken: String, replacement: String) -> String? {
+        let cleanReplacement = replacement.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanReplacement.isEmpty else {
+            return "Enter the word or phrase you want Gojo to spell."
+        }
+        let trimmedSpoken = spoken.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanSpoken = trimmedSpoken.isEmpty ? cleanReplacement : trimmedSpoken
         guard cleanSpoken.count <= DictationVocabularyEntry.maximumSpokenLength else {
-            return "The spoken phrase must be \(DictationVocabularyEntry.maximumSpokenLength) characters or fewer."
+            return trimmedSpoken.isEmpty
+                ? "A word or phrase without a spoken alias must be \(DictationVocabularyEntry.maximumSpokenLength) characters or fewer."
+                : "The spoken phrase must be \(DictationVocabularyEntry.maximumSpokenLength) characters or fewer."
         }
         guard cleanReplacement.count <= DictationVocabularyEntry.maximumReplacementLength else {
             return "The replacement must be \(DictationVocabularyEntry.maximumReplacementLength) characters or fewer."
@@ -1062,7 +1176,7 @@ final class GojoDictationService: ObservableObject {
             replacement: cleanReplacement
         )
         guard let normalized = candidate.normalized else {
-            return "Enter both the spoken phrase and its replacement."
+            return "Enter the word or phrase you want Gojo to spell."
         }
         let isEditingExistingEntry = id.map { candidateID in
             vocabulary.contains { $0.id == candidateID }
@@ -1092,11 +1206,6 @@ final class GojoDictationService: ObservableObject {
         }
         persistVocabulary()
         return nil
-    }
-
-    func removeVocabularyEntry(_ id: UUID) {
-        vocabulary.removeAll { $0.id == id }
-        persistVocabulary()
     }
 
     private func persistVocabulary() {

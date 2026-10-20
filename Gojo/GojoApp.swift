@@ -406,7 +406,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
 #if DEBUG
         dictationPanelPreviewObserver = DistributedNotificationCenter.default().addObserver(
-            forName: Notification.Name("rohoswagger.gojo.dictation-panel-preview"),
+            forName: Notification.Name(
+                ProcessInfo.processInfo.environment["GOJO_DICTATION_PREVIEW_NOTIFICATION_NAME"]
+                    ?? "rohoswagger.gojo.dictation-panel-preview"
+            ),
             object: nil,
             queue: .main
         ) { notification in
@@ -440,7 +443,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 if name == "recovery" {
                     panel.showPreview(
                         state: .listening,
-                        recoveryText: "This preview phrase could not be inserted because its original field lost focus.",
+                        recoveryText: notification.userInfo?["text"] as? String ?? "This preview phrase could not be inserted because its original field lost focus.",
                         recoveryMessage: "Saved for copying. Voice mode is still listening."
                     )
                     return

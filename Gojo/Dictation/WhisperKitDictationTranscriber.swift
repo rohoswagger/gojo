@@ -20,6 +20,9 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
         let sha256: [String: String]
     }
 
+    private static let maximumPromptTokens = 200
+
+    private let vocabularyProvider: @Sendable () -> [DictationVocabularyEntry]
     private var selectedModel: WhisperDictationModel
     private var model: (identifier: WhisperDictationModel, value: WhisperKit)?
     private var modelTask: (
@@ -32,8 +35,14 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
     private var activeTranscriptionGeneration: UInt?
     private var transcriptionGeneration: UInt = 0
 
-    init(selectedModel: WhisperDictationModel = .smallEnglish) {
+    init(
+        selectedModel: WhisperDictationModel = .smallEnglish,
+        vocabularyProvider: @escaping @Sendable () -> [DictationVocabularyEntry] = {
+            DictationVocabularyPolicy.load()
+        }
+    ) {
         self.selectedModel = selectedModel
+        self.vocabularyProvider = vocabularyProvider
     }
 
     func install(_ requestedModel: WhisperDictationModel) async throws {
@@ -108,6 +117,10 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
         let model = try await loadSelectedModel()
         try Task.checkCancellation()
         guard activeTranscriptionGeneration == generation else { throw CancellationError() }
+        let promptTokens = Self.promptTokens(
+            for: DictationVocabularyPolicy.recognitionTerms(vocabularyProvider()),
+            tokenizer: model.tokenizer
+        )
         let options = DecodingOptions(
             language: "en",
             temperature: 0,
@@ -116,6 +129,7 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
             detectLanguage: false,
             skipSpecialTokens: true,
             withoutTimestamps: true,
+            promptTokens: promptTokens,
             noSpeechThreshold: 0.6,
             chunkingStrategy: .vad
         )
@@ -128,6 +142,21 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
         }
         transcriptionTask = (generation, task)
         return try await task.value
+    }
+
+    private static func promptTokens(
+        for terms: [String],
+        tokenizer: (any WhisperTokenizer)?
+    ) -> [Int]? {
+        guard let tokenizer else { return nil }
+        var tokens: [Int] = []
+        for term in terms {
+            let termTokens = tokenizer.encode(text: " \(term),")
+            guard !termTokens.isEmpty,
+                  tokens.count + termTokens.count <= maximumPromptTokens else { continue }
+            tokens.append(contentsOf: termTokens)
+        }
+        return tokens.isEmpty ? nil : tokens
     }
 
     func prepare() async throws {

@@ -35,6 +35,56 @@ private struct CapturedTextTarget {
     let kind: CapturedTextTargetKind
 }
 
+private struct DictationCorrectionTargetIdentity {
+    let pid: pid_t
+    let windowID: CGWindowID
+    let hash: UInt
+
+    init?(_ identity: String) {
+        let parts = identity.split(separator: ":", omittingEmptySubsequences: false)
+        guard parts.count == 4,
+              let pid = pid_t(parts[0]), pid > 0,
+              let windowID = CGWindowID(parts[1]),
+              let hash = UInt(parts[2]),
+              parts[3] == CapturedTextTargetKind.accessibility.rawValue else { return nil }
+        self.pid = pid
+        self.windowID = windowID
+        self.hash = hash
+    }
+}
+
+private final class DictationCorrectionObservation {
+    let generation: UUID
+    let originalText: String
+    let identity: DictationCorrectionTargetIdentity
+    let startedAt: UInt64
+    let deadline: UInt64
+    var snapshot: DictationCorrectionSnapshot?
+    var candidate: (text: String, since: UInt64)?
+    private var reply: ((NSDictionary) -> Void)?
+
+    init(
+        generation: UUID,
+        originalText: String,
+        identity: DictationCorrectionTargetIdentity,
+        timeout: UInt64,
+        reply: @escaping (NSDictionary) -> Void
+    ) {
+        self.generation = generation
+        self.originalText = originalText
+        self.identity = identity
+        startedAt = DispatchTime.now().uptimeNanoseconds
+        deadline = startedAt + timeout
+        self.reply = reply
+    }
+
+    func finish(_ result: NSDictionary) {
+        guard let reply else { return }
+        self.reply = nil
+        reply(result)
+    }
+}
+
 private struct PasteboardSnapshot {
     let items: [[NSPasteboard.PasteboardType: Data]]
     let isComplete: Bool
@@ -167,8 +217,14 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
     private var activationObserver: Any?
     private var lastWindowTargetApplication: NSRunningApplication?
     private var capturedTextTargets: [String: CapturedTextTarget] = [:]
+    private var dictationCorrectionGeneration = UUID()
+    private var activeDictationCorrection: DictationCorrectionObservation?
 
     private static let maximumCapturedTextTargets = 16
+    private static let correctionObservationTimeout: UInt64 = 30_000_000_000
+    private static let correctionPollInterval: TimeInterval = 0.5
+    private static let correctionStabilityInterval: UInt64 = 2_000_000_000
+    private static let correctionSnapshotGrace: UInt64 = 2_000_000_000
     private static let pasteKeyCode: CGKeyCode = 9
     private static let transientPasteboardType = NSPasteboard.PasteboardType(
         "org.nspasteboard.TransientType"
@@ -485,6 +541,144 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
             self?.capturedTextTargets.removeValue(forKey: token)
             reply()
         }
+    }
+
+    @objc func observeDictationCorrection(
+        _ text: String,
+        targetIdentity: String,
+        with reply: @escaping (NSDictionary) -> Void
+    ) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else {
+                reply([:])
+                return
+            }
+            self.endDictationCorrectionObservation()
+            guard !text.isEmpty,
+                  let identity = DictationCorrectionTargetIdentity(targetIdentity) else {
+                reply([:])
+                return
+            }
+            let observation = DictationCorrectionObservation(
+                generation: self.dictationCorrectionGeneration,
+                originalText: text,
+                identity: identity,
+                timeout: Self.correctionObservationTimeout,
+                reply: reply
+            )
+            self.activeDictationCorrection = observation
+            self.pollDictationCorrection(observation)
+        }
+    }
+
+    @objc func cancelDictationCorrectionObservation(with reply: @escaping () -> Void) {
+        DispatchQueue.main.async { [weak self] in
+            self?.endDictationCorrectionObservation()
+            reply()
+        }
+    }
+
+    private func endDictationCorrectionObservation() {
+        dictationCorrectionGeneration = UUID()
+        let observation = activeDictationCorrection
+        activeDictationCorrection = nil
+        observation?.finish([:])
+    }
+
+    private func pollDictationCorrection(_ observation: DictationCorrectionObservation) {
+        let finish: (NSDictionary) -> Void = { [weak self] result in
+            if self?.activeDictationCorrection === observation {
+                self?.activeDictationCorrection = nil
+            }
+            observation.finish(result)
+        }
+        let now = DispatchTime.now().uptimeNanoseconds
+        guard dictationCorrectionGeneration == observation.generation,
+              activeDictationCorrection === observation,
+              now < observation.deadline,
+              AXIsProcessTrusted(),
+              NSWorkspace.shared.frontmostApplication?.processIdentifier == observation.identity.pid,
+              let target = dictationCorrectionTarget(for: observation.identity),
+              let value = copyString(target.element, attribute: kAXValueAttribute as String),
+              value.utf16.count <= DictationCorrectionSnapshot.maximumValueLength else {
+            finish([:])
+            return
+        }
+
+        if observation.snapshot == nil {
+            if let caret = copyCFRange(
+                target.element,
+                attribute: kAXSelectedTextRangeAttribute as String
+            ) {
+                observation.snapshot = DictationCorrectionSnapshot(
+                    value: value,
+                    caret: caret,
+                    insertedText: observation.originalText
+                )
+            }
+            if observation.snapshot == nil,
+               now - observation.startedAt >= Self.correctionSnapshotGrace {
+                finish([:])
+                return
+            }
+        }
+
+        if let snapshot = observation.snapshot {
+            guard let edited = snapshot.editedText(in: value) else {
+                finish([:])
+                return
+            }
+            if edited == observation.originalText {
+                observation.candidate = nil
+            } else if let candidate = observation.candidate, candidate.text == edited {
+                if now - candidate.since >= Self.correctionStabilityInterval {
+                    finish([
+                        "original": observation.originalText,
+                        "edited": edited,
+                    ])
+                    return
+                }
+            } else {
+                observation.candidate = (edited, now)
+            }
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.correctionPollInterval) { [weak self] in
+            guard let self else {
+                observation.finish([:])
+                return
+            }
+            self.pollDictationCorrection(observation)
+        }
+    }
+
+    private func dictationCorrectionTarget(
+        for identity: DictationCorrectionTargetIdentity
+    ) -> CapturedTextTarget? {
+        guard let coarseElement = activeFocusedUIElement(for: identity.pid) else {
+            return nil
+        }
+        let focusedElement = focusedDescendantTextTarget(from: coarseElement) ?? coarseElement
+        guard case let .editable(element, allowsPasteFallback) = resolveEditableTextTarget(
+            from: focusedElement
+        ),
+              elementPID(element) == identity.pid,
+              CFHash(element) == identity.hash else {
+            return nil
+        }
+        let target = CapturedTextTarget(
+            element: element,
+            pid: identity.pid,
+            windowID: windowID(of: element),
+            displayID: nil,
+            allowsPasteFallback: allowsPasteFallback,
+            kind: .accessibility
+        )
+        guard (target.windowID ?? 0) == identity.windowID,
+              isStillFocused(target) else {
+            return nil
+        }
+        return target
     }
 
     private func performTextInsertion(

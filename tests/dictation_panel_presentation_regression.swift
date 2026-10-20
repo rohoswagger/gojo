@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import AppKit
 
 @main
 struct DictationPanelPresentationRegression {
@@ -43,7 +44,7 @@ struct DictationPanelPresentationRegression {
         expect(!model.shouldHideWhenFinished, "Locked voice controls must remain visible after finishing")
         model.state = .error(.captureFailed("unavailable"))
         model.recoveryText = "Uninserted phrase"
-        expect(model.shouldHideWhenFinished, "Voice-mode errors must also dismiss even with saved text")
+        expect(!model.shouldHideWhenFinished, "Errors with saved text must remain available for copying")
         expect(model.recoveryText == "Uninserted phrase", "Dismissing an error must not discard saved text")
         let states: [DictationState] = [
             .idle, .requestingPermission, .listening, .pausing, .paused,
@@ -54,10 +55,39 @@ struct DictationPanelPresentationRegression {
         for state in states {
             model.state = state
             model.recoveryText = ""
-            expect(model.height == 44, "Every state must keep the compact capsule height")
+            expect(model.size == CGSize(width: 150, height: 44), "Every state without recovery must keep the compact capsule size")
             model.recoveryText = String(repeating: "Saved phrase. ", count: 100)
-            expect(model.height == 44, "Saved text must not inflate the capsule")
+            expect(model.size == CGSize(width: 150, height: 44), "Saved text must keep the compact capsule size")
+            expect(!model.shouldHideWhenFinished, "Saved text must prevent automatic dismissal in every state")
+            let recoveryNotice = model.attentionIdentity
+            expect(recoveryNotice != nil, "Saved text must open the transcript popover in every state")
+            model.recoveryMessage = "A different status message"
+            expect(model.attentionIdentity == recoveryNotice, "Status changes must not reopen the transcript popover")
+            model.recoveryText += "New phrase."
+            expect(model.attentionIdentity != recoveryNotice, "New saved text must reopen the transcript popover")
+            model.recoveryText = ""
+            expect(model.size == CGSize(width: 150, height: 44), "Discarding recovery must preserve the compact capsule size")
         }
+        let transcript = (1...60).map { "Phrase \($0). café 日本語 🎙️" }.joined(separator: "\n")
+        let pasteboard = NSPasteboard(name: .init("gojo.dictation-panel-regression." + UUID().uuidString))
+        defer { pasteboard.clearContents() }
+        model.recoveryText = transcript
+        expect(model.copyRecoveryText(to: pasteboard), "Copy must report a successful pasteboard write")
+        expect(pasteboard.string(forType: .string) == transcript, "Copy must preserve the full multiline Unicode transcript")
+        expect(model.recoveryText == transcript, "Copy must keep the saved transcript available")
+        model.recoveryText = ""
+        expect(!model.copyRecoveryText(to: pasteboard), "Copy must fail when no saved transcript exists")
+        expect(pasteboard.string(forType: .string) == transcript, "An empty recovery must not erase the pasteboard")
+        let copyLabel = NSHostingView(rootView: DictationPanelCopyLabel(isCopied: false)
+            .font(.system(size: 11, weight: .medium)))
+        let initialCopySize = copyLabel.fittingSize
+        copyLabel.rootView = DictationPanelCopyLabel(isCopied: true)
+            .font(.system(size: 11, weight: .medium))
+        let copiedSize = copyLabel.fittingSize
+        expect(initialCopySize.width > 0 && initialCopySize.height == 26,
+               "Copy must reserve a real button area with a fixed height")
+        expect(copiedSize == initialCopySize,
+               "Copy and Copied must have identical rendered dimensions")
         model.state = .error(.accessibilityPermissionDenied)
         expect(model.permissionSettingsURL?.absoluteString == "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility", "Accessibility errors must open Accessibility settings")
         model.state = .error(.microphonePermissionDenied)

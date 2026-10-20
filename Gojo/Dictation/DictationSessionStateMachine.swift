@@ -12,6 +12,7 @@ struct DictationSessionStateMachine: Sendable {
         case audioTooShort
         case transcriptionCompleted(String)
         case insertionCompleted(String)
+        case transcriptSaved(String)
         case failed(DictationFailure)
         case cancel
     }
@@ -66,6 +67,11 @@ struct DictationSessionStateMachine: Sendable {
         case (.transcribing, .transcriptionCompleted):
             state = .inserting
             return .insert
+
+        case (.transcribing, .transcriptSaved(let transcript)),
+             (.inserting, .transcriptSaved(let transcript)):
+            state = .succeeded(transcript)
+            return .none
 
         case (.inserting, .insertionCompleted(let transcript)):
             state = .succeeded(transcript)

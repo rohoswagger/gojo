@@ -58,7 +58,11 @@ class SettingsWindowController: NSWindowController {
         window.identifier = NSUserInterfaceItemIdentifier("GojoSettingsWindow")
 
         // Create the SwiftUI content
-        let settingsView = SettingsView(updaterController: updaterController, initialTab: tab)
+        let settingsView = SettingsView(
+            updaterController: updaterController,
+            initialTab: tab,
+            settingsWindow: window
+        )
         let hostingView = NSHostingView(rootView: settingsView)
         window.contentView = hostingView
 

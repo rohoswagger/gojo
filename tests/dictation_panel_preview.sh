@@ -11,7 +11,10 @@ swift - "$state" <<'SWIFT'
 import Foundation
 
 DistributedNotificationCenter.default().postNotificationName(
-    Notification.Name("rohoswagger.gojo.dictation-panel-preview"),
+    Notification.Name(
+        ProcessInfo.processInfo.environment["GOJO_DICTATION_PREVIEW_NOTIFICATION_NAME"]
+            ?? "rohoswagger.gojo.dictation-panel-preview"
+    ),
     object: nil,
     userInfo: ["state": CommandLine.arguments[1]],
     deliverImmediately: true

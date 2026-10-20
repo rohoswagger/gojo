@@ -19,8 +19,9 @@ final class DictationPanelModel: ObservableObject {
     }
 
     var attentionIdentity: String? {
+        if !recoveryText.isEmpty { return "recovery:" + recoveryText }
         if case .error = state { return errorPresentationID.uuidString }
-        return recoveryText.isEmpty ? nil : recoveryMessage ?? "Saved for copying"
+        return nil
     }
 
     func leavePreview(recoveryText: String, recoveryMessage: String?) {
@@ -34,8 +35,9 @@ final class DictationPanelModel: ObservableObject {
     var isHandsFree: Bool { activationMode == .voiceMode }
 
     var shouldHideWhenFinished: Bool {
+        guard recoveryText.isEmpty else { return false }
         if case .error = state { return true }
-        guard !isHandsFree, recoveryText.isEmpty else { return false }
+        guard !isHandsFree else { return false }
         switch state {
         case .idle, .succeeded: return true
         default: return false
@@ -68,8 +70,14 @@ final class DictationPanelModel: ObservableObject {
         return failure.localizedDescription
     }
 
-    var height: CGFloat {
-        DictationPanelPlacement.defaultSize.height
+    var size: CGSize {
+        DictationPanelPlacement.defaultSize
+    }
+
+    func copyRecoveryText(to pasteboard: NSPasteboard = .general) -> Bool {
+        guard !recoveryText.isEmpty else { return false }
+        pasteboard.clearContents()
+        return pasteboard.setString(recoveryText, forType: .string)
     }
 
     var permissionSettingsURL: URL? {
@@ -97,6 +105,30 @@ enum DictationPanelCommand {
     case start, pause, resume, finish, dismiss, clearRecovery, settings
 }
 
+struct DictationPanelCopyLabel: View {
+    let isCopied: Bool
+
+    var body: some View {
+        ZStack(alignment: .leading) {
+            label("Copy", icon: "doc.on.doc")
+                .opacity(isCopied ? 0 : 1)
+                .accessibilityHidden(isCopied)
+            label("Copied", icon: "checkmark")
+                .opacity(isCopied ? 1 : 0)
+                .accessibilityHidden(!isCopied)
+        }
+        .frame(height: 26)
+        .contentShape(Rectangle())
+    }
+
+    private func label(_ title: String, icon: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon).frame(width: 14, height: 14)
+            Text(title)
+        }
+    }
+}
+
 private enum DictationPanelInk {
     static let background = Color(red: 0.075, green: 0.075, blue: 0.08)
     static let text = Color(red: 0.95, green: 0.95, blue: 0.92)
@@ -114,10 +146,11 @@ struct DictationPanelView: View {
     @State private var isSpinning = false
     @State private var copiedRecoveryText: String?
     @State private var detailsHovered = false
+    @State private var dismissedErrorID: UUID?
 
     var body: some View {
         capsule
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .frame(width: model.size.width, height: model.size.height)
         .background(DictationPanelInk.background, in: RoundedRectangle(cornerRadius: 22))
         .overlay {
             RoundedRectangle(cornerRadius: 22)
@@ -126,16 +159,18 @@ struct DictationPanelView: View {
         }
         .preferredColorScheme(.dark)
         .onHover { isHovered = $0 }
+        .onChange(of: model.recoveryText) { copiedRecoveryText = nil }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(model.isPreview ? "Gojo dictation preview" : "Gojo dictation controls")
         .help(model.isPreview ? "Preview · " + model.title : model.title)
-        .popover(isPresented: $model.showsDetails, arrowEdge: .top) { details }
         .task(id: model.attentionIdentity) {
             guard model.attentionIdentity != nil else {
                 model.showsDetails = false
                 return
             }
+            guard !model.recoveryText.isEmpty || dismissedErrorID != model.errorPresentationID else { return }
             model.showsDetails = true
+            guard model.recoveryText.isEmpty else { return }
             do {
                 try await Task.sleep(for: .seconds(2))
                 while detailsHovered {
@@ -153,6 +188,7 @@ struct DictationPanelView: View {
             icon("xmark", label: "Close voice controls", hint: "Cancel pending text and close.") { command(.dismiss) }
             waveformControl
                 .frame(maxWidth: .infinity)
+                .popover(isPresented: $model.showsDetails, arrowEdge: .top) { details }
             primaryAction
         }
         .padding(.horizontal, 8)
@@ -258,22 +294,27 @@ struct DictationPanelView: View {
         }
     }
 
-    private var needsAttention: Bool { model.errorMessage != nil || !model.recoveryText.isEmpty }
+    private var needsAttention: Bool { model.attentionIdentity != nil }
 
     private var details: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(model.permissionSettingsURL == nil ? "Dictation needs attention" : "Permission needed")
-                .font(.system(size: 13, weight: .semibold))
-            if let message = model.errorMessage {
-                Text(message).font(.system(size: 12)).fixedSize(horizontal: false, vertical: true)
-            }
-            if !model.recoveryText.isEmpty { recovery }
-            if model.permissionSettingsURL != nil {
-                detailButton("Open Settings") { model.showsDetails = false; command(.settings) }
+        Group {
+            if !model.recoveryText.isEmpty {
+                recovery
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(model.permissionSettingsURL == nil ? "Dictation needs attention" : "Permission needed")
+                        .font(.system(size: 13, weight: .semibold))
+                    if let message = model.errorMessage {
+                        Text(message).font(.system(size: 12)).fixedSize(horizontal: false, vertical: true)
+                    }
+                    if model.permissionSettingsURL != nil {
+                        detailButton("Open Settings") { model.showsDetails = false; command(.settings) }
+                    }
+                }
+                .padding(16)
+                .frame(width: 280)
             }
         }
-        .padding(16)
-        .frame(width: 280)
         .foregroundStyle(DictationPanelInk.text)
         .background(DictationPanelInk.background)
         .onHover { detailsHovered = $0 }
@@ -293,30 +334,48 @@ struct DictationPanelView: View {
     }
 
     private var recovery: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack {
-                Image(systemName: "text.badge.checkmark")
-                Spacer()
-                icon(copiedRecoveryText == model.recoveryText ? "checkmark" : "doc.on.doc", label: copiedRecoveryText == model.recoveryText ? "Copied" : "Copy saved text", hint: "Copy all uninserted text.") {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(model.recoveryText, forType: .string)
-                    copiedRecoveryText = model.recoveryText
-                }
-                icon("trash", label: "Discard saved text", hint: "Remove text that could not be inserted.") { command(.clearRecovery) }
-            }
-            Text(model.recoveryMessage ?? "Saved for copying")
-                .font(.system(size: 10))
-                .lineLimit(2)
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Dictated text")
+                .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(DictationPanelInk.secondary)
-            Text(model.recoveryText)
+            Text("Make sure a text field is selected before dictating.")
                 .font(.system(size: 11))
-                .lineLimit(3)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .foregroundStyle(DictationPanelInk.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            ScrollView(.vertical) {
+                Text(model.recoveryText)
+                    .font(.system(size: 12))
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(height: 160)
+            HStack {
+                Button {
+                    let text = model.recoveryText
+                    copiedRecoveryText = nil
+                    if model.copyRecoveryText() {
+                        copiedRecoveryText = text
+                    }
+                } label: {
+                    DictationPanelCopyLabel(isCopied: copiedRecoveryText == model.recoveryText)
+                }
+                .accessibilityLabel(copiedRecoveryText == model.recoveryText ? "Copied" : "Copy dictated text")
+                Spacer()
+                Button("Discard") {
+                    dismissedErrorID = model.errorPresentationID
+                    model.showsDetails = false
+                    command(.clearRecovery)
+                }
+                .foregroundStyle(DictationPanelInk.secondary)
+                .frame(height: 26)
+            }
+            .font(.system(size: 11, weight: .medium))
+            .buttonStyle(.plain)
         }
         .foregroundStyle(DictationPanelInk.text)
-        .padding(.horizontal, 12)
-        .padding(.bottom, 12)
-        .frame(height: 122, alignment: .top)
+        .padding(16)
+        .frame(width: 312)
     }
 
     private func icon(_ symbol: String, label: String, hint: String, prominent: Bool = false, action: @escaping () -> Void) -> some View {

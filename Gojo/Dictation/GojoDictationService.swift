@@ -57,30 +57,35 @@ private final class DictationModelDownloadPromptController {
 private actor DictationTranscriberRouter: LocalDictationTranscribing {
     private let local: LocalDictationTranscriber
     private let openRouter: OpenRouterDictationTranscriber
-    private let provider: @Sendable () -> DictationProvider
-
-    init(
-        local: LocalDictationTranscriber,
-        openRouter: OpenRouterDictationTranscriber,
-        provider: @escaping @Sendable () -> DictationProvider
-    ) {
+    init(local: LocalDictationTranscriber, openRouter: OpenRouterDictationTranscriber) {
         self.local = local
         self.openRouter = openRouter
-        self.provider = provider
     }
 
-    func transcribe(_ audio: DictationAudio) async throws -> String {
-        switch provider() {
-        case .local:
-            return try await local.transcribe(audio)
-        case .openRouter:
-            return try await openRouter.transcribe(audio)
+    func transcribe(_ audio: DictationAudio, request: DictationRecognitionRequest) async throws -> String {
+        switch request {
+        case .local: return try await local.transcribe(audio, request: request)
+        case .openRouter: return try await openRouter.transcribe(audio, request: request)
         }
     }
 
-    func prepare() async throws {
-        guard provider() == .local else { return }
-        try await local.prepare()
+    func prepare(request: DictationRecognitionRequest) async throws {
+        switch request {
+        case .local: try await local.prepare(request: request)
+        case .openRouter: try await openRouter.prepare(request: request)
+        }
+    }
+
+    func beginSession(_ plan: DictationSessionPlan) async throws {
+        switch plan.recognition {
+        case .local: try await local.beginSession(plan)
+        case .openRouter: try await openRouter.beginSession(plan)
+        }
+    }
+
+    func endSession(_ id: UUID) async {
+        await local.endSession(id)
+        await openRouter.endSession(id)
     }
 
     func cancelTranscription() async {
@@ -91,20 +96,37 @@ private actor DictationTranscriberRouter: LocalDictationTranscribing {
     }
 }
 
-private struct DictationTextTarget: Sendable, Equatable {
-    let token: String
-    let identity: String?
-    let processID: pid_t?
-    let displayID: CGDirectDisplayID?
+private enum DictationTextTarget: Sendable, Equatable {
+    case external(token: String, identity: String?, processID: pid_t?, displayID: CGDirectDisplayID?)
+    case practice(DictationPracticeTarget)
+
+    var identity: String? {
+        switch self {
+        case .external(_, let identity, _, _): return identity
+        case .practice(let target): return "practice-\(target.fieldID)-\(target.generation)"
+        }
+    }
+    var processID: pid_t? {
+        if case .external(_, _, let processID, _) = self { return processID }
+        return nil
+    }
+    var displayID: CGDirectDisplayID? {
+        if case .external(_, _, _, let displayID) = self { return displayID }
+        return nil
+    }
 }
 
 private struct XPCTargetProvider: DictationTargetCapturing {
-    func captureTarget() async throws -> DictationTargetResolution<DictationTextTarget> {
+    func captureTarget(purpose: DictationSessionPurpose) async throws -> DictationTargetResolution<DictationTextTarget> {
+        if case .practice(let fieldID) = purpose {
+            return try await .captured(.practice(DictationPracticeRegistry.shared.capture(fieldID: fieldID)))
+        }
         let result = await XPCHelperClient.shared.captureFocusedTextTarget(promptIfNeeded: true)
         return try capturedTarget(from: result)
     }
 
-    func captureAdditionalTarget() async throws -> DictationTargetResolution<DictationTextTarget> {
+    func captureAdditionalTarget(purpose: DictationSessionPurpose) async throws -> DictationTargetResolution<DictationTextTarget> {
+        if case .practice = purpose { return try await captureTarget(purpose: purpose) }
         let result = await XPCHelperClient.shared.captureAdditionalFocusedTextTarget(promptIfNeeded: false)
         return try capturedTarget(from: result)
     }
@@ -125,7 +147,7 @@ private struct XPCTargetProvider: DictationTargetCapturing {
             }
         }
         dictationTargetLogger.notice("capture success=true")
-        return .captured(DictationTextTarget(
+        return .captured(.external(
             token: token,
             identity: result["targetIdentity"] as? String,
             processID: ((result["processID"] ?? result["pid"]) as? NSNumber).map { pid_t($0.int32Value) },
@@ -135,36 +157,32 @@ private struct XPCTargetProvider: DictationTargetCapturing {
 }
 
 private struct XPCTextInserter: DictationTextInserting {
-    func insert(_ text: String, into target: DictationTextTarget) async throws -> DictationInsertionOutcome {
-        await GojoDictationService.shared.cancelCorrectionObservation()
-        let result = await XPCHelperClient.shared.insertText(text, token: target.token)
-        guard (result["success"] as? NSNumber)?.boolValue == true else {
-            let code = result["error"] as? String ?? "insertionFailed"
-            dictationTargetLogger.error("insert success=false error=\(code, privacy: .public)")
-            throw DictationXPCError(code: code)
-        }
-        await GojoDictationService.shared.observeCorrections(
-            to: text,
-            targetIdentity: target.identity
-        )
-        return (result["verified"] as? NSNumber)?.boolValue == true ? .verified : .unverified
+    func insert(_ text: String, into target: DictationTextTarget, plan: DictationSessionPlan) async throws -> DictationInsertionOutcome {
+        try await insert(text, into: target, plan: plan, retaining: false)
     }
 
-    func insertRetainingTarget(_ text: String, into target: DictationTextTarget) async throws -> DictationInsertionOutcome {
+    func insertRetainingTarget(_ text: String, into target: DictationTextTarget, plan: DictationSessionPlan) async throws -> DictationInsertionOutcome {
+        try await insert(text, into: target, plan: plan, retaining: true)
+    }
+
+    private func insert(_ text: String, into target: DictationTextTarget, plan: DictationSessionPlan, retaining: Bool) async throws -> DictationInsertionOutcome {
+        if case .practice(let practiceTarget) = target {
+            return try await DictationPracticeRegistry.shared.insert(text, target: practiceTarget)
+        }
+        guard case .external(let token, _, _, _) = target else { throw DictationXPCError(code: "invalidToken") }
         await GojoDictationService.shared.cancelCorrectionObservation()
-        let result = await XPCHelperClient.shared.insertTextRetainingTarget(text, token: target.token)
+        let result = retaining
+            ? await XPCHelperClient.shared.insertTextRetainingTarget(text, token: token)
+            : await XPCHelperClient.shared.insertText(text, token: token)
         guard (result["success"] as? NSNumber)?.boolValue == true else {
             throw DictationXPCError(code: result["error"] as? String ?? "insertionFailed")
         }
-        await GojoDictationService.shared.observeCorrections(
-            to: text,
-            targetIdentity: target.identity
-        )
+        await GojoDictationService.shared.observeCorrections(to: text, targetIdentity: target.identity, eligible: plan.learnsCorrections, sessionID: plan.id)
         return (result["verified"] as? NSNumber)?.boolValue == true ? .verified : .unverified
     }
 
     func releaseTarget(_ target: DictationTextTarget) async {
-        await XPCHelperClient.shared.releaseTextTarget(target.token)
+        if case .external(let token, _, _, _) = target { await XPCHelperClient.shared.releaseTextTarget(token) }
     }
 }
 
@@ -245,6 +263,30 @@ final class GojoDictationService: ObservableObject {
     @Published private(set) var targetApplicationName: String?
     @Published private(set) var sessionDisplayID: CGDirectDisplayID?
 
+    @Published private(set) var selectedIntent = DictationSessionIntent(rawValue: UserDefaults.standard.string(forKey: "gojo.dictation.intent") ?? "") ?? .standard
+    @Published private(set) var spokenCommandMode = DictationSpokenCommandMode(rawValue: UserDefaults.standard.string(forKey: "gojo.dictation.commands") ?? "") ?? .off
+    @Published private(set) var commandLanguage = DictationCommandLanguage(rawValue: UserDefaults.standard.string(forKey: "gojo.dictation.commandLanguage") ?? "") ?? .english
+    @Published private(set) var usesVocabulary = UserDefaults.standard.object(forKey: "gojo.dictation.usesVocabulary") as? Bool ?? true
+    @Published private(set) var selectedInput = GojoDictationService.loadInputSelection()
+    @Published private(set) var inputDevices: [DictationInputDevice] = []
+    @Published private(set) var currentInputName: String?
+    @Published private(set) var adaptiveSpeech = UserDefaults.standard.object(forKey: "gojo.dictation.adaptiveSpeech") as? Bool ?? true
+    @Published private(set) var previewEnabled = UserDefaults.standard.object(forKey: "gojo.dictation.preview") as? Bool ?? false
+    @Published private(set) var provisionalPreview: DictationProvisionalPreview?
+    @Published private(set) var cuesEnabled = UserDefaults.standard.object(forKey: "gojo.dictation.cues") as? Bool ?? false
+    @Published private(set) var completionAttentionID: UUID?
+    @Published private(set) var lastCompletion: DictationCompletion?
+    @Published private(set) var residencyPolicy = DictationResidencyPolicy(rawValue: UserDefaults.standard.string(forKey: "gojo.dictation.residency") ?? "") ?? .keepWarm
+    @Published private(set) var activeIntent: DictationSessionIntent?
+    @Published private(set) var activePracticeFieldID: UUID?
+    private var nextPracticeFieldID: UUID?
+    private var activeSessionID: UUID?
+    private var activeSessionCues = false
+    private var activeLearningSessionID: UUID?
+    private var readyCueSessionID: UUID?
+    private var completionSessionID: UUID?
+    @Published private var sessionResourceCount = 0
+    private let modelResidency: DictationModelResidency
     private let localTranscriber: LocalDictationTranscriber
     private let pipelineTranscriber: DictationTranscriberRouter
     private let polisher: S1MiniDictationPolisher
@@ -295,20 +337,18 @@ final class GojoDictationService: ObservableObject {
         let localTranscriber = LocalDictationTranscriber(selectedModel: initialModel)
         let openRouterClient = OpenRouterAPIClient()
         let openRouterTranscriber = OpenRouterDictationTranscriber(client: openRouterClient)
-        let pipelineTranscriber = DictationTranscriberRouter(
-            local: localTranscriber,
-            openRouter: openRouterTranscriber,
-            provider: {
-                DictationProvider(
-                    rawValue: UserDefaults.standard.string(forKey: DictationProvider.defaultsKey) ?? ""
-                ) ?? .local
-            }
-        )
+        let pipelineTranscriber = DictationTranscriberRouter(local: localTranscriber, openRouter: openRouterTranscriber)
         let polisher = S1MiniDictationPolisher()
         self.localTranscriber = localTranscriber
         self.openRouterClient = openRouterClient
         self.pipelineTranscriber = pipelineTranscriber
         self.polisher = polisher
+        let modelResidency = DictationModelResidency { [localTranscriber, polisher] in
+            await localTranscriber.releaseModels()
+            await polisher.releaseModels()
+        }
+        self.modelResidency = modelResidency
+        Task { await modelResidency.setPolicy(residencyPolicy) }
         let observer: Controller.StateObserver = { [weak self] state in
             Task { @MainActor in
                 guard let self, let controller = self.controller else { return }
@@ -351,7 +391,25 @@ final class GojoDictationService: ObservableObject {
                     }
                 }
             },
-            beforeCapture: { await MusicManager.shared.pauseForDictation() }
+            beforeCapture: { await MusicManager.shared.pauseForDictation() },
+            acquireSessionResources: { [weak self, modelResidency] _ in
+                await self?.adjustSessionResources(by: 1)
+                let lease = await modelResidency.acquire()
+                return { [weak self, modelResidency] in
+                    await modelResidency.release(lease)
+                    await self?.adjustSessionResources(by: -1)
+                }
+            },
+            previewObserver: { [weak self] preview in
+                Task { @MainActor in
+                    guard let self, let controller = self.controller,
+                          await controller.provisionalPreview == preview else { return }
+                    self.provisionalPreview = preview
+                }
+            },
+            completionObserver: { [weak self] id, completion, plan in
+                Task { @MainActor in self?.receiveCompletion(completion, id: id, plan: plan) }
+            }
         )
         self.audioCapture = audioCapture
         Task { await audioCapture.prepareForCaptureIfAuthorized() }
@@ -374,6 +432,7 @@ final class GojoDictationService: ObservableObject {
         if selectedProvider == .openRouter {
             refreshOpenRouterModels()
         }
+        refreshInputDevices()
         warmSelectedTranscriber()
     }
 
@@ -386,6 +445,7 @@ final class GojoDictationService: ObservableObject {
         transcriberWarmGeneration &+= 1
         let generation = transcriberWarmGeneration
         let model = selectedModel
+        guard let request = try? makeRecognitionRequest() else { return }
         isPreparingTranscriber = true
         Task(priority: .utility) { [weak self, localTranscriber, warmupSequencer] in
             await self?.loadInitialModelStatusIfNeeded()
@@ -403,7 +463,14 @@ final class GojoDictationService: ObservableObject {
                     let warmStart = ProcessInfo.processInfo.systemUptime
                     #endif
                     do {
-                        try await localTranscriber.prepare()
+                        let lease = await self.modelResidency.acquire()
+                        do {
+                            try await localTranscriber.prepare(request: request)
+                            await self.modelResidency.release(lease)
+                        } catch {
+                            await self.modelResidency.release(lease)
+                            throw error
+                        }
                         await self.recordModelPreparationResult(nil, model: model, generation: generation)
                     } catch is CancellationError {
                         return
@@ -423,8 +490,10 @@ final class GojoDictationService: ObservableObject {
                 shouldRunCleanup: { [self] completedGeneration in
                     await self.shouldRunS1MiniWarmup(generation: completedGeneration)
                 },
-                prepareCleanup: { [polisher] in
+                prepareCleanup: { [polisher, modelResidency] in
+                    let lease = await modelResidency.acquire()
                     await polisher.prepareIfInstalled()
+                    await modelResidency.release(lease)
                 }
             )
         }
@@ -478,7 +547,7 @@ final class GojoDictationService: ObservableObject {
     }
 
     var canChangeModel: Bool {
-        modelOperation == nil && !shortcutPreflighting && !awaitingControllerStart && isDictationInactive
+        modelOperation == nil && sessionResourceCount == 0 && !shortcutPreflighting && !awaitingControllerStart && isDictationInactive
     }
 
     var canTestMicrophone: Bool {
@@ -495,7 +564,8 @@ final class GojoDictationService: ObservableObject {
     }
 
     var canChangeCleanupModel: Bool {
-        guard s1MiniOperation == nil else { return false }
+        guard s1MiniOperation == nil, sessionResourceCount == 0,
+              !shortcutPreflighting, !awaitingControllerStart else { return false }
         switch state {
         case .requestingPermission, .listening, .pausing, .paused, .transcribing, .inserting:
             return false
@@ -521,12 +591,23 @@ final class GojoDictationService: ObservableObject {
         guard let controller else { return }
         switch event {
         case .keyDown, .startVoiceMode:
+            let requestsVoiceMode: Bool
+            if case .startVoiceMode = event { requestsVoiceMode = true } else { requestsVoiceMode = false }
+            let practiceID = nextPracticeFieldID ?? DictationPracticeRegistry.shared.focusedFieldID
+            nextPracticeFieldID = nil
+            let purpose = practiceID.map(DictationSessionPurpose.practice) ?? .focusedField
+            let plan: DictationSessionPlan
+            do {
+                plan = try makeSessionPlan(mode: requestsVoiceMode ? .continuous : .singleUtterance, purpose: purpose)
+            } catch {
+                receive(.error(.transcriptionFailed(error.localizedDescription)))
+                rejectShortcutStart()
+                return
+            }
             if let microphoneTestTask {
                 microphoneTestTask.cancel()
                 await microphoneTestTask.value
             }
-            let requestsVoiceMode: Bool
-            if case .startVoiceMode = event { requestsVoiceMode = true } else { requestsVoiceMode = false }
             shortcutGeneration &+= 1
             shortcutPreflighting = true
             defer { shortcutPreflighting = false }
@@ -573,7 +654,7 @@ final class GojoDictationService: ObservableObject {
             #if DEBUG
             let shortcutStartTime = ProcessInfo.processInfo.systemUptime
             #endif
-            if selectedProvider == .local {
+            if case .local = plan.recognition {
                 // The launch scan performs the full integrity checks once. Normal
                 // shortcut activation uses that cached result instead of hashing
                 // hundreds of megabytes before the microphone can start.
@@ -587,15 +668,15 @@ final class GojoDictationService: ObservableObject {
                 "stage=modelPreflight ms=\(modelMilliseconds, privacy: .public)"
             )
             #endif
-            switch selectedProvider {
-            case .local:
-                guard installedModels.contains(selectedModel) else {
+            switch plan.recognition {
+            case .local(let request):
+                guard installedModels.contains(request.model) else {
                     receive(.error(.modelNotInstalled))
                     rejectShortcutStart()
                     DictationModelDownloadPromptController.shared.present()
                     return
                 }
-            case .openRouter:
+            case .openRouter(let modelID):
                 guard hasOpenRouterAPIKey else {
                     let detail = "Add an OpenRouter API key in Dictation settings."
                     receive(.error(.cloudConfigurationMissing(detail)))
@@ -608,7 +689,7 @@ final class GojoDictationService: ObservableObject {
                 }
                 guard hasVerifiedOpenRouterModel,
                       availableOpenRouterModels.contains(where: {
-                          $0.id == selectedOpenRouterModelID && $0.supportsTranscription
+                          $0.id == modelID && $0.supportsTranscription
                       }) else {
                     let detail = "Wait for Gojo to verify an OpenRouter speech-to-text model in Dictation settings."
                     receive(.error(.cloudConfigurationMissing(detail)))
@@ -620,14 +701,15 @@ final class GojoDictationService: ObservableObject {
                     return
                 }
             }
-            let mode: DictationCaptureMode = requestsVoiceMode
-                ? .continuous : .singleUtterance
             awaitingControllerStart = true
-            if await controller.hotKeyDown(
-                mode: mode,
-                pauseDuration: DictationPauseDuration.saved().seconds,
-                targetPolicy: mode == .continuous ? .followFocus : .fixed
-            ) {
+            activeSessionID = plan.id
+            activeSessionCues = plan.cuesEnabled
+            activeLearningSessionID = plan.learnsCorrections ? plan.id : nil
+            activeIntent = plan.text.intent
+            activePracticeFieldID = practiceID
+            lastCompletion = nil
+            completionAttentionID = nil
+            if await controller.hotKeyDown(plan: plan) {
                 if requestsVoiceMode { DictationModifierHotKeyMonitor.shared.adoptVoiceModeSession() }
                 shortcutSessionGate.acceptKeyDown()
                 shortcutPreflighting = false
@@ -646,7 +728,7 @@ final class GojoDictationService: ObservableObject {
             }
             await controller.hotKeyUp()
         case .lockVoiceMode:
-            if await controller.lockVoiceMode(pauseDuration: DictationPauseDuration.saved().seconds) {
+            if await controller.lockVoiceMode() {
                 DictationModifierHotKeyMonitor.shared.adoptVoiceModeSession()
                 DictationPanelController.shared.show()
             } else {
@@ -732,7 +814,18 @@ final class GojoDictationService: ObservableObject {
 
     #if DEBUG
     func transcribeE2E(_ audio: DictationAudio) async throws -> String {
-        try await localTranscriber.transcribe(audio)
+        let request = DictationRecognitionRequest.local(try DictationLocalRecognition(model: selectedModel,
+            language: recognitionLanguage, translateToEnglish: translatesToEnglish,
+            recognitionTerms: usesVocabulary ? DictationVocabularyPolicy.recognitionTerms(vocabulary) : []))
+        let lease = await modelResidency.acquire()
+        do {
+            let transcript = try await localTranscriber.transcribe(audio, request: request)
+            await modelResidency.release(lease)
+            return transcript
+        } catch {
+            await modelResidency.release(lease)
+            throw error
+        }
     }
     #endif
 
@@ -749,7 +842,14 @@ final class GojoDictationService: ObservableObject {
         modelErrors[model] = nil
         Task {
             do {
-                try await localTranscriber.install(model)
+                let lease = await modelResidency.acquire()
+                do {
+                    try await localTranscriber.install(model)
+                    await modelResidency.release(lease)
+                } catch {
+                    await modelResidency.release(lease)
+                    throw error
+                }
                 installedModels.insert(model)
             } catch {
                 modelErrors[model] = modelOperationError(error, fallback: "Could not download this model. Check your connection and try again.")
@@ -769,7 +869,14 @@ final class GojoDictationService: ObservableObject {
         modelErrors[model] = nil
         Task {
             do {
-                try await localTranscriber.selectModel(model)
+                let lease = await modelResidency.acquire()
+                do {
+                    try await localTranscriber.selectModel(model)
+                    await modelResidency.release(lease)
+                } catch {
+                    await modelResidency.release(lease)
+                    throw error
+                }
                 selectedModel = model
                 UserDefaults.standard.set(model.rawValue, forKey: Self.selectedModelKey)
                 warmSelectedTranscriber()
@@ -790,7 +897,14 @@ final class GojoDictationService: ObservableObject {
         Task {
             var removalError: String?
             do {
-                try await localTranscriber.removeModel(model)
+                let lease = await modelResidency.acquire()
+                do {
+                    try await localTranscriber.removeModel(model)
+                    await modelResidency.release(lease)
+                } catch {
+                    await modelResidency.release(lease)
+                    throw error
+                }
             } catch {
                 removalError = modelOperationError(error, fallback: "Gojo could not remove this model. Try again.")
             }
@@ -840,6 +954,21 @@ final class GojoDictationService: ObservableObject {
             DictationModifierHotKeyMonitor.shared.rejectCurrentDictationStart()
         }
         state = newState
+        if newState == .listening {
+            if let id = activeSessionID, readyCueSessionID != id, activeSessionCues, cuesEnabled {
+                readyCueSessionID = id
+                DictationFeedback.play(.ready)
+            }
+            if let audioCapture {
+                Task { [weak self] in self?.currentInputName = await audioCapture.currentInputDevice?.name }
+            }
+        }
+        switch newState {
+        case .idle, .succeeded, .error:
+            activeIntent = nil
+            activePracticeFieldID = nil
+        default: break
+        }
         if newState != .listening {
             audioLevel = 0
         }
@@ -849,6 +978,118 @@ final class GojoDictationService: ObservableObject {
         } else if case .succeeded = newState {
             if selectedProvider == .local { modelErrors[selectedModel] = nil }
             dictationPipelineLogger.notice("state=succeeded")
+        }
+    }
+
+    private func adjustSessionResources(by delta: Int) {
+        sessionResourceCount += delta
+    }
+
+    var currentModelCapabilities: DictationModelCapabilities? {
+        selectedProvider == .local ? DictationModelDescriptor.descriptor(for: selectedModel).capabilities : nil
+    }
+
+    var recognitionLanguage: DictationLanguageSelection {
+        let stored = UserDefaults.standard.string(forKey: languageKey)
+        if let stored { return stored == "auto" ? .automatic : .fixed(stored) }
+        return DictationModelDescriptor.descriptor(for: selectedModel).capabilities.language.defaultSelection
+    }
+
+    var translatesToEnglish: Bool { UserDefaults.standard.bool(forKey: translationKey) }
+    private var languageKey: String { "gojo.dictation.language.\(selectedModel.rawValue)" }
+    private var translationKey: String { "gojo.dictation.translate.\(selectedModel.rawValue)" }
+
+    private static func loadInputSelection() -> DictationInputSelection {
+        guard let data = UserDefaults.standard.data(forKey: "gojo.dictation.input"),
+              let value = try? JSONDecoder().decode(DictationInputSelection.self, from: data) else { return .systemDefault }
+        return value
+    }
+
+    func setIntent(_ value: DictationSessionIntent) { selectedIntent = value; UserDefaults.standard.set(value.rawValue, forKey: "gojo.dictation.intent") }
+    func setSpokenCommandMode(_ value: DictationSpokenCommandMode) { spokenCommandMode = value; UserDefaults.standard.set(value.rawValue, forKey: "gojo.dictation.commands") }
+    func setCommandLanguage(_ value: DictationCommandLanguage) { commandLanguage = value; UserDefaults.standard.set(value.rawValue, forKey: "gojo.dictation.commandLanguage") }
+    func setUsesVocabulary(_ value: Bool) { usesVocabulary = value; UserDefaults.standard.set(value, forKey: "gojo.dictation.usesVocabulary") }
+    func setRecognitionLanguage(_ value: DictationLanguageSelection) {
+        guard let capabilities = currentModelCapabilities,
+              (try? capabilities.validate(language: value, translateToEnglish: translatesToEnglish, model: selectedModel)) != nil else { return }
+        objectWillChange.send()
+        UserDefaults.standard.set(value.persistedCode, forKey: languageKey)
+    }
+    func setTranslatesToEnglish(_ value: Bool) {
+        guard let capabilities = currentModelCapabilities,
+              (try? capabilities.validate(language: recognitionLanguage, translateToEnglish: value, model: selectedModel)) != nil else { return }
+        objectWillChange.send()
+        UserDefaults.standard.set(value, forKey: translationKey)
+    }
+    func setInput(_ value: DictationInputSelection) { selectedInput = value; UserDefaults.standard.set(try? JSONEncoder().encode(value), forKey: "gojo.dictation.input") }
+    func refreshInputDevices() { inputDevices = (try? DictationInputDevices.inputDevices()) ?? [] }
+    func setAdaptiveSpeech(_ value: Bool) { adaptiveSpeech = value; UserDefaults.standard.set(value, forKey: "gojo.dictation.adaptiveSpeech") }
+    func setPreviewEnabled(_ value: Bool) { previewEnabled = value; UserDefaults.standard.set(value, forKey: "gojo.dictation.preview") }
+    func setCuesEnabled(_ value: Bool) { cuesEnabled = value; UserDefaults.standard.set(value, forKey: "gojo.dictation.cues") }
+    func setResidencyPolicy(_ value: DictationResidencyPolicy) {
+        residencyPolicy = value
+        UserDefaults.standard.set(value.rawValue, forKey: "gojo.dictation.residency")
+        Task { await modelResidency.setPolicy(value) }
+    }
+
+    func beginPractice(fieldID: UUID) {
+        guard isDictationInactive else { return }
+        nextPracticeFieldID = fieldID
+        startVoiceMode()
+    }
+
+    func cancelPractice(fieldID: UUID) {
+        guard let controller else { return }
+        Task { [weak self] in
+            if await controller.cancelPractice(fieldID: fieldID) {
+                guard let self else { return }
+                self.shortcutSessionGate.reset()
+                self.receive(await controller.state)
+            }
+        }
+    }
+
+    private func makeRecognitionRequest() throws -> DictationRecognitionRequest {
+        switch selectedProvider {
+        case .local:
+            return .local(try DictationLocalRecognition(model: selectedModel, language: recognitionLanguage,
+                translateToEnglish: translatesToEnglish,
+                recognitionTerms: usesVocabulary ? DictationVocabularyPolicy.recognitionTerms(vocabulary) : []))
+        case .openRouter: return .openRouter(modelID: selectedOpenRouterModelID)
+        }
+    }
+
+    private func makeSessionPlan(mode: DictationCaptureMode, purpose: DictationSessionPurpose) throws -> DictationSessionPlan {
+        let recognition = try makeRecognitionRequest()
+        let englishOutput: Bool
+        switch recognition {
+        case .local(let request): englishOutput = request.language == .fixed("en") || request.translateToEnglish
+        case .openRouter: englishOutput = false
+        }
+        let cleanup: DictationCleanupPolicy = cleanupEnabled && englishOutput ? .s1Mini(writingStyle) : .off
+        let targetPolicy: DictationTargetPolicy
+        if case .practice = purpose { targetPolicy = .fixed }
+        else { targetPolicy = mode == .continuous ? .followFocus : .fixed }
+        return DictationSessionPlan(mode: mode, pauseDuration: DictationPauseDuration.saved().seconds,
+            targetPolicy: targetPolicy, purpose: purpose, recognition: recognition,
+            text: DictationTextOptions(intent: selectedIntent, commands: spokenCommandMode, commandLanguage: commandLanguage,
+                vocabulary: usesVocabulary ? vocabulary : [], cleanup: cleanup),
+            capture: DictationCaptureConfiguration(input: selectedInput, adaptiveSpeech: adaptiveSpeech, previewEnabled: previewEnabled),
+            cuesEnabled: cuesEnabled, learnsCorrections: learnsCorrections)
+    }
+
+    private func receiveCompletion(_ completion: DictationCompletion, id: UUID, plan: DictationSessionPlan) {
+        guard activeSessionID == id, completionSessionID != id else { return }
+        completionSessionID = id
+        completionAttentionID = id
+        lastCompletion = completion
+        guard plan.cuesEnabled, cuesEnabled else { return }
+        switch completion {
+        case .empty: DictationFeedback.play(.empty)
+        case .delivered: DictationFeedback.play(.delivered)
+        case .savedForCopying: DictationFeedback.play(.savedForCopying)
+        case .cancelled: DictationFeedback.play(.cancelled)
+        case .failed: DictationFeedback.play(.failed)
         }
     }
 
@@ -978,8 +1219,10 @@ final class GojoDictationService: ObservableObject {
                 shouldRunCleanup: { [self] completedGeneration in
                     await self.shouldRunS1MiniWarmup(generation: completedGeneration)
                 },
-                prepareCleanup: { [polisher] in
+                prepareCleanup: { [polisher, modelResidency] in
+                    let lease = await modelResidency.acquire()
                     await polisher.prepareIfInstalled()
+                    await modelResidency.release(lease)
                 }
             )
         }
@@ -996,8 +1239,10 @@ final class GojoDictationService: ObservableObject {
         s1MiniOperationID = operationID
         s1MiniOperation = .installing
         s1MiniError = nil
-        let task = Task { [weak self, polisher] in
+        let task = Task { [weak self, polisher, modelResidency] in
+            let lease = await modelResidency.acquire()
             defer {
+                Task { await modelResidency.release(lease) }
                 if self?.s1MiniOperationID == operationID {
                     self?.s1MiniOperation = nil
                     self?.s1MiniOperationID = nil
@@ -1035,8 +1280,10 @@ final class GojoDictationService: ObservableObject {
         s1MiniOperation = .removing
         s1MiniError = nil
         updateCleanupEnabled(false)
-        let task = Task { [weak self, polisher] in
+        let task = Task { [weak self, polisher, modelResidency] in
+            let lease = await modelResidency.acquire()
             defer {
+                Task { await modelResidency.release(lease) }
                 if self?.s1MiniOperationID == operationID {
                     self?.s1MiniOperation = nil
                     self?.s1MiniOperationID = nil
@@ -1086,6 +1333,7 @@ final class GojoDictationService: ObservableObject {
     func setLearnsCorrections(_ enabled: Bool) {
         guard enabled != learnsCorrections else { return }
         learnsCorrections = enabled
+        if !enabled { activeLearningSessionID = nil }
         UserDefaults.standard.set(enabled, forKey: DictationCorrectionLearningPolicy.defaultsKey)
         resetCorrectionLearning()
     }
@@ -1097,9 +1345,9 @@ final class GojoDictationService: ObservableObject {
         await XPCHelperClient.shared.cancelDictationCorrectionObservation()
     }
 
-    func observeCorrections(to text: String, targetIdentity: String?) {
+    func observeCorrections(to text: String, targetIdentity: String?, eligible: Bool, sessionID: UUID) {
         cancelCorrectionObservationTask()
-        guard learnsCorrections,
+        guard eligible, learnsCorrections, activeLearningSessionID == sessionID,
               !text.isEmpty,
               let targetIdentity,
               targetIdentity.hasSuffix(":accessibility") else { return }

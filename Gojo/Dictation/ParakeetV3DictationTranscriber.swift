@@ -4,6 +4,8 @@ import CryptoKit
 import Foundation
 
 actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
+    private var session: (id: UUID, request: DictationRecognitionRequest)?
+    private var maintenanceInProgress = false
     private var manager: AsrManager?
     private var modelValidation = DictationModelValidationCache()
     private var loadTask: (generation: UInt, task: Task<AsrManager, Error>)?
@@ -16,6 +18,26 @@ actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
         ModelHub.offlineMode = true
     }
 
+    func beginSession(_ plan: DictationSessionPlan) async throws {
+        try validateRequest(plan.recognition)
+        guard session == nil else { throw WhisperKitDictationError.sessionAlreadyActive }
+        session = (plan.id, plan.recognition)
+    }
+
+    func endSession(_ id: UUID) async {
+        guard session?.id == id else { return }
+        await cancelTranscription()
+        if session?.id == id { session = nil }
+    }
+
+    private func validateRequest(_ request: DictationRecognitionRequest) throws {
+        guard !maintenanceInProgress else { throw ParakeetV3DictationError.transcriptionAlreadyRunning }
+        guard case .local(let local) = request, local.model == .parakeetV3Multilingual,
+              session == nil || session?.request == request else {
+            throw WhisperKitDictationError.incompatibleRecognitionRequest
+        }
+    }
+
     func install() async throws {
         _ = try await resolvePinnedModelFolder(
             allowDownload: DictationModelRequest.settingsDownload.allowsDownload
@@ -23,7 +45,12 @@ actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
     }
 
     func remove() async throws {
-        await unload()
+        guard session == nil, !maintenanceInProgress else {
+            throw ParakeetV3DictationError.transcriptionAlreadyRunning
+        }
+        maintenanceInProgress = true
+        defer { maintenanceInProgress = false }
+        await unloadResources()
         modelValidation.invalidate()
         try Self.removeCachedModel()
     }
@@ -46,7 +73,8 @@ actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
         return validatedFolder
     }
 
-    func transcribe(_ audio: DictationAudio) async throws -> String {
+    func transcribe(_ audio: DictationAudio, request: DictationRecognitionRequest) async throws -> String {
+        try validateRequest(request)
         guard audio.sampleRate == DictationAudio.transcriptionSampleRate else {
             throw ParakeetV3DictationError.invalidSampleRate(audio.sampleRate)
         }
@@ -71,7 +99,8 @@ actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
 
         let manager = try await loadManager()
         try Task.checkCancellation()
-        guard activeTranscriptionGeneration == generation else { throw CancellationError() }
+        guard activeTranscriptionGeneration == generation,
+              transcriptionGeneration == generation else { throw CancellationError() }
 
         let task = Task<String, Error> {
             try Task.checkCancellation()
@@ -86,11 +115,13 @@ actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
         }
         transcriptionTask = (generation, task)
         let transcript = try await task.value
-        guard activeTranscriptionGeneration == generation else { throw CancellationError() }
+        guard activeTranscriptionGeneration == generation,
+              transcriptionGeneration == generation else { throw CancellationError() }
         return transcript
     }
 
-    func prepare() async throws {
+    func prepare(request: DictationRecognitionRequest) async throws {
+        try validateRequest(request)
         _ = try await loadManager()
     }
 
@@ -98,8 +129,14 @@ actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
         transcriptionGeneration &+= 1
         let cancelledGeneration = activeTranscriptionGeneration
         let cancelledTranscription = transcriptionTask
+        let cancelledLoad = loadTask
+        loadGeneration &+= 1
         cancelledTranscription?.task.cancel()
+        cancelledLoad?.task.cancel()
         if let task = cancelledTranscription?.task {
+            _ = await task.result
+        }
+        if let task = cancelledLoad?.task {
             _ = await task.result
         }
         if activeTranscriptionGeneration == cancelledGeneration {
@@ -108,9 +145,19 @@ actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
         if transcriptionTask?.generation == cancelledTranscription?.generation {
             transcriptionTask = nil
         }
+        if loadTask?.generation == cancelledLoad?.generation {
+            loadTask = nil
+        }
     }
 
     func unload() async {
+        guard session == nil, !maintenanceInProgress else { return }
+        maintenanceInProgress = true
+        defer { maintenanceInProgress = false }
+        await unloadResources()
+    }
+
+    private func unloadResources() async {
         await cancelTranscription()
         let pendingLoad = loadTask
         loadGeneration &+= 1
@@ -128,7 +175,11 @@ actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
     private func loadManager() async throws -> AsrManager {
         if let manager { return manager }
         if let loadTask {
-            do { return try await loadTask.task.value }
+            do {
+                let loaded = try await loadTask.task.value
+                guard loadGeneration == loadTask.generation else { throw CancellationError() }
+                return loaded
+            }
             catch is CancellationError { throw CancellationError() }
             catch { throw DictationModelPreparationError.classify(error) }
         }

@@ -38,7 +38,7 @@ actor FakeTargetProvider: DictationTargetCapturing {
         self.failure = failure
     }
 
-    func captureTarget() async throws -> DictationTargetResolution<String> {
+    func captureTarget(purpose: DictationSessionPurpose) async throws -> DictationTargetResolution<String> {
         captures += 1
         await log.append("target")
         if let failure { throw failure }
@@ -138,7 +138,7 @@ actor FakeTranscriber: LocalDictationTranscribing {
         self.behavior = behavior
     }
 
-    func transcribe(_ audio: DictationAudio) async throws -> String {
+    func transcribe(_ audio: DictationAudio, request: DictationRecognitionRequest) async throws -> String {
         calls += 1
         await log.append("transcribe")
         switch behavior {
@@ -149,11 +149,11 @@ actor FakeTranscriber: LocalDictationTranscribing {
 }
 
 actor FailingPreparationTranscriber: LocalDictationTranscribing {
-    func prepare() async throws {
+    func prepare(request: DictationRecognitionRequest) async throws {
         throw DictationModelPreparationError.insufficientStorage
     }
 
-    func transcribe(_ audio: DictationAudio) async throws -> String {
+    func transcribe(_ audio: DictationAudio, request: DictationRecognitionRequest) async throws -> String {
         throw DictationModelPreparationError.insufficientStorage
     }
 }
@@ -226,7 +226,7 @@ actor FakePolisher: DictationTextPolishing {
         self.behavior = behavior
     }
 
-    func polish(_ transcript: String) async throws -> String {
+    func polish(_ transcript: String, options: DictationTextOptions) async throws -> String {
         calls += 1
         await log.append("polish")
         switch behavior {
@@ -250,7 +250,7 @@ actor TeardownAwareTranscriber: LocalDictationTranscribing {
     private var activeInferences = 0
     private var maximumConcurrentInferences = 0
 
-    func transcribe(_ audio: DictationAudio) async throws -> String {
+    func transcribe(_ audio: DictationAudio, request: DictationRecognitionRequest) async throws -> String {
         calls += 1
         let call = calls
         activeInferences += 1
@@ -288,7 +288,7 @@ actor TeardownAwarePolisher: DictationTextPolishing {
     private var maximumConcurrentPolishes = 0
     private var cancellations = 0
 
-    func polish(_ transcript: String) async throws -> String {
+    func polish(_ transcript: String, options: DictationTextOptions) async throws -> String {
         calls += 1
         let call = calls
         activePolishes += 1
@@ -330,7 +330,7 @@ actor FakeInserter: DictationTextInserting {
 
     init(log: EventLog) { self.log = log }
 
-    func insert(_ text: String, into target: String) async throws -> DictationInsertionOutcome {
+    func insert(_ text: String, into target: String, plan: DictationSessionPlan) async throws -> DictationInsertionOutcome {
         insertions.append((text, target))
         await log.append("insert")
         return .verified
@@ -346,7 +346,7 @@ private struct FriendlyTargetError: LocalizedError {
 actor FailingTargetProvider: DictationTargetCapturing {
     typealias Target = String
 
-    func captureTarget() async throws -> DictationTargetResolution<String> {
+    func captureTarget(purpose: DictationSessionPurpose) async throws -> DictationTargetResolution<String> {
         throw FriendlyTargetError()
     }
 }
@@ -357,7 +357,7 @@ actor GatedTargetProvider: DictationTargetCapturing {
     private var continuation: CheckedContinuation<Void, Never>?
     private var released = false
 
-    func captureTarget() async throws -> DictationTargetResolution<String> {
+    func captureTarget(purpose: DictationSessionPurpose) async throws -> DictationTargetResolution<String> {
         if !released {
             await withCheckedContinuation { continuation = $0 }
         }
@@ -391,12 +391,12 @@ actor FollowingTargetProvider: DictationTargetCapturing {
         self.initialResolution = initialResolution
     }
 
-    func captureTarget() async throws -> DictationTargetResolution<String> {
+    func captureTarget(purpose: DictationSessionPurpose) async throws -> DictationTargetResolution<String> {
         captures += 1
         return initialResolution
     }
 
-    func captureAdditionalTarget() async throws -> DictationTargetResolution<String> {
+    func captureAdditionalTarget(purpose: DictationSessionPurpose) async throws -> DictationTargetResolution<String> {
         additionalCaptures += 1
         let ordinal = additionalCaptures
         if ordinal == gateOrdinal {
@@ -538,7 +538,7 @@ actor ContinuousTranscriber: LocalDictationTranscribing {
         shouldGateFirst = gateFirst
     }
 
-    func transcribe(_ audio: DictationAudio) async throws -> String {
+    func transcribe(_ audio: DictationAudio, request: DictationRecognitionRequest) async throws -> String {
         let ordinal = Int(audio.samples.first ?? 0)
         ordinals.append(ordinal)
         active += 1
@@ -576,16 +576,16 @@ actor RetainedInserter: DictationTextInserting {
     private var releaseIsGated = false
     private var releaseContinuation: CheckedContinuation<Void, Never>?
 
-    func insert(_ text: String, into target: String) async throws -> DictationInsertionOutcome {
+    func insert(_ text: String, into target: String, plan: DictationSessionPlan) async throws -> DictationInsertionOutcome {
         if failInsertion || rejectedTargets.contains(target) { throw FriendlyTargetError() }
         chunks.append(text)
         targets.append(target)
         return outcome
     }
 
-    func insertRetainingTarget(_ text: String, into target: String) async throws -> DictationInsertionOutcome {
+    func insertRetainingTarget(_ text: String, into target: String, plan: DictationSessionPlan) async throws -> DictationInsertionOutcome {
         retainedInsertions += 1
-        return try await insert(text, into: target)
+        return try await insert(text, into: target, plan: plan)
     }
 
     func releaseTarget(_ target: String) async {
@@ -605,6 +605,122 @@ actor RetainedInserter: DictationTextInserting {
     func setFailure() { failInsertion = true }
     func setOutcome(_ outcome: DictationInsertionOutcome) { self.outcome = outcome }
     func rejectTarget(_ target: String) { rejectedTargets.insert(target) }
+}
+
+actor SessionPlanProbe: DictationTargetCapturing, DictationAudioCapturing, LocalDictationTranscribing, DictationTextPolishing, DictationTextInserting {
+    typealias Target = String
+    private(set) var purposes: [DictationSessionPurpose] = []
+    private(set) var configurations: [DictationCaptureConfiguration] = []
+    private(set) var requests: [DictationRecognitionRequest] = []
+    private(set) var options: [DictationTextOptions] = []
+    private(set) var insertedPlans: [DictationSessionPlan] = []
+    private(set) var insertions: [String] = []
+    private(set) var begun: [UUID] = []
+    private(set) var ended: [UUID] = []
+    private(set) var cancellationRequests = 0
+    private(set) var maximumActive = 0
+    private(set) var active = 0
+    private(set) var resourceAcquisitions = 0
+    private(set) var resourceReleases = 0
+    private(set) var promotions = 0
+    private(set) var captureStops = 0
+    private(set) var continuousStops = 0
+    private var gateFirst: Bool
+    private var continuation: CheckedContinuation<Void, Never>?
+    private var gatePreparation: Bool
+    private var preparationContinuation: CheckedContinuation<Void, Error>?
+    private var stream: AsyncThrowingStream<DictationAudio, Error>.Continuation?
+    private var sampleCount = 1_600
+    private var failFirst: Bool
+    private var fakeLiveRequest: DictationRecognitionRequest = .local(.english)
+    private var fakeLiveOptions = DictationTextOptions()
+
+    init(gateFirst: Bool = false, failFirst: Bool = false, gatePreparation: Bool = false) {
+        self.gateFirst = gateFirst
+        self.failFirst = failFirst
+        self.gatePreparation = gatePreparation
+    }
+    func captureTarget(purpose: DictationSessionPurpose) -> DictationTargetResolution<String> {
+        purposes.append(purpose)
+        return .captured("captured")
+    }
+    func requestPermission() -> Bool { true }
+    func configure(_ configuration: DictationCaptureConfiguration) { configurations.append(configuration) }
+    func startCapture() {}
+    func stopCapture() -> DictationAudio {
+        captureStops += 1
+        return DictationAudio(samples: Array(repeating: 0.2, count: 3_200))
+    }
+    func cancelCapture() { stream?.finish(); stream = nil }
+    func captureSnapshot() -> DictationCaptureSnapshot? {
+        DictationCaptureSnapshot(totalSampleCount: sampleCount, sourceOffset: 0,
+            audio: DictationAudio(samples: Array(repeating: 0.1, count: sampleCount)), isWindowed: false)
+    }
+    func promoteCaptureToContinuous(pauseDuration: TimeInterval) -> AsyncThrowingStream<DictationAudio, Error> {
+        promotions += 1
+        return AsyncThrowingStream { stream = $0 }
+    }
+    func startContinuousCapture(pauseDuration: TimeInterval) -> AsyncThrowingStream<DictationAudio, Error> {
+        AsyncThrowingStream { stream = $0 }
+    }
+    func stopContinuousCapture() {
+        continuousStops += 1
+        stream?.yield(DictationAudio(samples: Array(repeating: 0.2, count: 3_200)))
+        stream?.finish()
+        stream = nil
+    }
+    func transcribe(_ audio: DictationAudio, request: DictationRecognitionRequest) async throws -> String {
+        requests.append(request)
+        let ordinal = requests.count
+        active += 1
+        maximumActive = max(maximumActive, active)
+        defer { active -= 1 }
+        if gateFirst, ordinal == 1 { await withCheckedContinuation { continuation = $0 } }
+        if failFirst, ordinal == 1 { throw FakePolisherError.unavailable }
+        return audio.samples.count == 3_200 ? "final\nparagraph" : "draft speech"
+    }
+    func cancelTranscription() async {
+        cancellationRequests += 1
+        preparationContinuation?.resume(throwing: CancellationError())
+        preparationContinuation = nil
+        while active > 0 { try? await Task.sleep(for: .milliseconds(1)) }
+    }
+    func prepare(request: DictationRecognitionRequest) async throws {
+        if gatePreparation {
+            try await withCheckedThrowingContinuation { preparationContinuation = $0 }
+        }
+    }
+    func beginSession(_ plan: DictationSessionPlan) { begun.append(plan.id) }
+    func endSession(_ id: UUID) { ended.append(id) }
+    func polish(_ transcript: String, options: DictationTextOptions) -> String {
+        self.options.append(options)
+        return transcript
+    }
+    func cancelPolishing() {}
+    func insert(_ text: String, into target: String, plan: DictationSessionPlan) -> DictationInsertionOutcome {
+        insertions.append(text)
+        insertedPlans.append(plan)
+        return .verified
+    }
+    func acquireResources() -> (@Sendable () async -> Void) {
+        resourceAcquisitions += 1
+        return { [self] in await releaseResources() }
+    }
+    private func releaseResources() { resourceReleases += 1 }
+    func isWaiting() -> Bool { continuation != nil }
+    func release() { continuation?.resume(); continuation = nil }
+    func isPreparing() -> Bool { preparationContinuation != nil }
+    func releasePreparation(cancelled: Bool = false) {
+        gatePreparation = false
+        if cancelled { preparationContinuation?.resume(throwing: CancellationError()) }
+        else { preparationContinuation?.resume() }
+        preparationContinuation = nil
+    }
+    func setSampleCount(_ count: Int) { sampleCount = count }
+    func changeLivePreferences() {
+        fakeLiveRequest = .openRouter(modelID: "later-preference")
+        fakeLiveOptions = DictationTextOptions(intent: .literal)
+    }
 }
 
 func waitForCondition(_ message: String, _ condition: @escaping () async -> Bool) async {
@@ -735,7 +851,250 @@ struct DictationRegressionRunner {
         await testMediaResumesOnStopCaptureFailure()
         await testContinuousMediaResumesOnPauseAndRepauses()
         await testStaleStopCaptureDoesNotResumeReplacementSessionMedia()
+        await testTypedEmptyAudioOutcomes()
+        await testFinalCommandsSurviveFallback()
+        await testFrozenPlanAndParagraphDelivery()
+        await testPreviewReleaseDuringPreparation()
+        await testPreviewCancelDuringPreparation()
+        await testUnexpectedPreparationCancellationReleasesSession()
+        await testPreviewDrainsBeforeFinalDecode()
+        await testPreviewCancellationAndPromotion()
+        await testPreviewSkipsUnchangedAndFailureKeepsFinal()
         print("dictation-regression-pass")
+    }
+
+    static func testTypedEmptyAudioOutcomes() async {
+        for (audio, reason) in [
+            (DictationAudio(samples: []), DictationEmptyReason.noSpeech),
+            (DictationAudio(samples: Array(repeating: 0, count: 3_200), speechEvidence: .silence), .noSpeech),
+            (DictationAudio(samples: Array(repeating: 0.1, count: 800)), .tooShort)
+        ] {
+            let log = EventLog()
+            let capture = FakeAudioCapture(log: log)
+            await capture.setAudio(audio)
+            let transcriber = FakeTranscriber(log: log)
+            let inserter = FakeInserter(log: log)
+            let controller = DictationController(targetProvider: FakeTargetProvider(log: log), audioCapture: capture,
+                transcriber: transcriber, polisher: FakePolisher(log: log), inserter: inserter)
+            await controller.hotKeyDown()
+            await waitForState(.listening, controller: controller, message: "empty-audio case must start capture")
+            await controller.hotKeyUp()
+            await waitForState(.idle, controller: controller, message: "empty-audio case must finish quietly")
+            assertEqual(await controller.lastCompletion, .empty(reason: reason), "audio outcome must distinguish no speech and too short")
+            assertEqual(await transcriber.calls, 0, "rejected empty audio must not invoke recognition")
+            assertEqual(await inserter.insertionCount(), 0, "empty audio must not insert")
+        }
+    }
+
+    static func testFinalCommandsSurviveFallback() async {
+        for behavior in [FakePolisher.Behavior.fail, .polish("")] {
+            let log = EventLog()
+            let inserter = FakeInserter(log: log)
+            let controller = DictationController(targetProvider: FakeTargetProvider(log: log), audioCapture: FakeAudioCapture(log: log),
+                transcriber: FakeTranscriber(log: log, behavior: .fixed("go joe new paragraph")),
+                polisher: FakePolisher(log: log, behavior: behavior), inserter: inserter)
+            let options = DictationTextOptions(commands: .punctuation,
+                vocabulary: [DictationVocabularyEntry(spoken: "go joe", replacement: "Gojo")])
+            await controller.hotKeyDown(plan: DictationSessionPlan(text: options))
+            await waitForState(.listening, controller: controller, message: "fallback command case must start")
+            await controller.hotKeyUp()
+            await waitForState(.succeeded("Gojo\n\n"), controller: controller, message: "failed or empty cleanup must retain frozen vocabulary and trailing paragraph command")
+            assertEqual(await inserter.insertions.map { $0.0 }, ["Gojo\n\n"], "fallback must insert structural command text once")
+        }
+        let log = EventLog()
+        let inserter = FakeInserter(log: log)
+        let controller = DictationController(targetProvider: FakeTargetProvider(log: log), audioCapture: FakeAudioCapture(log: log),
+            transcriber: FakeTranscriber(log: log, behavior: .fixed("new line")),
+            polisher: FakePolisher(log: log, behavior: .polish("\n")), inserter: inserter)
+        await controller.hotKeyDown()
+        await waitForState(.listening, controller: controller, message: "standalone newline case must start")
+        await controller.hotKeyUp()
+        await waitForState(.succeeded("\n"), controller: controller, message: "final structural newline must survive controller delivery")
+        assertEqual(await inserter.insertions.map { $0.0 }, ["\n"], "standalone line command must insert one newline")
+    }
+
+    static func testFrozenPlanAndParagraphDelivery() async {
+        let probe = SessionPlanProbe(gateFirst: true)
+        let purpose = DictationSessionPurpose.practice(UUID())
+        let request = DictationRecognitionRequest.local(try! DictationLocalRecognition(model: .whisperLargeV3,
+            language: .fixed("es"), translateToEnglish: true, recognitionTerms: ["Gojo"]))
+        let options = DictationTextOptions(intent: .code, commands: .punctuationAndCode, commandLanguage: .spanish,
+            vocabulary: [DictationVocabularyEntry(spoken: "go joe", replacement: "Gojo")])
+        let plan = DictationSessionPlan(pauseDuration: 1.8, purpose: purpose, recognition: request, text: options,
+            capture: DictationCaptureConfiguration(input: .deviceUID("frozen-mic"), adaptiveSpeech: false),
+            cuesEnabled: true, learnsCorrections: false)
+        let controller = DictationController(targetProvider: probe, audioCapture: probe, transcriber: probe,
+            polisher: probe, inserter: probe, acquireSessionResources: { _ in await probe.acquireResources() })
+        await controller.hotKeyDown(plan: plan)
+        await waitForState(.listening, controller: controller, message: "frozen plan must start capture")
+        await controller.hotKeyUp()
+        await waitForCondition("frozen recognition must reach the controlled decoder") { await probe.isWaiting() }
+        await probe.changeLivePreferences()
+        assertEqual(await probe.resourceReleases, 0, "stopping microphone must retain model resource lease through inference")
+        await probe.release()
+        await waitForState(.succeeded("final\nparagraph"), controller: controller, message: "final paragraph breaks must survive delivery")
+        await waitForCondition("finished decoder must release resources") { await probe.resourceReleases == 1 }
+        assertEqual(await probe.purposes, [purpose], "target routing must use frozen session purpose")
+        assertEqual(await probe.configurations, [plan.capture], "capture must use frozen input and speech configuration")
+        assertEqual(await probe.requests, [request], "recognition must receive the accepted immutable request")
+        assertEqual(await probe.options, [options], "polish must receive frozen text options")
+        assertEqual(await probe.insertedPlans, [plan], "insertion must receive frozen correction learning eligibility")
+        assertEqual(await probe.begun, [plan.id], "backend session identity must equal accepted plan identity")
+        assertEqual(await probe.ended, [plan.id], "backend pin must end exactly once after delivery")
+        assertEqual(await controller.lastCompletion, .delivered, "verified insertion must publish delivered outcome")
+    }
+
+    static func previewPlan() -> DictationSessionPlan {
+        DictationSessionPlan(recognition: .local(try! DictationLocalRecognition(model: .parakeetUnifiedEnglish)),
+            capture: DictationCaptureConfiguration(previewEnabled: true))
+    }
+
+    static func testPreviewReleaseDuringPreparation() async {
+        for promotes in [false, true] {
+            let probe = SessionPlanProbe(gatePreparation: true)
+            let media = BeforeCaptureProbe(log: EventLog(), playing: true)
+            let controller = DictationController(targetProvider: probe, audioCapture: probe, transcriber: probe,
+                polisher: probe, inserter: probe, beforeCapture: { await media.run() },
+                acquireSessionResources: { _ in await probe.acquireResources() }, previewInterval: .milliseconds(5))
+            let plan = previewPlan()
+            await controller.hotKeyDown(plan: plan)
+            await waitForState(.listening, controller: controller, message: "capture must start while the preview model loads")
+            await waitForCondition("preview model preparation must reach the controlled load") { await probe.isPreparing() }
+            if promotes {
+                _ = await controller.lockVoiceMode()
+                await waitForCondition("promotion must continue while the preview model loads") { await probe.promotions == 1 }
+                await controller.finishVoiceMode()
+                await waitForCondition("voice mode must stop the microphone while preparation continues") { await probe.continuousStops == 1 }
+            } else {
+                await controller.hotKeyUp()
+                await waitForCondition("release must stop the microphone while preparation continues") { await probe.captureStops == 1 }
+            }
+            await waitForCondition("microphone stop must restore media while preparation continues") { await media.resumes == 1 }
+            assertEqual(await probe.cancellationRequests, 0, "stopping a waiting preview must retain shared model preparation")
+            assertEqual(await probe.requests.count, 0, "preview must not decode before preparation finishes")
+            assertEqual(await probe.resourceReleases, 0, "preparation and final recognition must retain the model lease")
+            await probe.releasePreparation()
+            await waitForState(.succeeded("final\nparagraph"), controller: controller, message: "the complete take must decode after shared preparation finishes")
+            await waitForCondition("final recognition must release session resources") { await probe.resourceReleases == 1 }
+            assertEqual(await probe.requests, [plan.recognition], "shared preparation must lead to exactly one full final decode")
+            assertEqual(await probe.insertions, ["final\nparagraph"], "stopping during preparation must deliver the final take")
+            assertEqual(await probe.maximumActive, 1, "preparation handoff must preserve one decoder")
+            assertEqual(await controller.provisionalPreview, nil, "stopped preview must not publish after preparation")
+        }
+    }
+
+    static func testPreviewCancelDuringPreparation() async {
+        let probe = SessionPlanProbe(gatePreparation: true)
+        let controller = DictationController(targetProvider: probe, audioCapture: probe, transcriber: probe,
+            polisher: probe, inserter: probe, acquireSessionResources: { _ in await probe.acquireResources() })
+        await controller.hotKeyDown(plan: previewPlan())
+        await waitForState(.listening, controller: controller, message: "preview cancellation must start capture")
+        await waitForCondition("preview cancellation must reach model preparation") { await probe.isPreparing() }
+        await controller.cancel()
+        await waitForCondition("explicit cancel must cancel preparation and release its lease") { await probe.resourceReleases == 1 }
+        assertEqual(await probe.cancellationRequests, 1, "explicit cancel must still reach the loading backend")
+        assertEqual(await probe.requests.count, 0, "explicit cancel must not start a final decode")
+        assertEqual(await probe.insertions, [], "explicit cancel must not deliver text")
+        assertEqual(await controller.lastCompletion, .cancelled, "explicit cancel must retain the cancellation outcome")
+    }
+
+    static func testUnexpectedPreparationCancellationReleasesSession() async {
+        for mode in [DictationCaptureMode.singleUtterance, .continuous] {
+            let probe = SessionPlanProbe(gatePreparation: true)
+            let controller = DictationController(targetProvider: probe, audioCapture: probe, transcriber: probe,
+                polisher: probe, inserter: probe, acquireSessionResources: { _ in await probe.acquireResources() })
+            await controller.hotKeyDown(plan: DictationSessionPlan(mode: mode))
+            await waitForState(.listening, controller: controller, message: "preparation cancellation case must start capture")
+            await waitForCondition("preparation cancellation must reach the loading backend") { await probe.isPreparing() }
+            await controller.hotKeyUp()
+            await probe.releasePreparation(cancelled: true)
+            let failure = DictationFailure.transcriptionFailed("Speech recognition stopped before it finished. Try dictation again.")
+            await waitForState(.error(failure), controller: controller, message: "unexpected preparation cancellation must report a failure")
+            await waitForCondition("unexpected preparation cancellation must release its lease") { await probe.resourceReleases == 1 }
+            assertEqual(await probe.insertions, [], "failed preparation must not deliver text")
+            assertEqual(await probe.ended.count, 1, "failed preparation must release the backend session pin")
+            assertEqual(await controller.lastCompletion, .failed(failure), "failed preparation must publish its actual completion outcome")
+        }
+    }
+
+    static func testPreviewDrainsBeforeFinalDecode() async {
+        let probe = SessionPlanProbe(gateFirst: true)
+        let plan = previewPlan()
+        let media = BeforeCaptureProbe(log: EventLog(), playing: true)
+        let controller = DictationController(targetProvider: probe, audioCapture: probe, transcriber: probe,
+            polisher: probe, inserter: probe, beforeCapture: { await media.run() }, acquireSessionResources: { _ in await probe.acquireResources() },
+            previewInterval: .milliseconds(5))
+        await controller.hotKeyDown(plan: plan)
+        await waitForCondition("preview must use actual decoder") { await probe.isWaiting() }
+        await controller.hotKeyUp()
+        await waitForCondition("release must request decoder cancellation") { await probe.cancellationRequests == 1 }
+        await waitForCondition("release must stop microphone without waiting for noncooperative preview") { await probe.captureStops == 1 }
+        await waitForCondition("release must restore media without waiting for noncooperative preview") { await media.resumes == 1 }
+        assertEqual(await controller.provisionalPreview, nil, "release must invalidate preview before decoder drain")
+        assertEqual(await probe.requests.count, 1, "full final decode must wait for preview decoder to drain")
+        assertEqual(await probe.resourceReleases, 0, "resource lease must remain held while preview drains")
+        assertEqual(await probe.insertions, [], "preview must not insert provisional text")
+        await probe.release()
+        await waitForState(.succeeded("final\nparagraph"), controller: controller, message: "full original take must final-decode after preview cancellation")
+        await waitForCondition("completion must release the model lease") { await probe.resourceReleases == 1 }
+        assertEqual(await probe.requests, [plan.recognition, plan.recognition], "preview and final must share frozen recognition request")
+        assertEqual(await probe.maximumActive, 1, "preview and final decode must never overlap")
+        assertEqual(await probe.insertions, ["final\nparagraph"], "one final decode must produce one final insertion")
+        assertEqual(await probe.options.count, 1, "only final text may pass through polishing")
+        assertEqual(await controller.provisionalPreview, nil, "late cancelled preview must not republish")
+    }
+
+    static func testPreviewCancellationAndPromotion() async {
+        for promotes in [false, true] {
+            let probe = SessionPlanProbe(gateFirst: true)
+            let controller = DictationController(targetProvider: probe, audioCapture: probe, transcriber: probe,
+                polisher: probe, inserter: probe, acquireSessionResources: { _ in await probe.acquireResources() },
+                previewInterval: .milliseconds(5))
+            await controller.hotKeyDown(plan: previewPlan())
+            await waitForCondition("preview cancellation test must reach inference") { await probe.isWaiting() }
+            if promotes { _ = await controller.lockVoiceMode() } else { await controller.cancel() }
+            await waitForCondition("stop action must cancel preview decoder") { await probe.cancellationRequests == 1 }
+            assertEqual(await probe.resourceReleases, 0, "preview work must retain session resources until it exits")
+            if promotes {
+                await waitForCondition("promotion must transfer capture while noncooperative preview drains") { await probe.promotions == 1 }
+                await controller.finishVoiceMode()
+                await waitForCondition("promoted session must stop audio while preview still drains") { await probe.continuousStops == 1 }
+                try? await Task.sleep(for: .milliseconds(5))
+                assertEqual(await probe.requests.count, 1, "promoted phrase recognition must wait for preview decoder drain")
+            }
+            await probe.release()
+            if promotes {
+                await controller.finishVoiceMode()
+                await waitForState(.succeeded("final\nparagraph"), controller: controller, message: "promoted session must retain one final delivery")
+                assertEqual(await probe.insertions, ["final\nparagraph"], "promotion must not deliver provisional text")
+            } else {
+                await waitForCondition("cancel must release resources after preview drain") { await probe.resourceReleases == 1 }
+                assertEqual(await probe.insertions, [], "cancelled preview must never insert")
+                assertEqual(await controller.lastCompletion, .cancelled, "cancel must publish cancellation outcome")
+            }
+            assertEqual(await controller.provisionalPreview, nil, "late preview must remain invalid after stop action")
+            assertEqual(await probe.maximumActive, 1, "promotion or cancellation must not overlap decoder requests")
+        }
+    }
+
+    static func testPreviewSkipsUnchangedAndFailureKeepsFinal() async {
+        for fails in [false, true] {
+            let probe = SessionPlanProbe(failFirst: fails)
+            let controller = DictationController(targetProvider: probe, audioCapture: probe, transcriber: probe,
+                polisher: probe, inserter: probe, previewInterval: .milliseconds(5))
+            await controller.hotKeyDown(plan: previewPlan())
+            await waitForCondition("preview must perform the first recognition") { await probe.requests.count == 1 }
+            if !fails {
+                await waitForCondition("recognized preview must publish draft words") { await controller.provisionalPreview?.text == "draft speech" }
+            }
+            try? await Task.sleep(for: .milliseconds(30))
+            assertEqual(await probe.requests.count, 1, "unchanged audio must not be recognized repeatedly")
+            assertEqual(await probe.options.count, 0, "preview must not polish")
+            assertEqual(await probe.insertions, [], "preview must not insert")
+            await controller.hotKeyUp()
+            await waitForState(.succeeded("final\nparagraph"), controller: controller, message: "preview failure must keep the full final recognition usable")
+            assertEqual(await probe.insertions, ["final\nparagraph"], "preview failure must retain exactly one final insertion")
+        }
     }
 
     static func testModelDownloadPolicy() {
@@ -2271,11 +2630,12 @@ struct DictationRegressionRunner {
         await waitForState(.listening, controller: controller, message: "empty-output session should listen")
         await controller.hotKeyUp()
         await waitForState(
-            .error(.transcriptionReturnedNoText),
+            .idle,
             controller: controller,
-            message: "empty model output should be distinct from short or missing audio"
+            message: "empty model output should finish without an error"
         )
         assertEqual(await transcriber.calls, 1, "policy-approved audio should still call the transcriber")
+        assertEqual(await controller.lastCompletion, .empty(reason: .noWordsRecognized), "empty model output must retain its typed no-words outcome")
         assertEqual(await inserter.insertionCount(), 0, "empty model output must not insert text")
         let events = await log.snapshot()
         assertCondition(
@@ -2557,7 +2917,7 @@ struct DictationRegressionRunner {
         )
 
         struct DeniedTarget: DictationTargetCapturing {
-            func captureTarget() async throws -> DictationTargetResolution<String> { throw DictationFailure.accessibilityPermissionDenied }
+            func captureTarget(purpose: DictationSessionPurpose) async throws -> DictationTargetResolution<String> { throw DictationFailure.accessibilityPermissionDenied }
         }
         let deniedAudio = FakeAudioCapture(log: log)
         let deniedController = DictationController(
@@ -2632,7 +2992,7 @@ struct DictationRegressionRunner {
         await inserter.gateRelease()
         await controller.hotKeyDown()
         await waitForState(.listening, controller: controller, message: "hold must start before slow target release")
-        _ = await controller.lockVoiceMode(pauseDuration: 0.9)
+        _ = await controller.lockVoiceMode()
         await waitForCondition("initial target release must be waiting") { await inserter.isReleaseWaiting() }
         await audio.setTail(1)
         await controller.finishVoiceMode()
@@ -2656,7 +3016,7 @@ struct DictationRegressionRunner {
             await waitForState(.listening, controller: controller, message: "hold must start before queued lock")
             let queue = DictationShortcutEventQueue { event in
                 switch event {
-                case .lockVoiceMode: _ = await controller.lockVoiceMode(pauseDuration: 0.9)
+                case .lockVoiceMode: _ = await controller.lockVoiceMode()
                 case .cancel:
                     await controller.cancel()
                     await log.append("cancel accepted")
@@ -2698,7 +3058,7 @@ struct DictationRegressionRunner {
         await audio.gatePromotion()
         await controller.hotKeyDown()
         await waitForState(.listening, controller: controller, message: "hold must start before gated promotion")
-        let promotion = Task { await controller.lockVoiceMode(pauseDuration: 0.9) }
+        let promotion = Task { await controller.lockVoiceMode() }
         await waitForCondition("promotion must be gated") { await audio.isPromotionWaiting() }
         await audio.setTail(1)
         await controller.finishVoiceMode()
@@ -2720,12 +3080,12 @@ struct DictationRegressionRunner {
         await audio.setPermission(false)
         await controller.hotKeyDown()
         await waitForCondition("failed pending-lock target must be gated") { await target.isWaiting() }
-        _ = await controller.lockVoiceMode(pauseDuration: 0.9)
+        _ = await controller.lockVoiceMode()
         await target.release()
         await waitForState(.error(.microphonePermissionDenied), controller: controller, message: "pending lock must surface permission denial")
         assertEqual(await controller.isVoiceModeActive, false, "failed startup must clear pending voice intent")
         await audio.setPermission(true)
-        assertEqual(await controller.hotKeyDown(mode: .continuous, targetPolicy: .followFocus), true, "a failed pending lock must admit a fresh session")
+        assertEqual(await controller.hotKeyDown(plan: DictationSessionPlan(mode: .continuous, targetPolicy: .followFocus)), true, "a failed pending lock must admit a fresh session")
         await waitForState(.listening, controller: controller, message: "fresh voice session must actually start")
         assertEqual(await audio.starts, 1, "restart must create its microphone instead of adopting stale intent")
         await controller.cancel()
@@ -2741,13 +3101,13 @@ struct DictationRegressionRunner {
                 transcriber: ContinuousTranscriber(["tail"]),
                 polisher: FakePolisher(log: EventLog()), inserter: inserter
             )
-            assertEqual(await controller.hotKeyDown(mode: startsAsHold ? .singleUtterance : .continuous, targetPolicy: .followFocus), true, "first start must be admitted")
+            assertEqual(await controller.hotKeyDown(plan: DictationSessionPlan(mode: startsAsHold ? .singleUtterance : .continuous, targetPolicy: .followFocus)), true, "first start must be admitted")
             await waitForCondition("initial target must still be pending") { await target.isWaiting() }
             if startsAsHold {
-                assertEqual(await controller.lockVoiceMode(pauseDuration: 0.9), true, "Space must admit a pending voice lock")
+                assertEqual(await controller.lockVoiceMode(), true, "Space must admit a pending voice lock")
                 assertEqual(await controller.isVoiceModeActive, true, "a pending hold-to-voice lock is an admitted voice session")
             }
-            assertEqual(await controller.hotKeyDown(mode: .continuous, targetPolicy: .followFocus), true, "duplicate voice Start must preserve the already admitted session")
+            assertEqual(await controller.hotKeyDown(plan: DictationSessionPlan(mode: .continuous, targetPolicy: .followFocus)), true, "duplicate voice Start must preserve the already admitted session")
             assertEqual(await audio.starts, 0, "duplicate admission must not start a second microphone")
             await target.release()
             await waitForState(.listening, controller: controller, message: "the original voice start must complete")
@@ -2772,7 +3132,7 @@ struct DictationRegressionRunner {
             await controller.hotKeyDown()
             await waitForCondition("target startup must be gated") { await target.isWaiting() }
             let queue = DictationShortcutEventQueue { event in
-                if case .lockVoiceMode = event { _ = await controller.lockVoiceMode(pauseDuration: 0.9) }
+                if case .lockVoiceMode = event { _ = await controller.lockVoiceMode() }
                 if case .cancel = event { await controller.cancel() }
             }
             queue.send(.lockVoiceMode)
@@ -2802,10 +3162,10 @@ struct DictationRegressionRunner {
             targetProvider: FakeTargetProvider(log: EventLog()), audioCapture: audio,
             transcriber: transcriber, polisher: FakePolisher(log: EventLog()), inserter: inserter
         )
-        await controller.hotKeyDown()
+        await controller.hotKeyDown(plan: DictationSessionPlan(pauseDuration: 0.6))
         await waitForState(.listening, controller: controller, message: "push to talk must begin capture")
         assertEqual(await controller.isVoiceModeActive, false, "a batch hold must not be mistaken for an existing voice lock")
-        assertEqual(await controller.lockVoiceMode(pauseDuration: 0.6), true, "a live hold must promote to continuous voice")
+        assertEqual(await controller.lockVoiceMode(), true, "a live hold must promote to continuous voice")
         assertEqual(await controller.isVoiceModeActive, true, "busy-start admission must preserve a live continuous session")
         await waitForCondition("accepted voice lock must complete audio promotion") { await audio.pauseDuration == 0.6 }
         assertEqual(await audio.starts, 1, "locking must not restart the microphone")
@@ -2830,7 +3190,7 @@ struct DictationRegressionRunner {
             polisher: FakePolisher(log: EventLog()), inserter: inserter,
             stateObserver: { recorder.record($0) }
         )
-        await controller.hotKeyDown(mode: .continuous, pauseDuration: 1.5)
+        await controller.hotKeyDown(plan: DictationSessionPlan(mode: .continuous, pauseDuration: 1.5))
         await waitForState(.listening, controller: controller, message: "continuous session should listen")
         await audio.emit(1)
         await waitForCondition("first continuous inference should be gated") { await transcriber.isWaiting() }
@@ -2871,7 +3231,7 @@ struct DictationRegressionRunner {
             targetProvider: FakeTargetProvider(log: EventLog()), audioCapture: audio,
             transcriber: transcriber, polisher: FakePolisher(log: EventLog()), inserter: inserter
         )
-        await controller.hotKeyDown(mode: .continuous)
+        await controller.hotKeyDown(plan: DictationSessionPlan(mode: .continuous))
         await waitForState(.listening, controller: controller, message: "forced-split session must listen")
         await audio.emit(DictationAudio(samples: first[0]))
         await audio.setTail(DictationAudio(samples: tail[0]))
@@ -2890,7 +3250,7 @@ struct DictationRegressionRunner {
             transcriber: transcriber, polisher: FakePolisher(log: EventLog(), behavior: .fail),
             inserter: inserter
         )
-        await controller.hotKeyDown(mode: .continuous)
+        await controller.hotKeyDown(plan: DictationSessionPlan(mode: .continuous))
         await waitForState(.listening, controller: controller, message: "spacing session should listen")
         for ordinal in 1...6 {
             await audio.emit(ordinal)
@@ -2912,13 +3272,13 @@ struct DictationRegressionRunner {
                 targetProvider: FakeTargetProvider(log: EventLog()), audioCapture: audio,
                 transcriber: transcriber, polisher: FakePolisher(log: EventLog()), inserter: inserter
             )
-            await controller.hotKeyDown(mode: initialMode)
+            await controller.hotKeyDown(plan: DictationSessionPlan(mode: initialMode))
             await waitForState(.listening, controller: controller, message: "old cross-mode session should listen")
             if initialMode == .continuous { await audio.emit(1) } else { await controller.hotKeyUp() }
             await waitForCondition("old cross-mode inference should block") { await transcriber.isWaiting() }
             await controller.cancel()
             let replacementMode: DictationCaptureMode = initialMode == .continuous ? .singleUtterance : .continuous
-            await controller.hotKeyDown(mode: replacementMode)
+            await controller.hotKeyDown(plan: DictationSessionPlan(mode: replacementMode))
             await waitForState(.listening, controller: controller, message: "replacement capture must start while old inference unwinds")
             assertEqual(await audio.starts, 2, "cross-mode replacement must begin capture before blocked inference exits")
             if replacementMode == .continuous { await audio.emit(2) }
@@ -2930,7 +3290,7 @@ struct DictationRegressionRunner {
             assertEqual(await inserter.chunks, ["replacement"], "cancellation must discard stale inference without affecting replacement")
             assertEqual(await transcriber.maximumActive, 1, "cross-mode restarts must not overlap inference")
             assertEqual(await audio.cancellations, 1, "obsolete cleanup must not cancel replacement capture")
-            assertEqual(await inserter.releases, ["focused-field"], "the retained target must release once across cross-mode restart")
+            assertEqual(await inserter.releases, Array(repeating: "focused-field", count: initialMode == .continuous ? 1 : 2), "cancelled held targets and completed continuous targets must each release once")
         }
     }
 
@@ -2942,7 +3302,7 @@ struct DictationRegressionRunner {
             targetProvider: FakeTargetProvider(log: EventLog()), audioCapture: audio,
             transcriber: transcriber, polisher: FakePolisher(log: EventLog()), inserter: inserter
         )
-        await controller.hotKeyDown(mode: .continuous)
+        await controller.hotKeyDown(plan: DictationSessionPlan(mode: .continuous))
         await waitForState(.listening, controller: controller, message: "overflow session should listen")
         await audio.emit(1)
         await waitForCondition("overflow test should block first inference") { await transcriber.isWaiting() }
@@ -2968,9 +3328,17 @@ struct DictationRegressionRunner {
                 transcriber: ContinuousTranscriber([failureKind == 2 ? "  " : "word"]),
                 polisher: FakePolisher(log: EventLog(), behavior: .polish(processedText)), inserter: failedInserter
             )
-            await failedController.hotKeyDown(mode: .continuous)
+            await failedController.hotKeyDown(plan: DictationSessionPlan(mode: .continuous))
             await waitForState(.listening, controller: failedController, message: "failure session should listen")
             if failureKind == 0 { await failedAudio.fail() } else { await failedAudio.emit(1) }
+            if failureKind == 2 {
+                await waitForCondition("empty continuous phrase must be decoded") { await failedController.state == .listening }
+                await failedController.finishVoiceMode()
+                await waitForState(.idle, controller: failedController, message: "a continuous session containing no recognized words must finish quietly")
+                assertEqual(await failedController.lastCompletion, .empty(reason: .noWordsRecognized), "empty continuous recognition must retain a typed outcome")
+                assertEqual(await failedInserter.chunks, [], "empty continuous recognition must not insert")
+                continue
+            }
             let expected: DictationState
             switch failureKind {
             case 0: expected = .error(.captureFailed("Dictation could not keep up. Stop and start again."))
@@ -2998,7 +3366,7 @@ struct DictationRegressionRunner {
             transcriber: ContinuousTranscriber(["startup tail"]),
             polisher: FakePolisher(log: EventLog()), inserter: inserter
         )
-        await controller.hotKeyDown(mode: .continuous)
+        await controller.hotKeyDown(plan: DictationSessionPlan(mode: .continuous))
         await waitForCondition("continuous startup should be gated") { await audio.startupWaiting() }
         await controller.hotKeyUp()
         await controller.hotKeyUp()
@@ -3017,11 +3385,11 @@ struct DictationRegressionRunner {
             transcriber: ContinuousTranscriber(["obsolete", "new"]),
             polisher: FakePolisher(log: EventLog()), inserter: cancelledInserter
         )
-        await cancelledController.hotKeyDown(mode: .continuous)
+        await cancelledController.hotKeyDown(plan: DictationSessionPlan(mode: .continuous))
         await waitForCondition("cancelled continuous startup should be gated") { await cancelledAudio.startupWaiting() }
         await cancelledController.hotKeyUp()
         await cancelledController.cancel()
-        await cancelledController.hotKeyDown(mode: .continuous)
+        await cancelledController.hotKeyDown(plan: DictationSessionPlan(mode: .continuous))
         assertEqual(await cancelledAudio.starts, 1, "replacement must wait for cancelled startup to unwind")
         await cancelledAudio.releaseStartup()
         await waitForState(.listening, controller: cancelledController, message: "replacement should start after cancelled startup teardown")
@@ -3041,7 +3409,7 @@ struct DictationRegressionRunner {
             transcriber: ContinuousTranscriber(["unused"]),
             polisher: FakePolisher(log: EventLog()), inserter: lateInserter
         )
-        await lateController.hotKeyDown(mode: .continuous)
+        await lateController.hotKeyDown(plan: DictationSessionPlan(mode: .continuous))
         await waitForCondition("target capture should be gated before cancellation") { await lateTarget.isWaiting() }
         await lateController.cancel()
         await lateTarget.release()
@@ -3061,7 +3429,7 @@ struct DictationRegressionRunner {
             maximumCaptureDuration: .milliseconds(1),
             maximumContinuousSessionDuration: .milliseconds(80)
         )
-        await controller.hotKeyDown(mode: .continuous)
+        await controller.hotKeyDown(plan: DictationSessionPlan(mode: .continuous))
         await waitForState(.listening, controller: controller, message: "continuous watchdog session should listen")
         try? await Task.sleep(for: .milliseconds(10))
         assertEqual(await controller.state, .listening, "continuous sessions must not use the shorter batch watchdog")
@@ -3081,7 +3449,7 @@ struct DictationRegressionRunner {
             targetProvider: target, audioCapture: audio, transcriber: transcriber,
             polisher: FakePolisher(log: EventLog()), inserter: inserter
         )
-        await controller.hotKeyDown(mode: .continuous)
+        await controller.hotKeyDown(plan: DictationSessionPlan(mode: .continuous))
         await waitForState(.listening, controller: controller, message: "voice mode should listen")
         await audio.setTail(1)
         await controller.pauseVoiceMode()
@@ -3117,7 +3485,7 @@ struct DictationRegressionRunner {
             transcriber: ContinuousTranscriber([]),
             polisher: FakePolisher(log: EventLog()), inserter: inserter
         )
-        await controller.hotKeyDown(mode: .continuous)
+        await controller.hotKeyDown(plan: DictationSessionPlan(mode: .continuous))
         await waitForState(.listening, controller: controller, message: "voice should start with microphone access")
         await controller.pauseVoiceMode()
         await waitForState(.paused, controller: controller, message: "voice should pause before revocation")
@@ -3141,7 +3509,7 @@ struct DictationRegressionRunner {
             transcriber: ContinuousTranscriber([]),
             polisher: FakePolisher(log: EventLog()), inserter: inserter
         )
-        await controller.hotKeyDown(mode: .continuous)
+        await controller.hotKeyDown(plan: DictationSessionPlan(mode: .continuous))
         await waitForCondition("the OS microphone request should remain pending") { await audio.permissionWaiting() }
         assertEqual(await target.captures, 1, "the target must be captured before the permission prompt")
         assertEqual(await audio.starts, 0, "pending authorization must not start audio")
@@ -3164,7 +3532,7 @@ struct DictationRegressionRunner {
                 transcriber: ContinuousTranscriber([]),
                 polisher: FakePolisher(log: EventLog()), inserter: RetainedInserter()
             )
-            await controller.hotKeyDown(mode: .continuous)
+            await controller.hotKeyDown(plan: DictationSessionPlan(mode: .continuous))
             let expected: DictationFailure = failure == .denied
                 ? .microphonePermissionDenied : .captureFailed(failure.localizedDescription)
             await waitForState(.error(expected), controller: controller,
@@ -3184,7 +3552,7 @@ struct DictationRegressionRunner {
                 transcriber: ContinuousTranscriber(["startup phrase"]),
                 polisher: FakePolisher(log: EventLog()), inserter: inserter
             )
-            await controller.hotKeyDown(mode: .continuous)
+            await controller.hotKeyDown(plan: DictationSessionPlan(mode: .continuous))
             await waitForCondition("voice startup must be gated") { await audio.startupWaiting() }
             await controller.pauseVoiceMode()
             if finish { await controller.finishVoiceMode() }
@@ -3214,7 +3582,7 @@ struct DictationRegressionRunner {
             targetProvider: target, audioCapture: audio, transcriber: transcriber,
             polisher: FakePolisher(log: EventLog()), inserter: inserter
         )
-        await controller.hotKeyDown(mode: .continuous, targetPolicy: .followFocus)
+        await controller.hotKeyDown(plan: DictationSessionPlan(mode: .continuous, targetPolicy: .followFocus))
         await waitForState(.listening, controller: controller, message: "follow focus should listen")
         await audio.emit(1)
         await waitForCondition("follow focus first inference should block") { await transcriber.isWaiting() }
@@ -3240,7 +3608,7 @@ struct DictationRegressionRunner {
             targetProvider: target, audioCapture: audio, transcriber: transcriber,
             polisher: FakePolisher(log: EventLog()), inserter: inserter
         )
-        await controller.hotKeyDown(mode: .continuous, targetPolicy: .followFocus)
+        await controller.hotKeyDown(plan: DictationSessionPlan(mode: .continuous, targetPolicy: .followFocus))
         await waitForState(.listening, controller: controller, message: "cancel test should listen")
         await audio.emit(1)
         await waitForCondition("cancel test inference must block") { await transcriber.isWaiting() }
@@ -3264,7 +3632,7 @@ struct DictationRegressionRunner {
             transcriber: ContinuousTranscriber(["obsolete"]),
             polisher: FakePolisher(log: EventLog()), inserter: inserter
         )
-        await controller.hotKeyDown(mode: .continuous, targetPolicy: .followFocus)
+        await controller.hotKeyDown(plan: DictationSessionPlan(mode: .continuous, targetPolicy: .followFocus))
         await waitForState(.listening, controller: controller, message: "late target test should listen")
         await audio.emit(1)
         await waitForCondition("phrase target capture must suspend") { await target.isWaiting() }
@@ -3287,7 +3655,7 @@ struct DictationRegressionRunner {
             polisher: FakePolisher(log: EventLog()), inserter: inserter,
             recoveryObserver: { text, _ in recovery.record(text) }
         )
-        await controller.hotKeyDown(mode: .continuous, targetPolicy: .followFocus)
+        await controller.hotKeyDown(plan: DictationSessionPlan(mode: .continuous, targetPolicy: .followFocus))
         await waitForState(.listening, controller: controller, message: "recovery test should listen")
         await audio.emit(1)
         await waitForCondition("missing destination must retain transcript") { recovery.snapshot() == "No field." }
@@ -3316,7 +3684,7 @@ struct DictationRegressionRunner {
             polisher: FakePolisher(log: EventLog()), inserter: inserter,
             recoveryObserver: { text, _ in recovery.record(text) }
         )
-        await controller.hotKeyDown(mode: .continuous, targetPolicy: .followFocus)
+        await controller.hotKeyDown(plan: DictationSessionPlan(mode: .continuous, targetPolicy: .followFocus))
         await waitForState(.listening, controller: controller, message: "secure phrase session should listen")
         await audio.setTail(2)
         await audio.emit(1)
@@ -3344,7 +3712,7 @@ struct DictationRegressionRunner {
             targetProvider: target, audioCapture: audio, transcriber: transcriber,
             polisher: FakePolisher(log: EventLog()), inserter: inserter
         )
-        await controller.hotKeyDown(mode: .continuous, targetPolicy: .followFocus)
+        await controller.hotKeyDown(plan: DictationSessionPlan(mode: .continuous, targetPolicy: .followFocus))
         await waitForState(.listening, controller: controller, message: "secure drain session should listen")
         await audio.emit(1)
         await waitForCondition("safe inference should remain in flight") { await transcriber.isWaiting() }
@@ -3415,7 +3783,7 @@ struct DictationRegressionRunner {
                 polisher: FakePolisher(log: EventLog()), inserter: continuousInserter,
                 stateObserver: { continuousStates.record($0) }
             )
-            await continuous.hotKeyDown(mode: .continuous)
+            await continuous.hotKeyDown(plan: DictationSessionPlan(mode: .continuous))
             await waitForState(.listening, controller: continuous, message: "fixed copy-only sessions must record")
             await continuousAudio.emit(1)
             await waitForCondition("fixed copy-only sessions must save completed phrases") { await continuous.recoveryText == "First phrase." }
@@ -3475,7 +3843,7 @@ struct DictationRegressionRunner {
                 audioCapture: audio, transcriber: ContinuousTranscriber(["First phrase.", "Second phrase.", "Confirmed phrase."]),
                 polisher: FakePolisher(log: EventLog()), inserter: continuousInserter
             )
-            await continuous.hotKeyDown(mode: .continuous, targetPolicy: policy)
+            await continuous.hotKeyDown(plan: DictationSessionPlan(mode: .continuous, targetPolicy: policy))
             await waitForState(.listening, controller: continuous, message: "unverified continuous delivery must record")
             await audio.emit(1)
             await waitForCondition("unverified continuous delivery must save its first phrase") { await continuous.recoveryText == "First phrase." }
@@ -3501,7 +3869,7 @@ struct DictationRegressionRunner {
                 audioCapture: audio, transcriber: transcriber,
                 polisher: FakePolisher(log: EventLog()), inserter: RetainedInserter()
             )
-            await controller.hotKeyDown(mode: mode)
+            await controller.hotKeyDown(plan: DictationSessionPlan(mode: mode))
             await waitForState(.listening, controller: controller, message: "late-result test must record")
             if mode == .singleUtterance { await controller.hotKeyUp() } else { await audio.emit(1) }
             await waitForCondition("late-result transcription must block") { await transcriber.isWaiting() }
@@ -3526,7 +3894,7 @@ struct DictationRegressionRunner {
                     targetProvider: FakeTargetProvider(log: log, failure: failure), audioCapture: audio,
                     transcriber: FakeTranscriber(log: log), polisher: FakePolisher(log: log), inserter: FakeInserter(log: log)
                 )
-                await controller.hotKeyDown(mode: mode)
+                await controller.hotKeyDown(plan: DictationSessionPlan(mode: mode))
                 await waitForState(.error(failure), controller: controller, message: "fatal target errors must reject startup")
                 assertEqual(await audio.starts, 0, "fatal target errors must never start the microphone")
                 assertEqual(await log.count(of: "permission"), 0, "fatal target errors must precede microphone permission")
@@ -3560,7 +3928,7 @@ struct DictationRegressionRunner {
             polisher: FakePolisher(log: EventLog()), inserter: inserter,
             maximumRecoveryTextBytes: 8
         )
-        await controller.hotKeyDown(mode: .continuous, targetPolicy: .followFocus)
+        await controller.hotKeyDown(plan: DictationSessionPlan(mode: .continuous, targetPolicy: .followFocus))
         await waitForState(.listening, controller: controller, message: "recovery budget session should listen")
         await audio.setTail(2)
         await audio.emit(1)
@@ -3603,7 +3971,7 @@ struct DictationRegressionRunner {
                 return await probe.run()
             }
         )
-        await controller.hotKeyDown(mode: .continuous)
+        await controller.hotKeyDown(plan: DictationSessionPlan(mode: .continuous))
         await waitForState(.listening, controller: controller, message: "voice mode should listen after the media hook")
         assertEqual(
             await log.snapshot(),
@@ -3845,10 +4213,10 @@ struct DictationRegressionRunner {
             polisher: FakePolisher(log: EventLog()), inserter: RetainedInserter(),
             beforeCapture: { await probe.run() }
         )
-        await controller.hotKeyDown(mode: .continuous)
+        await controller.hotKeyDown(plan: DictationSessionPlan(mode: .continuous))
         await waitForState(.listening, controller: controller, message: "voice mode should listen")
         assertEqual(await probe.resumes, 0, "media must stay paused while voice mode listens")
-        assertEqual(await controller.hotKeyDown(mode: .continuous), true, "duplicate voice key-down is a no-op")
+        assertEqual(await controller.hotKeyDown(plan: DictationSessionPlan(mode: .continuous)), true, "duplicate voice key-down is a no-op")
         assertEqual(await probe.calls, 1, "duplicate voice key-down must not pause media again")
 
         await audio.setTail(1)

@@ -41,6 +41,16 @@ jobs:
       - name: Permission and recovery regressions
         run: make test-permissions
 
+      - name: Upload settings render diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: settings-render-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            .omx/settings-contrast/render/
+            .omx/dictation-panel/render/
+          include-hidden-files: true
+
       - name: Search regressions
         run: make test-search
 

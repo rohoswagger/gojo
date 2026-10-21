@@ -43,7 +43,7 @@ require_match \
 
 require_match \
   Gojo/Dictation/WhisperKitDictationTranscriber.swift \
-  'private\s+func\s+loadSelectedModel\(\)\s+async\s+throws\s+->\s+WhisperKit.*?resolvePinnedModelFolder\(\s*for:\s*requestedModel,\s*allowDownload:\s*DictationModelRequest\.transcription\.allowsDownload\s*\).*?WhisperKitConfig\([^)]*download:\s*false[^)]*\)' \
+  'private\s+func\s+loadModel\(_\s+requestedModel:\s*WhisperDictationModel\)\s+async\s+throws\s+->\s+WhisperKit.*?resolvePinnedModelFolder\(\s*for:\s*requestedModel,\s*allowDownload:\s*DictationModelRequest\.transcription\.allowsDownload\s*\).*?WhisperKitConfig\([^)]*download:\s*false[^)]*\)' \
   "Whisper transcription loads must use the no-download request policy and disable WhisperKit downloads"
 
 require_order \
@@ -91,7 +91,7 @@ require_order \
 
 require_match \
   Gojo/Dictation/LocalDictationTranscriber.swift \
-  'func\s+transcribe\(_\s+audio:\s+DictationAudio\)\s+async\s+throws\s+->\s+String\s*\{(?!.*install\()' \
+  'func\s+transcribe\(_\s+audio:\s+DictationAudio,\s*request:\s*DictationRecognitionRequest\)\s+async\s+throws\s+->\s+String\s*\{(?!.*install\()' \
   "the router transcription path must not call install"
 
 require_match \
@@ -101,7 +101,7 @@ require_match \
 
 require_match \
   Gojo/Dictation/S1MiniDictationPolisher.swift \
-  'func\s+polish\(_\s+transcript:\s+String\).*?let\s+correctedRaw\s*=\s*S1MiniVocabularyPipeline\.prepare.*?guard\s+enabledProvider\(\),\s*await\s+store\.isInstalled\(\)\s+else\s*\{\s*return\s+correctedRaw\s*\}' \
+  'func\s+polish\(_\s+transcript:\s+String,\s*options:\s*DictationTextOptions\).*?let\s+prepared\s*=\s*DictationFinalTextPolicy\.prepare.*?let\s+fallback\s*=\s*DictationFinalTextPolicy\.finalize.*?guard\s+case\s+\.s1Mini\(let\s+style\)\s*=\s*options\.cleanup\s+else\s*\{\s*return\s+fallback\s*\}.*?guard\s+await\s+store\.isInstalled\(\)' \
   "cleanup must fall back to deterministic local vocabulary when S1-mini is disabled or unavailable"
 
 require_order \

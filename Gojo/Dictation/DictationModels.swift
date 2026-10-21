@@ -68,7 +68,7 @@ enum DictationInsertionOutcome: Equatable, Sendable {
     }
 }
 
-enum DictationCaptureMode: Sendable {
+enum DictationCaptureMode: Equatable, Sendable {
     case singleUtterance
     case continuous
 }
@@ -85,15 +85,27 @@ enum DictationContinuousCaptureError: LocalizedError {
     }
 }
 
+enum DictationSpeechEvidence: Equatable, Sendable {
+    case speech
+    case silence
+    case uncertain
+}
+
 struct DictationAudio: Equatable, Sendable {
     static let transcriptionSampleRate = 16_000.0
 
     let samples: [Float]
     let sampleRate: Double
+    let speechEvidence: DictationSpeechEvidence?
 
-    init(samples: [Float], sampleRate: Double = transcriptionSampleRate) {
+    init(
+        samples: [Float],
+        sampleRate: Double = transcriptionSampleRate,
+        speechEvidence: DictationSpeechEvidence? = nil
+    ) {
         self.samples = samples
         self.sampleRate = sampleRate
+        self.speechEvidence = speechEvidence
     }
 
     var duration: TimeInterval {
@@ -111,8 +123,11 @@ struct DictationAudioPolicy: Equatable, Sendable {
 
     func shouldTranscribe(_ audio: DictationAudio) -> Bool {
         !audio.samples.isEmpty
+            && audio.samples.allSatisfy(\.isFinite)
+            && audio.sampleRate.isFinite
             && audio.sampleRate > 0
             && audio.duration >= minimumDuration
+            && audio.speechEvidence != .silence
     }
 }
 
@@ -820,6 +835,7 @@ struct DictationModelDescriptor: Identifiable, Sendable {
     let detail: String
     let downloadSizeLabel: String
     let isRecommended: Bool
+    let capabilities: DictationModelCapabilities
 
     var engine: DictationEngineID { id.engine }
     var engineLabel: String {
@@ -835,33 +851,81 @@ struct DictationModelDescriptor: Identifiable, Sendable {
             displayName: "Parakeet Unified",
             detail: "Strong English dictation with punctuation and capitalization",
             downloadSizeLabel: "614 MB",
-            isRecommended: true
+            isRecommended: true,
+            capabilities: DictationModelCapabilities(
+                language: .fixedEnglish,
+                supportsTranslationToEnglish: false,
+                supportsRecognizedPreview: true
+            )
         ),
         DictationModelDescriptor(
             id: .parakeetV3Multilingual,
             displayName: "Parakeet v3",
             detail: "Fast dictation in 25 European languages",
             downloadSizeLabel: "483 MB",
-            isRecommended: false
+            isRecommended: false,
+            capabilities: DictationModelCapabilities(
+                language: .automaticOnly(supportedLanguages: DictationSupportedLanguages.parakeetV3),
+                supportsTranslationToEnglish: false,
+                supportsRecognizedPreview: false
+            )
         ),
         DictationModelDescriptor(
             id: .whisperSmallEnglish,
             displayName: "Whisper Small",
             detail: "Fast and good for everyday dictation",
             downloadSizeLabel: "217 MB",
-            isRecommended: false
+            isRecommended: false,
+            capabilities: DictationModelCapabilities(
+                language: .fixedEnglish,
+                supportsTranslationToEnglish: false,
+                supportsRecognizedPreview: false
+            )
         ),
         DictationModelDescriptor(
             id: .whisperLargeV3,
             displayName: "Whisper Large v3",
             detail: "Higher accuracy for English dictation",
             downloadSizeLabel: "626 MB",
-            isRecommended: false
+            isRecommended: false,
+            capabilities: DictationModelCapabilities(
+                language: .selectable(supportedLanguages: DictationSupportedLanguages.whisper),
+                supportsTranslationToEnglish: true,
+                supportsRecognizedPreview: false
+            )
         ),
     ]
 
     static func descriptor(for id: DictationModelID) -> DictationModelDescriptor {
         all.first { $0.id == id }!
+    }
+
+    func resolveRecognition(
+        language: DictationLanguageSelection? = nil,
+        translateToEnglish: Bool = false,
+        recognitionTerms: [String] = []
+    ) throws -> DictationLocalRecognition {
+        try DictationLocalRecognition(
+            model: id,
+            language: language,
+            translateToEnglish: translateToEnglish,
+            recognitionTerms: recognitionTerms
+        )
+    }
+
+    func resolveRecognition(
+        persistedLanguageCode: String?,
+        translateToEnglish: Bool = false,
+        recognitionTerms: [String] = []
+    ) throws -> DictationLocalRecognition {
+        let selection = persistedLanguageCode.map {
+            $0 == "auto" ? DictationLanguageSelection.automatic : .fixed($0)
+        }
+        return try resolveRecognition(
+            language: selection,
+            translateToEnglish: translateToEnglish,
+            recognitionTerms: recognitionTerms
+        )
     }
 }
 
@@ -896,7 +960,7 @@ enum DictationFailure: Error, Equatable, Sendable {
     case insertionFailed(String)
 }
 
-enum DictationTargetPolicy: Sendable {
+enum DictationTargetPolicy: Equatable, Sendable {
     case fixed
     case followFocus
 }

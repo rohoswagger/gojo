@@ -39,7 +39,7 @@ private actor LocalDictationTranscriber {
         self.gates = gates
     }
 
-    func prepare() async throws {
+    func prepare(request: DictationRecognitionRequest) async throws {
         preparations += 1
         let attempt = preparations
         if let gate = gates[attempt] { await gate.wait() }
@@ -56,6 +56,10 @@ private actor S1MiniDictationPolisher {
 }
 
 private enum DictationProvider { case local, openRouter }
+private enum DictationFeedbackEvent { case ready }
+private enum DictationFeedback { static func play(_ event: DictationFeedbackEvent) {} }
+private actor CaptureStub { var currentInputDevice: DictationInputDevice? { nil } }
+
 
 @MainActor
 private final class DictationModifierHotKeyMonitor {
@@ -69,6 +73,18 @@ extension DictationFailure: LocalizedError {
 
 @MainActor
 private final class GojoDictationService {
+    private let modelResidency = DictationModelResidency {}
+    private var activeSessionID: UUID?
+    private var readyCueSessionID: UUID?
+    private var activeSessionCues = false
+    private var cuesEnabled = false
+    private var activeIntent: DictationSessionIntent?
+    private var activePracticeFieldID: UUID?
+    private var currentInputName: String?
+    private var audioCapture: CaptureStub?
+    private func makeRecognitionRequest() throws -> DictationRecognitionRequest {
+        .local(try DictationLocalRecognition(model: selectedModel))
+    }
     private let localTranscriber: LocalDictationTranscriber
     private let polisher: S1MiniDictationPolisher
     private let warmupSequencer = DictationWarmupSequencer()

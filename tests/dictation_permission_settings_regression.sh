@@ -52,5 +52,6 @@ swiftc -swift-version 5 -warnings-as-errors \
   -target "$(uname -m)-apple-macosx14.0" \
   Gojo/Dictation/DictationHelperReadiness.swift \
   Gojo/Dictation/DictationModels.swift \
+  Gojo/Dictation/DictationSessionPlan.swift \
   "$scratch_dir/fixture.swift" -o "$scratch_dir/settings-render"
 "$scratch_dir/settings-render" "$artifact_dir"

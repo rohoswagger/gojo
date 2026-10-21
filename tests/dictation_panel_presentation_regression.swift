@@ -9,6 +9,7 @@ struct DictationPanelPresentationRegression {
     static func main() {
         _ = NSApplication.shared
         NSApp.setActivationPolicy(.accessory)
+        verifyPopoverOrdering()
         let model = DictationPanelModel()
         model.present(.error(.captureFailed("Microphone unavailable")))
         let firstErrorNotice = model.attentionIdentity
@@ -188,8 +189,46 @@ struct DictationPanelPresentationRegression {
     }
 
     @MainActor
+    private static var visiblePopover: NSWindow? {
+        (NSWindow.windowNumbers(options: []) ?? []).lazy
+            .compactMap { NSApp.window(withWindowNumber: $0.intValue) }
+            .first { $0.isVisible && $0.className.contains("Popover") }
+    }
+
+    @MainActor
+    private static func verifyPopoverOrdering() {
+        let frame = NSRect(x: 60, y: 60, width: 320, height: 100)
+        let outgoing = OrderingPopoverPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        let incoming = OrderingPopoverPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        defer {
+            outgoing.orderOut(nil)
+            incoming.orderOut(nil)
+        }
+        for (panel, text) in [(outgoing, "Outgoing draft"), (incoming, "Current speech")] {
+            panel.appearance = NSAppearance(named: .aqua)
+            panel.title = text
+            let label = NSTextField(labelWithString: text)
+            label.drawsBackground = true
+            label.font = .systemFont(ofSize: 20)
+            label.frame = NSRect(x: 20, y: 35, width: 280, height: 30)
+            panel.contentView?.addSubview(label)
+            panel.orderFrontRegardless()
+        }
+        incoming.order(.above, relativeTo: outgoing.windowNumber)
+        expect(outgoing.isVisible && incoming.isVisible && outgoing.frame == incoming.frame,
+               "Ordering proof requires two overlapping visible native popovers")
+        print("Overlap selection chose \(visiblePopover?.title ?? "none"); expected Current speech.")
+        verifyPopover(name: "overlap-incoming", required: ["Current speech"], absent: ["Outgoing draft"])
+        expect(visiblePopover === incoming, "The incoming frontmost popover must be selected")
+        outgoing.order(.above, relativeTo: incoming.windowNumber)
+        verifyPopover(name: "overlap-reordered", required: ["Outgoing draft"], absent: ["Current speech"])
+        expect(visiblePopover === outgoing, "Selection must follow native order when overlapping popovers are reordered")
+    }
+
+    @MainActor
     private static func verifyPopover(name: String, required: [String], absent: [String]) {
-        guard let popover = NSApp.windows.first(where: { $0.isVisible && $0.className.contains("Popover") }),
+        let orderedWindowNumbers = NSWindow.windowNumbers(options: []) ?? []
+        guard let popover = visiblePopover,
               let view = popover.contentView else { fatalError("The production details popover must actually be visible for \(name)") }
         view.layoutSubtreeIfNeeded()
         guard let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { fatalError("Could not allocate panel render") }
@@ -205,7 +244,7 @@ struct DictationPanelPresentationRegression {
             try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
             try data.write(to: output.appendingPathComponent(name + ".png"))
             try rendered.write(to: output.appendingPathComponent(name + ".txt"), atomically: true, encoding: .utf8)
-            let popovers = NSApp.windows.filter { $0.className.contains("Popover") }
+            let popovers = "selected=\(popover.windowNumber) ordered=\(orderedWindowNumbers)\n" + NSApp.windows.filter { $0.className.contains("Popover") }
                 .map { "window=\($0.windowNumber) visible=\($0.isVisible) frame=\($0.frame)" }.joined(separator: "\n")
             try popovers.write(to: output.appendingPathComponent(name + "-windows.txt"), atomically: true, encoding: .utf8)
             for text in required { expect(rendered.localizedCaseInsensitiveContains(text), "\(name) must render \(text)") }
@@ -214,3 +253,5 @@ struct DictationPanelPresentationRegression {
         } catch { fatalError("Panel render failed: \(error)") }
     }
 }
+
+private final class OrderingPopoverPanel: NSPanel {}

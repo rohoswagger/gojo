@@ -11,6 +11,8 @@ final class DictationPanelModel: ObservableObject {
     @Published var activationMode = DictationActivationMode.saved()
     @Published var isPreview = false
     @Published var showsDetails = false
+    @Published var capsuleHovered = false
+    @Published var detailsHovered = false
     @Published var provisionalPreview: DictationProvisionalPreview?
     @Published var activeIntent: DictationSessionIntent?
     @Published var automaticallyOpensDraft = true
@@ -42,8 +44,17 @@ final class DictationPanelModel: ObservableObject {
 
     var isHandsFree: Bool { activationMode == .voiceMode }
 
+    static func isActiveSession(_ state: DictationState) -> Bool {
+        switch state {
+        case .requestingPermission, .listening, .pausing, .paused, .transcribing, .inserting: return true
+        case .idle, .succeeded, .error: return false
+        }
+    }
+
     var shouldHideWhenFinished: Bool {
-        guard recoveryText.isEmpty, emptyCompletion == nil else { return false }
+        guard !Self.isActiveSession(state) else { return false }
+        if !recoveryText.isEmpty { return true }
+        guard emptyCompletion == nil else { return false }
         if case .error = state { return true }
         guard !isHandsFree else { return false }
         switch state {
@@ -187,7 +198,6 @@ struct DictationPanelView: View {
     @State private var isHovered = false
     @State private var isSpinning = false
     @State private var copiedRecoveryText: String?
-    @State private var detailsHovered = false
     @State private var dismissedErrorID: UUID?
     @State private var openedDraftSessionID: UUID?
 
@@ -201,7 +211,10 @@ struct DictationPanelView: View {
                 .allowsHitTesting(false)
         }
         .preferredColorScheme(.dark)
-        .onHover { isHovered = $0 }
+        .onHover {
+            isHovered = $0
+            model.capsuleHovered = $0
+        }
         .onChange(of: model.recoveryText) { copiedRecoveryText = nil }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(model.isPreview ? "Gojo dictation preview" : "Gojo dictation controls")
@@ -221,16 +234,6 @@ struct DictationPanelView: View {
                 return
             }
             model.showsDetails = true
-            guard model.recoveryText.isEmpty else { return }
-            do {
-                try await Task.sleep(for: .seconds(2))
-                while detailsHovered {
-                    try await Task.sleep(for: .milliseconds(200))
-                }
-                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.2)) {
-                    model.showsDetails = false
-                }
-            } catch {}
         }
     }
 
@@ -323,7 +326,7 @@ struct DictationPanelView: View {
         case .idle:
             icon("mic.fill", label: "Start voice mode", hint: "Keep listening between phrases.", prominent: true) { command(.start) }
         case .succeeded:
-            if model.shouldHideWhenFinished {
+            if model.shouldHideWhenFinished, model.recoveryText.isEmpty {
                 icon("checkmark", label: "Text inserted", hint: "Dictation complete.", prominent: true) {}
                     .disabled(true)
             } else {
@@ -398,7 +401,7 @@ struct DictationPanelView: View {
         }
         .foregroundStyle(DictationPanelInk.text)
         .background(DictationPanelInk.background)
-        .onHover { detailsHovered = $0 }
+        .onHover { model.detailsHovered = $0 }
         .preferredColorScheme(.dark)
     }
 

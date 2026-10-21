@@ -76,14 +76,21 @@ struct DictationPanelPresentationRegression {
         expect(model.shouldHideWhenFinished, "Errors must dismiss after their message is shown")
         model.state = .succeeded("Finished")
         model.recoveryText = "Uninserted phrase"
-        expect(!model.shouldHideWhenFinished, "Saved text must remain available for copying")
+        expect(model.shouldHideWhenFinished, "Saved text must expire after its grace period once the session is over")
         model.recoveryText = ""
         model.activationMode = .voiceMode
         expect(!model.shouldHideWhenFinished, "Locked voice controls must remain visible after finishing")
         model.state = .error(.captureFailed("unavailable"))
         model.recoveryText = "Uninserted phrase"
-        expect(!model.shouldHideWhenFinished, "Errors with saved text must remain available for copying")
-        expect(model.recoveryText == "Uninserted phrase", "Dismissing an error must not discard saved text")
+        expect(model.shouldHideWhenFinished, "Errors with saved text must expire without discarding it")
+        expect(model.recoveryText == "Uninserted phrase", "Expiring an error must not discard saved text")
+        model.state = .succeeded("Finished")
+        model.activationMode = .voiceMode
+        expect(model.shouldHideWhenFinished, "Saved text must expire in voice mode too")
+        model.state = .idle
+        expect(model.shouldHideWhenFinished, "Idle controls with saved text must expire in voice mode")
+        model.activationMode = .holdToTalk
+        model.recoveryText = ""
         let states: [DictationState] = [
             .idle, .requestingPermission, .listening, .pausing, .paused,
             .transcribing, .inserting, .succeeded("done"),
@@ -96,7 +103,13 @@ struct DictationPanelPresentationRegression {
             expect(model.size == CGSize(width: 150, height: 44), "Every state without recovery must keep the compact capsule size")
             model.recoveryText = String(repeating: "Saved phrase. ", count: 100)
             expect(model.size == CGSize(width: 150, height: 44), "Saved text must keep the compact capsule size")
-            expect(!model.shouldHideWhenFinished, "Saved text must prevent automatic dismissal in every state")
+            let sessionIsActive: Bool
+            switch state {
+            case .requestingPermission, .listening, .pausing, .paused, .transcribing, .inserting: sessionIsActive = true
+            case .idle, .succeeded, .error: sessionIsActive = false
+            }
+            expect(model.shouldHideWhenFinished == !sessionIsActive,
+                   "Saved text must expire once the session is over and never hide an active session")
             let recoveryNotice = model.attentionIdentity
             expect(recoveryNotice != nil, "Saved text must open the transcript popover in every state")
             model.recoveryMessage = "A different status message"

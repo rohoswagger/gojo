@@ -6,6 +6,23 @@
     <description>Most recent changes to Gojo, with download links.</description>
     <language>en</language>
     <item>
+      <title>Version 1.7.2</title>
+      <pubDate>Wed, 21 Oct 2026 17:23:36 +0000</pubDate>
+      <sparkle:version>1792603251</sparkle:version>
+      <sparkle:shortVersionString>1.7.2</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+<h4>Fixed</h4>
+<ul><li>Copying or discarding a recovery transcript clears the controls and lets dictation start normally again.</li><li>Recovery transcripts are discarded after 10 seconds without interaction. Hovering pauses the timer, and expiry does not interrupt an active recording.</li><li>Dictation controls follow active Space and display changes without taking keyboard focus.</li><li>Reopening controls after completion shows Ready. Older dismissal animations cannot hide a new session, and repeated failed attempts show their error again.</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://downloads.trygojo.com/Gojo-1.7.2.dmg"
+        sparkle:edSignature="CqeDmb4yEmxKqUeMQ8GQkL22imCno+xySLgPvtQt14tqEJwXh9HjjHeicRDaAq+cyB4++NecxFzSHWuPPopLDQ=="
+        length="17939575"
+        type="application/octet-stream" />
+    </item>
+
+    <item>
       <title>Version 1.7.1</title>
       <pubDate>Wed, 21 Oct 2026 05:00:48 +0000</pubDate>
       <sparkle:version>1792555341</sparkle:version>

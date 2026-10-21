@@ -46,7 +46,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: settings-render-${{ github.run_id }}-${{ github.run_attempt }}
-          path: .omx/settings-contrast/render/
+          path: |
+            .omx/settings-contrast/render/
+            .omx/dictation-panel/render/
           include-hidden-files: true
 
       - name: Search regressions

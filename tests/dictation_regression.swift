@@ -2885,16 +2885,20 @@ struct DictationRegressionRunner {
         let transcriber = FakeTranscriber(log: log)
         let polisher = FakePolisher(log: log)
         let inserter = FakeInserter(log: log)
+        let states = StateRecorder()
         let watchdogController = DictationController(
             targetProvider: FakeTargetProvider(log: log),
             audioCapture: audio,
             transcriber: transcriber,
             polisher: polisher,
             inserter: inserter,
-            maximumCaptureDuration: .milliseconds(25)
+            maximumCaptureDuration: .milliseconds(25),
+            stateObserver: { states.record($0) }
         )
         await watchdogController.hotKeyDown()
-        await waitForState(.listening, controller: watchdogController, message: "watchdog session should listen")
+        await waitForCondition("watchdog session should enter listening") {
+            states.snapshot().contains(.listening)
+        }
         await waitForState(.idle, controller: watchdogController, message: "watchdog should stop a lost-key-up session")
         for _ in 0..<100 where await audio.cancellations == 0 {
             try? await Task.sleep(for: .milliseconds(5))

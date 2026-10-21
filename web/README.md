@@ -37,9 +37,9 @@ Before updating the record, compare `../appcast.xml` with the release tag and
 download the versioned artifact. Read the actual byte count and SHA-256.
 
 ```sh
-curl --fail --location --output /tmp/Gojo-1.6.1.dmg https://downloads.trygojo.com/Gojo-1.6.1.dmg
-wc -c < /tmp/Gojo-1.6.1.dmg
-shasum -a 256 /tmp/Gojo-1.6.1.dmg
+curl --fail --location --output /tmp/Gojo-1.7.0.dmg 'https://downloads.trygojo.com/Gojo-1.7.0.dmg?release=1.7.0'
+wc -c < /tmp/Gojo-1.7.0.dmg
+shasum -a 256 /tmp/Gojo-1.7.0.dmg
 ```
 
 The published 1.6.0 artifact was downloaded for the cleanup audit and measured

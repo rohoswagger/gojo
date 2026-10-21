@@ -15,7 +15,7 @@ assert.equal(releaseVersions.size, 1, "All app targets must share one release ve
 const [releaseVersion] = releaseVersions
 assert.equal(GOJO_RELEASE.version, releaseVersion, "Web release must match the native release version")
 assert.equal(GOJO_RELEASE.fileName, `Gojo-${releaseVersion}.dmg`, "Artifact filename must match the release version")
-assert.ok(GOJO_RELEASE.downloadUrl.endsWith(`/${GOJO_RELEASE.fileName}`), "Download URL must identify the versioned artifact")
+assert.equal(new URL(GOJO_RELEASE.downloadUrl).pathname, `/${GOJO_RELEASE.fileName}`, "Download URL must identify the versioned artifact")
 
 const pressHtml = read("out/press/index.html")
 const pressCss = read("app/press.css")
@@ -58,7 +58,7 @@ const links = new Map(
 for (const href of [
   "/assets/demo.mp4",
   "/assets/og.jpg",
-  `https://downloads.trygojo.com/Gojo-${releaseVersion}.dmg`,
+  GOJO_RELEASE.downloadUrl,
   "https://github.com/rohoswagger/gojo",
   "/press/",
 ]) {

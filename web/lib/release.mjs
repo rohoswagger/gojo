@@ -1,6 +1,6 @@
 export const GOJO_RELEASE = {
   version: "1.7.0",
-  downloadUrl: "https://downloads.trygojo.com/Gojo-1.7.0.dmg",
+  downloadUrl: "https://downloads.trygojo.com/Gojo-1.7.0.dmg?release=1.7.0",
   fileName: "Gojo-1.7.0.dmg",
   fileSizeBytes: 17_927_860,
   fileSizeLabel: "17.9 MB",

@@ -165,8 +165,8 @@ This builds, signs, notarizes, and produces a real DMG + appcast entry in `.buil
 
 When a release should be available from the website, finish these steps after verifying the signed artifact. A private build and source tag do not update the site.
 
-1. Upload the verified DMG to `gojo-downloads/Gojo-<version>.dmg` in R2. Refresh `gojo-downloads/Gojo.dmg` for site buttons that use the latest alias. Website publication does not require changing the Sparkle appcast.
-2. Download the versioned URL from `downloads.trygojo.com` and verify its byte count and SHA-256 against the local verified DMG.
+1. Confirm the verified DMG is uploaded to `gojo-downloads/Gojo-<version>.dmg` in R2. Refresh `gojo-downloads/Gojo.dmg` for site buttons that use the latest alias. Website publication does not require changing the Sparkle appcast.
+2. Download the versioned URL from `downloads.trygojo.com` and verify its byte count and SHA-256 against the local verified DMG. If an earlier missing-object request was cached, purge that URL or use a release-specific query in the download record and verify that exact URL.
 3. Update `web/lib/release.mjs` with the version, immutable URL, filename, exact byte count, display size and SHA-256 together. Use a PR for repository changes.
 4. Run `pnpm build` in `web`, then deploy its static export with `npx wrangler@4 deploy --keep-vars` from that directory using the production build environment.
 5. Verify `https://trygojo.com/downloads/` displays the version, checksum and working versioned link. Download both the versioned URL and latest alias and compare their hashes with the verified artifact. Check the homepage release version and press kit too.

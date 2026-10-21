@@ -208,7 +208,8 @@ function verifyDownloadLinks(directory) {
       const page = parse(readFileSync(path, "utf8"))
       for (const link of page.querySelectorAll("a[href]")) {
         const href = link.getAttribute("href")
-        if (!/^https:\/\/downloads\.trygojo\.com\/Gojo(?:-[\d.]+)?\.dmg$/.test(href)) continue
+        const url = new URL(href, "https://trygojo.com")
+        if (url.origin !== "https://downloads.trygojo.com" || !/^\/Gojo(?:-[\d.]+)?\.dmg$/.test(url.pathname)) continue
         if (link.getAttribute("data-funnel-event") !== "download_cta_clicked") {
           throw new Error(`${path}: untracked direct download ${href}`)
         }

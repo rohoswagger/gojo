@@ -333,7 +333,12 @@ private struct DictationModelSettingsRegression {
                 host.layoutSubtreeIfNeeded()
                 RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.1))
                 host.layoutSubtreeIfNeeded()
-                guard let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { fatalError("Could not allocate experience snapshot") }
+                guard let bitmap = NSBitmapImageRep(
+                    bitmapDataPlanes: nil, pixelsWide: 1240, pixelsHigh: 3000,
+                    bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                    colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
+                ) else { fatalError("Could not allocate experience snapshot") }
+                bitmap.size = host.bounds.size
                 host.cacheDisplay(in: host.bounds, to: bitmap)
                 guard let image = bitmap.cgImage, let png = bitmap.representation(using: .png, properties: [:]) else { fatalError("Could not encode experience snapshot") }
                 try png.write(to: output.appendingPathComponent(name + ".png"))
@@ -361,7 +366,7 @@ private struct DictationModelSettingsRegression {
 
         Action closures compile and render but are never invoked; fake select/download methods trap if called. Disabled-state assertions call the extracted production helpers; Remove's predicate is checked structurally. No live interaction or AX enabled-state assertion is claimed. Native enabled/disabled treatments are saved as PNGs.
 
-        Twelve additional light and dark captures extract the production practice, behavior, and audio input sections. They cover Unified draft preview, Whisper language selection and translation, v3 automatic detection, fixed English, Literal command restrictions, and cloud capabilities. OCR checks required labels and the absence of unsupported control labels. These captures use the real empty NSTextView practice field. No mocked transcript or recording operation runs.
+        Twelve additional light and dark captures extract the production practice, behavior, and audio input sections at an explicit 2x scale. They cover Unified draft preview, Whisper language selection and translation, v3 automatic detection, fixed English, Literal command restrictions, and cloud capabilities. OCR checks required labels and the absence of unsupported control labels. These captures use the real empty NSTextView practice field. No mocked transcript or recording operation runs.
 
         The host is never shown. Aqua/Dark Aqua are applied locally. The current system Increase Contrast preference is \(NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast); this test honors it without changing it. Assigning an accessibility-high-contrast NSAppearance did not change SwiftUI's contrast environment, so no separate Increase Contrast coverage is claimed. No system appearance, Night Shift, TCC, app data, microphone, network, inference, or model operation is changed. Live navigation, real button activation, display calibration, and Night Shift's hardware transform are not tested.
 

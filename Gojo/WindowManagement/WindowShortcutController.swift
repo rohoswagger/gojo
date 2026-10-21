@@ -32,13 +32,7 @@ final class WindowShortcutController {
 
     private static func execute(_ action: WindowAction) {
         Task { @MainActor in
-            let context = WindowPowerSession.contextForMouseLocation()
-            gojoDebug("keybind \(action): mouse=\(NSEvent.mouseLocation) → screenUUID=\(context.screenUUID ?? "nil")")
-            await WindowActionExecutor.shared.execute(
-                action,
-                screenUUID: context.screenUUID,
-                state: context.state
-            )
+            await WindowActionExecutor.shared.executeShortcut(action)
         }
     }
 }

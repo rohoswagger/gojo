@@ -59,6 +59,7 @@ import Foundation
     /// Ends the active correction observation, replying empty to its caller.
     func cancelDictationCorrectionObservation(with reply: @escaping () -> Void)
     func focusedWindowSnapshot(_ promptIfNeeded: Bool, with reply: @escaping (NSDictionary) -> Void)
+    func focusedWindowSnapshot(forPID pid: NSNumber, with reply: @escaping (NSDictionary) -> Void)
     func setFocusedWindowFrame(_ normalFrame: NSDictionary, windowID: NSNumber?, with reply: @escaping (Bool) -> Void)
     /// Replies with a dict: `{"success": Bool, "frame": NSDictionary?}` where `frame`
     /// is the window's actual resulting frame read straight back from AX (no

@@ -68,12 +68,14 @@ private struct WindowsTabPanel: View {
                 onSelect: { summary in
                     state.focusedWindowID = summary.id
                     Task {
-                        _ = await XPCHelperClient.shared.raiseWindow(
+                        let raised = await XPCHelperClient.shared.raiseWindow(
                             pid: summary.pid,
                             windowID: summary.windowID,
-                            allowApplicationFallback: true
+                            allowApplicationFallback: false
                         )
-                        NSRunningApplication(processIdentifier: summary.pid)?.activate(options: [])
+                        if !raised {
+                            state.setFailure("Window unavailable", detail: "The selected window could not be activated.")
+                        }
                     }
                 }
             )

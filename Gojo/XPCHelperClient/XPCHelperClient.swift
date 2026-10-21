@@ -1107,6 +1107,27 @@ final class XPCHelperClient: NSObject, @unchecked Sendable {
         }
     }
 
+    nonisolated func focusedWindow(forPID pid: pid_t) async -> WindowTargetWindowSnapshot? {
+        do {
+            let service = await MainActor.run { ensureRemoteService() }
+            let result: NSDictionary = try await service.withContinuation { service, continuation in
+                service.focusedWindowSnapshot(forPID: NSNumber(value: pid)) { snapshot in
+                    continuation.resume(returning: snapshot)
+                }
+            }
+            guard WindowTargetResolver.pidValue(result["pid"]) == pid,
+                  let windowID = WindowTargetResolver.cgWindowIDValue(result["windowID"]),
+                  windowID != 0,
+                  let frame = WindowTargetResolver.rectValue(result["axFrame"]),
+                  !frame.isNull, frame.width > 0, frame.height > 0 else {
+                return nil
+            }
+            return WindowTargetWindowSnapshot(windowID: windowID, pid: pid, ownerName: nil, layer: 0, bounds: frame)
+        } catch {
+            return nil
+        }
+    }
+
     nonisolated func setFocusedWindowFrame(_ normalFrame: CGRect, windowID: CGWindowID?) async -> Bool {
         do {
             let service = await MainActor.run {

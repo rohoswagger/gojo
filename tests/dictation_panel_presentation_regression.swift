@@ -205,8 +205,10 @@ struct DictationPanelPresentationRegression {
             incoming.orderOut(nil)
         }
         for (panel, text) in [(outgoing, "Outgoing draft"), (incoming, "Current speech")] {
+            panel.appearance = NSAppearance(named: .aqua)
             panel.title = text
             let label = NSTextField(labelWithString: text)
+            label.drawsBackground = true
             label.font = .systemFont(ofSize: 20)
             label.frame = NSRect(x: 20, y: 35, width: 280, height: 30)
             panel.contentView?.addSubview(label)

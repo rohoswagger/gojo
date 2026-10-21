@@ -7,8 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] — 2026-10-20
+
+### Added
+
+- Personal vocabulary imports from JSON, CSV, and text lists. Repeated
+  corrections can teach vocabulary locally, with a setting to turn learning off.
+- Native dictation practice, microphone selection, supported language and
+  translation controls, and Standard, Literal, Code, and Chat intents.
+- Optional draft previews for held local Unified dictation and idle model
+  release to free memory.
+
+### Changed
+
+- Dictation freezes recognition and cleanup choices for each session.
+- Recording temporarily mutes the default media and system outputs. Cleanup
+  restores settings that Gojo still owns while preserving user adjustments.
+- Completed transcripts remain available to copy or discard when insertion
+  fails or the destination cannot confirm receipt.
+
 ### Fixed
 
+- Window snapping follows the keyboard-focused window on its own display.
+  Stale selections cannot move another window from the same app.
+- Search regains keyboard focus reliably and closes lingering panels.
+- Dictation controls open on the pointer's display, and model buttons remain
+  readable in dark mode.
 - Speech model preparation errors, including low disk space, appear in
   Dictation settings and recording feedback.
 
@@ -270,7 +294,9 @@ Meet Gojo — it turns the dead space around your MacBook's notch into a control
 - **Guided setup** — a polished first launch that gets you going in seconds.
 - **Automatic updates** — new versions install themselves; no re-downloading.
 
-[Unreleased]: https://github.com/rohoswagger/gojo/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/rohoswagger/gojo/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/rohoswagger/gojo/compare/v1.6.1...v1.7.0
+[1.6.1]: https://github.com/rohoswagger/gojo/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/rohoswagger/gojo/compare/v1.5.1...v1.6.0
 [1.5.1]: https://github.com/rohoswagger/gojo/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/rohoswagger/gojo/compare/v1.4.0...v1.5.0

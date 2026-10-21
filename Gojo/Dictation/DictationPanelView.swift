@@ -109,10 +109,16 @@ final class DictationPanelModel: ObservableObject {
     @discardableResult
     func clearRecoveryText(matching text: String) -> Bool {
         guard !text.isEmpty, recoveryText == text else { return false }
-        recoveryText = ""
-        recoveryMessage = nil
-        showsDetails = false
-        return true
+        return updateRecoveryText("", message: nil)
+    }
+
+    @discardableResult
+    func updateRecoveryText(_ text: String, message: String?) -> Bool {
+        let resolved = !recoveryText.isEmpty && text.isEmpty
+        recoveryText = text
+        recoveryMessage = message
+        if resolved { showsDetails = false }
+        return resolved
     }
 
     var permissionSettingsURL: URL? {

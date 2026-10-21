@@ -65,15 +65,20 @@ final class DictationPanelController {
             .receive(on: RunLoop.main)
             .sink { [weak self] text, message in
                 guard let self, !self.model.isPreview else { return }
-                self.model.recoveryText = text
-                self.model.recoveryMessage = message
+                let resolved = self.model.updateRecoveryText(text, message: message)
                 if !text.isEmpty {
                     self.dismissalTask?.cancel()
                     self.dismissalTask = nil
                     if !self.explicitlyDismissed, !self.suppressUntilInactive { self.presentPanel() }
                 }
                 self.resizePanel()
-                if text.isEmpty, case .error = self.model.state { self.scheduleErrorDismissal() }
+                if resolved, !self.isActive(self.service.state) {
+                    self.dismissalTask?.cancel()
+                    self.dismissalTask = nil
+                    self.panel?.orderOut(nil)
+                } else if text.isEmpty, case .error = self.model.state {
+                    self.scheduleErrorDismissal()
+                }
             }
             .store(in: &subscriptions)
         service.$provisionalPreview

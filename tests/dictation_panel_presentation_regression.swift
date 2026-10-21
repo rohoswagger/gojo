@@ -20,6 +20,13 @@ struct DictationPanelPresentationRegression {
         expect(resolved.recoveryText.isEmpty && resolved.recoveryMessage == nil && !resolved.showsDetails,
                "Successful copy must consume the saved transcript and close its details")
         resolvedBoard.clearContents()
+        expect(!resolved.updateRecoveryText("Completed transcript", message: "Delayed update"),
+               "A delayed pre-clear update is not a resolution")
+        resolved.showsDetails = true
+        expect(resolved.updateRecoveryText("", message: nil), "The authoritative clear must resolve a delayed update")
+        expect(resolved.recoveryText.isEmpty && !resolved.showsDetails,
+               "The authoritative clear must close restored details")
+        expect(!resolved.updateRecoveryText("", message: nil), "Initial empty updates must not dismiss newly opened controls")
         resolved.recoveryText = "Keep on copy failure"
         resolved.recoveryMessage = "Saved text"
         resolved.showsDetails = true

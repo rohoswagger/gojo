@@ -99,7 +99,7 @@ private final class Controller {
     func pauseVoiceMode() async {}
     func resumeVoiceMode() async {}
     func finishVoiceMode() async {}
-    func clearRecoveryText() async {}
+    func clearRecoveryText(matching text: String) async -> Bool { true }
     func cancel() async { currentState = .idle }
 }
 

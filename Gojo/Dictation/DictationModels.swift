@@ -1008,7 +1008,7 @@ enum DictationShortcutEvent: Sendable {
     case pauseVoiceMode
     case resumeVoiceMode
     case finishVoiceMode
-    case clearRecoveryText
+    case clearRecoveryText(String)
     case cancel
 }
 

@@ -16,3 +16,5 @@ swiftc \
 "$binary_path"
 
 bash tests/dictation_panel_presentation_regression.sh
+
+bash tests/dictation_panel_controller_regression.sh

@@ -10,6 +10,40 @@ struct DictationPanelPresentationRegression {
         _ = NSApplication.shared
         NSApp.setActivationPolicy(.accessory)
         verifyPopoverOrdering()
+        let resolved = DictationPanelModel()
+        let resolvedBoard = NSPasteboard(name: .init("gojo.recovery-resolution." + UUID().uuidString))
+        resolved.recoveryText = "Completed transcript"
+        resolved.recoveryMessage = "No selected field"
+        resolved.showsDetails = true
+        expect(resolved.copyRecoveryText(to: resolvedBoard), "Completed transcript must copy")
+        expect(resolvedBoard.string(forType: .string) == "Completed transcript", "Copy must write the exact transcript")
+        expect(resolved.recoveryText.isEmpty && resolved.recoveryMessage == nil && !resolved.showsDetails,
+               "Successful copy must consume the saved transcript and close its details")
+        resolvedBoard.clearContents()
+        expect(!resolved.updateRecoveryText("Completed transcript", message: "Delayed update"),
+               "A delayed pre-clear update is not a resolution")
+        resolved.showsDetails = true
+        expect(resolved.updateRecoveryText("", message: nil), "The authoritative clear must resolve a delayed update")
+        expect(resolved.recoveryText.isEmpty && !resolved.showsDetails,
+               "The authoritative clear must close restored details")
+        expect(!resolved.updateRecoveryText("", message: nil), "Initial empty updates must not dismiss newly opened controls")
+        resolved.recoveryText = "Keep on copy failure"
+        resolved.recoveryMessage = "Saved text"
+        resolved.showsDetails = true
+        expect(!resolved.copyRecoveryText(write: { _ in false }), "Failed clipboard writes must report failure")
+        expect(resolved.recoveryText == "Keep on copy failure" && resolved.recoveryMessage == "Saved text" && resolved.showsDetails,
+               "Failed copies must retain the transcript and its open details")
+        expect(!resolved.clearRecoveryText(matching: "Old transcript"), "Stale discard must not clear newer text")
+        expect(resolved.clearRecoveryText(matching: "Keep on copy failure"), "Discard must acknowledge the shown transcript")
+        expect(resolved.recoveryText.isEmpty && resolved.recoveryMessage == nil && !resolved.showsDetails,
+               "Discard must clear saved text and close its details")
+        resolved.recoveryText = "Copied snapshot"
+        expect(resolved.copyRecoveryText(write: { text in
+            expect(text == "Copied snapshot", "Clipboard must receive the captured snapshot")
+            resolved.recoveryText = "Newer transcript"
+            return true
+        }), "The captured clipboard write must succeed")
+        expect(resolved.recoveryText == "Newer transcript", "Copy completion must preserve a newer transcript")
         let model = DictationPanelModel()
         model.present(.error(.captureFailed("Microphone unavailable")))
         let firstErrorNotice = model.attentionIdentity
@@ -42,14 +76,21 @@ struct DictationPanelPresentationRegression {
         expect(model.shouldHideWhenFinished, "Errors must dismiss after their message is shown")
         model.state = .succeeded("Finished")
         model.recoveryText = "Uninserted phrase"
-        expect(!model.shouldHideWhenFinished, "Saved text must remain available for copying")
+        expect(model.shouldHideWhenFinished, "Saved text must expire after its grace period once the session is over")
         model.recoveryText = ""
         model.activationMode = .voiceMode
         expect(!model.shouldHideWhenFinished, "Locked voice controls must remain visible after finishing")
         model.state = .error(.captureFailed("unavailable"))
         model.recoveryText = "Uninserted phrase"
-        expect(!model.shouldHideWhenFinished, "Errors with saved text must remain available for copying")
-        expect(model.recoveryText == "Uninserted phrase", "Dismissing an error must not discard saved text")
+        expect(model.shouldHideWhenFinished, "Errors with saved text must expire without discarding it")
+        expect(model.recoveryText == "Uninserted phrase", "Expiring an error must not discard saved text")
+        model.state = .succeeded("Finished")
+        model.activationMode = .voiceMode
+        expect(model.shouldHideWhenFinished, "Saved text must expire in voice mode too")
+        model.state = .idle
+        expect(model.shouldHideWhenFinished, "Idle controls with saved text must expire in voice mode")
+        model.activationMode = .holdToTalk
+        model.recoveryText = ""
         let states: [DictationState] = [
             .idle, .requestingPermission, .listening, .pausing, .paused,
             .transcribing, .inserting, .succeeded("done"),
@@ -62,7 +103,13 @@ struct DictationPanelPresentationRegression {
             expect(model.size == CGSize(width: 150, height: 44), "Every state without recovery must keep the compact capsule size")
             model.recoveryText = String(repeating: "Saved phrase. ", count: 100)
             expect(model.size == CGSize(width: 150, height: 44), "Saved text must keep the compact capsule size")
-            expect(!model.shouldHideWhenFinished, "Saved text must prevent automatic dismissal in every state")
+            let sessionIsActive: Bool
+            switch state {
+            case .requestingPermission, .listening, .pausing, .paused, .transcribing, .inserting: sessionIsActive = true
+            case .idle, .succeeded, .error: sessionIsActive = false
+            }
+            expect(model.shouldHideWhenFinished == !sessionIsActive,
+                   "Saved text must expire once the session is over and never hide an active session")
             let recoveryNotice = model.attentionIdentity
             expect(recoveryNotice != nil, "Saved text must open the transcript popover in every state")
             model.recoveryMessage = "A different status message"
@@ -78,7 +125,7 @@ struct DictationPanelPresentationRegression {
         model.recoveryText = transcript
         expect(model.copyRecoveryText(to: pasteboard), "Copy must report a successful pasteboard write")
         expect(pasteboard.string(forType: .string) == transcript, "Copy must preserve the full multiline Unicode transcript")
-        expect(model.recoveryText == transcript, "Copy must keep the saved transcript available")
+        expect(model.recoveryText.isEmpty, "Successful copy must clear the saved transcript")
         model.recoveryText = ""
         expect(!model.copyRecoveryText(to: pasteboard), "Copy must fail when no saved transcript exists")
         expect(pasteboard.string(forType: .string) == transcript, "An empty recovery must not erase the pasteboard")

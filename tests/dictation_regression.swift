@@ -834,6 +834,7 @@ struct DictationRegressionRunner {
         await testCopyOnlyCancellationRejectsLateResult()
         await testFatalTargetCaptureNeverStartsMicrophone()
         testSavedTranscriptCompletion()
+        await testRecoveryResolutionRearmsWithoutLosingNewText()
         await testFollowFocusRecoveryKeepsListening()
         await testSecurePhraseStopsBeforeInference()
         await testSecurePhraseDrainsAcceptedSafeJobs()
@@ -2657,7 +2658,7 @@ struct DictationRegressionRunner {
             case .pauseVoiceMode: await log.append("pause")
             case .resumeVoiceMode: await log.append("resume")
             case .finishVoiceMode: await log.append("finish")
-            case .clearRecoveryText: await log.append("discard")
+            case .clearRecoveryText(_): await log.append("discard")
             case .cancel: await log.append("cancel")
             }
         }
@@ -2668,7 +2669,7 @@ struct DictationRegressionRunner {
         queue.send(.pauseVoiceMode)
         queue.send(.resumeVoiceMode)
         queue.send(.finishVoiceMode)
-        queue.send(.clearRecoveryText)
+        queue.send(.clearRecoveryText("saved transcript"))
         queue.send(.cancel) { await log.append("cancel complete") }
         await queue.drain()
         assertEqual(
@@ -3667,6 +3668,43 @@ struct DictationRegressionRunner {
         assertEqual(await controller.state, .idle, "late target must leave the cancelled state idle")
     }
 
+    static func testRecoveryResolutionRearmsWithoutLosingNewText() async {
+        let audio = ContinuousAudioCapture()
+        let inserter = RetainedInserter()
+        let controller = DictationController(
+            targetProvider: FollowingTargetProvider([nil, nil, "editor#1"], initialResolution: .copyOnly(.noFocusedTextField)),
+            audioCapture: audio, transcriber: ContinuousTranscriber(["First phrase.", "Second phrase.", "Inserted normally."]),
+            polisher: FakePolisher(log: EventLog()), inserter: inserter
+        )
+        await controller.hotKeyDown(plan: DictationSessionPlan(mode: .continuous, targetPolicy: .followFocus))
+        await waitForState(.listening, controller: controller, message: "recovery resolution should start recording")
+        await audio.emit(1)
+        await waitForCondition("first phrase must be saved") { await controller.recoveryText == "First phrase." }
+        let firstCleared = await controller.clearRecoveryText(matching: "First phrase.")
+        assertCondition(firstCleared, "copy or discard must acknowledge exactly the shown text")
+        assertEqual(await controller.state, .listening, "resolving saved text must preserve an active dictation session")
+        assertEqual(await audio.cancellations, 0, "resolving saved text must not cancel the microphone")
+        await audio.emit(2)
+        await waitForCondition("the next phrase must be saved without old text") { await controller.recoveryText == "Second phrase." }
+        let staleCleared = await controller.clearRecoveryText(matching: "First phrase.")
+        assertCondition(!staleCleared, "a queued stale copy or discard must not acknowledge new text")
+        assertEqual(await controller.recoveryText, "Second phrase.", "stale actions must preserve the newer transcript")
+        await audio.emit(3)
+        await waitForCondition("normal dictation must insert after a saved transcript is resolved") {
+            await inserter.chunks == ["Inserted normally."]
+        }
+        await controller.finishVoiceMode()
+        await waitForState(.succeeded("Inserted normally."), controller: controller, message: "saved phrase should finish normally")
+        let finalCleared = await controller.clearRecoveryText(matching: "Second phrase.")
+        assertCondition(finalCleared, "completed text must be resolvable")
+        assertEqual(await controller.recoveryText, "", "resolved text must be removed from the controller")
+        assertEqual(await controller.recoveryMessage, nil, "resolved text must clear its explanatory message")
+        assertEqual(await controller.state, .idle, "resolving a completed transcript must reset dictation to ready")
+        await controller.hotKeyDown()
+        await waitForState(.listening, controller: controller, message: "dictation must restart after copy or discard")
+        await controller.cancel()
+    }
+
     static func testFollowFocusRecoveryKeepsListening() async {
         let target = FollowingTargetProvider([nil, "moved-field#1", "editor#1"], initialResolution: .copyOnly(.noFocusedTextField))
         let audio = ContinuousAudioCapture()
@@ -3837,6 +3875,13 @@ struct DictationRegressionRunner {
         await waitForState(.error(.insertionFailed("Enable the required permission in System Settings.")), controller: controller, message: "saved insertion failures must preserve their error state")
         assertEqual(await controller.recoveryText, text, "single insertion failures must retain the entire processed transcript")
         assertEqual(await inserter.chunks, [], "failed single insertion must not report an insertion")
+        let resolved = await controller.clearRecoveryText(matching: text)
+        assertCondition(resolved, "copy or discard must resolve an insertion-failure transcript")
+        assertEqual(await controller.state, .idle, "resolving a failed transcript must clear the terminal error")
+        assertEqual(await controller.recoveryText, "", "failed transcript must stay cleared")
+        await controller.hotKeyDown()
+        await waitForState(.listening, controller: controller, message: "dictation must restart after resolving an insertion error")
+        await controller.cancel()
     }
 
     static func testUnverifiedInsertionKeepsCompletedText() async {

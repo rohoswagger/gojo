@@ -9,12 +9,59 @@ private struct DictationPanelPreferences: Codable {
     var positions: [String: DictationPanelSavedPosition] = [:]
 }
 
+struct DictationPanelDisplays {
+    var screens: @MainActor () -> [DictationPanelScreen]
+    var pointerDisplayID: @MainActor () -> String?
+    var sessionDisplayID: @MainActor () -> String?
+
+    @MainActor
+    static func live(service: GojoDictationService) -> DictationPanelDisplays {
+        DictationPanelDisplays(
+            screens: {
+                NSScreen.screens.compactMap { screen in
+                    screen.displayUUID.map { DictationPanelScreen(id: $0, visibleFrame: screen.visibleFrame) }
+                }
+            },
+            pointerDisplayID: { NSScreen.screenWithMouse?.displayUUID },
+            sessionDisplayID: {
+                (NSScreen.screens.first { $0.directDisplayID == service.sessionDisplayID }
+                    ?? NSScreen.main ?? NSScreen.screens.first)?.displayUUID
+            }
+        )
+    }
+}
+
+private enum DictationPanelExpiryAction: Equatable {
+    case hide
+    case expireRecovery(String)
+    case finishSuccess
+    case clearEmpty(UUID)
+}
+
+private struct DictationPanelExpiryPlan: Equatable {
+    var grace: Duration
+    var action: DictationPanelExpiryAction
+    var state: DictationState
+    var identity: String?
+}
+
 @MainActor
 final class DictationPanelController {
     static let shared = DictationPanelController()
     private static let preferencesKey = "gojo.dictation.panel.placement.v1"
+    private static let recoveryGrace: Duration = .seconds(10)
+    private static let noticeGrace: Duration = .seconds(2)
 
-    private let service = GojoDictationService.shared
+    typealias Sleeper = @Sendable (Duration) async throws -> Void
+    typealias PanelFade = @MainActor (NSPanel) async -> Void
+
+    private let service: GojoDictationService
+    private let defaults: UserDefaults
+    private let notificationCenter: NotificationCenter
+    private let workspaceNotificationCenter: NotificationCenter
+    private let displays: DictationPanelDisplays
+    private let sleeper: Sleeper
+    private let fade: PanelFade
     private let model = DictationPanelModel()
     private var panel: DictationFloatingPanel?
     private var subscriptions = Set<AnyCancellable>()
@@ -23,13 +70,38 @@ final class DictationPanelController {
     private var explicitlyDismissed = false
     private var isPanelStartPending = false
     private var displayedOnID: String?
-    private var dismissalTask: Task<Void, Never>?
-    private var emptyCompletionTask: Task<Void, Never>?
     private var preferences: DictationPanelPreferences
-    private var lastScreens: [DictationPanelScreen] = []
+    private var lastServiceState: DictationState?
 
-    private init() {
-        if let data = UserDefaults.standard.data(forKey: Self.preferencesKey),
+    private var isPresented = false
+    private var isHiding = false
+    private var presentationGeneration: UInt64 = 0
+    private var expiryTask: Task<Void, Never>?
+    private var armedPlan: DictationPanelExpiryPlan?
+    private var pointerInside = false
+    private var previewExpiry = false
+    private var canonicalRecoveryText = ""
+    private var consumedRecoveryText: String?
+    private var handledEmptyAttentionID: UUID?
+
+    init(
+        service: GojoDictationService? = nil,
+        defaults: UserDefaults = .standard,
+        notificationCenter: NotificationCenter = .default,
+        workspaceNotificationCenter: NotificationCenter = NSWorkspace.shared.notificationCenter,
+        displays: DictationPanelDisplays? = nil,
+        sleeper: @escaping Sleeper = { try await Task.sleep(for: $0) },
+        fade: PanelFade? = nil
+    ) {
+        let service = service ?? GojoDictationService.shared
+        self.service = service
+        self.defaults = defaults
+        self.notificationCenter = notificationCenter
+        self.workspaceNotificationCenter = workspaceNotificationCenter
+        self.displays = displays ?? .live(service: service)
+        self.sleeper = sleeper
+        self.fade = fade ?? Self.animateFadeOut
+        if let data = defaults.data(forKey: Self.preferencesKey),
            let saved = try? JSONDecoder().decode(DictationPanelPreferences.self, from: data) {
             preferences = saved
             preferences.positions = saved.positions.filter { $0.value.isValid }
@@ -63,18 +135,7 @@ final class DictationPanelController {
             .store(in: &subscriptions)
         Publishers.CombineLatest(service.$recoveryText, service.$recoveryMessage)
             .receive(on: RunLoop.main)
-            .sink { [weak self] text, message in
-                guard let self, !self.model.isPreview else { return }
-                self.model.recoveryText = text
-                self.model.recoveryMessage = message
-                if !text.isEmpty {
-                    self.dismissalTask?.cancel()
-                    self.dismissalTask = nil
-                    if !self.explicitlyDismissed, !self.suppressUntilInactive { self.presentPanel() }
-                }
-                self.resizePanel()
-                if text.isEmpty, case .error = self.model.state { self.scheduleErrorDismissal() }
-            }
+            .sink { [weak self] text, message in self?.receiveRecovery(text: text, message: message) }
             .store(in: &subscriptions)
         service.$provisionalPreview
             .receive(on: RunLoop.main)
@@ -92,74 +153,77 @@ final class DictationPanelController {
             .store(in: &subscriptions)
         Publishers.CombineLatest(service.$lastCompletion, service.$completionAttentionID)
             .receive(on: RunLoop.main)
-            .sink { [weak self] completion, id in
-                guard let self, !self.model.isPreview else { return }
-                self.emptyCompletionTask?.cancel()
-                guard case .empty(let reason) = completion, let id else {
-                    self.model.emptyCompletion = nil
-                    self.model.completionAttentionID = nil
-                    return
-                }
-                self.dismissalTask?.cancel()
-                self.model.emptyCompletion = reason
-                self.model.completionAttentionID = id
-                if !self.explicitlyDismissed, !self.suppressUntilInactive { self.presentPanel() }
-                self.emptyCompletionTask = Task { [weak self] in
-                    do {
-                        try await Task.sleep(for: .seconds(2))
-                        guard let self else { return }
-                        while self.model.showsDetails { try await Task.sleep(for: .milliseconds(50)) }
-                        guard !Task.isCancelled, self.model.completionAttentionID == id else { return }
-                        self.model.emptyCompletion = nil
-                        self.model.completionAttentionID = nil
-                        if !self.isActive(self.model.state), self.model.shouldHideWhenFinished {
-                            await self.fadeOutPanel()
-                        }
-                    } catch {}
-                }
+            .sink { [weak self] completion, id in self?.receiveCompletion(completion, id: id) }
+            .store(in: &subscriptions)
+        Publishers.CombineLatest(model.$capsuleHovered, model.$detailsHovered)
+            .sink { [weak self] capsule, details in self?.hoverChanged(capsule || details) }
+            .store(in: &subscriptions)
+        model.$showsDetails
+            .removeDuplicates()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] shown in
+                guard let self else { return }
+                if !shown { self.model.detailsHovered = false }
+                self.rearmExpiry()
             }
             .store(in: &subscriptions)
-        NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
+        notificationCenter.publisher(for: NSApplication.didChangeScreenParametersNotification)
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.screensChanged() }
+            .store(in: &subscriptions)
+        service.$sessionDisplayID
+            .removeDuplicates()
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.reassertPanel(followSession: true) }
+            .store(in: &subscriptions)
+        workspaceNotificationCenter.publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.reassertPanel() }
+            .store(in: &subscriptions)
+        workspaceNotificationCenter.publisher(for: NSWorkspace.didActivateApplicationNotification)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.reassertPanel() }
             .store(in: &subscriptions)
     }
 
     func show() {
         startObserving()
-        dismissalTask?.cancel()
-        dismissalTask = nil
+        cancelExpiry()
         suppressUntilInactive = false
         explicitlyDismissed = false
-        if !model.isPreview { synchronizePresentation() }
+        if !model.isPreview {
+            synchronizePresentation()
+            if !isActive(service.state), model.recoveryText.isEmpty, model.emptyCompletion == nil {
+                model.present(.idle)
+            }
+        }
         presentPanel(onPointerDisplay: !isActive(service.state))
+        if !model.isPreview, !model.recoveryText.isEmpty { model.showsDetails = true }
     }
 
     func dismiss() {
         explicitlyDismissed = true
-        emptyCompletionTask?.cancel()
-        emptyCompletionTask = nil
         model.emptyCompletion = nil
         model.completionAttentionID = nil
-        dismissalTask?.cancel()
-        dismissalTask = nil
+        cancelExpiry()
         if model.isPreview {
             endPreview()
         } else {
+            discardRecovery(model.recoveryText)
             suppressUntilInactive = isActive(service.state) || isPanelStartPending
             isPanelStartPending = false
             service.cancel { [weak self] in
                 self?.suppressUntilInactive = false
             }
         }
-        model.showsDetails = false
-        panel?.orderOut(nil)
+        hidePanelImmediately()
         model.clearWaveform()
     }
 
     func resetPosition() {
         preferences = DictationPanelPreferences()
-        UserDefaults.standard.removeObject(forKey: Self.preferencesKey)
+        defaults.removeObject(forKey: Self.preferencesKey)
         displayedOnID = nil
         if panel?.isVisible == true { placePanel(preferredDisplayID: nil) }
     }
@@ -167,11 +231,16 @@ final class DictationPanelController {
     #if DEBUG
     var debugFrame: CGRect? { panel?.frame }
     var debugIsKey: Bool { panel?.isKeyWindow ?? false }
+    var debugPanel: NSPanel? { panel }
+    var debugModel: DictationPanelModel { model }
+    func debugPerform(_ command: DictationPanelCommand) { perform(command) }
+    func debugCompleteDrag() { completeDrag() }
 
     func previewFadeOut() {
         guard !isActive(service.state) else { return }
         showPreview(state: .error(.captureFailed("Microphone unavailable. Check your input device and try again.")))
-        scheduleErrorDismissal()
+        previewExpiry = true
+        rearmExpiry()
         Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(2100))
             guard let self, self.model.isPreview, let panel = self.panel else { return }
@@ -201,7 +270,8 @@ final class DictationPanelController {
     func showPreview(state: DictationState, recoveryText: String = "", recoveryMessage: String? = nil) {
         guard !isActive(service.state) else { return }
         startObserving()
-        dismissalTask?.cancel()
+        cancelExpiry()
+        previewExpiry = false
         explicitlyDismissed = false
         model.isPreview = true
         model.present(state)
@@ -216,9 +286,11 @@ final class DictationPanelController {
     }
 
     func endPreview() {
+        previewExpiry = false
         model.leavePreview(recoveryText: service.recoveryText, recoveryMessage: service.recoveryMessage)
         synchronizePresentation()
         resizePanel()
+        rearmExpiry()
     }
     #else
     private func endPreview() {}
@@ -226,12 +298,24 @@ final class DictationPanelController {
 
     private func receive(_ state: DictationState) {
         guard state == service.state else { return }
+        if state == lastServiceState {
+            switch state {
+            case .error: break
+            default: return
+            }
+        }
+        let previousServiceState = lastServiceState
+        lastServiceState = state
+        if isActive(state), previousServiceState.map({ !isActive($0) }) ?? true {
+            consumedRecoveryText = nil
+            canonicalRecoveryText = ""
+        }
         if model.isPreview {
             guard isActive(state) else { return }
+            previewExpiry = false
             model.leavePreview(recoveryText: service.recoveryText, recoveryMessage: service.recoveryMessage)
         }
-        dismissalTask?.cancel()
-        dismissalTask = nil
+        cancelExpiry()
         let previousState = model.state
         let wasListening = previousState == .listening
         model.present(state)
@@ -250,59 +334,163 @@ final class DictationPanelController {
         }
         if isActive(state) { explicitlyDismissed = false }
         guard !explicitlyDismissed else { return }
-        if state == .idle, previousState != .idle, model.shouldHideWhenFinished {
+        if state == .idle, previousState != .idle, model.recoveryText.isEmpty, model.shouldHideWhenFinished {
             model.state = previousState
-            dismissalTask = Task { [weak self] in
-                guard let self else { return }
-                await self.fadeOutPanel()
-                guard !Task.isCancelled else { return }
+            isHiding = true
+            expiryTask = Task { [weak self] in
+                guard let self, await self.fadeOutPanel() else { return }
                 self.model.state = .idle
-                self.dismissalTask = nil
             }
             return
         }
         if state != .idle { presentPanel(onPointerDisplay: isActive(state) && !isActive(previousState)) }
         resizePanel()
-        if case .error = state {
-            scheduleErrorDismissal()
-        } else if case .succeeded = state {
-            let delay: Duration = .milliseconds(model.shouldHideWhenFinished ? 120 : 900)
-            dismissalTask = Task { [weak self] in
-                try? await Task.sleep(for: delay)
-                guard !Task.isCancelled, let self, !self.model.isPreview,
-                      case .succeeded = self.model.state else { return }
-                if self.model.shouldHideWhenFinished { await self.fadeOutPanel() }
-                guard !Task.isCancelled else { return }
-                self.model.state = .idle
-                self.dismissalTask = nil
+        rearmExpiry()
+    }
+
+    private func receiveRecovery(text: String, message: String?) {
+        guard !model.isPreview else { return }
+        let previous = canonicalRecoveryText
+        canonicalRecoveryText = text
+        if let consumed = consumedRecoveryText {
+            if text == consumed { return }
+            consumedRecoveryText = nil
+        }
+        let resolved = model.updateRecoveryText(text, message: message)
+        if !text.isEmpty, text != previous, !explicitlyDismissed, !suppressUntilInactive { presentPanel() }
+        resizePanel()
+        if resolved, !isActive(service.state) {
+            hidePanelImmediately()
+        } else {
+            rearmExpiry()
+        }
+    }
+
+    private func receiveCompletion(_ completion: DictationCompletion?, id: UUID?) {
+        guard !model.isPreview else { return }
+        guard case .empty(let reason) = completion, let id else {
+            model.emptyCompletion = nil
+            model.completionAttentionID = nil
+            rearmExpiry()
+            return
+        }
+        guard id != handledEmptyAttentionID else { return }
+        handledEmptyAttentionID = id
+        model.emptyCompletion = reason
+        model.completionAttentionID = id
+        if !explicitlyDismissed, !suppressUntilInactive { presentPanel() } else { rearmExpiry() }
+    }
+
+    private func hoverChanged(_ inside: Bool) {
+        guard inside != pointerInside else { return }
+        pointerInside = inside
+        rearmExpiry(restart: true)
+    }
+
+    private func expiryPlan() -> DictationPanelExpiryPlan? {
+        guard isPresented, !model.isPreview || previewExpiry else { return nil }
+        let state = model.state
+        func plan(_ grace: Duration, _ action: DictationPanelExpiryAction) -> DictationPanelExpiryPlan {
+            DictationPanelExpiryPlan(grace: grace, action: action, state: state, identity: model.attentionIdentity)
+        }
+        let emptyID = model.emptyCompletion != nil ? model.completionAttentionID : nil
+        let recovery = model.recoveryText
+        if !recovery.isEmpty { return plan(Self.recoveryGrace, .expireRecovery(recovery)) }
+        if isActive(state) { return emptyID.map { plan(Self.noticeGrace, .clearEmpty($0)) } }
+        if let emptyID { return plan(Self.noticeGrace, .clearEmpty(emptyID)) }
+        if case .error = state { return plan(Self.noticeGrace, .hide) }
+        if case .succeeded = state {
+            return plan(model.shouldHideWhenFinished ? .milliseconds(120) : .milliseconds(900), .finishSuccess)
+        }
+        return nil
+    }
+
+    private func rearmExpiry(restart: Bool = false) {
+        guard !isHiding else { return }
+        guard !pointerInside, let plan = expiryPlan() else {
+            cancelExpiry()
+            return
+        }
+        guard restart || armedPlan != plan else { return }
+        cancelExpiry()
+        armedPlan = plan
+        let generation = presentationGeneration
+        expiryTask = Task { [weak self] in
+            guard let self else { return }
+            do { try await self.sleeper(plan.grace) } catch { return }
+            guard !Task.isCancelled, generation == self.presentationGeneration else { return }
+            self.armedPlan = nil
+            await self.runExpiry(plan.action)
+        }
+    }
+
+    private func cancelExpiry() {
+        expiryTask?.cancel()
+        expiryTask = nil
+        armedPlan = nil
+    }
+
+    private func runExpiry(_ action: DictationPanelExpiryAction) async {
+        switch action {
+        case .expireRecovery(let text):
+            guard model.recoveryText == text else { return }
+            discardRecovery(text)
+            if isActive(service.state) {
+                model.showsDetails = false
+            } else {
+                _ = await fadeOutPanel()
             }
+        case .hide:
+            _ = await fadeOutPanel()
+        case .finishSuccess:
+            if model.shouldHideWhenFinished, !(await fadeOutPanel()) { return }
+            if case .succeeded = model.state { model.state = .idle }
+        case .clearEmpty(let id):
+            guard model.completionAttentionID == id else { return }
+            model.emptyCompletion = nil
+            model.completionAttentionID = nil
+            if !isActive(model.state), model.shouldHideWhenFinished { _ = await fadeOutPanel() }
         }
     }
 
-    private func scheduleErrorDismissal() {
-        guard model.recoveryText.isEmpty, !explicitlyDismissed else { return }
-        dismissalTask?.cancel()
-        dismissalTask = Task { [weak self] in
-            do {
-                try await Task.sleep(for: .seconds(2))
-                guard let self else { return }
-                repeat {
-                    while self.model.showsDetails {
-                        try await Task.sleep(for: .milliseconds(50))
-                    }
-                    try await Task.sleep(for: .milliseconds(180))
-                } while self.model.showsDetails
-                guard !Task.isCancelled, case .error = self.model.state,
-                      self.model.recoveryText.isEmpty else { return }
-                await self.fadeOutPanel()
-                guard !Task.isCancelled else { return }
-                self.dismissalTask = nil
-            } catch {}
-        }
+    /// Forgets a saved transcript: the optimistic model clear plus a
+    /// snapshot-matched service clear, so a newer transcript is never lost.
+    private func discardRecovery(_ text: String) {
+        guard !text.isEmpty else { return }
+        if canonicalRecoveryText == text { consumedRecoveryText = text }
+        model.clearRecoveryText(matching: text)
+        service.clearRecoveryText(matching: text)
     }
 
-    private func fadeOutPanel() async {
-        guard !Task.isCancelled, model.recoveryText.isEmpty, let panel, panel.isVisible else { return }
+    /// Returns true only when this fade finished and hid the panel; a newer
+    /// presentation or an immediate hide supersedes it and leaves the panel alone.
+    private func fadeOutPanel() async -> Bool {
+        guard isPresented, let panel, panel.isVisible else {
+            hidePanelImmediately()
+            return true
+        }
+        isHiding = true
+        presentationGeneration &+= 1
+        let generation = presentationGeneration
+        model.showsDetails = false
+        await fade(panel)
+        guard generation == presentationGeneration else { return false }
+        hidePanelImmediately()
+        return true
+    }
+
+    private func hidePanelImmediately() {
+        cancelExpiry()
+        presentationGeneration &+= 1
+        isHiding = false
+        isPresented = false
+        model.showsDetails = false
+        model.capsuleHovered = false
+        model.detailsHovered = false
+        panel?.orderOut(nil)
+    }
+
+    private static func animateFadeOut(_ panel: NSPanel) async {
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? 0.08 : 0.32
@@ -312,19 +500,18 @@ final class DictationPanelController {
                 continuation.resume()
             }
         }
-        guard !Task.isCancelled, model.recoveryText.isEmpty else {
-            if !explicitlyDismissed, panel.isVisible { panel.alphaValue = 1 }
-            return
-        }
-        panel.orderOut(nil)
     }
 
     private func synchronizePresentation() {
+        let text = service.recoveryText
+        canonicalRecoveryText = text
+        if consumedRecoveryText != text { consumedRecoveryText = nil }
+        let consumed = consumedRecoveryText != nil
         model.present(service.state)
         model.activationMode = DictationModifierHotKeyMonitor.shared.activationMode
         model.targetApplicationName = service.targetApplicationName
-        model.recoveryText = service.recoveryText
-        model.recoveryMessage = service.recoveryMessage
+        model.recoveryText = consumed ? "" : text
+        model.recoveryMessage = consumed ? nil : service.recoveryMessage
         model.provisionalPreview = service.provisionalPreview
         model.activeIntent = service.activeIntent
     }
@@ -336,7 +523,7 @@ final class DictationPanelController {
             case .pause: model.state = .paused
             case .finish: model.state = .transcribing
             case .dismiss: dismiss()
-            case .clearRecovery: model.recoveryText = ""
+            case .clearRecovery(let text): model.clearRecoveryText(matching: text)
             case .settings: break
             }
             resizePanel()
@@ -350,7 +537,13 @@ final class DictationPanelController {
         case .resume: service.resumeVoiceMode()
         case .finish: service.finishVoiceMode()
         case .dismiss: dismiss()
-        case .clearRecovery: service.clearRecoveryText()
+        case .clearRecovery(let text):
+            discardRecovery(text)
+            if !text.isEmpty, model.recoveryText.isEmpty, !isActive(service.state) {
+                hidePanelImmediately()
+            } else {
+                rearmExpiry()
+            }
         case .settings:
             if let url = model.permissionSettingsURL {
                 NSWorkspace.shared.open(url)
@@ -361,6 +554,7 @@ final class DictationPanelController {
     }
 
     private func presentPanel(onPointerDisplay: Bool = false) {
+        cancelExpiry()
         if panel == nil {
             panel = DictationFloatingPanel(rootView: DictationPanelView(
                 model: model,
@@ -368,6 +562,9 @@ final class DictationPanelController {
                 dragEnded: { [weak self] in self?.completeDrag() }
             ))
         }
+        presentationGeneration &+= 1
+        isHiding = false
+        isPresented = true
         if onPointerDisplay || panel?.isVisible != true {
             placePanel(preferredDisplayID: preferences.preferredDisplayID)
         } else {
@@ -377,78 +574,73 @@ final class DictationPanelController {
             context.duration = 0
             panel?.animator().alphaValue = 1
         }
+        panel?.alphaValue = 1
         panel?.orderFrontRegardless()
+        rearmExpiry()
+    }
+
+    /// Re-asserts an intentionally visible panel after a Space or frontmost-app
+    /// change without activating Gojo or taking key focus. Timer-hidden and
+    /// manually dismissed panels stay hidden.
+    private func reassertPanel(followSession: Bool = false) {
+        guard isPresented, !isHiding, let panel else { return }
+        panel.level = DictationFloatingPanel.presentationLevel
+        panel.collectionBehavior = DictationFloatingPanel.presentationBehavior
+        panel.orderFrontRegardless()
+        let target = followSession ? displays.sessionDisplayID() : displays.pointerDisplayID()
+        screensChanged(preferredDisplayID: target)
     }
 
     private func placePanel(preferredDisplayID: String?) {
-        let screens = screenDescriptions()
+        let screens = displays.screens()
         guard let placement = DictationPanelPlacement.restore(
             size: model.size,
             screens: screens,
-            pointerDisplayID: NSScreen.screenWithMouse?.displayUUID,
+            pointerDisplayID: displays.pointerDisplayID(),
             preferredDisplayID: preferredDisplayID,
-            fallbackDisplayID: sessionScreen()?.displayUUID,
+            fallbackDisplayID: displays.sessionDisplayID(),
             positions: preferences.positions
         ) else { return }
         displayedOnID = placement.displayID
-        lastScreens = screens
         panel?.setFrame(placement.frame, display: true)
     }
 
     private func resizePanel() {
         guard let panel, panel.isVisible,
-              let screen = screenDescriptions().first(where: { $0.id == displayedOnID }) else { return }
+              let screen = displays.screens().first(where: { $0.id == displayedOnID }) else { return }
         let frame = CGRect(origin: panel.frame.origin, size: model.size)
         panel.setFrame(DictationPanelPlacement.clamped(frame, to: screen.visibleFrame), display: true)
     }
 
     private func completeDrag() {
         guard let panel else { return }
-        let screens = screenDescriptions()
+        let screens = displays.screens()
         guard let screen = screens.max(by: {
             intersectionArea(panel.frame, $0.visibleFrame) < intersectionArea(panel.frame, $1.visibleFrame)
         }) else { return }
         let frame = DictationPanelPlacement.clamped(panel.frame, to: screen.visibleFrame)
         panel.setFrame(frame, display: true)
         displayedOnID = screen.id
-        lastScreens = screens
         guard let position = DictationPanelPlacement.savedPosition(for: frame, on: screen) else { return }
         preferences.preferredDisplayID = screen.id
         preferences.positions[screen.id] = position
         if let data = try? JSONEncoder().encode(preferences) {
-            UserDefaults.standard.set(data, forKey: Self.preferencesKey)
+            defaults.set(data, forKey: Self.preferencesKey)
         }
     }
 
-    private func screensChanged() {
+    private func screensChanged(preferredDisplayID: String? = nil) {
         guard let panel, panel.isVisible else { return }
-        let screens = screenDescriptions()
-        var positions = preferences.positions
-        if let oldScreen = lastScreens.first(where: { $0.id == displayedOnID }),
-           let position = DictationPanelPlacement.savedPosition(for: panel.frame, on: oldScreen) {
-            positions[oldScreen.id] = position
-        }
+        let screens = displays.screens()
         guard let placement = DictationPanelPlacement.restore(
             size: model.size,
             screens: screens,
-            preferredDisplayID: displayedOnID,
-            fallbackDisplayID: sessionScreen()?.displayUUID,
-            positions: positions
+            preferredDisplayID: preferredDisplayID ?? displayedOnID,
+            fallbackDisplayID: displays.sessionDisplayID(),
+            positions: preferences.positions
         ) else { return }
         displayedOnID = placement.displayID
-        lastScreens = screens
         panel.setFrame(placement.frame, display: true)
-    }
-
-    private func screenDescriptions() -> [DictationPanelScreen] {
-        NSScreen.screens.compactMap { screen in
-            screen.displayUUID.map { DictationPanelScreen(id: $0, visibleFrame: screen.visibleFrame) }
-        }
-    }
-
-    private func sessionScreen() -> NSScreen? {
-        NSScreen.screens.first { $0.directDisplayID == service.sessionDisplayID }
-            ?? NSScreen.main ?? NSScreen.screens.first
     }
 
     private func intersectionArea(_ lhs: CGRect, _ rhs: CGRect) -> CGFloat {
@@ -457,10 +649,7 @@ final class DictationPanelController {
     }
 
     private func isActive(_ state: DictationState) -> Bool {
-        switch state {
-        case .requestingPermission, .listening, .pausing, .paused, .transcribing, .inserting: return true
-        case .idle, .succeeded, .error: return false
-        }
+        DictationPanelModel.isActiveSession(state)
     }
 }
 
@@ -469,6 +658,11 @@ private final class DictationPanelHostingView: NSHostingView<DictationPanelView>
 }
 
 private final class DictationFloatingPanel: NSPanel {
+    static let presentationLevel = NSWindow.Level.statusBar
+    static let presentationBehavior: NSWindow.CollectionBehavior = [
+        .canJoinAllSpaces, .canJoinAllApplications, .fullScreenAuxiliary, .ignoresCycle, .stationary
+    ]
+
     init(rootView: DictationPanelView) {
         super.init(
             contentRect: CGRect(origin: .zero, size: DictationPanelPlacement.defaultSize),
@@ -481,14 +675,14 @@ private final class DictationFloatingPanel: NSPanel {
         backgroundColor = .clear
         appearance = NSAppearance(named: .darkAqua)
         hasShadow = true
-        level = .floating
         isFloatingPanel = true
+        level = Self.presentationLevel
         hidesOnDeactivate = false
         isReleasedWhenClosed = false
         isMovableByWindowBackground = false
         animationBehavior = .none
         acceptsMouseMovedEvents = true
-        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle, .stationary]
+        collectionBehavior = Self.presentationBehavior
         contentView = DictationPanelHostingView(rootView: rootView)
         setAccessibilityLabel("Gojo dictation controls")
     }

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.2] — 2026-10-21
+
+### Fixed
+
+- Copying or discarding a recovery transcript clears the controls and lets dictation start normally again.
+- Recovery transcripts are discarded after 10 seconds without interaction. Hovering pauses the timer, and expiry does not interrupt an active recording.
+- Dictation controls follow active Space and display changes without taking keyboard focus.
+- Reopening controls after completion shows Ready. Older dismissal animations cannot hide a new session, and repeated failed attempts show their error again.
+
 ## [1.7.1] — 2026-10-20
 
 ### Fixed

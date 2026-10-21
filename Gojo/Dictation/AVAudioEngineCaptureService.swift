@@ -64,14 +64,37 @@ extension DictationCaptureEngine {
     func selectInput(_ selection: DictationInputSelection) throws -> DictationInputDevice? { nil }
 }
 
-private final class SystemDictationCaptureEngine: DictationCaptureEngine, @unchecked Sendable {
+final class SystemDictationCaptureEngine: DictationCaptureEngine, @unchecked Sendable {
     private let engine: AVAudioEngine
-    private let inputNode: AVAudioInputNode
+    private var inputNode: AVAudioInputNode { engine.inputNode }
+    private let resolveInput: (DictationInputSelection) throws -> DictationInputDevices.ResolvedInput
+    private let bindInput: (AudioDeviceID) throws -> Void
     private var selectedInput: DictationInputDevices.ResolvedInput?
 
-    init(_ engine: AVAudioEngine) {
+    init(
+        _ engine: AVAudioEngine,
+        resolveInput: @escaping (DictationInputSelection) throws -> DictationInputDevices.ResolvedInput = DictationInputDevices.resolve,
+        bindInput: ((AudioDeviceID) throws -> Void)? = nil
+    ) {
         self.engine = engine
-        inputNode = engine.inputNode
+        self.resolveInput = resolveInput
+        self.bindInput = bindInput ?? { deviceID in
+            guard let unit = engine.inputNode.audioUnit else { throw AVAudioEngineCaptureError.inputUnavailable }
+            var requested = deviceID
+            let size = UInt32(MemoryLayout<AudioDeviceID>.size)
+            let status = AudioUnitSetProperty(
+                unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &requested, size
+            )
+            guard status == noErr else { throw DictationInputDeviceError.selectionFailed(status) }
+            var actual = AudioDeviceID(kAudioObjectUnknown)
+            var actualSize = size
+            let readStatus = AudioUnitGetProperty(
+                unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &actual, &actualSize
+            )
+            guard readStatus == noErr, actual == deviceID else {
+                throw DictationInputDeviceError.selectionFailed(readStatus)
+            }
+        }
     }
 
     var identity: ObjectIdentifier { ObjectIdentifier(engine) }
@@ -82,26 +105,12 @@ private final class SystemDictationCaptureEngine: DictationCaptureEngine, @unche
         return matchesInputSelection(.deviceUID(selectedInput.device.id))
     }
     func matchesInputSelection(_ selection: DictationInputSelection) -> Bool {
-        guard let selectedInput, let current = try? DictationInputDevices.resolve(selection) else { return false }
+        guard let selectedInput, let current = try? resolveInput(selection) else { return false }
         return current.deviceID == selectedInput.deviceID
     }
     func selectInput(_ selection: DictationInputSelection) throws -> DictationInputDevice? {
-        let input = try DictationInputDevices.resolve(selection)
-        guard let unit = inputNode.audioUnit else { throw AVAudioEngineCaptureError.inputUnavailable }
-        var deviceID = input.deviceID
-        let size = UInt32(MemoryLayout<AudioDeviceID>.size)
-        let status = AudioUnitSetProperty(
-            unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &deviceID, size
-        )
-        guard status == noErr else { throw DictationInputDeviceError.selectionFailed(status) }
-        var actual = AudioDeviceID(kAudioObjectUnknown)
-        var actualSize = size
-        let readStatus = AudioUnitGetProperty(
-            unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &actual, &actualSize
-        )
-        guard readStatus == noErr, actual == deviceID else {
-            throw DictationInputDeviceError.selectionFailed(readStatus)
-        }
+        let input = try resolveInput(selection)
+        if case .deviceUID = selection { try bindInput(input.deviceID) }
         selectedInput = input
         return input.device
     }
@@ -558,9 +567,9 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
 
     func handleConfigurationChange(engineID: ObjectIdentifier) async {
         if let preparedContext, preparedContext.engine.identity == engineID { discardPreparedCapture() }
-        if let context, context.engine.identity == engineID {
+        if let context, context.engine.identity == engineID, !context.engine.isRunning {
             failActiveInput(AVAudioEngineCaptureError.inputConfigurationChanged)
-        } else if let continuousContext, continuousContext.engine.identity == engineID {
+        } else if let continuousContext, continuousContext.engine.identity == engineID, !continuousContext.engine.isRunning {
             failActiveInput(AVAudioEngineCaptureError.inputConfigurationChanged)
         }
     }

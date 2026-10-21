@@ -18,6 +18,9 @@ struct DictationCaptureLivenessRegression {
             exit(1)
         }
         defer { timeout.cancel() }
+        try defaultInputKeepsTheEngineManagedDevice()
+        try explicitInputIsBoundAndFailuresRemainVisible()
+        try await delayedConfigurationNotificationDoesNotStopHealthyCapture()
         try await heldStartWaitsForSilentBuffer()
         try await missingBuffersFailAfterOneRecovery()
         try await replacementBufferRecoversContinuousCapture()
@@ -199,6 +202,78 @@ private actor CaptureCompletion {
 }
 
 extension DictationCaptureLivenessRegression {
+    private static func defaultInputKeepsTheEngineManagedDevice() throws {
+        var boundDevices: [UInt32] = []
+        let selected = DictationInputDevices.ResolvedInput(
+            deviceID: 42, device: .init(id: "default-mic", name: "Default microphone")
+        )
+        let engine = SystemDictationCaptureEngine(
+            AVAudioEngine(), resolveInput: { _ in selected },
+            bindInput: { boundDevices.append($0) }
+        )
+        let device = try engine.selectInput(.systemDefault)
+        require(device == selected.device, "default selection must expose the actual microphone")
+        require(engine.matchesInputSelection(.systemDefault), "default selection must retain input identity")
+        require(boundDevices.isEmpty, "system default must preserve the engine-managed device without rebinding hardware")
+    }
+
+    private static func explicitInputIsBoundAndFailuresRemainVisible() throws {
+        var boundDevices: [UInt32] = []
+        let selected = DictationInputDevices.ResolvedInput(
+            deviceID: 42, device: .init(id: "studio", name: "Studio microphone")
+        )
+        let engine = SystemDictationCaptureEngine(
+            AVAudioEngine(), resolveInput: { _ in selected },
+            bindInput: { boundDevices.append($0) }
+        )
+        let device = try engine.selectInput(.deviceUID("studio"))
+        require(device == selected.device,
+                "explicit selection must expose the bound microphone")
+        require(boundDevices == [42], "explicit selection must still bind the requested device")
+        let failing = SystemDictationCaptureEngine(
+            AVAudioEngine(), resolveInput: { _ in selected },
+            bindInput: { _ in throw DictationInputDeviceError.selectionFailed(-1) }
+        )
+        do {
+            _ = try failing.selectInput(.deviceUID("studio"))
+            require(false, "explicit selection failure must remain visible")
+        } catch DictationInputDeviceError.selectionFailed(-1) {}
+    }
+
+    private static func delayedConfigurationNotificationDoesNotStopHealthyCapture() async throws {
+        for continuous in [false, true] {
+            let system = CaptureSystemStub()
+            let gate = CaptureReadinessGate()
+            let capture = system.capture(gate: gate)
+            let start = Task { () -> AsyncThrowingStream<DictationAudio, Error>? in
+                if continuous { return try await capture.startContinuousCapture(pauseDuration: 0.9) }
+                try await capture.startCapture()
+                return nil
+            }
+            await gate.waitForArrival(1)
+            let engine = system.engine(0)
+            await capture.handleConfigurationChange(engineID: engine.identity)
+            require(engine.isRunning, "a delayed setup notification must not stop a running microphone during startup")
+            engine.emit(amplitude: 0.1)
+            await gate.advance()
+            let stream = try await start.value
+            await capture.handleConfigurationChange(engineID: engine.identity)
+            require(engine.isRunning, "a redundant configuration notification must preserve a healthy recording")
+            require(system.count == 1 && engine.starts == 1, "a healthy notification must not rebuild or restart capture")
+            for _ in 0..<10 { engine.emit(amplitude: 0.1) }
+            if continuous {
+                try await capture.stopContinuousCapture()
+                var received = false
+                for try await audio in stream! { received = received || !audio.samples.isEmpty }
+                require(received, "continuous audio must survive benign configuration notifications")
+            } else {
+                let audio = try await capture.stopCapture()
+                require(!audio.samples.isEmpty, "held audio must survive benign configuration notifications")
+            }
+            await capture.cancelCapture()
+        }
+    }
+
     private static func heldStartWaitsForSilentBuffer() async throws {
         let system = CaptureSystemStub()
         let gate = CaptureReadinessGate()

@@ -201,12 +201,16 @@ struct DictationPanelPresentationRegression {
         do {
             try VNImageRequestHandler(cgImage: image).perform([request])
             let rendered = (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
-            for text in required { expect(rendered.localizedCaseInsensitiveContains(text), "\(name) must render \(text)") }
-            let lines = rendered.components(separatedBy: .newlines)
-            for text in absent { expect(!lines.contains(text), "\(name) must not render \(text)") }
             let output = URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appendingPathComponent(".omx/dictation-panel/render", isDirectory: true)
             try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
             try data.write(to: output.appendingPathComponent(name + ".png"))
+            try rendered.write(to: output.appendingPathComponent(name + ".txt"), atomically: true, encoding: .utf8)
+            let popovers = NSApp.windows.filter { $0.className.contains("Popover") }
+                .map { "window=\($0.windowNumber) visible=\($0.isVisible) frame=\($0.frame)" }.joined(separator: "\n")
+            try popovers.write(to: output.appendingPathComponent(name + "-windows.txt"), atomically: true, encoding: .utf8)
+            for text in required { expect(rendered.localizedCaseInsensitiveContains(text), "\(name) must render \(text)") }
+            let lines = rendered.components(separatedBy: .newlines)
+            for text in absent { expect(!lines.contains(text), "\(name) must not render \(text)") }
         } catch { fatalError("Panel render failed: \(error)") }
     }
 }

@@ -287,6 +287,7 @@ struct DictationAudioExperienceRegression {
         try await capture.configure(.init(input: .deviceUID("studio")))
         try await capture.startCapture()
         let active = system.engines.last!
+        active.stop()
         await capture.handleConfigurationChange(engineID: active.identity)
         require(!active.isRunning && active.events.suffix(2) == ["remove", "stop"],
                 "device configuration change must retire an active held engine")

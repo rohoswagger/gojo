@@ -6,6 +6,23 @@
     <description>Most recent changes to Gojo, with download links.</description>
     <language>en</language>
     <item>
+      <title>Version 1.7.1</title>
+      <pubDate>Wed, 21 Oct 2026 05:00:48 +0000</pubDate>
+      <sparkle:version>1792555341</sparkle:version>
+      <sparkle:shortVersionString>1.7.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+<h4>Fixed</h4>
+<ul><li>Dictation with the system-default microphone no longer forces an audio device switch at startup. Delayed setup notifications no longer stop a healthy recording.</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://downloads.trygojo.com/Gojo-1.7.1.dmg"
+        sparkle:edSignature="ULHsO+flycDdtBX2sbCaDYCu5gy+eR4PONa0oSYFu4cXIb9pdx10mSQupxqixk3zkOYNbyvzInpnO+TVs4rVAQ=="
+        length="17928955"
+        type="application/octet-stream" />
+    </item>
+
+    <item>
       <title>Version 1.7.0</title>
       <pubDate>Wed, 21 Oct 2026 03:32:03 +0000</pubDate>
       <sparkle:version>1792548188</sparkle:version>

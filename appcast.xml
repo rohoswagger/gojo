@@ -6,6 +6,40 @@
     <description>Most recent changes to Gojo, with download links.</description>
     <language>en</language>
     <item>
+      <title>Version 1.7.0</title>
+      <pubDate>Wed, 21 Oct 2026 03:32:03 +0000</pubDate>
+      <sparkle:version>1792548188</sparkle:version>
+      <sparkle:shortVersionString>1.7.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+<h4>Added</h4>
+<ul><li>Personal vocabulary imports from JSON, CSV, and text lists. Repeated</li></ul>
+<p>  corrections can teach vocabulary locally, with a setting to turn learning off.</p>
+<ul><li>Native dictation practice, microphone selection, supported language and</li></ul>
+<p>  translation controls, and Standard, Literal, Code, and Chat intents.</p>
+<ul><li>Optional draft previews for held local Unified dictation and idle model</li></ul>
+<p>  release to free memory.</p>
+<h4>Changed</h4>
+<ul><li>Dictation freezes recognition and cleanup choices for each session.</li><li>Recording temporarily mutes the default media and system outputs. Cleanup</li></ul>
+<p>  restores settings that Gojo still owns while preserving user adjustments.</p>
+<ul><li>Completed transcripts remain available to copy or discard when insertion</li></ul>
+<p>  fails or the destination cannot confirm receipt.</p>
+<h4>Fixed</h4>
+<ul><li>Window snapping follows the keyboard-focused window on its own display.</li></ul>
+<p>  Stale selections cannot move another window from the same app.</p>
+<ul><li>Search regains keyboard focus reliably and closes lingering panels.</li><li>Dictation controls open on the pointer's display, and model buttons remain</li></ul>
+<p>  readable in dark mode.</p>
+<ul><li>Speech model preparation errors, including low disk space, appear in</li></ul>
+<p>  Dictation settings and recording feedback.</p>
+      ]]></description>
+      <enclosure
+        url="https://downloads.trygojo.com/Gojo-1.7.0.dmg?release=1.7.0"
+        sparkle:edSignature="jssLdjAlcYAfk9zizaIw9dg/ok9RcktmcmszuaXz+dQqwABhR70EK82C/TClpo/jqlg0Obe1xAYCv7pl0e3BCQ=="
+        length="17927860"
+        type="application/octet-stream" />
+    </item>
+
+    <item>
       <title>Version 1.6.1</title>
       <pubDate>Tue, 20 Oct 2026 05:31:36 +0000</pubDate>
       <sparkle:version>1792474089</sparkle:version>

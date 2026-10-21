@@ -3423,21 +3423,41 @@ struct DictationRegressionRunner {
     }
 
     static func testContinuousSessionLimit() async {
+        let unboundedAudio = ContinuousAudioCapture()
+        let unboundedController = DictationController(
+            targetProvider: FakeTargetProvider(log: EventLog()), audioCapture: unboundedAudio,
+            transcriber: ContinuousTranscriber(["unused"]),
+            polisher: FakePolisher(log: EventLog()), inserter: RetainedInserter(),
+            maximumCaptureDuration: .milliseconds(1)
+        )
+        await unboundedController.hotKeyDown(plan: DictationSessionPlan(mode: .continuous))
+        await waitForState(.listening, controller: unboundedController, message: "unbounded continuous session should listen")
+        try? await Task.sleep(for: .milliseconds(100))
+        assertEqual(await unboundedController.state, .listening, "continuous sessions must not use the shorter batch watchdog")
+        await unboundedController.cancel()
+        await waitForCondition("unbounded continuous cancellation should release capture") {
+            await unboundedAudio.cancellations == 1
+        }
+
         let audio = ContinuousAudioCapture()
         await audio.setTail(1)
         let inserter = RetainedInserter()
+        let states = StateRecorder()
         let controller = DictationController(
             targetProvider: FakeTargetProvider(log: EventLog()), audioCapture: audio,
             transcriber: ContinuousTranscriber(["limit tail"]),
             polisher: FakePolisher(log: EventLog()), inserter: inserter,
             maximumCaptureDuration: .milliseconds(1),
-            maximumContinuousSessionDuration: .milliseconds(80)
+            maximumContinuousSessionDuration: .milliseconds(80),
+            stateObserver: { states.record($0) }
         )
         await controller.hotKeyDown(plan: DictationSessionPlan(mode: .continuous))
-        await waitForState(.listening, controller: controller, message: "continuous watchdog session should listen")
-        try? await Task.sleep(for: .milliseconds(10))
-        assertEqual(await controller.state, .listening, "continuous sessions must not use the shorter batch watchdog")
-        await waitForState(.succeeded("limit tail"), controller: controller, message: "continuous session limit must flush and drain final speech")
+        await waitForCondition("continuous watchdog session should enter listening") {
+            states.snapshot().contains(.listening)
+        }
+        await waitForCondition("continuous session limit must flush and drain final speech") {
+            states.snapshot().contains(.succeeded("limit tail"))
+        }
         assertEqual(await audio.stops, 1, "continuous session limit must flush capture once")
         assertEqual(await audio.cancellations, 0, "continuous session limit must finish accepted speech")
         assertEqual(await inserter.chunks, ["limit tail"], "continuous session limit must preserve the final phrase")

@@ -173,6 +173,18 @@ When a release should be available from the website, finish these steps after ve
 
 Keep Stripe licensing, private-distribution access controls and automatic-update feed publication consistent with the authorized release scope. Do not create a GitHub Release.
 
+## Publish and verify in-app updates
+
+A public release for existing users is complete only when the signed Sparkle entry is live. A source tag, website deployment or DMG upload alone does not update **Check for Updates**. Use `--public` when cutting a release intended for existing installs. Private distribution remains an explicit separate mode.
+
+When publishing an already built and tagged artifact, reuse its exact build number, URL, byte count and Sparkle signature. Do not rebuild it or move the tag to produce a feed entry.
+
+1. Generate the entry with `.github/scripts/update_appcast.py` from the verified artifact metadata. Confirm the build number increases, the minimum macOS version is correct, and older feed entries remain intact.
+2. Download the exact enclosure URL. Verify its size, SHA-256 and Ed25519 signature against the public update key embedded in the shipped app.
+3. Submit `appcast.xml` through a PR and merge the verified entry. Upload that exact file with `npx wrangler@4 r2 object put gojo-downloads/appcast.xml --remote --content-type application/xml --cache-control 'no-cache' --file appcast.xml`.
+4. Fetch `https://updates.trygojo.com/appcast.xml` and the legacy `https://trygojo.com/appcast.xml` redirect without a cache-busting query. Confirm both serve the new version, build, enclosure URL, length and signature. Repeat artifact verification using the live entry. Resolve stale caching before declaring publication complete.
+5. Verify **Check for Updates** from an older installed build when available. If it cannot be exercised, state that limit separately from the verified live feed.
+
 ## If something fails mid-release
 
 The script is mostly idempotent up to step 9 (R2 upload). Common issues:

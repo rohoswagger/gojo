@@ -126,6 +126,7 @@ test-accessibility-menu:
 	./tests/accessibility_authorization_flow_regression.sh
 
 test-dictation:
+	bash ./tests/dictation_output_silencer_regression.sh
 	bash ./tests/dictation_session_plan_regression.sh
 	bash ./tests/dictation_audio_experience_regression.sh
 	bash ./tests/dictation_final_text_regression.sh

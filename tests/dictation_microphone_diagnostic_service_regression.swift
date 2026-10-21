@@ -134,11 +134,11 @@ private enum DictationFeedbackEvent: Equatable { case ready, empty, delivered, s
     private(set) var observations = 0
     private(set) var cancellations = 0
     private(set) var externalCaptures = 0
-    func captureFocusedTextTarget(promptIfNeeded: Bool) async -> NSDictionary {
-        externalCaptures += 1
+    nonisolated func captureFocusedTextTarget(promptIfNeeded: Bool) async -> NSDictionary {
+        await MainActor.run { externalCaptures += 1 }
         return ["success": true, "token": "external-token", "targetIdentity": "external-field"]
     }
-    func captureAdditionalFocusedTextTarget(promptIfNeeded: Bool) async -> NSDictionary {
+    nonisolated func captureAdditionalFocusedTextTarget(promptIfNeeded: Bool) async -> NSDictionary {
         await captureFocusedTextTarget(promptIfNeeded: promptIfNeeded)
     }
     func observeDictationCorrection(_ text: String, targetIdentity: String) async -> NSDictionary {

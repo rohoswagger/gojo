@@ -283,10 +283,17 @@ where TargetProvider: DictationTargetCapturing,
         }
     }
 
-    func clearRecoveryText() {
+    @discardableResult
+    func clearRecoveryText(matching expectedText: String? = nil) -> Bool {
+        guard expectedText == nil || recoveryText == expectedText else { return false }
         recoveryText = ""
         recoveryMessage = nil
+        switch machine.state {
+        case .succeeded, .error: cancel()
+        default: break
+        }
         recoveryObserver?(recoveryText, recoveryMessage)
+        return true
     }
 
     func cancel() {

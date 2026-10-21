@@ -93,9 +93,26 @@ final class DictationPanelModel: ObservableObject {
     }
 
     func copyRecoveryText(to pasteboard: NSPasteboard = .general) -> Bool {
-        guard !recoveryText.isEmpty else { return false }
-        pasteboard.clearContents()
-        return pasteboard.setString(recoveryText, forType: .string)
+        copyRecoveryText { text in
+            pasteboard.clearContents()
+            return pasteboard.setString(text, forType: .string)
+        }
+    }
+
+    func copyRecoveryText(write: (String) -> Bool) -> Bool {
+        let text = recoveryText
+        guard !text.isEmpty, write(text) else { return false }
+        clearRecoveryText(matching: text)
+        return true
+    }
+
+    @discardableResult
+    func clearRecoveryText(matching text: String) -> Bool {
+        guard !text.isEmpty, recoveryText == text else { return false }
+        recoveryText = ""
+        recoveryMessage = nil
+        showsDetails = false
+        return true
     }
 
     var permissionSettingsURL: URL? {
@@ -120,7 +137,8 @@ final class DictationPanelModel: ObservableObject {
 }
 
 enum DictationPanelCommand {
-    case start, pause, resume, finish, dismiss, clearRecovery, settings
+    case start, pause, resume, finish, dismiss, settings
+    case clearRecovery(String)
 }
 
 struct DictationPanelCopyLabel: View {
@@ -413,6 +431,8 @@ struct DictationPanelView: View {
                     copiedRecoveryText = nil
                     if model.copyRecoveryText() {
                         copiedRecoveryText = text
+                        dismissedErrorID = model.errorPresentationID
+                        command(.clearRecovery(text))
                     }
                 } label: {
                     DictationPanelCopyLabel(isCopied: copiedRecoveryText == model.recoveryText)
@@ -421,8 +441,7 @@ struct DictationPanelView: View {
                 Spacer()
                 Button("Discard") {
                     dismissedErrorID = model.errorPresentationID
-                    model.showsDetails = false
-                    command(.clearRecovery)
+                    command(.clearRecovery(model.recoveryText))
                 }
                 .foregroundStyle(DictationPanelInk.secondary)
                 .frame(height: 26)

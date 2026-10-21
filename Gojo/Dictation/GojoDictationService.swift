@@ -741,8 +741,10 @@ final class GojoDictationService: ObservableObject {
         case .finishVoiceMode:
             shortcutSessionGate.reset()
             await controller.finishVoiceMode()
-        case .clearRecoveryText:
-            await controller.clearRecoveryText()
+        case .clearRecoveryText(let text):
+            if await controller.clearRecoveryText(matching: text) {
+                receive(await controller.state)
+            }
         case .cancel:
             cancelMicrophoneTest()
             DictationModifierHotKeyMonitor.shared.rejectCurrentDictationStart()
@@ -792,7 +794,7 @@ final class GojoDictationService: ObservableObject {
     func pauseVoiceMode() { Self.sendShortcutEvent(.pauseVoiceMode) }
     func resumeVoiceMode() { Self.sendShortcutEvent(.resumeVoiceMode) }
     func finishVoiceMode() { Self.sendShortcutEvent(.finishVoiceMode) }
-    func clearRecoveryText() { Self.sendShortcutEvent(.clearRecoveryText) }
+    func clearRecoveryText(matching text: String) { Self.sendShortcutEvent(.clearRecoveryText(text)) }
 
     func terminate() {
         cancelMicrophoneTest()

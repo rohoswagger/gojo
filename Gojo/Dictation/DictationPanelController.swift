@@ -336,7 +336,7 @@ final class DictationPanelController {
             case .pause: model.state = .paused
             case .finish: model.state = .transcribing
             case .dismiss: dismiss()
-            case .clearRecovery: model.recoveryText = ""
+            case .clearRecovery(let text): model.clearRecoveryText(matching: text)
             case .settings: break
             }
             resizePanel()
@@ -350,7 +350,14 @@ final class DictationPanelController {
         case .resume: service.resumeVoiceMode()
         case .finish: service.finishVoiceMode()
         case .dismiss: dismiss()
-        case .clearRecovery: service.clearRecoveryText()
+        case .clearRecovery(let text):
+            model.clearRecoveryText(matching: text)
+            if model.recoveryText.isEmpty, !isActive(service.state) {
+                dismissalTask?.cancel()
+                dismissalTask = nil
+                panel?.orderOut(nil)
+            }
+            service.clearRecoveryText(matching: text)
         case .settings:
             if let url = model.permissionSettingsURL {
                 NSWorkspace.shared.open(url)

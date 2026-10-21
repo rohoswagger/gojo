@@ -342,6 +342,7 @@ private struct DictationModelSettingsRegression {
                 recognition.usesLanguageCorrection = false
                 try VNImageRequestHandler(cgImage: image).perform([recognition])
                 let rendered = (recognition.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
+                print("\(name) recognized text [\(bitmap.pixelsWide)x\(bitmap.pixelsHigh)]:\n\(rendered)\n")
                 for text in required where !rendered.localizedCaseInsensitiveContains(text) { failures.append("\(name): missing \(text)") }
                 let renderedLines = rendered.components(separatedBy: .newlines).map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
                 for text in absent where renderedLines.contains(text.lowercased()) { failures.append("\(name): unsupported control \(text) was visible") }

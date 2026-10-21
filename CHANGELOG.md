@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.1] — 2026-10-20
+
+### Fixed
+
+- Dictation with the system-default microphone no longer forces an audio device switch at startup. Delayed setup notifications no longer stop a healthy recording.
+
 ## [1.7.0] — 2026-10-20
 
 ### Added

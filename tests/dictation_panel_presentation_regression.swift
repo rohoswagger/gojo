@@ -190,7 +190,9 @@ struct DictationPanelPresentationRegression {
 
     @MainActor
     private static var visiblePopover: NSWindow? {
-        NSApp.windows.first { $0.isVisible && $0.className.contains("Popover") }
+        (NSWindow.windowNumbers(options: []) ?? []).lazy
+            .compactMap { NSApp.window(withWindowNumber: $0.intValue) }
+            .first { $0.isVisible && $0.className.contains("Popover") }
     }
 
     @MainActor

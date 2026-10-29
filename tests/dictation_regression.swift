@@ -1785,7 +1785,7 @@ struct DictationRegressionRunner {
 
     static func testWhisperModelCatalog() {
         let models = DictationModelDescriptor.all
-        assertEqual(models.count, 4, "the local catalog should contain Whisper and Parakeet choices")
+        assertEqual(models.count, 6, "the local catalog should contain Whisper, Parakeet and Bark choices")
         assertEqual(
             models.first?.id,
             .parakeetUnifiedEnglish,

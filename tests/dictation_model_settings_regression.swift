@@ -89,7 +89,7 @@ private struct ModelSectionFixture: View {
             /* PRODUCTION_MODEL_SECTION */
         }
         .formStyle(.grouped)
-        .frame(width: 500, height: 440)
+        .frame(width: 500, height: 560)
         .background(Color(NSColor.windowBackgroundColor))
         .tint(Color(nsColor: .controlAccentColor))
         .preferredColorScheme(scheme)
@@ -127,6 +127,8 @@ private struct DictationModelSettingsRegression {
                 .init(model: .parakeetUnifiedEnglish, title: "Selected", disabled: true),
                 .init(model: .parakeetUnifiedEnglish, title: "Remove", disabled: false, removal: true),
                 .init(model: .parakeetV3Multilingual, title: "Download", disabled: false),
+                .init(model: .underdogBark3CleanEnglish, title: "Download", disabled: false),
+                .init(model: .underdogBark3English, title: "Download", disabled: false),
                 .init(model: .whisperSmallEnglish, title: "Use", disabled: false),
                 .init(model: .whisperSmallEnglish, title: "Remove", disabled: false, removal: true),
                 .init(model: .whisperLargeV3, title: "Download", disabled: false),
@@ -138,6 +140,8 @@ private struct DictationModelSettingsRegression {
                 .init(model: .parakeetUnifiedEnglish, title: "Selected", disabled: true),
                 .init(model: .parakeetUnifiedEnglish, title: "Remove", disabled: true, removal: true),
                 .init(model: .parakeetV3Multilingual, title: "Downloading…", disabled: true),
+                .init(model: .underdogBark3CleanEnglish, title: "Download", disabled: true),
+                .init(model: .underdogBark3English, title: "Download", disabled: true),
                 .init(model: .whisperSmallEnglish, title: "Use", disabled: true),
                 .init(model: .whisperSmallEnglish, title: "Remove", disabled: true, removal: true),
                 .init(model: .whisperLargeV3, title: "Download", disabled: true),
@@ -149,6 +153,8 @@ private struct DictationModelSettingsRegression {
                 .init(model: .parakeetUnifiedEnglish, title: "Selected", disabled: true),
                 .init(model: .parakeetUnifiedEnglish, title: "Remove", disabled: true, removal: true),
                 .init(model: .parakeetV3Multilingual, title: "Download", disabled: true),
+                .init(model: .underdogBark3CleanEnglish, title: "Download", disabled: true),
+                .init(model: .underdogBark3English, title: "Download", disabled: true),
                 .init(model: .whisperSmallEnglish, title: "Switching…", disabled: true),
                 .init(model: .whisperSmallEnglish, title: "Remove", disabled: true, removal: true),
                 .init(model: .whisperLargeV3, title: "Download", disabled: true),
@@ -160,6 +166,8 @@ private struct DictationModelSettingsRegression {
                 .init(model: .parakeetUnifiedEnglish, title: "Selected", disabled: true),
                 .init(model: .parakeetUnifiedEnglish, title: "Remove", disabled: true, removal: true),
                 .init(model: .parakeetV3Multilingual, title: "Download", disabled: true),
+                .init(model: .underdogBark3CleanEnglish, title: "Download", disabled: true),
+                .init(model: .underdogBark3English, title: "Download", disabled: true),
                 .init(model: .whisperSmallEnglish, title: "Use", disabled: true),
                 .init(model: .whisperSmallEnglish, title: "Removing…", disabled: true, removal: true),
                 .init(model: .whisperLargeV3, title: "Download", disabled: true),
@@ -170,6 +178,8 @@ private struct DictationModelSettingsRegression {
                 .init(model: .parakeetUnifiedEnglish, title: "Selected", disabled: true),
                 .init(model: .parakeetUnifiedEnglish, title: "Remove", disabled: true, removal: true),
                 .init(model: .parakeetV3Multilingual, title: "Download", disabled: true),
+                .init(model: .underdogBark3CleanEnglish, title: "Download", disabled: true),
+                .init(model: .underdogBark3English, title: "Download", disabled: true),
                 .init(model: .whisperSmallEnglish, title: "Use", disabled: true),
                 .init(model: .whisperSmallEnglish, title: "Remove", disabled: true, removal: true),
                 .init(model: .whisperLargeV3, title: "Download", disabled: true),
@@ -185,8 +195,7 @@ private struct DictationModelSettingsRegression {
         return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
     }
 
-    private static func pixels(_ observation: VNRecognizedTextObservation, bitmap: NSBitmapImageRep, dark: Bool, scale: Int) -> ActionPixels {
-        let box = observation.boundingBox
+    private static func pixels(_ box: CGRect, bitmap: NSBitmapImageRep, dark: Bool, scale: Int) -> ActionPixels {
         let x0 = max(0, Int(box.minX * Double(bitmap.pixelsWide)))
         let x1 = min(bitmap.pixelsWide, Int(ceil(box.maxX * Double(bitmap.pixelsWide))))
         let y0 = max(0, Int((1 - box.maxY) * Double(bitmap.pixelsHigh)))
@@ -234,12 +243,12 @@ private struct DictationModelSettingsRegression {
                     failures += fixture.verifyHelpers(expected).map { "\(name): \($0)" }
                     let host = NSHostingView(rootView: fixture)
                     host.appearance = NSAppearance(named: appearance)
-                    host.frame = CGRect(x: 0, y: 0, width: 500, height: 440)
+                    host.frame = CGRect(x: 0, y: 0, width: 500, height: 560)
                     host.layoutSubtreeIfNeeded()
                     RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.1))
                     host.layoutSubtreeIfNeeded()
                     guard let bitmap = NSBitmapImageRep(
-                        bitmapDataPlanes: nil, pixelsWide: 500 * scale, pixelsHigh: 440 * scale,
+                        bitmapDataPlanes: nil, pixelsWide: 500 * scale, pixelsHigh: 560 * scale,
                         bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
                         colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
                     ) else {
@@ -258,26 +267,34 @@ private struct DictationModelSettingsRegression {
                     try VNImageRequestHandler(cgImage: image).perform([recognition])
                     let observations = recognition.results ?? []
                     let rendered = observations.compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
-                    for text in ["Speech models", "Parakeet Unified", "Parakeet v3", "Whisper Small", "Whisper Large v3"] {
+                    for text in ["Speech models", "Parakeet Unified", "Parakeet v3", "Underdog Bark 3.0 Clean", "Underdog Bark 3.0", "Whisper Small", "Whisper Large v3"] {
                         if !rendered.localizedCaseInsensitiveContains(text) { failures.append("\(name): missing rendered text \(text)") }
                     }
                     let titles = Set(expected.map { normalized($0.title) })
-                    let actions = observations.filter {
-                        guard let text = $0.topCandidates(1).first?.string else { return false }
-                        return titles.contains(normalized(text))
-                    }.sorted {
+                    var actions: [(title: String, boundingBox: CGRect)] = []
+                    for observation in observations {
+                        guard let candidate = observation.topCandidates(1).first else { continue }
+                        let line = candidate.string
+                        for word in line.split(whereSeparator: \.isWhitespace) {
+                            let title = String(word)
+                            guard titles.contains(normalized(title)),
+                                  let rectangle = try candidate.boundingBox(for: word.startIndex..<word.endIndex) else { continue }
+                            actions.append((title, rectangle.boundingBox))
+                        }
+                    }
+                    actions.sort {
                         abs($0.boundingBox.midY - $1.boundingBox.midY) > 0.04
                             ? $0.boundingBox.midY > $1.boundingBox.midY
                             : $0.boundingBox.minX < $1.boundingBox.minX
                     }
-                    if actions.count != expected.count { failures.append("\(name): expected six rendered action labels, found \(actions.count)") }
+                    if actions.count != expected.count { failures.append("\(name): expected \(expected.count) rendered action labels, found \(actions.count)") }
                     var measurements: [String] = []
                     for (action, expectation) in zip(actions, expected) {
-                        let title = action.topCandidates(1).first!.string
+                        let title = action.title
                         if normalized(title) != normalized(expectation.title) {
                             failures.append("\(name): expected rendered \(expectation.title), found \(title)")
                         }
-                        let measurement = pixels(action, bitmap: bitmap, dark: dark, scale: scale)
+                        let measurement = pixels(action.boundingBox, bitmap: bitmap, dark: dark, scale: scale)
                         let minimum = expectation.disabled ? 2.0 : 4.5
                         if measurement.contrast < minimum {
                             failures.append("\(name): \(title) contrast \(String(format: "%.2f", measurement.contrast)):1 is below \(minimum):1")

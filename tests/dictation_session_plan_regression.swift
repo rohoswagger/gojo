@@ -15,6 +15,15 @@ struct DictationSessionPlanRegression {
         try savedLanguageValidation()
         try frozenValueSnapshots()
         try previewCapabilityGate()
+        for model in [DictationModelID.underdogBark3English, .underdogBark3CleanEnglish] {
+            let bark = try DictationLocalRecognition(model: model)
+            let direct = DictationSessionPlan(recognition: .local(bark))
+            require(direct.text.cleanup == .off, "Both Bark variants work without an LLM cleanup model")
+            require(!direct.supportsRecognizedPreview, "Bark does not advertise provisional preview")
+            let polished = DictationSessionPlan(recognition: .local(bark), text: DictationTextOptions(cleanup: .s1Mini(.formal)))
+            require(polished.text.cleanup == .s1Mini(.formal), "Both Bark variants honor explicit optional AI polish")
+            require(DictationModelID.resolveSelection(bark.model.rawValue) == model, "saved Bark selections round trip")
+        }
         defaultBehavior()
         textIntentCleanup()
         currentLearningConsentWins()
@@ -37,7 +46,7 @@ struct DictationSessionPlanRegression {
     }
 
     private static func englishModelsRejectUnsupportedRequests() throws {
-        for model in [DictationModelID.whisperSmallEnglish, .parakeetUnifiedEnglish] {
+        for model in [DictationModelID.whisperSmallEnglish, .parakeetUnifiedEnglish, .underdogBark3English, .underdogBark3CleanEnglish] {
             let descriptor = DictationModelDescriptor.descriptor(for: model)
             let request = try descriptor.resolveRecognition()
             require(request.model == model, "recognition retains the selected English model")

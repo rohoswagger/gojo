@@ -1654,7 +1654,7 @@ struct DictationSettings: View {
             experienceSection
 
             Section {
-                Toggle("Polish English dictated text", isOn: cleanupEnabledBinding)
+                Toggle("AI polish (optional, English)", isOn: cleanupEnabledBinding)
                     .disabled(
                         !dictation.s1MiniInstalled || dictation.s1MiniOperation != nil
                     )
@@ -1675,7 +1675,7 @@ struct DictationSettings: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    Text("A purpose-built English transcript normalizer running privately through llama.cpp.")
+                    Text("Optional cleanup for English transcripts. Leave AI polish off to use the speech model’s output directly.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 

@@ -214,6 +214,11 @@
 		F1AC100000000000000000B7 /* FluxSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1AC100000000000000000A7 /* FluxSettings.swift */; };
 		F1AC100000000000000000B8 /* FluxTemperatureEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1AC100000000000000000A8 /* FluxTemperatureEditor.swift */; };
 		F38DE6482D8243E7008B5C6D /* BatteryActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F38DE6472D8243E2008B5C6D /* BatteryActivityManager.swift */; };
+		D1CB00000000000000000B01 /* BarkDictationTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1CB00000000000000000A01 /* BarkDictationTranscriber.swift */; };
+		D1CB00000000000000000B02 /* BarkSpeechRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1CB00000000000000000A02 /* BarkSpeechRuntime.swift */; };
+		D1CB00000000000000000B03 /* BarkTensorArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1CB00000000000000000A03 /* BarkTensorArchive.swift */; };
+		D1CB00000000000000000B04 /* BarkModelVariant.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1CB00000000000000000A04 /* BarkModelVariant.swift */; };
+		D1CB00000000000000000B05 /* BarkSpeechEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1CB00000000000000000A05 /* BarkSpeechEngine.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -446,6 +451,11 @@
 		F1AC100000000000000000A7 /* FluxSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FluxSettings.swift; sourceTree = "<group>"; };
 		F1AC100000000000000000A8 /* FluxTemperatureEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FluxTemperatureEditor.swift; sourceTree = "<group>"; };
 		F38DE6472D8243E2008B5C6D /* BatteryActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatteryActivityManager.swift; sourceTree = "<group>"; };
+		D1CB00000000000000000A01 /* BarkDictationTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarkDictationTranscriber.swift; sourceTree = "<group>"; };
+		D1CB00000000000000000A02 /* BarkSpeechRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarkSpeechRuntime.swift; sourceTree = "<group>"; };
+		D1CB00000000000000000A03 /* BarkTensorArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarkTensorArchive.swift; sourceTree = "<group>"; };
+		D1CB00000000000000000A04 /* BarkModelVariant.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarkModelVariant.swift; sourceTree = "<group>"; };
+		D1CB00000000000000000A05 /* BarkSpeechEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BarkSpeechEngine.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -556,6 +566,11 @@
 				D1C7000000000000000000F3 /* DictationPanelView.swift */,
 				D1C7000000000000000000F4 /* DictationPanelPlacement.swift */,
 				D1C7000000000000000000A6 /* WhisperKitDictationTranscriber.swift */,
+				D1CB00000000000000000A04 /* BarkModelVariant.swift */,
+				D1CB00000000000000000A05 /* BarkSpeechEngine.swift */,
+				D1CB00000000000000000A01 /* BarkDictationTranscriber.swift */,
+				D1CB00000000000000000A02 /* BarkSpeechRuntime.swift */,
+				D1CB00000000000000000A03 /* BarkTensorArchive.swift */,
 				D1C8000000000000000000A1 /* ParakeetUnifiedDictationTranscriber.swift */,
 				D1C8000000000000000000A3 /* ParakeetV3DictationTranscriber.swift */,
 				D1C8000000000000000000A2 /* LocalDictationTranscriber.swift */,
@@ -1262,6 +1277,11 @@
 				D1C7000000000000000000BA /* DictationModifierShortcutStateMachine.swift in Sources */,
 				D1C7000000000000000000BB /* DictationModifierHotKeyMonitor.swift in Sources */,
 				D1C9000000000000000000B1 /* DictationUnicodeTextInjector.swift in Sources */,
+				D1CB00000000000000000B04 /* BarkModelVariant.swift in Sources */,
+				D1CB00000000000000000B05 /* BarkSpeechEngine.swift in Sources */,
+				D1CB00000000000000000B01 /* BarkDictationTranscriber.swift in Sources */,
+				D1CB00000000000000000B02 /* BarkSpeechRuntime.swift in Sources */,
+				D1CB00000000000000000B03 /* BarkTensorArchive.swift in Sources */,
 				D1C8000000000000000000B2 /* ParakeetUnifiedDictationTranscriber.swift in Sources */,
 				D1C8000000000000000000B4 /* ParakeetV3DictationTranscriber.swift in Sources */,
 				D1C8000000000000000000B3 /* LocalDictationTranscriber.swift in Sources */,

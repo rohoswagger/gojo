@@ -774,9 +774,12 @@ enum DictationModelStorageError: Error {
 enum DictationEngineID: String, Sendable {
     case whisperKit
     case fluidAudio
+    case barkCoreML
 }
 
 enum DictationModelID: String, CaseIterable, Identifiable, Sendable {
+    case underdogBark3CleanEnglish = "bark:underdog-bark-3.0-clean"
+    case underdogBark3English = "bark:underdog-bark-3.0"
     case whisperSmallEnglish = "whisperkit:small.en_217MB"
     case whisperLargeV3 = "whisperkit:large-v3-v20240930_626MB"
     case parakeetUnifiedEnglish = "fluidaudio:parakeet-unified-en-0.6b"
@@ -790,6 +793,7 @@ enum DictationModelID: String, CaseIterable, Identifiable, Sendable {
             return .whisperKit
         case .parakeetUnifiedEnglish, .parakeetV3Multilingual:
             return .fluidAudio
+        case .underdogBark3English, .underdogBark3CleanEnglish: return .barkCoreML
         }
     }
 
@@ -811,7 +815,7 @@ enum DictationModelID: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .whisperSmallEnglish: return .smallEnglish
         case .whisperLargeV3: return .largeV3
-        case .parakeetUnifiedEnglish, .parakeetV3Multilingual: return nil
+        case .parakeetUnifiedEnglish, .parakeetV3Multilingual, .underdogBark3English, .underdogBark3CleanEnglish: return nil
         }
     }
 }
@@ -842,6 +846,7 @@ struct DictationModelDescriptor: Identifiable, Sendable {
         switch engine {
         case .whisperKit: return "WhisperKit"
         case .fluidAudio: return "FluidAudio"
+        case .barkCoreML: return "Core ML"
         }
     }
 
@@ -866,6 +871,30 @@ struct DictationModelDescriptor: Identifiable, Sendable {
             isRecommended: false,
             capabilities: DictationModelCapabilities(
                 language: .automaticOnly(supportedLanguages: DictationSupportedLanguages.parakeetV3),
+                supportsTranslationToEnglish: false,
+                supportsRecognizedPreview: false
+            )
+        ),
+        DictationModelDescriptor(
+            id: .underdogBark3CleanEnglish,
+            displayName: "Underdog Bark 3.0 Clean",
+            detail: "English dictation with built-in filler and false-start removal. Apple silicon, macOS 15+. AI polish is optional.",
+            downloadSizeLabel: "447 MB",
+            isRecommended: false,
+            capabilities: DictationModelCapabilities(
+                language: .fixedEnglish,
+                supportsTranslationToEnglish: false,
+                supportsRecognizedPreview: false
+            )
+        ),
+        DictationModelDescriptor(
+            id: .underdogBark3English,
+            displayName: "Underdog Bark 3.0",
+            detail: "English transcription, including fillers. Apple silicon, macOS 15+. AI polish is optional.",
+            downloadSizeLabel: "202 MB",
+            isRecommended: false,
+            capabilities: DictationModelCapabilities(
+                language: .fixedEnglish,
                 supportsTranslationToEnglish: false,
                 supportsRecognizedPreview: false
             )

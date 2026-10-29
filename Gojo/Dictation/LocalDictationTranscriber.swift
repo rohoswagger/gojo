@@ -4,6 +4,8 @@ actor LocalDictationTranscriber: LocalDictationTranscribing {
     private var selectedModel: DictationModelID
     private let whisper: WhisperKitDictationTranscriber
     private let parakeet = ParakeetUnifiedDictationTranscriber()
+    private let barkClean = BarkDictationTranscriber(variant: .clean)
+    private let bark = BarkDictationTranscriber()
     private let parakeetV3 = ParakeetV3DictationTranscriber()
     private var session: (id: UUID, request: DictationLocalRecognition)?
     private var operations: [UUID: DictationModelID] = [:]
@@ -41,6 +43,10 @@ actor LocalDictationTranscriber: LocalDictationTranscribing {
             try await whisper.install(whisperModel)
         case .parakeetUnifiedEnglish:
             try await parakeet.install()
+        case .underdogBark3CleanEnglish:
+            try await barkClean.install()
+        case .underdogBark3English:
+            try await bark.install()
         case .parakeetV3Multilingual:
             try await parakeetV3.install()
         }
@@ -53,6 +59,10 @@ actor LocalDictationTranscriber: LocalDictationTranscribing {
             return await whisper.isModelInstalled(whisperModel)
         case .parakeetUnifiedEnglish:
             return await parakeet.isModelInstalled()
+        case .underdogBark3CleanEnglish:
+            return await barkClean.isModelInstalled()
+        case .underdogBark3English:
+            return await bark.isModelInstalled()
         case .parakeetV3Multilingual:
             return await parakeetV3.isModelInstalled()
         }
@@ -70,6 +80,10 @@ actor LocalDictationTranscriber: LocalDictationTranscribing {
             try await whisper.remove(whisperModel)
         case .parakeetUnifiedEnglish:
             try await parakeet.remove()
+        case .underdogBark3CleanEnglish:
+            try await barkClean.remove()
+        case .underdogBark3English:
+            try await bark.remove()
         case .parakeetV3Multilingual:
             try await parakeetV3.remove()
         }
@@ -129,6 +143,8 @@ actor LocalDictationTranscriber: LocalDictationTranscribing {
         await whisper.unload()
         await parakeet.unload()
         await parakeetV3.unload()
+        await bark.unload()
+        await barkClean.unload()
     }
 
     private func localRequest(_ request: DictationRecognitionRequest) throws -> DictationLocalRecognition {
@@ -147,6 +163,8 @@ actor LocalDictationTranscriber: LocalDictationTranscribing {
         switch model {
         case .whisperSmallEnglish, .whisperLargeV3: return whisper
         case .parakeetUnifiedEnglish: return parakeet
+        case .underdogBark3CleanEnglish: return barkClean
+        case .underdogBark3English: return bark
         case .parakeetV3Multilingual: return parakeetV3
         }
     }
@@ -155,6 +173,8 @@ actor LocalDictationTranscriber: LocalDictationTranscribing {
         switch model {
         case .whisperSmallEnglish, .whisperLargeV3: await whisper.unload()
         case .parakeetUnifiedEnglish: await parakeet.unload()
+        case .underdogBark3CleanEnglish: await barkClean.unload()
+        case .underdogBark3English: await bark.unload()
         case .parakeetV3Multilingual: await parakeetV3.unload()
         }
     }

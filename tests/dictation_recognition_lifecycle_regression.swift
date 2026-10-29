@@ -104,6 +104,13 @@ struct BarkSpeechEngine: Sendable {
     func cleanup() async { await SDKProbe.shared.cleanup(modelID) }
 }
 
+private final class InstallProgressProbe: @unchecked Sendable {
+    private let lock = NSLock()
+    private var fractions: [Double] = []
+    func append(_ fraction: Double) { lock.withLock { fractions.append(fraction) } }
+    var values: [Double] { lock.withLock { fractions } }
+}
+
 private actor CompletionProbe {
     private(set) var completed = false
     func finish() { completed = true }
@@ -112,6 +119,12 @@ private actor CompletionProbe {
 @main
 struct DictationRecognitionLifecycleRegression {
     static func main() async throws {
+        for model in DictationModelID.allCases {
+            let backend = LocalDictationTranscriber(selectedModel: .whisperSmallEnglish)
+            let progress = InstallProgressProbe()
+            try await backend.install(model) { progress.append($0) }
+            require(progress.values == [0.42, 1], "\(model) must forward installation progress through its backend")
+        }
         for model in [DictationModelID.whisperSmallEnglish, .parakeetUnifiedEnglish, .parakeetV3Multilingual, .underdogBark3English, .underdogBark3CleanEnglish] {
             try await sessionPinsDecodeAndUnload(model)
         }

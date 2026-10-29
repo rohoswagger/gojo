@@ -39,7 +39,7 @@ actor BarkDictationTranscriber: LocalDictationTranscribing {
         }
     }
 
-    func install() async throws {
+    func install(onProgress: @escaping @Sendable (Double) -> Void = { _ in }) async throws {
         guard #available(macOS 15.0, *) else { throw BarkRuntimeError.unsupportedSystem }
         #if !arch(arm64)
         throw BarkRuntimeError.unsupportedSystem
@@ -52,7 +52,8 @@ actor BarkDictationTranscriber: LocalDictationTranscribing {
         defer { maintenanceInProgress = false }
         await unloadResources()
         _ = try await resolvePinnedModelFolder(
-            allowDownload: DictationModelRequest.settingsDownload.allowsDownload
+            allowDownload: DictationModelRequest.settingsDownload.allowsDownload,
+            onProgress: onProgress
         )
     }
 
@@ -265,7 +266,10 @@ actor BarkDictationTranscriber: LocalDictationTranscribing {
         }
     }
 
-    private func resolvePinnedModelFolder(allowDownload: Bool) async throws -> URL {
+    private func resolvePinnedModelFolder(
+        allowDownload: Bool,
+        onProgress: @escaping @Sendable (Double) -> Void = { _ in }
+    ) async throws -> URL {
         if let cachedURL = installedModelFolder() { return cachedURL }
 
         guard allowDownload else {
@@ -295,8 +299,13 @@ actor BarkDictationTranscriber: LocalDictationTranscribing {
         let snapshot = try await hub.snapshot(
             from: HubApiWrapper.Repo(id: variant.repository),
             revision: variant.revision,
-            matching: variant.downloadPatterns
+            matching: variant.downloadPatterns,
+            progressHandler: { progress in
+                let fraction = progress.fractionCompleted
+                if fraction < 1 { onProgress(fraction) }
+            }
         )
+        onProgress(1)
         guard snapshot.standardizedFileURL.path == expectedURL.standardizedFileURL.path else {
             throw WhisperKitDictationError.modelUnavailable(variant.repository)
         }

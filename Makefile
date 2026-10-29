@@ -1,4 +1,4 @@
-.PHONY: test-dictation-sdk test-permissions test-dev-handshake help build run stop restart smoke reset-onboarding run-onboarding test-release-signing test-window test-window-ui test-window-focus test-flux test-alt-tab test-search test-accessibility-menu test-dictation test-dictation-model-validation test-dictation-cleanup-benchmark test-dictation-live test-dictation-codex-capture-live test-dictation-secure-live test-dictation-multidisplay-live test-dictation-model-live test-dictation-installed-models-live test-dictation-shortcut-live test-dictation-opaque-paste-live test-dictation-unicode-typing-live test-dictation-real-microphone-live release release-dry clean
+.PHONY: test-dictation-model-download test-dictation-sdk test-permissions test-dev-handshake help build run stop restart smoke reset-onboarding run-onboarding test-release-signing test-window test-window-ui test-window-focus test-flux test-alt-tab test-search test-accessibility-menu test-dictation test-dictation-model-validation test-dictation-cleanup-benchmark test-dictation-live test-dictation-codex-capture-live test-dictation-secure-live test-dictation-multidisplay-live test-dictation-model-live test-dictation-installed-models-live test-dictation-shortcut-live test-dictation-opaque-paste-live test-dictation-unicode-typing-live test-dictation-real-microphone-live release release-dry clean
 
 PROJECT := Gojo.xcodeproj
 SCHEME := Gojo
@@ -128,6 +128,7 @@ test-accessibility-menu:
 test-dictation:
 	bash ./tests/bark_runtime_regression.sh
 	bash ./tests/bark_installation_regression.sh
+	bash ./tests/dictation_model_download_regression.sh
 	bash ./tests/dictation_output_silencer_regression.sh
 	bash ./tests/dictation_session_plan_regression.sh
 	bash ./tests/dictation_audio_experience_regression.sh
@@ -161,6 +162,9 @@ test-dictation:
 	bash ./tests/dictation_live_harness_regression.sh
 	./tests/dictation_benchmark_regression.sh
 	bash ./tests/dictation_cleanup_benchmark_regression.sh
+
+test-dictation-model-download:
+	bash ./tests/dictation_model_download_regression.sh
 
 test-dictation-sdk:
 	bash ./tests/dictation_recognition_options_regression.sh

@@ -75,10 +75,14 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
         return local
     }
 
-    func install(_ requestedModel: WhisperDictationModel) async throws {
+    func install(
+        _ requestedModel: WhisperDictationModel,
+        onProgress: @escaping @Sendable (Double) -> Void = { _ in }
+    ) async throws {
         _ = try await Self.resolvePinnedModelFolder(
             for: requestedModel,
-            allowDownload: DictationModelRequest.settingsDownload.allowsDownload
+            allowDownload: DictationModelRequest.settingsDownload.allowsDownload,
+            onProgress: onProgress
         )
     }
 
@@ -386,7 +390,8 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
 
     private static func resolvePinnedModelFolder(
         for requestedModel: WhisperDictationModel,
-        allowDownload: Bool
+        allowDownload: Bool,
+        onProgress: @escaping @Sendable (Double) -> Void = { _ in }
     ) async throws -> URL {
         let descriptor = descriptor(for: requestedModel)
         let cacheKey = cachedModelFolderKey(for: requestedModel)
@@ -417,8 +422,13 @@ actor WhisperKitDictationTranscriber: LocalDictationTranscribing {
         let snapshot = try await hub.snapshot(
             from: repo,
             revision: modelRevision,
-            matching: [searchPath]
+            matching: [searchPath],
+            progressHandler: { progress in
+                let fraction = progress.fractionCompleted
+                if fraction < 1 { onProgress(fraction) }
+            }
         )
+        onProgress(1)
         let modelFolder = snapshot.appending(path: folder, directoryHint: .isDirectory)
         guard let expectedURL = expectedModelFolder(for: requestedModel),
               modelFolder.standardizedFileURL.path == expectedURL.standardizedFileURL.path,

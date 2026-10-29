@@ -36,19 +36,22 @@ actor LocalDictationTranscriber: LocalDictationTranscribing {
         if session?.id == id { session = nil }
     }
 
-    func install(_ model: DictationModelID) async throws {
+    func install(
+        _ model: DictationModelID,
+        onProgress: @escaping @Sendable (Double) -> Void = { _ in }
+    ) async throws {
         switch model {
         case .whisperSmallEnglish, .whisperLargeV3:
             guard let whisperModel = model.whisperModel else { return }
-            try await whisper.install(whisperModel)
+            try await whisper.install(whisperModel, onProgress: onProgress)
         case .parakeetUnifiedEnglish:
-            try await parakeet.install()
+            try await parakeet.install(onProgress: onProgress)
         case .underdogBark3CleanEnglish:
-            try await barkClean.install()
+            try await barkClean.install(onProgress: onProgress)
         case .underdogBark3English:
-            try await bark.install()
+            try await bark.install(onProgress: onProgress)
         case .parakeetV3Multilingual:
-            try await parakeetV3.install()
+            try await parakeetV3.install(onProgress: onProgress)
         }
     }
 

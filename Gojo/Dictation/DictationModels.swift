@@ -820,6 +820,25 @@ enum DictationModelID: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
+struct DictationModelDownload: Equatable, Sendable {
+    enum Phase: Equatable, Sendable {
+        case preparing
+        case downloading(Double)
+        case verifying
+    }
+
+    let id: UUID
+    let model: DictationModelID
+    let phase: Phase
+
+    func advancing(to fraction: Double) -> Self {
+        guard fraction.isFinite, phase != .verifying else { return self }
+        let fraction = min(1, max(0, fraction))
+        if case .downloading(let previous) = phase, fraction < previous { return self }
+        return Self(id: id, model: model, phase: fraction == 1 ? .verifying : .downloading(fraction))
+    }
+}
+
 enum DictationModelOperation: Equatable, Sendable {
     case installing(DictationModelID)
     case selecting(DictationModelID)

@@ -38,9 +38,10 @@ actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
         }
     }
 
-    func install() async throws {
+    func install(onProgress: @escaping @Sendable (Double) -> Void = { _ in }) async throws {
         _ = try await resolvePinnedModelFolder(
-            allowDownload: DictationModelRequest.settingsDownload.allowsDownload
+            allowDownload: DictationModelRequest.settingsDownload.allowsDownload,
+            onProgress: onProgress
         )
     }
 
@@ -319,7 +320,10 @@ actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
         }
     }
 
-    private func resolvePinnedModelFolder(allowDownload: Bool) async throws -> URL {
+    private func resolvePinnedModelFolder(
+        allowDownload: Bool,
+        onProgress: @escaping @Sendable (Double) -> Void = { _ in }
+    ) async throws -> URL {
         if let cachedURL = installedModelFolder() { return cachedURL }
 
         guard allowDownload else {
@@ -330,8 +334,13 @@ actor ParakeetV3DictationTranscriber: LocalDictationTranscribing {
         let snapshot = try await hub.snapshot(
             from: HubApiWrapper.Repo(id: Self.repository),
             revision: Self.revision,
-            matching: Self.downloadPatterns
+            matching: Self.downloadPatterns,
+            progressHandler: { progress in
+                let fraction = progress.fractionCompleted
+                if fraction < 1 { onProgress(fraction) }
+            }
         )
+        onProgress(1)
         guard let expectedURL = DictationModelStorage.hubRepositoryRoot(Self.repository),
               snapshot.standardizedFileURL.path == expectedURL.standardizedFileURL.path else {
             throw WhisperKitDictationError.modelUnavailable(Self.repository)

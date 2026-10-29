@@ -256,6 +256,7 @@ final class GojoDictationService: ObservableObject {
     @Published private(set) var s1MiniError: String?
     @Published private(set) var installedModels: Set<DictationModelID> = []
     @Published private(set) var modelOperation: DictationModelOperation?
+    @Published private(set) var modelDownload: DictationModelDownload?
     @Published private(set) var modelErrors: [DictationModelID: String] = [:]
     @Published private(set) var audioLevel: Float = 0
     @Published private(set) var recoveryText = ""
@@ -839,14 +840,19 @@ final class GojoDictationService: ObservableObject {
 
     func downloadModel(_ model: DictationModelID) {
         guard canChangeModel, !installedModels.contains(model) else { return }
-        let operation = DictationModelOperation.installing(model)
-        modelOperation = operation
+        let id = UUID()
+        modelOperation = .installing(model)
+        modelDownload = DictationModelDownload(id: id, model: model, phase: .preparing)
         modelErrors[model] = nil
         Task {
             do {
                 let lease = await modelResidency.acquire()
                 do {
-                    try await localTranscriber.install(model)
+                    try await localTranscriber.install(model) { [weak self] fraction in
+                        Task { @MainActor [weak self] in
+                            self?.receiveModelDownloadProgress(fraction, id: id)
+                        }
+                    }
                     await modelResidency.release(lease)
                 } catch {
                     await modelResidency.release(lease)
@@ -856,9 +862,22 @@ final class GojoDictationService: ObservableObject {
             } catch {
                 modelErrors[model] = modelOperationError(error, fallback: "Could not download this model. Check your connection and try again.")
             }
-            if modelOperation == operation {
-                modelOperation = nil
-            }
+            finishModelDownload(id: id)
+        }
+    }
+
+    private func receiveModelDownloadProgress(_ fraction: Double, id: UUID) {
+        guard let download = modelDownload,
+              download.id == id,
+              modelOperation == .installing(download.model) else { return }
+        modelDownload = download.advancing(to: fraction)
+    }
+
+    private func finishModelDownload(id: UUID) {
+        guard let download = modelDownload, download.id == id else { return }
+        modelDownload = nil
+        if modelOperation == .installing(download.model) {
+            modelOperation = nil
         }
     }
 

@@ -30,8 +30,10 @@ for filename, boundary in [
     private static let modelSHA256: [String: String] = [:]
     private static func validateModel(at folder: URL) throws {}
     private static func removeCachedModel() throws { SDKProbe.deletedInstalledFiles() }
-    private func resolvePinnedModelFolder(allowDownload: Bool) async throws -> URL {
-        URL(fileURLWithPath: "/tmp")
+    private func resolvePinnedModelFolder(allowDownload: Bool, onProgress: @escaping @Sendable (Double) -> Void = { _ in }) async throws -> URL {
+        onProgress(0.42)
+        onProgress(1)
+        return URL(fileURLWithPath: "/tmp")
     }
 '''
     if filename.startswith('WhisperKit'):
@@ -43,8 +45,13 @@ for filename, boundary in [
         SDKProbe.deletedInstalledFiles()
     }
     private static func resolvePinnedModelFolder(
-        for model: WhisperDictationModel, allowDownload: Bool
-    ) async throws -> URL { URL(fileURLWithPath: "/tmp") }
+        for model: WhisperDictationModel, allowDownload: Bool,
+        onProgress: @escaping @Sendable (Double) -> Void = { _ in }
+    ) async throws -> URL {
+        onProgress(0.42)
+        onProgress(1)
+        return URL(fileURLWithPath: "/tmp")
+    }
 '''
     if filename.startswith('ParakeetV3'):
         helpers += '''
@@ -60,8 +67,10 @@ for filename, boundary in [
     private func clearCachedModelFolder() {}
     private func validateModel(at folder: URL) throws {}
     private func removeCachedModel() throws { SDKProbe.deletedInstalledFiles() }
-    private func resolvePinnedModelFolder(allowDownload: Bool) async throws -> URL {
-        URL(fileURLWithPath: "/tmp")
+    private func resolvePinnedModelFolder(allowDownload: Bool, onProgress: @escaping @Sendable (Double) -> Void = { _ in }) async throws -> URL {
+        onProgress(0.42)
+        onProgress(1)
+        return URL(fileURLWithPath: "/tmp")
     }
 '''
     error = re.search(r'^enum (WhisperKitDictationError|ParakeetDictationError|ParakeetV3DictationError|BarkDictationError):', source, re.M)

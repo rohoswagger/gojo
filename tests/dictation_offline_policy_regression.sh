@@ -142,7 +142,7 @@ require_match \
 
 require_match \
   Gojo/Dictation/BarkDictationTranscriber.swift \
-  'func\s+install\(\).*?resolvePinnedModelFolder\(\s*allowDownload:\s*DictationModelRequest\.settingsDownload\.allowsDownload' \
+  'func\s+install\(onProgress:\s*@escaping\s+@Sendable\s+\(Double\)\s*->\s*Void\s*=\s*\{\s*_\s+in\s*\}\).*?resolvePinnedModelFolder\(\s*allowDownload:\s*DictationModelRequest\.settingsDownload\.allowsDownload' \
   "Bark downloads must be explicitly requested from Settings"
 
 require_match \

@@ -1608,6 +1608,9 @@ struct DictationSettings: View {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .fixedSize(horizontal: false, vertical: true)
+                                if let download = dictation.modelDownload, download.model == model.id {
+                                    modelDownloadProgress(download, modelName: model.displayName)
+                                }
                                 if let error = dictation.modelErrors[model.id] {
                                     Text(error)
                                         .font(.caption)
@@ -2457,6 +2460,38 @@ struct DictationSettings: View {
         if dictation.preparingModel != nil { return true }
         if !dictation.canChangeModel { return true }
         return dictation.selectedModel == model && dictation.isModelInstalled(model)
+    }
+
+    @ViewBuilder
+    private func modelDownloadProgress(_ download: DictationModelDownload, modelName: String) -> some View {
+        switch download.phase {
+        case .preparing:
+            ProgressView("Preparing download…")
+                .progressViewStyle(.linear)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .accessibilityLabel("\(modelName) download")
+                .accessibilityValue("Preparing download")
+        case .downloading(let fraction):
+            ProgressView(value: fraction, total: 1) {
+                Text("File download progress")
+            } currentValueLabel: {
+                Text("\(Int(fraction * 100))%")
+                    .monospacedDigit()
+            }
+            .progressViewStyle(.linear)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .accessibilityLabel("\(modelName) download")
+            .accessibilityValue("\(Int(fraction * 100)) percent file download progress")
+        case .verifying:
+            ProgressView("Verifying model…")
+                .progressViewStyle(.linear)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .accessibilityLabel("\(modelName) download")
+                .accessibilityValue("Verifying model")
+        }
     }
 }
 

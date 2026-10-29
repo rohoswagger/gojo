@@ -27,10 +27,38 @@ enum BarkSpeechEngine: Sendable {
 
 enum BarkRuntimeError: Error { case unsupportedSystem }
 
+private final class SnapshotFixture: @unchecked Sendable {
+    enum Mode { case success, snapshotFailure, validationFailure }
+    static let shared = SnapshotFixture()
+    private let lock = NSLock()
+    private var mode = Mode.success
+    func setMode(_ mode: Mode) { lock.withLock { self.mode = mode } }
+    func currentMode() -> Mode { lock.withLock { mode } }
+}
+
+private final class ProgressCapture: @unchecked Sendable {
+    private let lock = NSLock()
+    private var fractions: [Double] = []
+    func append(_ fraction: Double) { lock.withLock { fractions.append(fraction) } }
+    var values: [Double] { lock.withLock { fractions } }
+}
+
+private enum SnapshotFailure: Error { case failed }
+
 struct HubApiWrapper {
     struct Repo { let id: String }
     init(useBackgroundSession: Bool) {}
-    func snapshot(from repo: Repo, revision: String, matching paths: [String]) async throws -> URL {
+    func snapshot(
+        from repo: Repo, revision: String, matching paths: [String],
+        progressHandler: @escaping (Progress) -> Void = { _ in }
+    ) async throws -> URL {
+        let progress = Progress(totalUnitCount: 100)
+        progress.completedUnitCount = 25
+        progressHandler(progress)
+        progress.completedUnitCount = 100
+        progressHandler(progress)
+        let mode = SnapshotFixture.shared.currentMode()
+        if mode == .snapshotFailure { throw SnapshotFailure.failed }
         let folder = DictationModelStorage.hubRepositoryRoot(repo.id)!
         for path in paths {
             let file = folder.appendingPathComponent(path)
@@ -39,7 +67,7 @@ struct HubApiWrapper {
                (try? String(contentsOf: metadata, encoding: .utf8)) == revision { continue }
             try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
             try FileManager.default.createDirectory(at: metadata.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try Data("verified".utf8).write(to: file, options: .atomic)
+            try Data((mode == .validationFailure ? "corrupt!" : "verified").utf8).write(to: file, options: .atomic)
             try revision.write(to: metadata, atomically: true, encoding: .utf8)
         }
         return folder
@@ -67,7 +95,12 @@ struct HubApiWrapper {
     private static func repairVariants() async throws {
         for variant in [BarkModelVariant.verbatim, .clean] {
             let backend = BarkDictationTranscriber(variant: variant)
-            try await backend.install()
+            let progress = ProgressCapture()
+            try await backend.install { progress.append($0) }
+            precondition(progress.values == [0.25, 1], "snapshot completion follows partial progress")
+            let cached = ProgressCapture()
+            try await backend.install { cached.append($0) }
+            precondition(cached.values.isEmpty, "validated cache returns directly without snapshot progress")
             let installed = await backend.isModelInstalled()
             precondition(installed)
             let root = DictationModelStorage.hubRepositoryRoot(variant.repository)!
@@ -86,7 +119,31 @@ struct HubApiWrapper {
             let removedInstalled = await backend.isModelInstalled()
             precondition(!removedInstalled)
             precondition(FileManager.default.fileExists(atPath: unrelated.path))
+
+            SnapshotFixture.shared.setMode(.snapshotFailure)
+            let snapshotFailure = ProgressCapture()
+            do {
+                try await backend.install { snapshotFailure.append($0) }
+                preconditionFailure("snapshot error must fail installation")
+            } catch SnapshotFailure.failed {}
+            precondition(snapshotFailure.values == [0.25], "SDK completion before a failed snapshot must not begin verification")
+
+            SnapshotFixture.shared.setMode(.validationFailure)
+            let validationFailure = ProgressCapture()
+            do {
+                try await backend.install { validationFailure.append($0) }
+                preconditionFailure("invalid snapshot must fail verification")
+            } catch BarkDictationError.integrityFailed {}
+            precondition(validationFailure.values == [0.25, 1], "snapshot return begins verification before validation failure")
+            let failedInstalled = await backend.isModelInstalled()
+            precondition(!failedInstalled, "invalid model cannot appear installed")
+
+            SnapshotFixture.shared.setMode(.success)
+            let repairedProgress = ProgressCapture()
+            try await backend.install { repairedProgress.append($0) }
+            precondition(repairedProgress.values == [0.25, 1], "retry repairs the invalid snapshot and reports verification")
+            try await backend.remove()
         }
-        print("Bark installation, corruption repair, and removal regression passed")
+        print("Bark installation progress, cache, failures, corruption repair, and removal regression passed")
     }
 }

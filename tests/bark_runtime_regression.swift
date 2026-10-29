@@ -43,11 +43,20 @@ import Foundation
             }
         }
         precondition(features.suffix(128).allSatisfy { $0 == 0 }, "the invalid final frame is masked")
-        let long = [Float](repeating: 0.1, count: 600_000)
-        let segments = BarkSpeechRuntime.segments(long)
-        precondition(segments.first?.lowerBound == 0 && segments.last?.upperBound == long.count)
-        precondition(segments.allSatisfy { $0.count <= 236_000 && !$0.isEmpty })
-        for (a, b) in zip(segments, segments.dropFirst()) { precondition(a.upperBound == b.lowerBound) }
+        let publisherSegmentSizes = [
+            (235_999, [235_999]),
+            (236_000, [236_000]),
+            (236_001, [235_920, 81]),
+            (600_000, [80_080, 80_000, 80_000, 80_000, 80_000, 199_920]),
+        ]
+        for (sampleCount, expectedSizes) in publisherSegmentSizes {
+            let audio = [Float](repeating: 0.1, count: sampleCount)
+            let segments = BarkSpeechRuntime.segments(audio)
+            precondition(segments.map(\.count) == expectedSizes, "segment boundaries must match the publisher reference")
+            precondition(segments.first?.lowerBound == 0 && segments.last?.upperBound == audio.count)
+            precondition(segments.allSatisfy { $0.count <= 236_000 && !$0.isEmpty })
+            for (a, b) in zip(segments, segments.dropFirst()) { precondition(a.upperBound == b.lowerBound) }
+        }
         print("Bark tensor, frontend and segmentation regression passed")
     }
 }

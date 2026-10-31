@@ -23,6 +23,8 @@ protocol DictationAudioCapturing: Sendable {
     func startCapture() async throws
     func stopCapture() async throws -> DictationAudio
     func cancelCapture() async
+    func takeInterruptedAudio() async -> DictationAudio?
+    func captureIsQuiescent() async -> Bool
     func startContinuousCapture(pauseDuration: TimeInterval) async throws -> AsyncThrowingStream<DictationAudio, Error>
     func stopContinuousCapture() async throws
     func promoteCaptureToContinuous(pauseDuration: TimeInterval) async throws -> AsyncThrowingStream<DictationAudio, Error>
@@ -31,6 +33,8 @@ protocol DictationAudioCapturing: Sendable {
 extension DictationAudioCapturing {
     func configure(_ configuration: DictationCaptureConfiguration) async throws {}
     func captureSnapshot() async -> DictationCaptureSnapshot? { nil }
+    func takeInterruptedAudio() async -> DictationAudio? { nil }
+    func captureIsQuiescent() async -> Bool { true }
 
     func promoteCaptureToContinuous(pauseDuration: TimeInterval) async throws -> AsyncThrowingStream<DictationAudio, Error> {
         throw DictationContinuousCaptureError.unsupported

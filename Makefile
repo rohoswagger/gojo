@@ -159,6 +159,7 @@ test-dictation:
 	bash ./tests/dictation_capture_probe_regression.sh
 	./tests/text_insertion_xpc_regression.sh
 	./tests/dictation_unicode_typing_regression.sh
+	bash ./tests/dictation_delivery_receipt_regression.sh
 	bash ./tests/dictation_live_harness_regression.sh
 	./tests/dictation_benchmark_regression.sh
 	bash ./tests/dictation_cleanup_benchmark_regression.sh

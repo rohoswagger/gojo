@@ -291,10 +291,9 @@ struct DictationAudioExperienceRegression {
         await capture.handleConfigurationChange(engineID: active.identity)
         require(!active.isRunning && active.events.suffix(2) == ["remove", "stop"],
                 "device configuration change must retire an active held engine")
-        do {
-            _ = try await capture.stopCapture()
-            require(false, "stop after input loss must preserve the clear terminal failure")
-        } catch AVAudioEngineCaptureError.inputConfigurationChanged {}
+        let retained = try await capture.stopCapture()
+        require(retained.samples == Array(repeating: Float(0.02), count: 6_400),
+                "same-input recovery must preserve accepted speech across both sequential engine epochs")
         try await capture.startCapture()
         require(system.engines.last!.events.first == "select:studio", "retry must resolve the same selection on a fresh engine")
         await capture.cancelCapture()
@@ -317,9 +316,12 @@ struct DictationAudioExperienceRegression {
         active.available = false
         await capture.handleInputDevicesChanged()
         var iterator = stream.makeAsyncIterator()
+        let retained = try await iterator.next()
+        require(retained?.samples == Array(repeating: Float(0.02), count: 3_200),
+                "pinned input loss must seal accepted speech before the visible failure")
         do {
             _ = try await iterator.next()
-            require(false, "continuous stream must fail when its pinned input disappears")
+            require(false, "continuous stream must fail after retaining accepted speech when its pinned input disappears")
         } catch DictationInputDeviceError.unavailable {}
         require(!active.isRunning, "continuous device loss must stop the engine")
         do {
@@ -361,6 +363,20 @@ struct DictationAudioExperienceRegression {
         require(diagnosticSystem.engines[1].events.first == "select:headset",
                 "failed diagnostic must release ownership for another selected input")
         await diagnosticCapture.cancelCapture()
+
+        let receivingSystem = AudioExperienceSystem(initialEngineSuppliesAudio: true)
+        let receivingCapture = receivingSystem.capture()
+        let receivingDiagnostic = Task { try await receivingCapture.runMicrophoneDiagnostic() }
+        while receivingSystem.engines.isEmpty { await Task.yield() }
+        let receivingEngine = receivingSystem.engines[0]
+        while !receivingEngine.isRunning { await Task.yield() }
+        receivingEngine.available = false
+        await receivingCapture.handleInputDevicesChanged()
+        receivingDiagnostic.cancel()
+        _ = try? await receivingDiagnostic.value
+        try await receivingCapture.configure(.init(input: .deviceUID("headset")))
+        try await receivingCapture.startCapture()
+        await receivingCapture.cancelCapture()
     }
 
 }

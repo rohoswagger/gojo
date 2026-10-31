@@ -196,7 +196,7 @@ struct DictationUtteranceMailbox {
             $0 + max(0, $1.count - segmenter.maximumUtteranceSampleCount)
         }
         return segmenter.maximumBufferedSampleCount +
-            Self.capacity * segmenter.maximumUtteranceSampleCount + preservedHoldSamples
+            (Self.capacity + 1) * segmenter.maximumUtteranceSampleCount + preservedHoldSamples
     }
 
     mutating func append(samples: [Float]) throws {
@@ -227,10 +227,7 @@ struct DictationUtteranceMailbox {
     }
 
     private mutating func enqueue(_ segments: [[Float]]) throws {
-        guard completed.count + segments.count <= Self.capacity else {
-            discard()
-            throw Failure.overflow
-        }
         completed.append(contentsOf: segments)
+        guard completed.count <= Self.capacity else { throw Failure.overflow }
     }
 }

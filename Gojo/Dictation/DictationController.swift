@@ -29,6 +29,7 @@ where TargetProvider: DictationTargetCapturing,
     }
 
     typealias RecoveryObserver = @Sendable (String, String?) -> Void
+    typealias RecoveryRecordsObserver = @Sendable ([DictationRecoveryRecord], UUID?) -> Void
     typealias CaptureCleanup = @Sendable () async -> Void
     typealias BeforeCapture = @Sendable () async -> CaptureCleanup?
 
@@ -41,6 +42,8 @@ where TargetProvider: DictationTargetCapturing,
         let audio: DictationAudio
         let leaseID: UUID?
         let unavailableReason: String?
+        let recoveryOriginalID: UUID?
+        let recoveryAttemptID: UUID?
     }
 
     private struct ContinuousSession {
@@ -56,9 +59,13 @@ where TargetProvider: DictationTargetCapturing,
         let pauseDuration: TimeInterval
         var capturePhase: CapturePhase = .starting(nil)
         var pending: [ContinuousJob] = []
+        var pendingTargetCaptures = 0
+        var recoveryAttempts: [UUID: UUID] = [:]
+        var outstandingAudioDuration: TimeInterval = 0
         var lastDestinationID: String?
         var lastInsertedCharacter: Character?
         var lastCompletion: DictationSessionStateMachine.Event?
+        var workFailure: DictationFailure?
         var terminalFailure: DictationFailure?
         var emptyReason: DictationEmptyReason = .noSpeech
     }
@@ -73,6 +80,7 @@ where TargetProvider: DictationTargetCapturing,
     private let maximumContinuousSessionDuration: Duration?
     private let stateObserver: StateObserver?
     private let recoveryObserver: RecoveryObserver?
+    private let recoveryRecordsObserver: RecoveryRecordsObserver?
     private let targetObserver: TargetObserver?
     private let maximumRecoveryTextBytes: Int
     private let beforeCapture: BeforeCapture?
@@ -80,6 +88,11 @@ where TargetProvider: DictationTargetCapturing,
     private let previewObserver: PreviewObserver?
     private let completionObserver: CompletionObserver?
     private let previewInterval: Duration
+    private var pendingCompletions: [UUID: (DictationSessionPlan, DictationCompletion)] = [:]
+    private var readyCompletions: Set<UUID> = []
+    private var deliveryAdmissionBlocked = false
+    private var captureAdmissionBlocked = false
+    private var recoveryAttemptID: UUID?
     private var activePlan: DictationSessionPlan?
     private var sessionResourceCleanup: CaptureCleanup?
     private var preparationTask: Task<Void, Error>?
@@ -124,6 +137,7 @@ where TargetProvider: DictationTargetCapturing,
         maximumRecoveryTextBytes: Int = 32 * 1024,
         stateObserver: StateObserver? = nil,
         recoveryObserver: RecoveryObserver? = nil,
+        recoveryRecordsObserver: RecoveryRecordsObserver? = nil,
         targetObserver: TargetObserver? = nil,
         beforeCapture: BeforeCapture? = nil,
         acquireSessionResources: SessionResources? = nil,
@@ -141,6 +155,7 @@ where TargetProvider: DictationTargetCapturing,
         self.maximumContinuousSessionDuration = maximumContinuousSessionDuration
         self.stateObserver = stateObserver
         self.recoveryObserver = recoveryObserver
+        self.recoveryRecordsObserver = recoveryRecordsObserver
         self.targetObserver = targetObserver
         self.maximumRecoveryTextBytes = maximumRecoveryTextBytes
         self.beforeCapture = beforeCapture
@@ -155,16 +170,26 @@ where TargetProvider: DictationTargetCapturing,
         continuousSession != nil ||
             (machine.state == .requestingPermission && pendingVoiceLockPauseDuration != nil)
     }
+    var latestDeliveryUnconfirmed: Bool {
+        machine.recoveryRecords.last { $0.sessionID == sessionID }?.outcome.disposition == .allDispatched
+    }
+    var recoveryRecords: [DictationRecoveryRecord] { machine.recoveryRecords }
+    var recoveryAttentionID: UUID? { machine.recoveryAttentionID }
     var recoverySnapshot: (text: String, message: String?) { (recoveryText, recoveryMessage) }
 
     @discardableResult
     func hotKeyDown(
         plan: DictationSessionPlan = DictationSessionPlan()
-    ) -> Bool {
+    ) async -> Bool {
+        if captureAdmissionBlocked, await audioCapture.captureIsQuiescent() {
+            captureAdmissionBlocked = false
+            flushCompletions()
+        }
         let mode = plan.mode
         let pauseDuration = plan.pauseDuration
         let targetPolicy = plan.targetPolicy
         if mode == .continuous, isVoiceModeActive { return true }
+        guard !deliveryAdmissionBlocked, !captureAdmissionBlocked, recoveryPayloadBytes < recoveryHighWaterBytes else { return false }
         guard machine.handle(.hotKeyDown) == .beginRequest else { return false }
 
         let currentSession = plan.id
@@ -177,7 +202,7 @@ where TargetProvider: DictationTargetCapturing,
         targetSnapshot = nil
         continuousSession = mode == .continuous
             ? ContinuousSession(targetPolicy: targetPolicy, pauseDuration: pauseDuration) : nil
-        let pendingCleanup = audioCleanupTask
+        let pendingCleanup = cleanupTask
         startupOperation = Task { [weak self] in
             await pendingCleanup?.value
             guard !Task.isCancelled else { return }
@@ -265,7 +290,8 @@ where TargetProvider: DictationTargetCapturing,
     }
 
     func resumeVoiceMode() {
-        guard let session = continuousSession, case .paused = session.capturePhase,
+        guard !captureAdmissionBlocked, recoveryPayloadBytes < recoveryHighWaterBytes,
+              let session = continuousSession, case .paused = session.capturePhase,
               machine.handle(.resumeRequested) == .beginRequest else { return }
         continuousSession?.capturePhase = .starting(nil)
         publishState()
@@ -286,14 +312,126 @@ where TargetProvider: DictationTargetCapturing,
     @discardableResult
     func clearRecoveryText(matching expectedText: String? = nil) -> Bool {
         guard expectedText == nil || recoveryText == expectedText else { return false }
-        recoveryText = ""
-        recoveryMessage = nil
+        let ids = Set(machine.recoveryRecords.compactMap { record -> UUID? in
+            guard case .text = record.payload else { return nil }
+            return record.id
+        })
+        machine.discardRecovery(ids: ids)
+        publishRecovery()
         switch machine.state {
         case .succeeded, .error: cancel()
         default: break
         }
-        recoveryObserver?(recoveryText, recoveryMessage)
         return true
+    }
+
+    func markRecoveryCopied(id: UUID) {
+        machine.markRecoveryCopied(ids: [id])
+        publishRecovery()
+    }
+
+    func markRecoveryCopied(matching text: String) {
+        guard !text.isEmpty, recoveryText == text else { return }
+        machine.markRecoveryCopied(ids: Set(machine.recoveryRecords.compactMap { record in
+            if case .text = record.payload { return record.id }
+            return nil
+        }))
+        publishRecovery()
+    }
+
+    func discardRecovery(id: UUID) {
+        machine.discardRecovery(ids: [id])
+        publishRecovery()
+    }
+
+    @discardableResult
+    func retryRecovery(id: UUID) async -> Bool {
+        if !deliveryAdmissionBlocked, !captureAdmissionBlocked,
+           let original = machine.recoveryRecords.first(where: { $0.id == id }),
+           original.sessionID == sessionID, original.outcome.disposition == .notSent,
+           case .audio(let audio) = original.payload,
+           case .paused = continuousSession?.capturePhase {
+            return await receiveContinuousAudio(audio, sessionID: sessionID, recoveryOriginalID: id)
+        }
+        guard !deliveryAdmissionBlocked, !captureAdmissionBlocked,
+              activePlan == nil, recoveryAttemptID == nil,
+              let original = machine.recoveryRecords.first(where: { $0.id == id }),
+              let payload = original.payload, original.outcome.disposition == .notSent,
+              machine.handle(.hotKeyDown) == .beginRequest else { return false }
+        let previous = original.plan
+        let plan = DictationSessionPlan(mode: .singleUtterance, purpose: previous.purpose,
+            recognition: previous.recognition, text: previous.text, capture: previous.capture,
+            cuesEnabled: false, learnsCorrections: previous.learnsCorrections)
+        sessionID = plan.id
+        activePlan = plan
+        recoveryAttemptID = id
+        publishState()
+        let predecessor = cleanupTask
+        operation = Task { [weak self] in
+            await self?.runRecoveryAttempt(originalID: id, payload: payload, plan: plan, predecessor: predecessor)
+        }
+        return true
+    }
+
+    private func runRecoveryAttempt(originalID: UUID, payload: DictationRecoveryRecord.Payload, plan: DictationSessionPlan, predecessor: Task<Void, Never>?) async {
+        do {
+            try checkSession(plan.id)
+            await predecessor?.value
+            try checkSession(plan.id)
+            if let acquireSessionResources {
+                let cleanup = await acquireSessionResources(plan)
+                guard sessionID == plan.id, !Task.isCancelled else {
+                    await cleanup?()
+                    return
+                }
+                sessionResourceCleanup = cleanup
+            }
+            preparationTask = Task { [transcriber] in
+                try await transcriber.beginSession(plan)
+                try Task.checkCancellation()
+                try await transcriber.prepare(request: plan.recognition)
+            }
+            transition(.retryStarted)
+            let text: String
+            switch payload {
+            case .text(let saved): text = saved
+            case .audio(let audio): text = try await processedTranscript(for: audio, sessionID: plan.id)
+            }
+            try checkSession(plan.id)
+            let resolution = try await targetProvider.captureTarget(purpose: plan.purpose)
+            guard sessionID == plan.id, !Task.isCancelled else {
+                if let target = resolution.capturedTarget { await inserter.releaseTarget(target) }
+                throw CancellationError()
+            }
+            guard let target = resolution.capturedTarget else {
+                if case .audio = payload {
+                    recordDelivery(text, outcome: .notSent(resolution.copyOnlyReason!.message), plan: plan)
+                    machine.linkLatestRecovery(to: originalID)
+                    machine.discardRecovery(ids: [originalID])
+                    publishRecovery()
+                }
+                transition(.transcriptSaved(text))
+                return
+            }
+            transition(.transcriptionCompleted(text))
+            let outcome: DictationInsertionOutcome
+            do { outcome = try await inserter.insert(text, into: target, plan: plan) }
+            catch {
+                await inserter.releaseTarget(target)
+                throw error
+            }
+            recordDelivery(text, outcome: outcome, plan: plan)
+            machine.linkLatestRecovery(to: originalID)
+            if outcome.disposition != .notSent { machine.discardRecovery(ids: [originalID]) }
+            publishRecovery()
+            try checkSession(plan.id)
+            transition(outcome.recoveryMessage == nil ? .insertionCompleted(text) : .transcriptSaved(text))
+        } catch {
+            guard sessionID == plan.id, !Task.isCancelled else { return }
+            transition(.failed(failure(for: error, stage: .transcription)))
+            scheduleResourceRelease()
+        }
+        if sessionID == plan.id { operation = nil }
     }
 
     func cancel() {
@@ -329,6 +467,7 @@ where TargetProvider: DictationTargetCapturing,
         #endif
         let resolution: DictationTargetResolution<TargetProvider.Target>
         do {
+            guard !captureAdmissionBlocked, !deliveryAdmissionBlocked else { throw AVAudioEngineCaptureError.cleanupBlocked }
             guard let plan = activePlan else { throw CancellationError() }
             if let acquireSessionResources {
                 let cleanup = await acquireSessionResources(plan)
@@ -446,6 +585,7 @@ where TargetProvider: DictationTargetCapturing,
                 await finishCaptureSideEffects()
                 guard isCurrent(expectedSession, state: .requestingPermission) else { return }
             }
+            if error as? AVAudioEngineCaptureError == .cleanupBlocked { captureAdmissionBlocked = true }
             failCaptureStartup(Self.captureFailure(for: error))
         }
     }
@@ -458,6 +598,9 @@ where TargetProvider: DictationTargetCapturing,
     private func finishCapture(sessionID expectedSession: UUID) async {
         var stage = PipelineStage.capture
         var completedTranscript: String?
+        var attemptedDeliveryPlan: DictationSessionPlan?
+        var deliveryAcknowledged = false
+        var acceptedAudio: DictationAudio?
         do {
             beginPreviewDrain()
             let audio = try await audioCapture.stopCapture()
@@ -478,6 +621,7 @@ where TargetProvider: DictationTargetCapturing,
             await previewDrainTask?.value
             try checkSession(expectedSession)
             stage = .transcription
+            acceptedAudio = audio
             let transcript = try await processedTranscript(for: audio, sessionID: expectedSession)
             try checkSession(expectedSession)
             guard machine.state == .transcribing else { return }
@@ -499,7 +643,11 @@ where TargetProvider: DictationTargetCapturing,
             #if DEBUG
             let insertionStart = ProcessInfo.processInfo.systemUptime
             #endif
-            let outcome = try await inserter.insert(transcript, into: target, plan: activePlan!)
+            let deliveryPlan = activePlan!
+            attemptedDeliveryPlan = deliveryPlan
+            let outcome = try await inserter.insert(transcript, into: target, plan: deliveryPlan)
+            recordDelivery(transcript, outcome: outcome, plan: deliveryPlan)
+            deliveryAcknowledged = true
             #if DEBUG
             dictationControllerLatencyLogger.notice(
                 "stage=insertion ms=\(Int(((ProcessInfo.processInfo.systemUptime - insertionStart) * 1_000).rounded()), privacy: .public)"
@@ -509,24 +657,34 @@ where TargetProvider: DictationTargetCapturing,
             guard machine.state == .inserting else { return }
             initialResolution = nil
             if let message = outcome.recoveryMessage {
-                try recoverTranscript(transcript, reason: message, sessionID: expectedSession)
+                _ = message
                 transition(.transcriptSaved(transcript))
             } else {
                 transition(.insertionCompleted(transcript))
             }
             operation = nil
         } catch {
+            if stage == .insertion, !deliveryAcknowledged, let completedTranscript, let attemptedDeliveryPlan {
+                recordDelivery(completedTranscript, outcome: .partialUnknown(Self.userFacingDetail(for: error)), plan: attemptedDeliveryPlan)
+            }
             guard expectedSession == sessionID, !Task.isCancelled else { return }
-            if stage == .capture, captureCleanup != nil {
+            if stage == .capture {
+                if let audio = await audioCapture.takeInterruptedAudio(), let plan = activePlan {
+                    guard expectedSession == sessionID else { return }
+                    machine.retainAudio(audio, sessionID: expectedSession, plan: plan, reason: Self.userFacingDetail(for: error))
+                    publishRecovery()
+                }
                 await audioCapture.cancelCapture()
                 guard expectedSession == sessionID else { return }
+                if !(await audioCapture.captureIsQuiescent()) { captureAdmissionBlocked = true }
                 await finishCaptureSideEffects()
                 guard expectedSession == sessionID else { return }
             }
-            if stage == .insertion, let completedTranscript {
-                do {
-                    try recoverTranscript(completedTranscript, reason: Self.userFacingDetail(for: error), sessionID: expectedSession)
-                } catch { return }
+            if stage == .transcription, let acceptedAudio, let plan = activePlan,
+               error as? DictationFailure != .transcriptionReturnedNoText {
+                machine.retainAudio(acceptedAudio, sessionID: expectedSession, plan: plan,
+                    reason: Self.userFacingDetail(for: error))
+                publishRecovery()
             }
             if error as? DictationFailure == .transcriptionReturnedNoText {
                 if let target = initialResolution?.capturedTarget { await inserter.releaseTarget(target) }
@@ -579,8 +737,6 @@ where TargetProvider: DictationTargetCapturing,
             try checkSession(expectedSession)
             let finalTranscript = polishedTranscript.trimmingCharacters(in: .whitespaces)
             return finalTranscript.isEmpty ? fallback : finalTranscript
-        } catch is CancellationError {
-            throw CancellationError()
         } catch {
             try checkSession(expectedSession)
             return fallback
@@ -612,7 +768,7 @@ where TargetProvider: DictationTargetCapturing,
             let permissionGranted = try await audioCapture.requestPermission()
             try checkSession(expectedSession)
             guard permissionGranted else {
-                failContinuousSession(.microphonePermissionDenied)
+                await failResume(sessionID: expectedSession)
                 return
             }
             try await runBeforeCapture(sessionID: expectedSession)
@@ -632,28 +788,73 @@ where TargetProvider: DictationTargetCapturing,
             return
         } catch {
             guard expectedSession == sessionID else { return }
-            failContinuousSession(Self.captureFailure(for: error))
+            if error as? AVAudioEngineCaptureError == .cleanupBlocked {
+                captureAdmissionBlocked = true
+                await finishCaptureSideEffects()
+                continuousSession?.capturePhase = .stopping(.pause, streamFinished: true)
+                publishState()
+            } else {
+                await failResume(sessionID: expectedSession)
+            }
         }
     }
 
-    private func receiveContinuousAudio(_ audio: DictationAudio, sessionID expectedSession: UUID) async {
+    private func failResume(sessionID expectedSession: UUID) async {
+        await audioCapture.cancelCapture()
+        guard sessionID == expectedSession else { return }
+        let quiescent = await audioCapture.captureIsQuiescent()
+        await finishCaptureSideEffects()
+        guard sessionID == expectedSession else { return }
+        guard quiescent else { captureAdmissionBlocked = true; return }
+        let intent: StopIntent?
+        if case .starting(let pendingIntent) = continuousSession?.capturePhase { intent = pendingIntent }
+        else { intent = nil }
+        continuousSession?.capturePhase = .paused
+        startupOperation = nil
+        transition(.resumeFailed)
+        if intent == .finish { stopContinuousSession(intent: .finish) }
+    }
+
+    @discardableResult
+    private func receiveContinuousAudio(_ audio: DictationAudio, sessionID expectedSession: UUID, recoveryOriginalID: UUID? = nil) async -> Bool {
         guard expectedSession == sessionID, let session = continuousSession,
               session.terminalFailure == nil,
               !audio.samples.isEmpty, audio.sampleRate.isFinite, audio.sampleRate > 0,
-              audio.speechEvidence != .silence, audio.samples.allSatisfy(\.isFinite) else { return }
-        continuousSession?.emptyReason = .noWordsRecognized
-        guard session.pending.count < 3 else {
-            failContinuousSession(.captureFailed("Dictation could not keep up. Stop and start again."))
-            return
+              audio.speechEvidence != .silence, audio.samples.allSatisfy(\.isFinite) else { return false }
+        var recoveryAttemptID: UUID?
+        if let recoveryOriginalID {
+            guard session.recoveryAttempts[recoveryOriginalID] == nil,
+                  session.pending.count + session.pendingTargetCaptures < 2,
+                  session.outstandingAudioDuration + audio.duration <= 60 else { return false }
+            let attemptID = UUID()
+            recoveryAttemptID = attemptID
+            continuousSession?.recoveryAttempts[recoveryOriginalID] = attemptID
         }
+        continuousSession?.pendingTargetCaptures += 1
+        continuousSession?.outstandingAudioDuration += audio.duration
+        var enqueued = false
+        defer {
+            if expectedSession == sessionID, !enqueued {
+                continuousSession?.pendingTargetCaptures -= 1
+                continuousSession?.outstandingAudioDuration -= audio.duration
+                if let recoveryOriginalID,
+                   continuousSession?.recoveryAttempts[recoveryOriginalID] == recoveryAttemptID {
+                    continuousSession?.recoveryAttempts.removeValue(forKey: recoveryOriginalID)
+                }
+                Task { [weak self] in
+                    await self?.completeContinuousSessionIfDrained(sessionID: expectedSession)
+                }
+            }
+        }
+        continuousSession?.emptyReason = .noWordsRecognized
         var leaseID: UUID?
         var unavailableReason: String?
-        if session.targetPolicy == .followFocus {
+        if session.targetPolicy == .followFocus || recoveryOriginalID != nil {
             do {
                 let resolution = try await targetProvider.captureAdditionalTarget(purpose: activePlan!.purpose)
                 guard expectedSession == sessionID, continuousSession != nil, !Task.isCancelled else {
                     if let target = resolution.capturedTarget { await inserter.releaseTarget(target) }
-                    return
+                    return false
                 }
                 targetSnapshot = resolution.capturedTarget
                 targetObserver?(resolution.capturedTarget)
@@ -666,24 +867,31 @@ where TargetProvider: DictationTargetCapturing,
                     unavailableReason = reason.message
                 }
             } catch {
-                guard expectedSession == sessionID, continuousSession != nil, !Task.isCancelled else { return }
+                guard expectedSession == sessionID, continuousSession != nil, !Task.isCancelled else { return false }
                 targetSnapshot = nil
                 targetObserver?(nil)
                 if error as? DictationFailure == .secureTextTarget {
                     continuousSession?.terminalFailure = .secureTextTarget
                     stopContinuousSession(intent: .finish)
-                    return
+                    return false
                 }
                 unavailableReason = Self.userFacingDetail(for: error)
             }
         }
         continuousSession?.pending.append(ContinuousJob(
-            audio: audio, leaseID: leaseID, unavailableReason: unavailableReason
+            audio: audio, leaseID: leaseID, unavailableReason: unavailableReason,
+            recoveryOriginalID: recoveryOriginalID, recoveryAttemptID: recoveryAttemptID
         ))
-        guard continuousPipeline == nil else { return }
+        continuousSession?.pendingTargetCaptures -= 1
+        enqueued = true
+        if continuousSession!.pending.count >= 2 || continuousSession!.outstandingAudioDuration >= 60 {
+            stopContinuousSession(intent: .pause)
+        }
+        guard continuousPipeline == nil else { return true }
         continuousPipeline = Task { [weak self] in
             await self?.processContinuousQueue(sessionID: expectedSession)
         }
+        return true
     }
 
     private func processContinuousQueue(sessionID expectedSession: UUID) async {
@@ -694,13 +902,22 @@ where TargetProvider: DictationTargetCapturing,
                 return
             }
             let job = continuousSession!.pending.removeFirst()
+            defer {
+                if expectedSession == sessionID {
+                    continuousSession?.outstandingAudioDuration -= job.audio.duration
+                    if let originalID = job.recoveryOriginalID,
+                       continuousSession?.recoveryAttempts[originalID] == job.recoveryAttemptID {
+                        continuousSession?.recoveryAttempts.removeValue(forKey: originalID)
+                    }
+                }
+            }
             let policy = continuousSession!.targetPolicy
             var stage = PipelineStage.transcription
             do {
                 let transcript = try await processedTranscript(for: job.audio, sessionID: expectedSession)
                 try checkSession(expectedSession)
                 var completion: DictationSessionStateMachine.Event = .transcriptSaved(transcript)
-                let destination = job.leaseID.flatMap { leasedTargets[$0] } ?? (policy == .fixed ? initialResolution?.capturedTarget : nil)
+                let destination = job.leaseID.flatMap { leasedTargets[$0] } ?? (policy == .fixed && job.recoveryOriginalID == nil ? initialResolution?.capturedTarget : nil)
                 if let destination {
                     let destinationID = targetProvider.destinationIdentifier(for: destination)
                     let continuesDestination = policy == .fixed
@@ -709,21 +926,32 @@ where TargetProvider: DictationTargetCapturing,
                         ? Self.joinedChunk(transcript, after: continuousSession?.lastInsertedCharacter)
                         : transcript
                     stage = .insertion
+                    let deliveryPlan = activePlan!
+                    var deliveryAcknowledged = false
                     do {
-                        let outcome = try await inserter.insertRetainingTarget(insertion, into: destination, plan: activePlan!)
+                        let outcome = try await inserter.insertRetainingTarget(insertion, into: destination, plan: deliveryPlan)
+                        recordDelivery(transcript, outcome: outcome, plan: deliveryPlan)
+                        deliveryAcknowledged = true
+                        if let originalID = job.recoveryOriginalID {
+                            machine.linkLatestRecovery(to: originalID)
+                            if outcome.disposition != .notSent { machine.discardRecovery(ids: [originalID]) }
+                            if !machine.recoveryRecords.contains(where: { record in
+                                if case .audio = record.payload { return record.sessionID == expectedSession }
+                                return false
+                            }) { continuousSession?.workFailure = nil }
+                            publishRecovery()
+                        }
                         try checkSession(expectedSession)
                         continuousSession?.lastInsertedCharacter = insertion.last
                         continuousSession?.lastDestinationID = destinationID
-                        if let message = outcome.recoveryMessage {
-                            try recoverTranscript(transcript, reason: message, sessionID: expectedSession)
-                        } else {
+                        if outcome.recoveryMessage == nil {
                             completion = .insertionCompleted(transcript)
                         }
-                    } catch is CancellationError {
-                        throw CancellationError()
                     } catch {
+                        if !deliveryAcknowledged {
+                            recordDelivery(transcript, outcome: .partialUnknown(Self.userFacingDetail(for: error)), plan: deliveryPlan)
+                        }
                         try checkSession(expectedSession)
-                        try recoverTranscript(transcript, reason: Self.userFacingDetail(for: error), sessionID: expectedSession)
                         guard policy == .followFocus else { throw error }
                     }
                 } else {
@@ -739,6 +967,16 @@ where TargetProvider: DictationTargetCapturing,
                 await releaseLease(job.leaseID)
                 guard expectedSession == sessionID, !Task.isCancelled else { return }
                 if error as? DictationFailure == .transcriptionReturnedNoText { continue }
+                if stage == .transcription, let plan = activePlan {
+                    continuousSession?.workFailure = failure(for: error, stage: stage)
+                    if job.recoveryOriginalID == nil {
+                        machine.retainAudio(job.audio, sessionID: expectedSession, plan: plan,
+                            reason: Self.userFacingDetail(for: error))
+                        publishRecovery()
+                    }
+                    stopContinuousSession(intent: .pause)
+                    continue
+                }
                 failContinuousSession(failure(for: error, stage: stage))
                 return
             }
@@ -750,15 +988,46 @@ where TargetProvider: DictationTargetCapturing,
         await inserter.releaseTarget(releasedTarget)
     }
 
+    private var recoveryHighWaterBytes: Int { max(1, maximumRecoveryTextBytes) }
+    private var recoveryPayloadBytes: Int {
+        machine.recoveryRecords.reduce(0) { count, record in
+            switch record.payload {
+            case .text(let text): return count + text.utf8.count
+            case .audio(let audio): return count + audio.samples.count * MemoryLayout<Float>.size
+            case nil: return count
+            }
+        }
+    }
+
+    private func recordDelivery(_ transcript: String, outcome: DictationInsertionOutcome, plan: DictationSessionPlan) {
+        if case .receipt(let receipt) = outcome, !receipt.writerQuiescent { deliveryAdmissionBlocked = true }
+        machine.retainText(transcript, sessionID: plan.id, outcome: outcome, plan: plan,
+            requestsAttention: plan.id == sessionID)
+        publishRecovery()
+    }
+
+    private func publishRecovery() {
+        recoveryText = machine.recoveryRecords.compactMap { record -> String? in
+            guard case .text(let text) = record.payload else { return nil }
+            return text
+        }.reduce("") { $0 + Self.joinedChunk($1, after: $0.last) }
+        recoveryMessage = machine.recoveryRecords.first { $0.id == machine.recoveryAttentionID }?.reason
+        if continuousSession != nil, recoveryPayloadBytes >= recoveryHighWaterBytes {
+            stopContinuousSession(intent: .pause)
+        }
+        recoveryObserver?(recoveryText, recoveryMessage)
+        recoveryRecordsObserver?(machine.recoveryRecords, machine.recoveryAttentionID)
+    }
+
     private func recoverTranscript(_ transcript: String, reason: String, sessionID expectedSession: UUID) throws {
         try checkSession(expectedSession)
-        recoveryText += Self.joinedChunk(transcript, after: recoveryText.last)
-        recoveryMessage = reason
+        guard let plan = activePlan else { throw CancellationError() }
+        recordDelivery(transcript, outcome: .notSent(reason), plan: plan)
         if continuousSession != nil, recoveryText.utf8.count >= maximumRecoveryTextBytes {
             recoveryMessage = "Voice mode finished because saved text is full. Copy or discard the saved text before continuing."
             stopContinuousSession(intent: .finish)
+            recoveryObserver?(recoveryText, recoveryMessage)
         }
-        recoveryObserver?(recoveryText, recoveryMessage)
     }
 
     private func stopContinuousSession(intent: StopIntent) {
@@ -818,6 +1087,7 @@ where TargetProvider: DictationTargetCapturing,
             return
         } catch {
             guard expectedSession == sessionID else { return }
+            if error as? AVAudioEngineCaptureError == .cleanupBlocked { captureAdmissionBlocked = true }
             failContinuousSession(Self.captureFailure(for: error))
         }
     }
@@ -832,33 +1102,47 @@ where TargetProvider: DictationTargetCapturing,
                 : .stopping(intent, streamFinished: true)
             await completeContinuousSessionIfDrained(sessionID: expectedSession)
         case .listening:
-            failContinuousSession(.captureFailed("The microphone stopped unexpectedly. Start dictation again."))
+            await continuousCaptureFailed(AVAudioEngineCaptureError.inputUnavailable, sessionID: expectedSession)
         case .starting, .stopped, .paused:
             break
         }
     }
 
-    private func continuousCaptureFailed(_ error: Error, sessionID expectedSession: UUID) {
+    private func continuousCaptureFailed(_ error: Error, sessionID expectedSession: UUID) async {
         guard expectedSession == sessionID, continuousSession != nil else { return }
-        failContinuousSession(Self.captureFailure(for: error))
+        continuousReader = nil
+        cancelCaptureWatchdog()
+        if error as? AVAudioEngineCaptureError == .cleanupBlocked {
+            captureAdmissionBlocked = true
+            await finishCaptureSideEffects()
+            guard expectedSession == sessionID else { return }
+            continuousSession?.capturePhase = .stopping(.pause, streamFinished: true)
+            _ = transition(.pauseRequested)
+            return
+        }
+        await finishCaptureSideEffects()
+        guard expectedSession == sessionID else { return }
+        _ = transition(.pauseRequested)
+        continuousSession?.capturePhase = .stopped(.pause)
+        await completeContinuousSessionIfDrained(sessionID: expectedSession)
     }
 
     private func completeContinuousSessionIfDrained(sessionID expectedSession: UUID) async {
         guard expectedSession == sessionID, let session = continuousSession,
-              case .stopped(let intent) = session.capturePhase,
-              session.pending.isEmpty, continuousPipeline == nil else { return }
+              case .stopped(let intent) = session.capturePhase else { return }
         continuousStopOperation = nil
         if intent == .pause {
             continuousSession?.capturePhase = .paused
             transition(.capturePaused)
             return
         }
+        guard session.pending.isEmpty, session.pendingTargetCaptures == 0, continuousPipeline == nil else { return }
         let completedTarget = initialResolution?.capturedTarget
         initialResolution = nil
         continuousSession = nil
         if let completedTarget { await inserter.releaseTarget(completedTarget) }
         guard expectedSession == sessionID, !Task.isCancelled else { return }
-        if let failure = session.terminalFailure {
+        if let failure = session.terminalFailure ?? session.workFailure {
             transition(.failed(failure))
         } else if let completion = session.lastCompletion {
             if case .insertionCompleted(let transcript) = completion {
@@ -937,6 +1221,7 @@ where TargetProvider: DictationTargetCapturing,
         let oldSessionID = sessionID
         let oldPlan = activePlan
         activePlan = nil
+        recoveryAttemptID = nil
         let oldResourceCleanup = sessionResourceCleanup
         sessionResourceCleanup = nil
         let oldPreparation = preparationTask
@@ -975,17 +1260,19 @@ where TargetProvider: DictationTargetCapturing,
         continuousPipeline = nil
         continuousStopOperation = nil
 
-        Task { [inserter] in
+        let targetCleanup = Task { [inserter] in
             if let releasedTarget { await inserter.releaseTarget(releasedTarget) }
             for lease in releasedLeases { await inserter.releaseTarget(lease) }
         }
         let previousAudioCleanup = audioCleanupTask
-        audioCleanupTask = Task { [audioCapture] in
+        audioCleanupTask = Task { [weak self, audioCapture] in
             await previousAudioCleanup?.value
             await oldStartup?.value
             await oldStop?.value
             await oldCaptureCleanupRun?.value
             await audioCapture.cancelCapture()
+            let quiescent = await audioCapture.captureIsQuiescent()
+            await self?.acknowledgeCaptureCleanup(quiescent: quiescent)
             await oldCaptureCleanup?()
         }
         let previousCleanup = cleanupTask
@@ -1002,20 +1289,55 @@ where TargetProvider: DictationTargetCapturing,
             await oldOperation?.value
             await oldPipeline?.value
             await audioCleanup?.value
+            await targetCleanup.value
             if oldPlan != nil { await transcriber.endSession(oldSessionID) }
             await oldResourceCleanup?()
         }
+        publishCompletion(after: cleanupTask)
+    }
+
+    private func publishCompletion(after cleanup: Task<Void, Never>?) {
+        for id in pendingCompletions.keys {
+            Task { [weak self] in
+                await cleanup?.value
+                await self?.completionCleanupFinished(id: id)
+            }
+        }
+    }
+
+    private func acknowledgeCaptureCleanup(quiescent: Bool) {
+        if !quiescent { captureAdmissionBlocked = true }
+    }
+
+    private func completionCleanupFinished(id: UUID) {
+        readyCompletions.insert(id)
+        flushCompletions()
+    }
+
+    private func flushCompletions() {
+        guard !deliveryAdmissionBlocked, !captureAdmissionBlocked else { return }
+        for id in readyCompletions {
+            if let (plan, completion) = pendingCompletions.removeValue(forKey: id) {
+                completionObserver?(plan.id, completion, plan)
+            }
+        }
+        readyCompletions.removeAll()
     }
 
     private func complete(_ completion: DictationCompletion) {
-        guard let plan = activePlan, lastCompletion == nil else { return }
-        lastCompletion = completion
-        completionObserver?(plan.id, completion, plan)
+        guard recoveryAttemptID == nil, let plan = activePlan, lastCompletion == nil else { return }
+        let resolved: DictationCompletion
+        if completion == .delivered, machine.recoveryRecords.contains(where: {
+            $0.sessionID == plan.id && $0.payload != nil && $0.outcome.disposition != .allDispatched
+        }) { resolved = .savedForCopying } else { resolved = completion }
+        lastCompletion = resolved
+        pendingCompletions[plan.id] = (plan, resolved)
     }
 
     private func scheduleResourceRelease() {
         guard let plan = activePlan else { return }
         activePlan = nil
+        recoveryAttemptID = nil
         let cleanup = sessionResourceCleanup
         sessionResourceCleanup = nil
         let preparation = preparationTask
@@ -1030,6 +1352,7 @@ where TargetProvider: DictationTargetCapturing,
             await transcriber.endSession(plan.id)
             await cleanup?()
         }
+        publishCompletion(after: cleanupTask)
     }
 
     private func invalidatePreview() -> Task<Void, Never>? {
@@ -1167,9 +1490,8 @@ where TargetProvider: DictationTargetCapturing,
         guard isCurrent(expectedSession, state: .listening) else { return }
         if continuousSession != nil {
             stopContinuousSession(intent: .finish)
-        } else if machine.handle(.cancel) == .cancel {
-            publishState()
-            invalidateSessionAndScheduleCleanup()
+        } else {
+            hotKeyUp()
         }
     }
 }

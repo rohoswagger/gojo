@@ -28,6 +28,14 @@ struct DictationCaptureLivenessRegression {
         try await cancelledStartupReleasesItsEngine()
         try await configurationFailureDuringStartupIsVisible()
         try await diagnosticReservesAndReleasesTheSameCaptureActor()
+        try await continuousOverflowPreservesAllAcceptedPhrases()
+        try await stoppedHeldEnginePreservesAcceptedAudio()
+        try await stoppedContinuousEnginePreservesAcceptedAudio()
+        try await sameInputRecoveryPreservesAcceptedIntervals()
+        try await cancelDuringRecoveryCannotRestartMicrophone()
+        try await recoveryStopFailureBlocksReplacement()
+        try await unresolvedStopBlocksNewAdmission()
+        try stoppedTapCannotAppendAfterSealing()
         try microphoneSilenceStillProvesLiveness()
         try promotionPreservesLivenessAndAudio()
         try promotionBeforeFirstBufferWaitsForAudio()
@@ -114,6 +122,8 @@ private final class CaptureEngineStub: DictationCaptureEngine, @unchecked Sendab
     private var running = false
     private var startCount = 0
     private var stopCount = 0
+    var refusesStop = false
+    var isInputAvailable = true
     var inputFormat: AVAudioFormat { AVAudioFormat(standardFormatWithSampleRate: 16_000, channels: 1)! }
     var identity: ObjectIdentifier { ObjectIdentifier(self) }
     var isRunning: Bool { lock.withLock { running } }
@@ -128,7 +138,7 @@ private final class CaptureEngineStub: DictationCaptureEngine, @unchecked Sendab
     }
     func prepare() {}
     func start() throws { lock.withLock { running = true; startCount += 1 } }
-    func stop() { lock.withLock { running = false; stopCount += 1 } }
+    func stop() { lock.withLock { if !refusesStop { running = false }; stopCount += 1 } }
     func emit(stale: Bool = false, amplitude: Float = 0) {
         let callback = lock.withLock { stale ? oldReceiver : receiver }
         let buffer = AVAudioPCMBuffer(pcmFormat: inputFormat, frameCapacity: 320)!
@@ -420,5 +430,191 @@ extension DictationCaptureLivenessRegression {
         do { try await diagnostic.value } catch is CancellationError {}
         require(system.count == 1 && !system.engine(0).isRunning,
                 "canceling the diagnostic must discard audio and release the only engine")
+    }
+}
+
+extension DictationCaptureLivenessRegression {
+    private static func stoppedHeldEnginePreservesAcceptedAudio() async throws {
+        let system = CaptureSystemStub()
+        let gate = CaptureReadinessGate()
+        let capture = system.capture(gate: gate)
+        let start = Task { try await capture.startCapture() }
+        await gate.waitForArrival(1)
+        let engine = system.engine(0)
+        for _ in 0..<10 { engine.emit(amplitude: 0.1) }
+        await gate.advance()
+        try await start.value
+        engine.stop()
+        let audio = try await capture.stopCapture()
+        require(audio.samples == Array(repeating: Float(0.1), count: 3_200),
+                "an unexpected stopped engine must still return every accepted held sample")
+    }
+
+    private static func stoppedContinuousEnginePreservesAcceptedAudio() async throws {
+        let system = CaptureSystemStub()
+        let gate = CaptureReadinessGate()
+        let capture = system.capture(gate: gate)
+        let start = Task { try await capture.startContinuousCapture(pauseDuration: 0.9) }
+        await gate.waitForArrival(1)
+        let engine = system.engine(0)
+        for _ in 0..<10 { engine.emit(amplitude: 0.1) }
+        await gate.advance()
+        let stream = try await start.value
+        engine.stop()
+        engine.isInputAvailable = false
+        await capture.handleInputDevicesChanged()
+        await capture.handleConfigurationChange(engineID: engine.identity)
+        var samples: [Float] = []
+        do {
+            for try await audio in stream { samples += audio.samples }
+        } catch {}
+        require(samples == Array(repeating: Float(0.1), count: 3_200),
+                "an input failure must seal and yield accepted continuous speech before its error")
+    }
+
+    private static func unresolvedStopBlocksNewAdmission() async throws {
+        let system = CaptureSystemStub()
+        let gate = CaptureReadinessGate()
+        let capture = system.capture(gate: gate)
+        let start = Task { try await capture.startCapture() }
+        await gate.waitForArrival(1)
+        let engine = system.engine(0)
+        engine.emit()
+        await gate.advance()
+        try await start.value
+        engine.refusesStop = true
+        await capture.cancelCapture()
+        let second = Task { try await capture.startCapture() }
+        for _ in 0..<100 { await Task.yield() }
+        require(system.count == 1, "an unacknowledged engine stop must block creation of a second engine")
+        second.cancel()
+        _ = try? await second.value
+        engine.refusesStop = false
+        await capture.cancelCapture()
+    }
+
+    private static func stoppedTapCannotAppendAfterSealing() throws {
+        let held = LockedMonoSampleAccumulator(channelCount: 1, levelObserver: { _ in })
+        held.append(buffer(0.1))
+        let first = held.drain()
+        held.append(buffer(0.2))
+        require(first == Array(repeating: Float(0.1), count: 3_200) && held.drain().isEmpty,
+                "sealing held capture must retire its tap before a stale callback can append")
+    }
+}
+
+extension DictationCaptureLivenessRegression {
+    private static func sameInputRecoveryPreservesAcceptedIntervals() async throws {
+        for continuous in [false, true] {
+            let system = CaptureSystemStub()
+            let gate = CaptureReadinessGate()
+            let capture = system.capture(gate: gate)
+            let start = Task { () -> AsyncThrowingStream<DictationAudio, Error>? in
+                if continuous { return try await capture.startContinuousCapture(pauseDuration: 0.9) }
+                try await capture.startCapture()
+                return nil
+            }
+            await gate.waitForArrival(1)
+            let old = system.engine(0)
+            for _ in 0..<10 { old.emit(amplitude: 0.1) }
+            await gate.advance()
+            let stream = try await start.value
+            old.stop()
+            let recovery = Task { await capture.handleConfigurationChange(engineID: old.identity) }
+            await gate.waitForArrival(2)
+            require(system.count == 1 && !old.isRunning,
+                    "same-input recovery must stop the old engine before backoff and replacement")
+            old.emit(stale: true, amplitude: 0.9)
+            await gate.advance()
+            await gate.waitForArrival(3)
+            let fresh = system.engine(1)
+            for _ in 0..<10 { fresh.emit(amplitude: 0.2) }
+            await gate.advance()
+            await recovery.value
+            old.emit(stale: true, amplitude: 0.9)
+            var received: [Float] = []
+            if continuous {
+                try await capture.stopContinuousCapture()
+                for try await audio in stream! { received += audio.samples }
+            } else {
+                received = try await capture.stopCapture().samples
+            }
+            require(received == Array(repeating: Float(0.1), count: 3_200) + Array(repeating: Float(0.2), count: 3_200),
+                    "sequential epochs must retain accepted old/new speech once and reject stale tap callbacks")
+            await capture.cancelCapture()
+        }
+    }
+
+    private static func cancelDuringRecoveryCannotRestartMicrophone() async throws {
+        let system = CaptureSystemStub()
+        let gate = CaptureReadinessGate()
+        let capture = system.capture(gate: gate)
+        let start = Task { try await capture.startCapture() }
+        await gate.waitForArrival(1)
+        let old = system.engine(0)
+        old.emit()
+        await gate.advance()
+        try await start.value
+        old.stop()
+        let recovery = Task { await capture.handleConfigurationChange(engineID: old.identity) }
+        await gate.waitForArrival(2)
+        await capture.cancelCapture()
+        await gate.advance()
+        await recovery.value
+        require(system.count == 1 && !old.isRunning, "Cancel during recovery backoff must revoke restart intent")
+    }
+
+    private static func recoveryStopFailureBlocksReplacement() async throws {
+        let system = CaptureSystemStub()
+        let gate = CaptureReadinessGate()
+        let capture = system.capture(gate: gate)
+        let start = Task { try await capture.startCapture() }
+        await gate.waitForArrival(1)
+        let old = system.engine(0)
+        old.emit()
+        await gate.advance()
+        try await start.value
+        old.refusesStop = true
+        await capture.cancelCapture()
+        let stopBlocked = await capture.captureIsQuiescent()
+        require(!stopBlocked, "a canceled engine that still runs must report nonquiescent cleanup")
+        do {
+            try await capture.startCapture()
+            require(false, "a still-running retired engine must deny admission")
+        } catch AVAudioEngineCaptureError.cleanupBlocked {}
+        require(system.count == 1, "epoch fencing must not stand in for physical stop acknowledgement")
+        old.refusesStop = false
+        await capture.cancelCapture()
+        let stopped = await capture.captureIsQuiescent()
+        require(stopped, "positive physical stop acknowledgement must release the quiescence barrier")
+    }
+}
+
+extension DictationCaptureLivenessRegression {
+    private static func continuousOverflowPreservesAllAcceptedPhrases() async throws {
+        let system = CaptureSystemStub()
+        let gate = CaptureReadinessGate()
+        let capture = system.capture(gate: gate)
+        let start = Task { try await capture.startContinuousCapture(pauseDuration: 0.9) }
+        await gate.waitForArrival(1)
+        let engine = system.engine(0)
+        engine.emit()
+        await gate.advance()
+        let stream = try await start.value
+        for _ in 0..<4 {
+            for _ in 0..<10 { engine.emit(amplitude: 0.1) }
+            for _ in 0..<45 { engine.emit() }
+        }
+        while engine.isRunning { await Task.yield() }
+        var speechSamples = 0
+        do {
+            for try await audio in stream {
+                speechSamples += audio.samples.filter { $0 == 0.1 }.count
+            }
+            require(false, "capture high water must report its pause reason")
+        } catch DictationContinuousCaptureError.bufferOverflow {}
+        require(speechSamples == 12_800,
+                "mailbox high water must preserve all four accepted phrases through the bounded stream")
+        require(!engine.isRunning, "high water must stop physical capture before returning retained speech")
     }
 }

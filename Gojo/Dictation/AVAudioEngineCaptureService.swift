@@ -22,6 +22,7 @@ enum AVAudioEngineCaptureError: Error, Equatable, LocalizedError {
     case notCapturing
     case inputUnavailable
     case inputConfigurationChanged
+    case cleanupBlocked
     case noInputBuffers
     case unsupportedInputFormat
     case sampleBufferTooLarge
@@ -32,6 +33,8 @@ enum AVAudioEngineCaptureError: Error, Equatable, LocalizedError {
         switch self {
         case .noInputBuffers:
             return "The microphone delivered no audio. Check your input device in System Settings, then try again."
+        case .cleanupBlocked:
+            return "The microphone has not stopped yet. Dictation is blocked until microphone cleanup completes."
         case .alreadyCapturing:
             return "The microphone is already in use by dictation or a microphone test."
         case .inputUnavailable:
@@ -123,6 +126,33 @@ final class SystemDictationCaptureEngine: DictationCaptureEngine, @unchecked Sen
     func stop() { engine.stop() }
 }
 
+private final class CaptureEpochAcceptance: @unchecked Sendable {
+    private let lock = NSLock()
+    private var accepting = true
+    private var receivedBuffer = false
+
+    var hasReceivedBuffer: Bool { lock.withLock { receivedBuffer } }
+
+    func receive(_ buffer: AVAudioPCMBuffer, append: (AVAudioPCMBuffer) -> Void) {
+        lock.lock()
+        defer { lock.unlock() }
+        guard accepting else { return }
+        guard buffer.frameLength > 0, let channels = buffer.floatChannelData,
+              buffer.format.channelCount > 0 else { return }
+        for channel in 0..<Int(buffer.format.channelCount) {
+            for frame in 0..<Int(buffer.frameLength) where !channels[channel][frame].isFinite { return }
+        }
+        append(buffer)
+        receivedBuffer = true
+    }
+
+    func close() {
+        lock.lock()
+        accepting = false
+        lock.unlock()
+    }
+}
+
 private final class MicrophoneAuthorizationWaiter: @unchecked Sendable {
     private let lock = NSLock()
     private var continuation: CheckedContinuation<AVAuthorizationStatus, Error>?
@@ -156,6 +186,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
 
     private struct CaptureContext {
         let engine: any DictationCaptureEngine
+        let acceptance: CaptureEpochAcceptance
         let accumulator: LockedMonoSampleAccumulator
         let sampleRate: Double
         let configuration: DictationCaptureConfiguration
@@ -165,6 +196,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
     private struct ContinuousCaptureContext {
         let id: UUID
         let engine: any DictationCaptureEngine
+        let acceptance: CaptureEpochAcceptance
         let accumulator: LockedContinuousSampleAccumulator
         let sampleRate: Double
         let pauseDuration: TimeInterval
@@ -178,6 +210,11 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
     )
     private(set) var currentInputDevice: DictationInputDevice?
     private var terminalInputFailure: Error?
+    private var interruptedCapture: CaptureContext?
+    private var blockedEngine: (any DictationCaptureEngine)?
+    private var recoveryAttempted = false
+    private var recoveringEngineID: ObjectIdentifier?
+    private var heldHealthTask: Task<Void, Never>?
     private var inputDeviceObserver: DictationInputDeviceObserver?
     private var context: CaptureContext?
     private var preparedContext: CaptureContext?
@@ -217,7 +254,9 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
     }
 
     func configure(_ configuration: DictationCaptureConfiguration) async throws {
-        guard context == nil, continuousContext == nil, diagnosticID == nil, continuousStartID == nil else {
+        try requireQuiescentEngine()
+        guard context == nil, continuousContext == nil, interruptedCapture == nil,
+              diagnosticID == nil, continuousStartID == nil else {
             throw AVAudioEngineCaptureError.alreadyCapturing
         }
         guard self.configuration != configuration else { return }
@@ -271,15 +310,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
             try Self.requireAuthorization(authorizationStatus())
         } catch {
             discardPreparedCapture()
-            if let context {
-                stopActiveCapture(context)
-                context.accumulator.discard()
-            }
-            if let continuousContext {
-                stopActiveContinuousCapture(continuousContext)
-                continuousContext.accumulator.discard()
-                continuousContext.continuation.finish(throwing: error)
-            }
+            failActiveInput(error)
             throw error
         }
     }
@@ -290,7 +321,8 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
             discardPreparedCapture()
             return
         }
-        guard diagnosticID == nil,
+        guard blockedEngine == nil, interruptedCapture == nil,
+              diagnosticID == nil,
               context == nil,
               continuousContext == nil,
               preparedContext == nil else { return }
@@ -317,7 +349,10 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
         guard context == nil, continuousContext == nil else {
             throw AVAudioEngineCaptureError.alreadyCapturing
         }
+        try requireQuiescentEngine()
+        guard interruptedCapture == nil else { throw AVAudioEngineCaptureError.alreadyCapturing }
         terminalInputFailure = nil
+        recoveryAttempted = false
         let wasPrepared = preparedContext != nil
         var captureContext = try takePreparedCaptureContext()
         do {
@@ -330,6 +365,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
                 try startPreparedCaptureContext(captureContext, startTime: ProcessInfo.processInfo.systemUptime)
             }
             try await confirmHeldInput(captureContext)
+            startHeldHealthMonitor()
         } catch {
             if let context, context.engine.identity == captureContext.engine.identity {
                 stopActiveCapture(context)
@@ -370,6 +406,9 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
         guard continuousContext == nil, promoting || context == nil else {
             throw AVAudioEngineCaptureError.alreadyCapturing
         }
+        try requireQuiescentEngine()
+        guard interruptedCapture == nil else { throw AVAudioEngineCaptureError.alreadyCapturing }
+        if !promoting { recoveryAttempted = false }
         let existingCapture = promoting ? context : nil
         if let existingCapture, !existingCapture.engine.isRunning {
             throw AVAudioEngineCaptureError.inputConfigurationChanged
@@ -399,16 +438,19 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
             levelObserver: levelObserver
         )
         let (stream, continuation) = AsyncThrowingStream<DictationAudio, Error>.makeStream(
-            bufferingPolicy: .bufferingOldest(3)
+            bufferingPolicy: .bufferingOldest(8)
         )
         let id = UUID()
+        let acceptance = existingCapture?.acceptance ?? CaptureEpochAcceptance()
         do {
             if let existingCapture {
                 try existingCapture.accumulator.promote(to: accumulator)
                 context = nil
+                heldHealthTask?.cancel()
+                heldHealthTask = nil
             } else {
                 engine.installTap(format: tapFormat) { buffer in
-                    accumulator.append(buffer)
+                    acceptance.receive(buffer, append: accumulator.append)
                 }
                 engine.prepare()
                 try checkAuthorization()
@@ -419,8 +461,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
                 context = nil
                 existingCapture.accumulator.discard()
             }
-            engine.removeTap()
-            engine.stop()
+            _ = stopEngine(engine, acceptance: acceptance)
             accumulator.discard()
             continuation.finish(throwing: error)
             throw error
@@ -429,6 +470,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
         continuousContext = ContinuousCaptureContext(
             id: id,
             engine: engine,
+            acceptance: acceptance,
             accumulator: accumulator,
             sampleRate: tapFormat.sampleRate,
             pauseDuration: pauseDuration,
@@ -469,27 +511,36 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
 
     func stopContinuousCapture() async throws {
         guard let continuousContext else { throw terminalInputFailure ?? AVAudioEngineCaptureError.notCapturing }
-        stopActiveContinuousCapture(continuousContext, prepareNext: true)
+        guard stopActiveContinuousCapture(continuousContext, prepareNext: true) else {
+            try? Self.yield(continuousContext.accumulator.finishPreservingAccepted(), to: continuousContext, enforceHighWater: false)
+            continuousContext.continuation.finish(throwing: AVAudioEngineCaptureError.cleanupBlocked)
+            throw AVAudioEngineCaptureError.cleanupBlocked
+        }
         do {
             let segments = try continuousContext.accumulator.finish()
-            try Self.yield(segments, to: continuousContext)
+            try Self.yield(segments, to: continuousContext, enforceHighWater: false)
             continuousContext.continuation.finish()
         } catch {
-            continuousContext.accumulator.discard()
+            try? Self.yield(continuousContext.accumulator.finishPreservingAccepted(), to: continuousContext, enforceHighWater: false)
             continuousContext.continuation.finish(throwing: error)
             throw error
         }
     }
 
-    private func drainContinuousCapture(id: UUID) {
+    private func drainContinuousCapture(id: UUID) async {
         guard let continuousContext, continuousContext.id == id else { return }
+        if recoveringEngineID != nil { return }
+        if !continuousContext.engine.isRunning || continuousContext.accumulator.inputIsStale() {
+            await recoverStoppedInput(engineID: continuousContext.engine.identity)
+            return
+        }
         do {
             let segments = try continuousContext.accumulator.drain()
             try Self.yield(segments, to: continuousContext)
         } catch {
-            stopActiveContinuousCapture(continuousContext)
-            continuousContext.accumulator.discard()
-            continuousContext.continuation.finish(throwing: error)
+            let stopped = stopActiveContinuousCapture(continuousContext)
+            try? Self.yield(continuousContext.accumulator.finishPreservingAccepted(), to: continuousContext, enforceHighWater: false)
+            continuousContext.continuation.finish(throwing: stopped ? error : AVAudioEngineCaptureError.cleanupBlocked)
         }
     }
 
@@ -500,21 +551,44 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
         continuousContext.continuation.finish()
     }
 
-    private func stopActiveContinuousCapture(_ captureContext: ContinuousCaptureContext, prepareNext: Bool = false) {
-        guard continuousContext?.id == captureContext.id else { return }
+    @discardableResult
+    private func stopActiveContinuousCapture(_ captureContext: ContinuousCaptureContext, prepareNext: Bool = false) -> Bool {
+        guard continuousContext?.id == captureContext.id,
+              continuousContext?.engine.identity == captureContext.engine.identity else { return blockedEngine == nil }
         continuousContext = nil
         continuousPump?.cancel()
         continuousPump = nil
-        captureContext.engine.removeTap()
-        captureContext.engine.stop()
+        let stopped = stopEngine(captureContext.engine, acceptance: captureContext.acceptance)
         levelObserver(0)
-        if prepareNext { Task { await self.prepareForCaptureIfAuthorized() } }
+        if stopped && prepareNext { Task { await self.prepareForCaptureIfAuthorized() } }
+        return stopped
+    }
+
+    private func requireQuiescentEngine() throws {
+        guard let blockedEngine else { return }
+        guard !blockedEngine.isRunning else { throw AVAudioEngineCaptureError.cleanupBlocked }
+        self.blockedEngine = nil
+    }
+
+    private func stopEngine(_ engine: any DictationCaptureEngine, acceptance: CaptureEpochAcceptance) -> Bool {
+        acceptance.close()
+        engine.removeTap()
+        engine.stop()
+        if engine.isRunning {
+            blockedEngine = engine
+            terminalInputFailure = AVAudioEngineCaptureError.cleanupBlocked
+            return false
+        }
+        if blockedEngine?.identity == engine.identity { blockedEngine = nil }
+        return true
     }
 
     private static func yield(
         _ segments: [[Float]],
-        to context: ContinuousCaptureContext
+        to context: ContinuousCaptureContext,
+        enforceHighWater: Bool = true
     ) throws {
+        var reachedHighWater = false
         for samples in segments {
             let normalized = try normalize(samples: samples, from: context.sampleRate)
             let audio = DictationAudio(samples: normalized.samples, speechEvidence: .speech)
@@ -526,8 +600,8 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
             )
             #endif
             switch context.continuation.yield(audio) {
-            case .enqueued:
-                break
+            case .enqueued(let remainingCapacity):
+                reachedHighWater = reachedHighWater || remainingCapacity <= DictationUtteranceMailbox.capacity + 1
             case .dropped:
                 throw DictationContinuousCaptureError.bufferOverflow
             case .terminated:
@@ -536,13 +610,13 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
                 throw DictationContinuousCaptureError.bufferOverflow
             }
         }
+        if reachedHighWater && enforceHighWater { throw DictationContinuousCaptureError.bufferOverflow }
     }
 
     func discardPreparedCapture() {
         guard let preparedContext else { return }
         self.preparedContext = nil
-        preparedContext.engine.removeTap()
-        preparedContext.engine.stop()
+        _ = stopEngine(preparedContext.engine, acceptance: preparedContext.acceptance)
     }
 
     private func observeConfigurationChangesIfNeeded() {
@@ -568,9 +642,9 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
     func handleConfigurationChange(engineID: ObjectIdentifier) async {
         if let preparedContext, preparedContext.engine.identity == engineID { discardPreparedCapture() }
         if let context, context.engine.identity == engineID, !context.engine.isRunning {
-            failActiveInput(AVAudioEngineCaptureError.inputConfigurationChanged)
+            await recoverStoppedInput(engineID: engineID)
         } else if let continuousContext, continuousContext.engine.identity == engineID, !continuousContext.engine.isRunning {
-            failActiveInput(AVAudioEngineCaptureError.inputConfigurationChanged)
+            await recoverStoppedInput(engineID: engineID)
         }
     }
 
@@ -584,13 +658,116 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
     private func failActiveInput(_ error: Error) {
         terminalInputFailure = error
         if let context {
-            stopActiveCapture(context)
-            context.accumulator.discard()
+            let stopped = stopActiveCapture(context)
+            if context.accumulator.hasReceivedAudio() { interruptedCapture = context }
+            else { context.accumulator.discard() }
+            if !stopped { terminalInputFailure = AVAudioEngineCaptureError.cleanupBlocked }
         }
         if let continuousContext {
-            stopActiveContinuousCapture(continuousContext)
-            continuousContext.accumulator.discard()
-            continuousContext.continuation.finish(throwing: error)
+            let stopped = stopActiveContinuousCapture(continuousContext)
+            do {
+                try Self.yield(continuousContext.accumulator.finishPreservingAccepted(), to: continuousContext, enforceHighWater: false)
+            } catch {
+                terminalInputFailure = error
+            }
+            continuousContext.continuation.finish(throwing: stopped ? error : AVAudioEngineCaptureError.cleanupBlocked)
+        }
+    }
+
+    private func startHeldHealthMonitor() {
+        heldHealthTask?.cancel()
+        heldHealthTask = Task { [weak self] in
+            while !Task.isCancelled {
+                do { try await Task.sleep(for: .milliseconds(100)) } catch { return }
+                guard let self else { return }
+                await self.checkHeldHealth()
+            }
+        }
+    }
+
+    private func checkHeldHealth() async {
+        guard let context, diagnosticID == nil, recoveringEngineID == nil else { return }
+        if !context.engine.isRunning || context.accumulator.inputIsStale() {
+            await recoverStoppedInput(engineID: context.engine.identity)
+        }
+    }
+
+    private func recoverStoppedInput(engineID: ObjectIdentifier) async {
+        guard recoveringEngineID == nil else { return }
+        let held = context.flatMap { $0.engine.identity == engineID ? $0 : nil }
+        let continuous = continuousContext.flatMap { $0.engine.identity == engineID ? $0 : nil }
+        guard let engine = held?.engine ?? continuous?.engine else { return }
+        let hasAudio = held?.accumulator.hasReceivedAudio() ?? continuous!.accumulator.hasReceivedAudio()
+        guard hasAudio, !recoveryAttempted, engine.isInputAvailable, diagnosticID == nil else {
+            failActiveInput(engine.isInputAvailable ? AVAudioEngineCaptureError.inputConfigurationChanged : DictationInputDeviceError.unavailable)
+            return
+        }
+        recoveryAttempted = true
+        recoveringEngineID = engineID
+        defer { if recoveringEngineID == engineID { recoveringEngineID = nil } }
+        let acceptance = held?.acceptance ?? continuous!.acceptance
+        guard stopEngine(engine, acceptance: acceptance) else {
+            failActiveInput(AVAudioEngineCaptureError.cleanupBlocked)
+            return
+        }
+        var replacementID: ObjectIdentifier?
+        do {
+            if let continuous {
+                try Self.yield(continuous.accumulator.finish(), to: continuous)
+            }
+            try await readinessSleep()
+            try Task.checkCancellation()
+            guard context?.engine.identity == engineID || continuousContext?.engine.identity == engineID else { return }
+            try checkAuthorization()
+            try requireQuiescentEngine()
+            let frozen = held?.configuration ?? continuous!.configuration
+            let originalDevice = held?.inputDevice ?? continuous?.inputDevice
+            let replacement = try makeCaptureEngine()
+            replacementID = replacement.identity
+            let selected = try replacement.selectInput(frozen.input)
+            guard selected?.id == originalDevice?.id else {
+                throw DictationInputDeviceError.unavailable
+            }
+            let format = try Self.tapFormat(for: replacement.inputFormat)
+            let rate = held?.sampleRate ?? continuous!.sampleRate
+            let channels = held?.accumulator.sourceChannelCount ?? continuous!.accumulator.sourceChannelCount
+            guard format.sampleRate == rate, Int(format.channelCount) == channels else {
+                throw AVAudioEngineCaptureError.inputConfigurationChanged
+            }
+            let replacementAcceptance = CaptureEpochAcceptance()
+            if let held {
+                replacement.installTap(format: format) { buffer in
+                    replacementAcceptance.receive(buffer, append: held.accumulator.append)
+                }
+                replacement.prepare()
+                context = CaptureContext(engine: replacement, acceptance: replacementAcceptance,
+                    accumulator: held.accumulator, sampleRate: rate, configuration: frozen, inputDevice: selected)
+                try replacement.start()
+                guard try await waitForInput(from: replacement, { replacementAcceptance.hasReceivedBuffer }) else {
+                    throw AVAudioEngineCaptureError.noInputBuffers
+                }
+            } else if let continuous {
+                let accumulator = LockedContinuousSampleAccumulator(channelCount: Int(format.channelCount),
+                    segmenter: try DictationUtteranceSegmenter(sampleRate: rate, pauseDuration: continuous.pauseDuration,
+                        adaptiveSpeech: frozen.adaptiveSpeech), levelObserver: levelObserver)
+                replacement.installTap(format: format) { buffer in
+                    replacementAcceptance.receive(buffer, append: accumulator.append)
+                }
+                replacement.prepare()
+                continuousContext = ContinuousCaptureContext(id: continuous.id, engine: replacement,
+                    acceptance: replacementAcceptance, accumulator: accumulator, sampleRate: rate,
+                    pauseDuration: continuous.pauseDuration, configuration: frozen,
+                    inputDevice: selected, continuation: continuous.continuation)
+                try replacement.start()
+                guard try await waitForInput(from: replacement, { accumulator.hasReceivedAudio() }) else {
+                    throw AVAudioEngineCaptureError.noInputBuffers
+                }
+            }
+        } catch {
+            let currentID = context?.engine.identity ?? continuousContext?.engine.identity
+            if currentID == engineID || (replacementID != nil && currentID == replacementID) {
+                failActiveInput(error)
+            }
         }
     }
 
@@ -616,6 +793,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
         let startTime = ProcessInfo.processInfo.systemUptime
         #endif
         try checkAuthorization()
+        try requireQuiescentEngine()
         let engine = try makeCaptureEngine()
         let inputDevice = try engine.selectInput(configuration.input)
         let hardwareFormat = engine.inputFormat
@@ -635,8 +813,9 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
             previewEnabled: configuration.previewEnabled,
             levelObserver: levelObserver
         )
+        let acceptance = CaptureEpochAcceptance()
         engine.installTap(format: tapFormat) { buffer in
-            accumulator.append(buffer)
+            acceptance.receive(buffer, append: accumulator.append)
         }
         #if DEBUG
         let tapMilliseconds = Int(
@@ -658,6 +837,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
         #endif
         return CaptureContext(
             engine: engine,
+            acceptance: acceptance,
             accumulator: accumulator,
             sampleRate: tapFormat.sampleRate,
             configuration: configuration,
@@ -685,8 +865,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
             levelObserver(0)
         } catch {
             let engine = captureContext.engine
-            engine.removeTap()
-            engine.stop()
+            _ = stopEngine(engine, acceptance: captureContext.acceptance)
             throw error
         }
     }
@@ -723,8 +902,10 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
         guard context?.engine.identity == initial.engine.identity else { throw CancellationError() }
         guard initial.accumulator.discardIfSilent() else { return }
         self.context = nil
-        initial.engine.removeTap()
-        initial.engine.stop()
+        guard stopEngine(initial.engine, acceptance: initial.acceptance) else {
+            throw AVAudioEngineCaptureError.cleanupBlocked
+        }
+        try Task.checkCancellation()
         let fresh = try makeCaptureContext()
         do {
             try startPreparedCaptureContext(fresh, startTime: ProcessInfo.processInfo.systemUptime)
@@ -747,9 +928,11 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
         }
         guard continuousContext?.id == id else { throw CancellationError() }
         guard initial.accumulator.discardIfSilent() else { return }
-        initial.engine.removeTap()
-        initial.engine.stop()
         continuousContext = nil
+        guard stopEngine(initial.engine, acceptance: initial.acceptance) else {
+            throw AVAudioEngineCaptureError.cleanupBlocked
+        }
+        try Task.checkCancellation()
         let fresh = try makeCaptureContext()
         do {
             let accumulator = LockedContinuousSampleAccumulator(
@@ -764,7 +947,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
             try checkAuthorization()
             try fresh.engine.start()
             continuousContext = ContinuousCaptureContext(
-                id: id, engine: fresh.engine, accumulator: accumulator,
+                id: id, engine: fresh.engine, acceptance: fresh.acceptance, accumulator: accumulator,
                 sampleRate: fresh.sampleRate, pauseDuration: initial.pauseDuration,
                 configuration: initial.configuration, inputDevice: fresh.inputDevice, continuation: initial.continuation
             )
@@ -774,8 +957,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
             }
             guard continuousContext?.id == id else { throw CancellationError() }
         } catch {
-            fresh.engine.removeTap()
-            fresh.engine.stop()
+            _ = stopEngine(fresh.engine, acceptance: fresh.acceptance)
             initial.continuation.finish(throwing: error)
             throw error
         }
@@ -814,6 +996,8 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
 
     private func finishMicrophoneDiagnostic(id: UUID) {
         guard diagnosticID == id else { return }
+        interruptedCapture?.accumulator.discard()
+        interruptedCapture = nil
         if let context {
             stopActiveCapture(context)
             context.accumulator.discard()
@@ -822,12 +1006,15 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
     }
 
     func stopCapture() async throws -> DictationAudio {
-        guard let context else { throw terminalInputFailure ?? AVAudioEngineCaptureError.notCapturing }
-        guard context.engine.isRunning else {
-            failActiveInput(AVAudioEngineCaptureError.inputConfigurationChanged)
-            throw AVAudioEngineCaptureError.inputConfigurationChanged
+        guard let context = context ?? interruptedCapture else {
+            throw terminalInputFailure ?? AVAudioEngineCaptureError.notCapturing
         }
-        stopActiveCapture(context, prepareNext: true)
+        interruptedCapture = nil
+        let stopped = stopActiveCapture(context, prepareNext: true)
+        guard stopped else {
+            interruptedCapture = context
+            throw AVAudioEngineCaptureError.cleanupBlocked
+        }
 
         let samples = context.accumulator.drain()
         #if DEBUG
@@ -846,8 +1033,29 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
         return DictationAudio(samples: normalized.samples, speechEvidence: evidence)
     }
 
+    func takeInterruptedAudio() async -> DictationAudio? {
+        guard let interruptedCapture else { return nil }
+        self.interruptedCapture = nil
+        let samples = interruptedCapture.accumulator.drain()
+        guard !samples.isEmpty else { return nil }
+        return try? Self.normalize(samples: samples, from: interruptedCapture.sampleRate)
+    }
+
+    func captureIsQuiescent() async -> Bool {
+        do { try requireQuiescentEngine() }
+        catch { return false }
+        return context == nil && continuousContext == nil &&
+            interruptedCapture?.engine.isRunning != true && preparedContext?.engine.isRunning != true
+    }
+
     func cancelCapture() async {
         terminalInputFailure = nil
+        interruptedCapture?.accumulator.discard()
+        interruptedCapture = nil
+        if let blockedEngine {
+            blockedEngine.stop()
+            if !blockedEngine.isRunning { self.blockedEngine = nil }
+        }
         if let continuousContext {
             stopActiveContinuousCapture(continuousContext)
             continuousContext.accumulator.discard()
@@ -858,12 +1066,15 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
         context.accumulator.discard()
     }
 
-    private func stopActiveCapture(_ context: CaptureContext, prepareNext: Bool = false) {
-        self.context = nil
-        context.engine.removeTap()
-        context.engine.stop()
+    @discardableResult
+    private func stopActiveCapture(_ captureContext: CaptureContext, prepareNext: Bool = false) -> Bool {
+        if context?.engine.identity == captureContext.engine.identity { context = nil }
+        heldHealthTask?.cancel()
+        heldHealthTask = nil
+        let stopped = stopEngine(captureContext.engine, acceptance: captureContext.acceptance)
         levelObserver(0)
-        if prepareNext { Task { await self.prepareForCaptureIfAuthorized() } }
+        if stopped && prepareNext { Task { await self.prepareForCaptureIfAuthorized() } }
+        return stopped
     }
 
     static func normalize(samples: [Float], from sourceSampleRate: Double) throws -> DictationAudio {
@@ -1017,6 +1228,7 @@ final class LockedMonoSampleAccumulator: @unchecked Sendable {
     private var continuousDestination: LockedContinuousSampleAccumulator?
     private var meter = DictationAudioLevelMeter()
     private var receivedFirstBuffer = false
+    private var lastBufferTime = DispatchTime.now().uptimeNanoseconds
     private var isAccepting = true
 
     init(
@@ -1048,6 +1260,7 @@ final class LockedMonoSampleAccumulator: @unchecked Sendable {
                 sample += channels[channelIndex][frameIndex]
             }
             sample *= scale
+            guard sample.isFinite else { return }
             mono[frameIndex] = sample
             sumOfSquares += Double(sample) * Double(sample)
             peak = max(peak, abs(sample))
@@ -1062,6 +1275,7 @@ final class LockedMonoSampleAccumulator: @unchecked Sendable {
             previewBuffer?.append(mono)
         }
         receivedFirstBuffer = true
+        lastBufferTime = DispatchTime.now().uptimeNanoseconds
         let level = meter.consume(
             sumOfSquares: sumOfSquares,
             peak: peak,
@@ -1085,6 +1299,14 @@ final class LockedMonoSampleAccumulator: @unchecked Sendable {
         previewBuffer?.snapshot()
     }
 
+    var sourceChannelCount: Int { channelCount }
+
+    func inputIsStale() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return receivedFirstBuffer && DispatchTime.now().uptimeNanoseconds - lastBufferTime > 2_000_000_000
+    }
+
     func hasReceivedAudio() -> Bool {
         lock.lock()
         defer { lock.unlock() }
@@ -1105,6 +1327,7 @@ final class LockedMonoSampleAccumulator: @unchecked Sendable {
     func drain() -> [Float] {
         lock.lock()
         defer { lock.unlock() }
+        isAccepting = false
         let result = samples
         samples.removeAll(keepingCapacity: false)
         return result
@@ -1129,6 +1352,7 @@ final class LockedContinuousSampleAccumulator: @unchecked Sendable {
     private var isAccepting = true
     private var failure: Error?
     private var receivedFirstBuffer = false
+    private var lastBufferTime = DispatchTime.now().uptimeNanoseconds
 
     init(
         channelCount: Int,
@@ -1188,6 +1412,7 @@ final class LockedContinuousSampleAccumulator: @unchecked Sendable {
             fail(DictationContinuousCaptureError.bufferOverflow)
         }
         receivedFirstBuffer = true
+        lastBufferTime = DispatchTime.now().uptimeNanoseconds
         let level = meter.consume(
             sumOfSquares: sumOfSquares,
             peak: peak,
@@ -1202,19 +1427,33 @@ final class LockedContinuousSampleAccumulator: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         try mailbox.seedCapture(samples: samples)
-        if !samples.isEmpty { receivedFirstBuffer = true }
+        if !samples.isEmpty {
+            receivedFirstBuffer = true
+            lastBufferTime = DispatchTime.now().uptimeNanoseconds
+        }
     }
 
     func appendMono(_ samples: [Float]) {
         lock.lock()
         defer { lock.unlock() }
         guard isAccepting else { return }
-        if !samples.isEmpty { receivedFirstBuffer = true }
+        if !samples.isEmpty {
+            receivedFirstBuffer = true
+            lastBufferTime = DispatchTime.now().uptimeNanoseconds
+        }
         do {
             try mailbox.append(samples: samples)
         } catch {
             fail(DictationContinuousCaptureError.bufferOverflow)
         }
+    }
+
+    var sourceChannelCount: Int { channelCount }
+
+    func inputIsStale() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return receivedFirstBuffer && DispatchTime.now().uptimeNanoseconds - lastBufferTime > 2_000_000_000
     }
 
     func hasReceivedAudio() -> Bool {
@@ -1252,6 +1491,14 @@ final class LockedContinuousSampleAccumulator: @unchecked Sendable {
         }
     }
 
+    func finishPreservingAccepted() -> [[Float]] {
+        lock.lock()
+        defer { lock.unlock() }
+        isAccepting = false
+        do { return try mailbox.finish() }
+        catch { return mailbox.drain() }
+    }
+
     func discard() {
         lock.lock()
         isAccepting = false
@@ -1263,6 +1510,5 @@ final class LockedContinuousSampleAccumulator: @unchecked Sendable {
     private func fail(_ error: Error) {
         isAccepting = false
         failure = error
-        mailbox.discard()
     }
 }

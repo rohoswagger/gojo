@@ -56,14 +56,72 @@ enum DictationCopyOnlyReason: CaseIterable, Equatable, Sendable {
     }
 }
 
+enum DictationDeliveryDisposition: String, Equatable, Sendable {
+    case notSent
+    case partialUnknown
+    case allDispatched
+    case confirmed
+}
+
+struct DictationDeliveryReceipt: Equatable, Sendable {
+    let transactionID: UUID
+    let writerID: String
+    let disposition: DictationDeliveryDisposition
+    let writerQuiescent: Bool
+    let reason: String?
+
+    init(transactionID: UUID, writerID: String, disposition: DictationDeliveryDisposition,
+         writerQuiescent: Bool, reason: String? = nil) {
+        self.transactionID = transactionID
+        self.writerID = writerID
+        self.disposition = disposition
+        self.writerQuiescent = writerQuiescent
+        self.reason = reason
+    }
+
+    init?(dictionary: NSDictionary) {
+        guard let id = dictionary["transactionID"] as? String,
+              let transactionID = UUID(uuidString: id),
+              let writerID = dictionary["writerID"] as? String,
+              !writerID.isEmpty,
+              let rawDisposition = dictionary["disposition"] as? String,
+              let disposition = DictationDeliveryDisposition(rawValue: rawDisposition),
+              let quiescent = dictionary["writerQuiescent"] as? NSNumber else { return nil }
+        self.init(transactionID: transactionID, writerID: writerID, disposition: disposition,
+                  writerQuiescent: quiescent.boolValue, reason: dictionary["error"] as? String)
+    }
+}
+
 enum DictationInsertionOutcome: Equatable, Sendable {
     case verified
     case unverified
+    case notSent(String)
+    case partialUnknown(String)
+    case receipt(DictationDeliveryReceipt)
+
+    var disposition: DictationDeliveryDisposition {
+        switch self {
+        case .verified: return .confirmed
+        case .unverified: return .allDispatched
+        case .notSent: return .notSent
+        case .partialUnknown: return .partialUnknown
+        case .receipt(let receipt): return receipt.disposition
+        }
+    }
 
     var recoveryMessage: String? {
+        let reason: String?
         switch self {
-        case .verified: return nil
-        case .unverified: return "The app did not confirm receiving this text. It is saved for copying."
+        case .notSent(let message), .partialUnknown(let message): reason = message
+        case .receipt(let receipt): reason = receipt.reason
+        case .verified, .unverified: reason = nil
+        }
+        switch disposition {
+        case .confirmed, .allDispatched: return nil
+        case .notSent: return reason ?? "Gojo did not send this text. It is saved for copying."
+        case .partialUnknown:
+            let warning = "Some text may already be in the app. Review it before copying the saved transcript."
+            return reason.map { "\($0) \(warning)" } ?? warning
         }
     }
 }

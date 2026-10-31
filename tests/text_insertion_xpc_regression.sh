@@ -42,7 +42,7 @@ additional_capture_signature = capture_signature.replace(
     "captureFocusedTextTarget", "captureAdditionalFocusedTextTarget"
 )
 insert_signature = (
-    "func insertText(_ text: String, token: String, "
+    "func insertText(_ text: String, token: String, transactionID: String, "
     "with reply: @escaping (NSDictionary) -> Void)"
 )
 for source in (main_protocol, helper_protocol):
@@ -222,7 +222,10 @@ assert "try await insert(text, into: target, plan: plan, retaining: true)" in in
 assert "case .external(let token, _, _, _) = target" in inserter
 assert "XPCHelperClient.shared.insertTextRetainingTarget(text, token: token)" in inserter
 assert "XPCHelperClient.shared.insertText(text, token: token)" in inserter
-assert inserter.count('return (result["verified"] as? NSNumber)?.boolValue == true ? .verified : .unverified') == 1, "The shared external insertion path must preserve the recovery copy without explicit app confirmation."
+assert "DictationDeliveryReceipt(dictionary: result)" in inserter
+assert "return .receipt(DictationDeliveryReceipt(transactionID: receipt.transactionID" in inserter
+assert "reason: reason" in inserter, "Localized receipt messages must preserve transaction identity and certainty."
+assert "return .partialUnknown(" in inserter
 shortcut_key_down = service[
     service.index("case .keyDown, .startVoiceMode:"):
     service.index("case .keyUp:")
@@ -245,7 +248,7 @@ assert '"focusedControl"' not in helper, (
 assert "capturedTextTargets.removeValue(forKey: token)" in helper
 assert "currentPID == target.pid" in helper
 assert "CFEqual(currentElement, target.element)" in helper
-assert helper.count("guard isStillFocused(target) else") >= 2
+assert "guard self.isStillFocused(target) else" in helper
 assert '"error": "applicationPasteRequired"' in helper
 assert '"error": "applicationUnicodeRequired"' in helper
 unicode_handoff = helper[
@@ -263,10 +266,10 @@ assert '"windowID": NSNumber(value: windowID)' in helper
 assert 'let windowID = result["windowID"] as? NSNumber' in client
 assert "CGWindowID(truncating: windowID)" in client
 assert "guard await raiseWindow(pid: targetPID, windowID: targetWindowID)" not in client
-assert "return await DictationApplicationInsertionService.shared.insertUnicode(" in client
+assert "await DictationApplicationInsertionService.shared.insertUnicode(" in client
 unicode_insertion = client[
     client.index("func insertUnicode("):
-    client.index("private func failure(")
+    client.index("private func unicodeFailure(")
 ]
 assert "hasSecureFocusedAncestry(target.pid)" in unicode_insertion
 secure_client = client[
@@ -284,52 +287,34 @@ assert "validateApplicationPasteTarget" not in client
 assert "validateApplicationPasteTarget" not in helper
 assert "validateApplicationPasteTarget" not in main_protocol
 assert "validateApplicationPasteTarget" not in helper_protocol
-assert "commandDown.post(tap: .cghidEventTap)" in client
-assert "pasteDown.post(tap: .cghidEventTap)" in client
-assert "pasteUp.post(tap: .cghidEventTap)" in client
-assert "commandUp.post(tap: .cghidEventTap)" in client
-assert "var commandIsDown = false" in client
-assert "var pasteIsDown = false" in client
-assert "if pasteIsDown" in client
-assert "if commandIsDown" in client
-assert '"method": "application-paste"' in client
 assert '"method": "application-unicode"' in client
 assert '"verified": false' in helper
-assert '"clipboardRestored": false' in client
-assert "let shouldRestore = pasteboard.changeCount == injectedChangeCount" not in client
+assert "DictationDeliveryWriter.shared.perform(transactionID: transactionID)" in client
+assert "cancellation.cancel()" in client
+assert "transactionID: transactionID.uuidString" in client
+assert '"writerQuiescent": !requested' in client
+assert 'requested ? "partialUnknown" : "notSent"' in client
+assert 'receipt["writerID"] = hostWriterID' in client
 
-# Direct AX insertion must precede the narrowly allowed paste fallback.
-ax_insert = helper.index("AXUIElementSetAttributeValue(")
-paste_fallback = helper.index("insertWithGuardedPaste(text")
-assert ax_insert < paste_fallback
-assert "guard target.allowsPasteFallback else" in helper
-assert '"error": "axInsertionNotConfirmed"' in helper
+# Automatic delivery uses direct AX or Unicode. Posting Cmd-V cannot prove
+# clipboard consumption, so automatic paste and post-AX fallback are disabled.
+assert "insertWithGuardedPaste" not in helper
+assert "waitForPasteConfirmation" not in helper
+assert "NSPasteboard.general" not in helper
+assert "NSPasteboard.general" not in client
+assert "pasteDown.post" not in client
+assert "AXUIElementSetAttributeValue(" in helper
 assert "waitForAccessibilityConfirmation(" in helper
-assert "attemptsRemaining: 20" in helper
-assert "expectation.confirmsNoMutation(currentValue: currentValue)" in helper
-assert "expectation.insertionText" in helper
-unverified_reply = helper.index('"error": "axInsertionNotConfirmed"')
-verified_reply = helper.index('"verified": true', unverified_reply)
-assert unverified_reply < verified_reply
-
-# Clipboard fallback must be transient, preserve the old contents best-effort,
-# and never overwrite a clipboard changed by the user or target application.
-assert '"org.nspasteboard.TransientType"' in helper
-assert "let snapshot = PasteboardSnapshot(pasteboard: pasteboard)" in helper
-assert "let isComplete: Bool" in helper
-assert "let isComplete: Bool" in client
-assert "guard snapshot.isComplete else" in helper
-assert "guard snapshot.isComplete else" in client
-assert '"clipboardSnapshotUnavailable"' in helper
-assert '"clipboardSnapshotUnavailable"' in client
-assert "pasteboard.changeCount == injectedChangeCount" in helper
-assert "snapshot.restore(to: pasteboard)" in helper
-assert '"clipboardRestored": restored' in helper
-assert '"error": "pasteNotConfirmed"' in helper
-assert "waitForPasteConfirmation(" in helper
-assert "PasteMutationExpectation" in helper
-assert "elementContainsText" not in helper
-assert '"verified": true' in helper
+assert '"disposition": "allDispatched"' in helper
+assert '"disposition": "partialUnknown"' in helper
+assert "Self.insertionReceipts[transactionID]" in helper
+assert "Self.insertionWaiters[transactionID]?.append(reply)" in helper
+assert 'receipt["writerQuiescent"] = true' in helper
+assert 'receipt["transactionID"] = transactionID' in helper
+assert 'receipt["writerID"] = Self.insertionWriterID' in helper
+assert '"automaticPasteDisabled"' in client
+confirmation = helper[helper.index("private func waitForAccessibilityConfirmation("):helper.index("private func pasteMutationExpectation(")]
+assert "capturedTextTargets" not in confirmation, "Releasing a target after commitment must not erase its receipt."
 
 # Every insertion result is structured and the async client exposes both calls.
 for key in ('"authorized"', '"success"', '"method"', '"error"'):
@@ -344,8 +329,8 @@ assert shared_client_capture.count("preferredDictationApplicationPasteTarget()")
 assert shared_client_capture.count("notifyAuthorizationChange(authorized)") == 1
 assert "service.captureFocusedTextTarget(" in shared_client_capture
 assert "service.captureAdditionalFocusedTextTarget(" in shared_client_capture
-assert "func insertText(_ text: String, token: String) async -> NSDictionary" in client
-assert client.count('"error": "helperUnavailable"') >= 2
+assert "func insertText(_ text: String, token: String, transactionID: UUID = UUID()) async -> NSDictionary" in client
+assert '"helperUnavailable"' in client
 
 # The helper is TCC-authorized, so it must reject XPC clients that are not
 # signed as the containing Gojo app.

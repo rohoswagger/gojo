@@ -48,8 +48,8 @@ import Foundation
     /// Inserts text into a native element only when it is still focused. Browser
     /// and custom-editor replies identify the captured app and window for paste.
     /// Replies with `authorized`, `success`, `method`, and an optional `error`.
-    func insertText(_ text: String, token: String, with reply: @escaping (NSDictionary) -> Void)
-    func insertTextRetainingTarget(_ text: String, token: String, with reply: @escaping (NSDictionary) -> Void)
+    func insertText(_ text: String, token: String, transactionID: String, with reply: @escaping (NSDictionary) -> Void)
+    func insertTextRetainingTarget(_ text: String, token: String, transactionID: String, with reply: @escaping (NSDictionary) -> Void)
     func releaseTextTarget(_ token: String, with reply: @escaping () -> Void)
     /// Watches the field that just received `text` for a user correction and
     /// replies once with `original` and `edited` (the edited span only), or an

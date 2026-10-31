@@ -85,44 +85,6 @@ private final class DictationCorrectionObservation {
     }
 }
 
-private struct PasteboardSnapshot {
-    let items: [[NSPasteboard.PasteboardType: Data]]
-    let isComplete: Bool
-
-    init(pasteboard: NSPasteboard) {
-        var capturedItems: [[NSPasteboard.PasteboardType: Data]] = []
-        var capturedEveryType = true
-        for item in pasteboard.pasteboardItems ?? [] {
-            var capturedItem: [NSPasteboard.PasteboardType: Data] = [:]
-            for type in item.types {
-                guard let data = item.data(forType: type) else {
-                    capturedEveryType = false
-                    continue
-                }
-                capturedItem[type] = data
-            }
-            capturedItems.append(capturedItem)
-        }
-        items = capturedItems
-        isComplete = capturedEveryType
-    }
-
-    @discardableResult
-    func restore(to pasteboard: NSPasteboard) -> Bool {
-        pasteboard.clearContents()
-        guard !items.isEmpty else { return true }
-
-        let restoredItems = items.map { storedItem -> NSPasteboardItem in
-            let item = NSPasteboardItem()
-            for (type, data) in storedItem {
-                item.setData(data, forType: type)
-            }
-            return item
-        }
-        return pasteboard.writeObjects(restoredItems)
-    }
-}
-
 @_silgen_name("_AXUIElementGetWindow")
 private func _AXUIElementGetWindow(_ element: AXUIElement, _ identifier: UnsafeMutablePointer<CGWindowID>) -> AXError
 
@@ -154,6 +116,11 @@ private final class DictationClientEndpoint: @unchecked Sendable {
 }
 
 class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
+    private static let insertionWriterID = "helper:\(UUID().uuidString)"
+    private static var insertionReceipts: [String: NSDictionary] = [:]
+    private static var insertionWaiters: [String: [(NSDictionary) -> Void]] = [:]
+    private static var activeInsertion: String?
+
     private let dictationOwner = UUID()
     private var clientEndpoint: DictationClientEndpoint?
 
@@ -225,10 +192,6 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
     private static let correctionPollInterval: TimeInterval = 0.5
     private static let correctionStabilityInterval: UInt64 = 2_000_000_000
     private static let correctionSnapshotGrace: UInt64 = 2_000_000_000
-    private static let pasteKeyCode: CGKeyCode = 9
-    private static let transientPasteboardType = NSPasteboard.PasteboardType(
-        "org.nspasteboard.TransientType"
-    )
     private static let protectedContentAttribute = "AXContainsProtectedContent"
     private static let isFocusedAttribute = kAXFocusedAttribute as String
 
@@ -523,17 +486,19 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
     @objc func insertText(
         _ text: String,
         token: String,
+        transactionID: String,
         with reply: @escaping (NSDictionary) -> Void
     ) {
-        performTextInsertion(text, token: token, retainingTarget: false, reply: reply)
+        performTextInsertion(text, token: token, transactionID: transactionID, retainingTarget: false, reply: reply)
     }
 
     @objc func insertTextRetainingTarget(
         _ text: String,
         token: String,
+        transactionID: String,
         with reply: @escaping (NSDictionary) -> Void
     ) {
-        performTextInsertion(text, token: token, retainingTarget: true, reply: reply)
+        performTextInsertion(text, token: token, transactionID: transactionID, retainingTarget: true, reply: reply)
     }
 
     @objc func releaseTextTarget(_ token: String, with reply: @escaping () -> Void) {
@@ -684,6 +649,7 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
     private func performTextInsertion(
         _ text: String,
         token: String,
+        transactionID: String,
         retainingTarget: Bool,
         reply: @escaping (NSDictionary) -> Void
     ) {
@@ -697,7 +663,38 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
                 ])
                 return
             }
+            if let receipt = Self.insertionReceipts[transactionID] {
+                reply(receipt)
+                return
+            }
+            if Self.insertionWaiters[transactionID] != nil {
+                Self.insertionWaiters[transactionID]?.append(reply)
+                return
+            }
+            guard UUID(uuidString: transactionID) != nil, Self.insertionReceipts.count < 4096 else {
+                reply(["authorized": true, "success": false, "method": "none", "error": "deliveryHistoryFull",
+                       "transactionID": transactionID, "writerID": Self.insertionWriterID,
+                       "disposition": "notSent", "writerQuiescent": true])
+                return
+            }
+            Self.insertionWaiters[transactionID] = [reply]
             let complete: (NSDictionary) -> Void = { result in
+                guard let waiters = Self.insertionWaiters.removeValue(forKey: transactionID) else { return }
+                var receipt: [String: Any] = [:]
+                for (key, value) in result {
+                    if let key = key as? String { receipt[key] = value }
+                }
+                receipt["transactionID"] = transactionID
+                receipt["writerID"] = Self.insertionWriterID
+                receipt["writerQuiescent"] = true
+                if receipt["disposition"] == nil {
+                    let success = (result["success"] as? NSNumber)?.boolValue == true
+                    let verified = (result["verified"] as? NSNumber)?.boolValue == true
+                    receipt["disposition"] = success ? (verified ? "confirmed" : "allDispatched") : "notSent"
+                }
+                let immutable = NSDictionary(dictionary: receipt)
+                Self.insertionReceipts[transactionID] = immutable
+                if Self.activeInsertion == transactionID { Self.activeInsertion = nil }
                 let error = result["error"] as? String
                 if retainingTarget,
                    (result["success"] as? NSNumber)?.boolValue != true,
@@ -705,8 +702,13 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
                    error != "applicationUnicodeRequired" {
                     self.capturedTextTargets.removeValue(forKey: token)
                 }
-                reply(result)
+                waiters.forEach { $0(immutable) }
             }
+            guard Self.activeInsertion == nil else {
+                complete(self.textInsertionFailure(authorized: true, error: "writerBusy"))
+                return
+            }
+            Self.activeInsertion = transactionID
             guard AXIsProcessTrusted() else {
                 self.capturedTextTargets.removeValue(forKey: token)
                 complete(self.textInsertionFailure(authorized: false, error: "permissionMissing"))
@@ -724,7 +726,6 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
                 complete(self.textInsertionFailure(authorized: true, error: "invalidToken"))
                 return
             }
-            let retainedToken = retainingTarget ? token : nil
             if target.kind == .applicationPaste {
                 guard let windowID = target.windowID else {
                     complete(self.textInsertionFailure(authorized: true, error: "focusChanged"))
@@ -781,9 +782,10 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
                 guard let accessibilityExpectation else {
                     complete([
                         "authorized": true,
-                        "success": false,
+                        "success": true,
                         "method": "accessibility",
                         "verified": false,
+                        "disposition": "allDispatched",
                         "error": "axInsertionNotConfirmed",
                     ])
                     return
@@ -791,18 +793,16 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
                 self.waitForAccessibilityConfirmation(
                     expectation: accessibilityExpectation,
                     target: target,
-                    retainedToken: retainedToken,
                     attemptsRemaining: 20,
                     reply: complete
                 )
                 return
             }
 
-            guard target.allowsPasteFallback else {
-                complete(self.textInsertionFailure(authorized: true, error: "axInsertionFailed"))
-                return
-            }
-            self.insertWithGuardedPaste(text, target: target, retainedToken: retainedToken, reply: complete)
+            complete([
+                "authorized": true, "success": false, "method": "accessibility",
+                "disposition": "partialUnknown", "verified": false, "error": "axInsertionFailed",
+            ])
         }
     }
 
@@ -1630,211 +1630,29 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
         )
     }
 
-    private func insertWithGuardedPaste(
-        _ text: String,
-        target: CapturedTextTarget,
-        retainedToken: String?,
-        reply: @escaping (NSDictionary) -> Void
-    ) {
-        guard isTextTargetActive(retainedToken) else {
-            reply(textInsertionFailure(authorized: true, error: "invalidToken"))
-            return
-        }
-        guard isStillFocused(target) else {
-            reply(textInsertionFailure(authorized: true, error: "focusChanged"))
-            return
-        }
-        guard let eventSource = CGEventSource(stateID: .hidSystemState),
-              let keyDown = CGEvent(
-                keyboardEventSource: eventSource,
-                virtualKey: Self.pasteKeyCode,
-                keyDown: true
-              ),
-              let keyUp = CGEvent(
-                keyboardEventSource: eventSource,
-                virtualKey: Self.pasteKeyCode,
-                keyDown: false
-              ) else {
-            reply(textInsertionFailure(authorized: true, error: "pasteEventUnavailable"))
-            return
-        }
-
-        keyDown.flags = .maskCommand
-        keyUp.flags = .maskCommand
-
-        let pasteboard = NSPasteboard.general
-        let snapshot = PasteboardSnapshot(pasteboard: pasteboard)
-        guard snapshot.isComplete else {
-            reply(textInsertionFailure(authorized: true, error: "clipboardSnapshotUnavailable"))
-            return
-        }
-        let transcriptItem = NSPasteboardItem()
-        transcriptItem.setString(text, forType: .string)
-        transcriptItem.setData(Data(), forType: Self.transientPasteboardType)
-
-        pasteboard.clearContents()
-        guard pasteboard.writeObjects([transcriptItem]) else {
-            _ = snapshot.restore(to: pasteboard)
-            reply(textInsertionFailure(authorized: true, error: "pasteboardWriteFailed"))
-            return
-        }
-        let injectedChangeCount = pasteboard.changeCount
-
-        // Re-check after touching the pasteboard and immediately before sending
-        // Cmd-V. This closes the last focus-change window before the side effect.
-        guard isStillFocused(target) else {
-            if pasteboard.changeCount == injectedChangeCount {
-                _ = snapshot.restore(to: pasteboard)
-            }
-            reply(textInsertionFailure(authorized: true, error: "focusChanged"))
-            return
-        }
-        guard let expectation = pasteMutationExpectation(text, into: target.element) else {
-            if pasteboard.changeCount == injectedChangeCount {
-                _ = snapshot.restore(to: pasteboard)
-            }
-            reply(textInsertionFailure(authorized: true, error: "pasteVerificationUnavailable"))
-            return
-        }
-
-        keyDown.post(tap: .cghidEventTap)
-        keyUp.post(tap: .cghidEventTap)
-
-        waitForPasteConfirmation(
-            expectation: expectation,
-            target: target,
-            retainedToken: retainedToken,
-            pasteboard: pasteboard,
-            injectedChangeCount: injectedChangeCount,
-            snapshot: snapshot,
-            attemptsRemaining: 20,
-            reply: reply
-        )
-    }
-
     private func waitForAccessibilityConfirmation(
         expectation: PasteMutationExpectation,
         target: CapturedTextTarget,
-        retainedToken: String?,
         attemptsRemaining: Int,
         reply: @escaping (NSDictionary) -> Void
     ) {
-        guard isTextTargetActive(retainedToken) else {
-            reply(textInsertionFailure(authorized: true, error: "invalidToken"))
-            return
-        }
         if expectation.confirms(
             currentValue: copyString(target.element, attribute: kAXValueAttribute as String)
         ) {
-            reply([
-                "authorized": true,
-                "success": true,
-                "method": "accessibility",
-                "verified": true,
-            ])
+            reply(["authorized": true, "success": true, "method": "accessibility", "verified": true])
             return
         }
         guard attemptsRemaining > 0 else {
-            let currentValue = copyString(
-                target.element,
-                attribute: kAXValueAttribute as String
-            )
-            if target.allowsPasteFallback,
-               expectation.confirmsNoMutation(currentValue: currentValue),
-               isStillFocused(target) {
-                insertWithGuardedPaste(
-                    expectation.insertionText,
-                    target: target,
-                    retainedToken: retainedToken,
-                    reply: reply
-                )
-                return
-            }
             reply([
-                "authorized": true,
-                "success": false,
-                "method": "accessibility",
-                "verified": false,
-                "error": "axInsertionNotConfirmed",
+                "authorized": true, "success": true, "method": "accessibility", "verified": false,
+                "disposition": "allDispatched", "error": "axInsertionNotConfirmed",
             ])
             return
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.025) { [weak self] in
-            self?.waitForAccessibilityConfirmation(
-                expectation: expectation,
-                target: target,
-                retainedToken: retainedToken,
-                attemptsRemaining: attemptsRemaining - 1,
-                reply: reply
-            )
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.025) {
+            self.waitForAccessibilityConfirmation(expectation: expectation, target: target,
+                attemptsRemaining: attemptsRemaining - 1, reply: reply)
         }
-    }
-
-    private func waitForPasteConfirmation(
-        expectation: PasteMutationExpectation,
-        target: CapturedTextTarget,
-        retainedToken: String?,
-        pasteboard: NSPasteboard,
-        injectedChangeCount: Int,
-        snapshot: PasteboardSnapshot,
-        attemptsRemaining: Int,
-        reply: @escaping (NSDictionary) -> Void
-    ) {
-        guard isTextTargetActive(retainedToken) else {
-            if pasteboard.changeCount == injectedChangeCount,
-               expectation.confirms(
-                currentValue: copyString(target.element, attribute: kAXValueAttribute as String)
-               ) {
-                _ = snapshot.restore(to: pasteboard)
-            }
-            reply(textInsertionFailure(authorized: true, error: "invalidToken"))
-            return
-        }
-        if expectation.confirms(
-            currentValue: copyString(target.element, attribute: kAXValueAttribute as String)
-        ) {
-            let shouldRestore = pasteboard.changeCount == injectedChangeCount
-            let restored = shouldRestore ? snapshot.restore(to: pasteboard) : false
-            reply([
-                "authorized": true,
-                "success": true,
-                "method": "paste",
-                "verified": true,
-                "clipboardRestored": restored,
-            ])
-            return
-        }
-        guard attemptsRemaining > 0 else {
-            // Keep the transcript on the clipboard when consumption is not
-            // confirmed. Restoring here could make a delayed Cmd-V insert the
-            // user's previous clipboard contents.
-            reply([
-                "authorized": true,
-                "success": false,
-                "method": "paste",
-                "verified": false,
-                "clipboardRestored": false,
-                "error": "pasteNotConfirmed",
-            ])
-            return
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-            self?.waitForPasteConfirmation(
-                expectation: expectation,
-                target: target,
-                retainedToken: retainedToken,
-                pasteboard: pasteboard,
-                injectedChangeCount: injectedChangeCount,
-                snapshot: snapshot,
-                attemptsRemaining: attemptsRemaining - 1,
-                reply: reply
-            )
-        }
-    }
-
-    private func isTextTargetActive(_ retainedToken: String?) -> Bool {
-        guard let retainedToken else { return true }
-        return capturedTextTargets[retainedToken] != nil
     }
 
     private func pasteMutationExpectation(

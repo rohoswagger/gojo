@@ -127,7 +127,7 @@ require_match \
 
 require_match \
   Gojo/components/Settings/SettingsView.swift \
-  'Toggle\("Polish English dictated text".*?\.disabled\(\s*!dictation\.s1MiniInstalled\s*\|\|\s*dictation\.s1MiniOperation\s*!=\s*nil\s*\)' \
+  'Toggle\("AI polish \(optional, English\)".*?\.disabled\(\s*!dictation\.s1MiniInstalled\s*\|\|\s*dictation\.s1MiniOperation\s*!=\s*nil\s*\)' \
   "the cleanup toggle must remain disabled for the full S1-mini operation"
 
 require_match \
@@ -139,5 +139,15 @@ require_match \
   Gojo/Info.plist \
   'Audio stays on your Mac with local models, or is sent to your selected cloud transcription provider when you enable cloud dictation\.' \
   "microphone privacy copy must distinguish local and explicitly enabled cloud transcription"
+
+require_match \
+  Gojo/Dictation/BarkDictationTranscriber.swift \
+  'func\s+install\(onProgress:\s*@escaping\s+@Sendable\s+\(Double\)\s*->\s*Void\s*=\s*\{\s*_\s+in\s*\}\).*?resolvePinnedModelFolder\(\s*allowDownload:\s*DictationModelRequest\.settingsDownload\.allowsDownload' \
+  "Bark downloads must be explicitly requested from Settings"
+
+require_match \
+  Gojo/Dictation/BarkDictationTranscriber.swift \
+  'private\s+func\s+loadManager\(\).*?guard\s+let\s+modelFolder\s*=\s*installedModelFolder\(\)' \
+  "Bark inference must require verified local model files"
 
 echo "dictation-offline-policy-pass"

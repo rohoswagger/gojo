@@ -174,11 +174,17 @@ private struct XPCTextInserter: DictationTextInserting {
         let result = retaining
             ? await XPCHelperClient.shared.insertTextRetainingTarget(text, token: token)
             : await XPCHelperClient.shared.insertText(text, token: token)
-        guard (result["success"] as? NSNumber)?.boolValue == true else {
-            throw DictationXPCError(code: result["error"] as? String ?? "insertionFailed")
+        if let receipt = DictationDeliveryReceipt(dictionary: result) {
+            if receipt.disposition == .confirmed {
+                await GojoDictationService.shared.observeCorrections(to: text, targetIdentity: target.identity, eligible: plan.learnsCorrections, sessionID: plan.id)
+            }
+            let reason = receipt.reason.map { DictationXPCError(code: $0).localizedDescription }
+            return .receipt(DictationDeliveryReceipt(transactionID: receipt.transactionID, writerID: receipt.writerID,
+                disposition: receipt.disposition, writerQuiescent: receipt.writerQuiescent,
+                reason: reason))
         }
-        await GojoDictationService.shared.observeCorrections(to: text, targetIdentity: target.identity, eligible: plan.learnsCorrections, sessionID: plan.id)
-        return (result["verified"] as? NSNumber)?.boolValue == true ? .verified : .unverified
+        return .partialUnknown(DictationXPCError(code: result["error"] as? String ?? "insertionFailed").localizedDescription)
+
     }
 
     func releaseTarget(_ target: DictationTextTarget) async {
@@ -209,6 +215,14 @@ private struct DictationXPCError: LocalizedError {
             return "Gojo could not add the text. The transcript is still on your clipboard."
         case "helperUnavailable":
             return "Gojo's text helper is not available. Restart Gojo and try again."
+        case "writerCleanupBlocked":
+            return "A previous text write has not finished. Restart Gojo before dictating again."
+        case "deliveryHistoryFull":
+            return "Dictation's delivery history is full. Restart Gojo before dictating again."
+        case "automaticPasteDisabled":
+            return "This field needs clipboard paste. Copy the saved transcript to paste it yourself."
+        case "insertionCancelled":
+            return "Dictation was canceled. Review the app before using the saved transcript."
         case "emptyText":
             return "Gojo did not hear anything."
         case "clipboardSnapshotUnavailable", "pasteEventUnavailable", "pasteboardWriteFailed", "pasteVerificationUnavailable", "insertionFailed":
@@ -256,10 +270,18 @@ final class GojoDictationService: ObservableObject {
     @Published private(set) var s1MiniError: String?
     @Published private(set) var installedModels: Set<DictationModelID> = []
     @Published private(set) var modelOperation: DictationModelOperation?
+    @Published private(set) var modelDownload: DictationModelDownload?
     @Published private(set) var modelErrors: [DictationModelID: String] = [:]
     @Published private(set) var audioLevel: Float = 0
     @Published private(set) var recoveryText = ""
     @Published private(set) var recoveryMessage: String?
+    @Published private(set) var recoverableAudioID: UUID?
+    @Published private(set) var recoveryAudioMessage: String?
+    @Published private(set) var recoveryAttentionID: UUID?
+    @Published private(set) var recoveryRecords: [DictationRecoveryRecord] = []
+    @Published private(set) var recoveryTextCount = 0
+    @Published private(set) var latestDeliveryUnconfirmed = false
+    @Published private(set) var selectedRecoveryID: UUID?
     @Published private(set) var targetApplicationName: String?
     @Published private(set) var sessionDisplayID: CGDirectDisplayID?
 
@@ -355,6 +377,7 @@ final class GojoDictationService: ObservableObject {
                 let generation = self.shortcutGeneration
                 let currentState = await controller.state
                 guard generation == self.shortcutGeneration, currentState == state else { return }
+                self.latestDeliveryUnconfirmed = await controller.latestDeliveryUnconfirmed
                 self.receive(state)
             }
         }
@@ -373,12 +396,20 @@ final class GojoDictationService: ObservableObject {
             polisher: polisher,
             inserter: XPCTextInserter(),
             stateObserver: observer,
-            recoveryObserver: { [weak self] text, message in
+            recoveryRecordsObserver: { [weak self] records, attentionID in
                 Task { @MainActor in
                     guard let self, let controller = self.controller,
-                          await controller.recoverySnapshot == (text, message) else { return }
-                    self.recoveryText = text
-                    self.recoveryMessage = message
+                          await controller.recoveryRecords == records,
+                          await controller.recoveryAttentionID == attentionID else { return }
+                    self.recoveryRecords = records
+                    let audioRecord = records.first { if case .audio = $0.payload { return true }; return false }
+                    self.recoverableAudioID = audioRecord?.id
+                    self.recoveryAudioMessage = audioRecord?.reason
+                    self.recoveryAttentionID = attentionID
+                    if records.contains(where: { $0.id == attentionID && $0.payload != nil }) {
+                        self.selectedRecoveryID = attentionID
+                    }
+                    self.projectRecoveryText()
                 }
             },
             targetObserver: { [weak self] target in
@@ -394,7 +425,7 @@ final class GojoDictationService: ObservableObject {
             beforeCapture: { await DictationOutputSilencer.shared.quietForDictation() },
             acquireSessionResources: { [weak self, modelResidency] _ in
                 await self?.adjustSessionResources(by: 1)
-                let lease = await modelResidency.acquire()
+                let lease = await modelResidency.acquireRead()
                 return { [weak self, modelResidency] in
                     await modelResidency.release(lease)
                     await self?.adjustSessionResources(by: -1)
@@ -463,7 +494,7 @@ final class GojoDictationService: ObservableObject {
                     let warmStart = ProcessInfo.processInfo.systemUptime
                     #endif
                     do {
-                        let lease = await self.modelResidency.acquire()
+                        let lease = await self.modelResidency.acquireRead()
                         do {
                             try await localTranscriber.prepare(request: request)
                             await self.modelResidency.release(lease)
@@ -491,7 +522,7 @@ final class GojoDictationService: ObservableObject {
                     await self.shouldRunS1MiniWarmup(generation: completedGeneration)
                 },
                 prepareCleanup: { [polisher, modelResidency] in
-                    let lease = await modelResidency.acquire()
+                    let lease = await modelResidency.acquireRead(.polisher)
                     await polisher.prepareIfInstalled()
                     await modelResidency.release(lease)
                 }
@@ -794,7 +825,44 @@ final class GojoDictationService: ObservableObject {
     func pauseVoiceMode() { Self.sendShortcutEvent(.pauseVoiceMode) }
     func resumeVoiceMode() { Self.sendShortcutEvent(.resumeVoiceMode) }
     func finishVoiceMode() { Self.sendShortcutEvent(.finishVoiceMode) }
-    func clearRecoveryText(matching text: String) { Self.sendShortcutEvent(.clearRecoveryText(text)) }
+    func retryRecovery(id: UUID) {
+        Task { await controller?.retryRecovery(id: id) }
+    }
+
+    func discardRecovery(id: UUID) {
+        Task { await controller?.discardRecovery(id: id) }
+    }
+
+    private func projectRecoveryText() {
+        let texts = recoveryRecords.filter { if case .text = $0.payload { return true }; return false }
+        recoveryTextCount = texts.count
+        let selected = texts.first { $0.id == selectedRecoveryID } ?? texts.last
+        selectedRecoveryID = selected?.id
+        if case .text(let text) = selected?.payload { recoveryText = text } else { recoveryText = "" }
+        if selected?.outcome.disposition == .allDispatched {
+            recoveryMessage = "Text sent, unverified. Review the app before copying this transcript."
+        } else { recoveryMessage = selected?.reason }
+    }
+
+    func selectNextRecovery() {
+        let ids = recoveryRecords.compactMap { record -> UUID? in
+            if case .text = record.payload { return record.id }; return nil
+        }
+        guard !ids.isEmpty else { return }
+        let index = selectedRecoveryID.flatMap { ids.firstIndex(of: $0) } ?? -1
+        selectedRecoveryID = ids[(index + 1) % ids.count]
+        projectRecoveryText()
+    }
+
+    func markRecoveryCopied(id: UUID?, matching text: String) {
+        guard recoveryText == text, let id, id == selectedRecoveryID else { return }
+        Task { await controller?.markRecoveryCopied(id: id) }
+    }
+
+    func clearRecoveryText(id: UUID?, matching text: String) {
+        guard recoveryText == text, let id, id == selectedRecoveryID else { return }
+        Task { await controller?.discardRecovery(id: id) }
+    }
 
     func terminate() {
         cancelMicrophoneTest()
@@ -819,7 +887,7 @@ final class GojoDictationService: ObservableObject {
         let request = DictationRecognitionRequest.local(try DictationLocalRecognition(model: selectedModel,
             language: recognitionLanguage, translateToEnglish: translatesToEnglish,
             recognitionTerms: usesVocabulary ? DictationVocabularyPolicy.recognitionTerms(vocabulary) : []))
-        let lease = await modelResidency.acquire()
+        let lease = await modelResidency.acquireRead()
         do {
             let transcript = try await localTranscriber.transcribe(audio, request: request)
             await modelResidency.release(lease)
@@ -839,14 +907,20 @@ final class GojoDictationService: ObservableObject {
 
     func downloadModel(_ model: DictationModelID) {
         guard canChangeModel, !installedModels.contains(model) else { return }
-        let operation = DictationModelOperation.installing(model)
-        modelOperation = operation
+        let id = UUID()
+        modelOperation = .installing(model)
+        modelDownload = DictationModelDownload(id: id, model: model, phase: .preparing)
         modelErrors[model] = nil
         Task {
             do {
-                let lease = await modelResidency.acquire()
+                let lease = await modelResidency.acquireMaintenance()
                 do {
-                    try await localTranscriber.install(model)
+                    try Task.checkCancellation()
+                    try await localTranscriber.install(model) { [weak self] fraction in
+                        Task { @MainActor [weak self] in
+                            self?.receiveModelDownloadProgress(fraction, id: id)
+                        }
+                    }
                     await modelResidency.release(lease)
                 } catch {
                     await modelResidency.release(lease)
@@ -856,9 +930,22 @@ final class GojoDictationService: ObservableObject {
             } catch {
                 modelErrors[model] = modelOperationError(error, fallback: "Could not download this model. Check your connection and try again.")
             }
-            if modelOperation == operation {
-                modelOperation = nil
-            }
+            finishModelDownload(id: id)
+        }
+    }
+
+    private func receiveModelDownloadProgress(_ fraction: Double, id: UUID) {
+        guard let download = modelDownload,
+              download.id == id,
+              modelOperation == .installing(download.model) else { return }
+        modelDownload = download.advancing(to: fraction)
+    }
+
+    private func finishModelDownload(id: UUID) {
+        guard let download = modelDownload, download.id == id else { return }
+        modelDownload = nil
+        if modelOperation == .installing(download.model) {
+            modelOperation = nil
         }
     }
 
@@ -871,8 +958,9 @@ final class GojoDictationService: ObservableObject {
         modelErrors[model] = nil
         Task {
             do {
-                let lease = await modelResidency.acquire()
+                let lease = await modelResidency.acquireMaintenance()
                 do {
+                    try Task.checkCancellation()
                     try await localTranscriber.selectModel(model)
                     await modelResidency.release(lease)
                 } catch {
@@ -899,8 +987,9 @@ final class GojoDictationService: ObservableObject {
         Task {
             var removalError: String?
             do {
-                let lease = await modelResidency.acquire()
+                let lease = await modelResidency.acquireMaintenance()
                 do {
+                    try Task.checkCancellation()
                     try await localTranscriber.removeModel(model)
                     await modelResidency.release(lease)
                 } catch {
@@ -1222,7 +1311,7 @@ final class GojoDictationService: ObservableObject {
                     await self.shouldRunS1MiniWarmup(generation: completedGeneration)
                 },
                 prepareCleanup: { [polisher, modelResidency] in
-                    let lease = await modelResidency.acquire()
+                    let lease = await modelResidency.acquireRead(.polisher)
                     await polisher.prepareIfInstalled()
                     await modelResidency.release(lease)
                 }
@@ -1242,7 +1331,7 @@ final class GojoDictationService: ObservableObject {
         s1MiniOperation = .installing
         s1MiniError = nil
         let task = Task { [weak self, polisher, modelResidency] in
-            let lease = await modelResidency.acquire()
+            let lease = await modelResidency.acquireMaintenance(.polisher)
             defer {
                 Task { await modelResidency.release(lease) }
                 if self?.s1MiniOperationID == operationID {
@@ -1252,6 +1341,7 @@ final class GojoDictationService: ObservableObject {
                 }
             }
             do {
+                try Task.checkCancellation()
                 try await polisher.installModel()
                 guard let self else { return }
                 s1MiniInstalled = true
@@ -1283,7 +1373,7 @@ final class GojoDictationService: ObservableObject {
         s1MiniError = nil
         updateCleanupEnabled(false)
         let task = Task { [weak self, polisher, modelResidency] in
-            let lease = await modelResidency.acquire()
+            let lease = await modelResidency.acquireMaintenance(.polisher)
             defer {
                 Task { await modelResidency.release(lease) }
                 if self?.s1MiniOperationID == operationID {
@@ -1293,6 +1383,7 @@ final class GojoDictationService: ObservableObject {
                 }
             }
             do {
+                try Task.checkCancellation()
                 try await polisher.removeModel()
                 guard let self else { return }
                 s1MiniInstalled = false

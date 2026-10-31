@@ -33,7 +33,7 @@ struct DictationPanelDisplays {
 
 private enum DictationPanelExpiryAction: Equatable {
     case hide
-    case expireRecovery(String)
+    case expireRecovery(String, UUID?)
     case finishSuccess
     case clearEmpty(UUID)
 }
@@ -81,8 +81,10 @@ final class DictationPanelController {
     private var pointerInside = false
     private var previewExpiry = false
     private var canonicalRecoveryText = ""
-    private var consumedRecoveryText: String?
+    private var consumedRecovery: (id: UUID?, text: String)?
     private var handledEmptyAttentionID: UUID?
+    private var hiddenRecoveryAttentionIDs = Set<UUID>()
+    private var discardedAudioIDs = Set<UUID>()
 
     init(
         service: GojoDictationService? = nil,
@@ -133,9 +135,32 @@ final class DictationPanelController {
                 self.model.targetApplicationName = name
             }
             .store(in: &subscriptions)
-        Publishers.CombineLatest(service.$recoveryText, service.$recoveryMessage)
+        service.$latestDeliveryUnconfirmed
+            .sink { [weak self] value in self?.model.latestDeliveryUnconfirmed = value }
+            .store(in: &subscriptions)
+        Publishers.CombineLatest4(service.$recoveryText, service.$recoveryMessage, service.$recoveryAttentionID, service.$selectedRecoveryID)
             .receive(on: RunLoop.main)
-            .sink { [weak self] text, message in self?.receiveRecovery(text: text, message: message) }
+            .sink { [weak self] text, message, id, selectedID in self?.receiveRecovery(text: text, message: message, attentionID: id, selectedID: selectedID) }
+            .store(in: &subscriptions)
+        Publishers.CombineLatest(service.$recoverableAudioID, service.$recoveryAudioMessage)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] id, message in
+                guard let self, !self.model.isPreview, id == self.service.recoverableAudioID,
+                      message == self.service.recoveryAudioMessage else { return }
+                let resolved = self.model.recoverableAudioID != nil && id == nil && self.service.recoveryText.isEmpty
+                self.model.recoverableAudioID = id.flatMap { self.discardedAudioIDs.contains($0) ? nil : $0 }
+                self.model.recoveryAudioMessage = message
+                self.receiveRecovery(text: self.service.recoveryText, message: self.service.recoveryMessage,
+                                     attentionID: self.service.recoveryAttentionID, selectedID: self.service.selectedRecoveryID)
+                if resolved, !self.isActive(self.service.state) { self.hidePanelImmediately() }
+            }
+            .store(in: &subscriptions)
+        service.$recoveryTextCount
+            .receive(on: RunLoop.main)
+            .sink { [weak self] count in
+                guard let self, !self.model.isPreview else { return }
+                self.model.recoveryTextCount = count
+            }
             .store(in: &subscriptions)
         service.$provisionalPreview
             .receive(on: RunLoop.main)
@@ -194,12 +219,12 @@ final class DictationPanelController {
         explicitlyDismissed = false
         if !model.isPreview {
             synchronizePresentation()
-            if !isActive(service.state), model.recoveryText.isEmpty, model.emptyCompletion == nil {
+            if !isActive(service.state), model.recoveryText.isEmpty, model.recoverableAudioID == nil, model.emptyCompletion == nil {
                 model.present(.idle)
             }
         }
         presentPanel(onPointerDisplay: !isActive(service.state))
-        if !model.isPreview, !model.recoveryText.isEmpty { model.showsDetails = true }
+        if !model.isPreview, !model.recoveryText.isEmpty || model.recoverableAudioID != nil { model.showsDetails = true }
     }
 
     func dismiss() {
@@ -210,7 +235,7 @@ final class DictationPanelController {
         if model.isPreview {
             endPreview()
         } else {
-            discardRecovery(model.recoveryText)
+            hideRecoveryAttention()
             suppressUntilInactive = isActive(service.state) || isPanelStartPending
             isPanelStartPending = false
             service.cancel { [weak self] in
@@ -279,6 +304,9 @@ final class DictationPanelController {
         model.targetApplicationName = "TextEdit"
         model.recoveryText = recoveryText
         model.recoveryMessage = recoveryMessage
+        model.recoveryAttentionID = recoveryText.isEmpty ? nil : UUID()
+        model.recoverableAudioID = nil
+        model.recoveryAudioMessage = nil
         model.samples = (0..<80).map { index in
             Float([0.02, 0.08, 0.18, 0.42, 0.7, 0.36, 0.14, 0.05][index % 8])
         }
@@ -287,7 +315,8 @@ final class DictationPanelController {
 
     func endPreview() {
         previewExpiry = false
-        model.leavePreview(recoveryText: service.recoveryText, recoveryMessage: service.recoveryMessage)
+        model.leavePreview(recoveryText: service.recoveryText, recoveryMessage: service.recoveryMessage,
+                           recoverableAudioID: service.recoverableAudioID, recoveryAudioMessage: service.recoveryAudioMessage)
         synchronizePresentation()
         resizePanel()
         rearmExpiry()
@@ -307,13 +336,19 @@ final class DictationPanelController {
         let previousServiceState = lastServiceState
         lastServiceState = state
         if isActive(state), previousServiceState.map({ !isActive($0) }) ?? true {
-            consumedRecoveryText = nil
+            consumedRecovery = nil
             canonicalRecoveryText = ""
         }
         if model.isPreview {
             guard isActive(state) else { return }
             previewExpiry = false
-            model.leavePreview(recoveryText: service.recoveryText, recoveryMessage: service.recoveryMessage)
+            model.leavePreview(recoveryText: service.recoveryText, recoveryMessage: service.recoveryMessage,
+                               recoverableAudioID: service.recoverableAudioID, recoveryAudioMessage: service.recoveryAudioMessage)
+            model.selectedRecoveryID = service.selectedRecoveryID
+            model.recoveryTextCount = service.recoveryTextCount
+            model.recoveryAttentionID = service.recoveryAttentionID.flatMap {
+                hiddenRecoveryAttentionIDs.contains($0) ? nil : $0
+            }
         }
         cancelExpiry()
         let previousState = model.state
@@ -348,18 +383,24 @@ final class DictationPanelController {
         rearmExpiry()
     }
 
-    private func receiveRecovery(text: String, message: String?) {
-        guard !model.isPreview else { return }
-        let previous = canonicalRecoveryText
+    private func receiveRecovery(text: String, message: String?, attentionID: UUID?, selectedID: UUID?) {
+        guard !model.isPreview, text == service.recoveryText,
+              message == service.recoveryMessage, attentionID == service.recoveryAttentionID,
+              selectedID == service.selectedRecoveryID else { return }
+        let previousAttentionID = model.recoveryAttentionID
         canonicalRecoveryText = text
-        if let consumed = consumedRecoveryText {
-            if text == consumed { return }
-            consumedRecoveryText = nil
+        if let consumed = consumedRecovery {
+            if text == consumed.text, selectedID == consumed.id { return }
+            consumedRecovery = nil
         }
         let resolved = model.updateRecoveryText(text, message: message)
-        if !text.isEmpty, text != previous, !explicitlyDismissed, !suppressUntilInactive { presentPanel() }
+        model.selectedRecoveryID = selectedID
+        model.recoveryAttentionID = text.isEmpty && model.recoverableAudioID == nil ? nil : attentionID.flatMap { hiddenRecoveryAttentionIDs.contains($0) ? nil : $0 }
+        if previousAttentionID != nil, model.recoveryAttentionID == nil { model.showsDetails = false }
+        if let id = model.recoveryAttentionID, id != previousAttentionID,
+           !model.isCapturing, !explicitlyDismissed, !suppressUntilInactive { presentPanel() }
         resizePanel()
-        if resolved, !isActive(service.state) {
+        if resolved, model.recoverableAudioID == nil, !isActive(service.state) {
             hidePanelImmediately()
         } else {
             rearmExpiry()
@@ -391,11 +432,16 @@ final class DictationPanelController {
         guard isPresented, !model.isPreview || previewExpiry else { return nil }
         let state = model.state
         func plan(_ grace: Duration, _ action: DictationPanelExpiryAction) -> DictationPanelExpiryPlan {
-            DictationPanelExpiryPlan(grace: grace, action: action, state: state, identity: model.attentionIdentity)
+            let identity = model.selectedRecoveryID.map { "transcript:" + $0.uuidString }
+                ?? model.recoverableAudioID.map { "audio:" + $0.uuidString }
+                ?? model.attentionIdentity
+            return DictationPanelExpiryPlan(grace: grace, action: action, state: state, identity: identity)
         }
         let emptyID = model.emptyCompletion != nil ? model.completionAttentionID : nil
         let recovery = model.recoveryText
-        if !recovery.isEmpty { return plan(Self.recoveryGrace, .expireRecovery(recovery)) }
+        if (!recovery.isEmpty || model.recoverableAudioID != nil), (model.recoveryAttentionID != nil && !model.isCapturing) || model.showsDetails {
+            return plan(Self.recoveryGrace, .expireRecovery(recovery, model.recoverableAudioID))
+        }
         if isActive(state) { return emptyID.map { plan(Self.noticeGrace, .clearEmpty($0)) } }
         if let emptyID { return plan(Self.noticeGrace, .clearEmpty(emptyID)) }
         if case .error = state { return plan(Self.noticeGrace, .hide) }
@@ -432,9 +478,9 @@ final class DictationPanelController {
 
     private func runExpiry(_ action: DictationPanelExpiryAction) async {
         switch action {
-        case .expireRecovery(let text):
-            guard model.recoveryText == text else { return }
-            discardRecovery(text)
+        case .expireRecovery(let text, let audioID):
+            guard model.recoveryText == text, model.recoverableAudioID == audioID else { return }
+            hideRecoveryAttention()
             if isActive(service.state) {
                 model.showsDetails = false
             } else {
@@ -453,13 +499,21 @@ final class DictationPanelController {
         }
     }
 
+    private func hideRecoveryAttention() {
+        if let id = model.recoveryAttentionID { hiddenRecoveryAttentionIDs.insert(id) }
+        model.recoveryAttentionID = nil
+        model.showsDetails = false
+    }
+
     /// Forgets a saved transcript: the optimistic model clear plus a
     /// snapshot-matched service clear, so a newer transcript is never lost.
-    private func discardRecovery(_ text: String) {
+    private func discardRecovery(id: UUID?, text: String) {
         guard !text.isEmpty else { return }
-        if canonicalRecoveryText == text { consumedRecoveryText = text }
+        service.clearRecoveryText(id: id, matching: text)
+        guard model.selectedRecoveryID == id, model.recoveryText == text else { return }
+        if canonicalRecoveryText == text { consumedRecovery = (id, text) }
         model.clearRecoveryText(matching: text)
-        service.clearRecoveryText(matching: text)
+        model.selectedRecoveryID = nil
     }
 
     /// Returns true only when this fade finished and hid the panel; a newer
@@ -505,13 +559,20 @@ final class DictationPanelController {
     private func synchronizePresentation() {
         let text = service.recoveryText
         canonicalRecoveryText = text
-        if consumedRecoveryText != text { consumedRecoveryText = nil }
-        let consumed = consumedRecoveryText != nil
+        if consumedRecovery?.text != text || consumedRecovery?.id != service.selectedRecoveryID { consumedRecovery = nil }
+        let consumed = consumedRecovery != nil
         model.present(service.state)
         model.activationMode = DictationModifierHotKeyMonitor.shared.activationMode
         model.targetApplicationName = service.targetApplicationName
         model.recoveryText = consumed ? "" : text
+        model.selectedRecoveryID = consumed ? nil : service.selectedRecoveryID
         model.recoveryMessage = consumed ? nil : service.recoveryMessage
+        model.recoveryAttentionID = consumed ? nil : service.recoveryAttentionID.flatMap {
+            hiddenRecoveryAttentionIDs.contains($0) ? nil : $0
+        }
+        model.recoverableAudioID = service.recoverableAudioID.flatMap { discardedAudioIDs.contains($0) ? nil : $0 }
+        model.recoveryAudioMessage = service.recoveryAudioMessage
+        model.recoveryTextCount = service.recoveryTextCount
         model.provisionalPreview = service.provisionalPreview
         model.activeIntent = service.activeIntent
     }
@@ -523,7 +584,11 @@ final class DictationPanelController {
             case .pause: model.state = .paused
             case .finish: model.state = .transcribing
             case .dismiss: dismiss()
-            case .clearRecovery(let text): model.clearRecoveryText(matching: text)
+            case .clearRecovery(_, let text): model.clearRecoveryText(matching: text)
+            case .copyRecovery: model.showsDetails = false
+            case .nextRecovery: break
+            case .retryAudio: model.showsDetails = false
+            case .discardAudio: model.recoverableAudioID = nil; model.showsDetails = false
             case .settings: break
             }
             resizePanel()
@@ -537,8 +602,24 @@ final class DictationPanelController {
         case .resume: service.resumeVoiceMode()
         case .finish: service.finishVoiceMode()
         case .dismiss: dismiss()
-        case .clearRecovery(let text):
-            discardRecovery(text)
+        case .nextRecovery: service.selectNextRecovery()
+        case .retryAudio(let id):
+            service.retryRecovery(id: id)
+            if model.recoverableAudioID == id, model.recoveryAttentionID == id { hideRecoveryAttention() }
+        case .discardAudio(let id):
+            discardedAudioIDs.insert(id)
+            service.discardRecovery(id: id)
+            guard model.recoverableAudioID == id else { return }
+            model.recoverableAudioID = nil
+            if model.recoveryAttentionID == id { hideRecoveryAttention() }
+            if model.recoveryText.isEmpty, !isActive(service.state) { hidePanelImmediately() }
+        case .copyRecovery(let id, let text):
+            service.markRecoveryCopied(id: id, matching: text)
+            guard model.selectedRecoveryID == id, model.recoveryText == text else { return }
+            hideRecoveryAttention()
+            if !isActive(service.state) { hidePanelImmediately() } else { rearmExpiry() }
+        case .clearRecovery(let id, let text):
+            discardRecovery(id: id, text: text)
             if !text.isEmpty, model.recoveryText.isEmpty, !isActive(service.state) {
                 hidePanelImmediately()
             } else {

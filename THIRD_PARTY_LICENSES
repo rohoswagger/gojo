@@ -728,3 +728,36 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+Underdog Bark 3.0
+-----------------
+Source: https://huggingface.co/ConwayResearch/Underdog-Bark-3.0/tree/85db2ad18ab41e534a222ee253c29191d77ed919
+License: Creative Commons Attribution 4.0 International (CC-BY-4.0)
+https://creativecommons.org/licenses/by/4.0/
+
+Gojo ports ConwayResearch's bark_coreml.py audio frontend, greedy TDT decoder,
+and segmentation to Swift/Accelerate and loads its Core ML ANE encoder.
+The port adds cancellation checks and native ZIP/NPY weight loading.
+Model weights are downloaded separately without modification.
+
+This model derives from:
+  nvidia/parakeet-tdt-0.6b-v3, (c) NVIDIA Corporation, CC-BY-4.0
+  https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3
+  moondream/parakeet-ultra, (c) Moondream, CC-BY-4.0
+  https://huggingface.co/moondream/parakeet-ultra
+Changes: post-trained and compressed by Conway Research. The FastConformer
+encoder architecture, TDT decoder, tokenizer and feature-extractor configuration
+derive from the models above and remain under CC-BY-4.0.
+
+Underdog Bark 3.0 Clean (Core ML)
+--------------------------------
+Source model by Conway Research:
+https://huggingface.co/ConwayResearch/Underdog-Bark-3.0-Clean/tree/6d34ed8639b2b9a33e764acf06748519bbb950cf
+Core ML conversion and re-encoding by Fluid Inference:
+https://huggingface.co/FluidInference/bark-3.0-coreml/tree/73b0c0da665d29ea0332e9f0d32da8e26a4cdb38
+License: CC-BY-4.0, https://creativecommons.org/licenses/by/4.0/
+Derived from nvidia/parakeet-tdt-0.6b-v3 (c) NVIDIA Corporation, through
+moondream/parakeet-ultra (c) Moondream and Bark 3.0 Plus, under CC-BY-4.0.
+Conway Research post-trained and compressed the model. Fluid Inference converted
+it to Core ML; encoder linear weights reconstruct the upstream values exactly,
+and other tensors use FP16. Gojo downloads the converted weights unmodified.

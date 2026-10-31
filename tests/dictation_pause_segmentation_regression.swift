@@ -151,7 +151,8 @@ struct DictationPauseSegmentationRegression {
             try mailbox.append(samples: utterance)
             require(false, "a fourth undrained utterance must fail explicitly")
         } catch DictationUtteranceMailbox.Failure.overflow {
-            require(mailbox.bufferedSampleCount == 0, "overflow must release all pending raw audio")
+            require(mailbox.drain() == Array(repeating: utterance, count: DictationUtteranceMailbox.capacity + 1),
+                    "high-water overflow must retain queued speech plus the in-flight segment")
         }
 
         try mailbox.append(samples: utterance)

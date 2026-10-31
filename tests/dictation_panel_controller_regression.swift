@@ -11,6 +11,12 @@ final class GojoDictationService: ObservableObject {
     @Published var audioLevel: Float = 0
     @Published var recoveryText = ""
     @Published var recoveryMessage: String?
+    @Published var recoveryAttentionID: UUID?
+    @Published var recoverableAudioID: UUID?
+    @Published var recoveryAudioMessage: String?
+    @Published var recoveryTextCount = 0
+    @Published var latestDeliveryUnconfirmed = false
+    @Published var selectedRecoveryID: UUID?
     @Published var targetApplicationName: String?
     @Published var provisionalPreview: DictationProvisionalPreview?
     @Published var activeIntent: DictationSessionIntent?
@@ -18,6 +24,10 @@ final class GojoDictationService: ObservableObject {
     @Published var completionAttentionID: UUID?
     @Published var sessionDisplayID: CGDirectDisplayID?
     var clearedRecoveryTexts: [String] = []
+    var copiedRecoveryTexts: [String] = []
+    var retriedAudioIDs: [UUID] = []
+    var discardedAudioIDs: [UUID] = []
+    var selectedNextRecoveryCount = 0
     var autoClear = true
     var cancelCount = 0
     var pendingCancelCompletions: [@MainActor @Sendable () -> Void] = []
@@ -30,9 +40,18 @@ final class GojoDictationService: ObservableObject {
     func pauseVoiceMode() {}
     func resumeVoiceMode() {}
     func finishVoiceMode() {}
-    func clearRecoveryText(matching text: String) {
+    func selectNextRecovery() { selectedNextRecoveryCount += 1 }
+    func retryRecovery(id: UUID) { retriedAudioIDs.append(id) }
+    func discardRecovery(id: UUID) {
+        discardedAudioIDs.append(id)
+        guard recoverableAudioID == id else { return }
+        recoverableAudioID = nil
+        recoveryAudioMessage = nil
+    }
+    func markRecoveryCopied(id: UUID?, matching text: String) { copiedRecoveryTexts.append(text) }
+    func clearRecoveryText(id: UUID?, matching text: String) {
         clearedRecoveryTexts.append(text)
-        guard autoClear, !text.isEmpty, recoveryText == text else { return }
+        guard autoClear, id == selectedRecoveryID, !text.isEmpty, recoveryText == text else { return }
         recoveryText = ""
         recoveryMessage = nil
     }
@@ -237,11 +256,16 @@ struct DictationPanelControllerRegression {
 
     @MainActor
     static func run() async {
-        await savedTranscriptExpiresAndIsForgotten()
+        await audioRecoveryActionsRetainIdentity()
+        await passiveRecoveryAndAttentionIdentity()
+        await savedTranscriptExpiryOnlyHides()
         await hoverPausesAndRestartsGrace()
         await duplicateAndMessageOnlyPublicationsStayHidden()
-        await explicitCloseDiscardsTranscript()
+        await explicitCloseRetainsTranscript()
         await copyDiscardAndStaleSnapshots()
+        await equalTextRecordsKeepTheirIdentity()
+        await previewHandoffKeepsRecoverySelection()
+        await manualTranscriptSelectionRestartsGrace()
         await activeSessionsNeverAutoHide()
         await terminalNoticesExpire()
         await staleFadeCannotHideNewPresentation()
@@ -256,8 +280,12 @@ struct DictationPanelControllerRegression {
 
     @MainActor
     private static func publishRecovery(_ fixture: Fixture, _ text: String = saved, _ message: String? = "No selected field") async {
+        let selectedID = text.isEmpty ? nil : (fixture.service.recoveryText == text ? fixture.service.selectedRecoveryID ?? UUID() : UUID())
+        let id = text.isEmpty ? nil : (fixture.service.recoveryText == text ? fixture.service.recoveryAttentionID : selectedID)
         fixture.service.recoveryText = text
         fixture.service.recoveryMessage = message
+        fixture.service.recoveryAttentionID = id
+        fixture.service.selectedRecoveryID = selectedID
         await Harness.flush()
     }
 
@@ -265,6 +293,87 @@ struct DictationPanelControllerRegression {
     private static func expectNoKeyFocus(_ fixture: Fixture, _ context: String) {
         Harness.expect(fixture.panel?.isKeyWindow == false && NSApp.keyWindow == nil && !NSApp.isActive,
                        "\(context) must not take key focus or activate Gojo")
+    }
+
+    @MainActor
+    private static func audioRecoveryActionsRetainIdentity() async {
+        let fixture = Fixture()
+        defer { fixture.teardown() }
+        await fixture.start()
+        let id = UUID()
+        fixture.service.recoverableAudioID = id
+        fixture.service.recoveryAudioMessage = "Recognition failed. Recording saved."
+        fixture.service.recoveryAttentionID = id
+        await Harness.flush()
+        Harness.expect(fixture.isVisible && fixture.model.recoverableAudioID == id && fixture.model.recoveryText.isEmpty,
+                       "Saved audio must be reachable without a transcript")
+        Harness.expect(fixture.model.attentionIdentity == "recovery:" + id.uuidString,
+                       "Audio recovery attention must use its record identity")
+        fixture.controller.debugPerform(.retryAudio(id))
+        await Harness.flush()
+        Harness.expect(fixture.service.retriedAudioIDs == [id] && fixture.service.cancelCount == 0,
+                       "Retry must target the saved record without cancelling the session")
+        Harness.expect(fixture.model.recoverableAudioID == id && fixture.service.recoverableAudioID == id,
+                       "Starting a retry must retain its source audio")
+        fixture.service.recoveryAudioMessage = "Retry failed. Recording saved."
+        await Harness.flush()
+        Harness.expect(fixture.model.recoverableAudioID == id, "A failed retry must retain the original recording")
+        fixture.controller.show()
+        await Harness.flush()
+        Harness.expect(fixture.model.showsDetails, "Retried audio must remain manually accessible")
+        await fixture.advance(.seconds(10))
+        fixture.fades.release()
+        await Harness.flush()
+        Harness.expect(!fixture.isVisible && fixture.service.recoverableAudioID == id,
+                       "Audio expiry must hide without discarding the recording")
+        fixture.controller.show()
+        fixture.controller.debugPerform(.discardAudio(UUID()))
+        await Harness.flush()
+        Harness.expect(fixture.model.recoverableAudioID == id && fixture.isVisible,
+                       "A stale discard must retain the current recording")
+        fixture.controller.debugPerform(.discardAudio(id))
+        await Harness.flush()
+        Harness.expect(fixture.model.recoverableAudioID == nil && fixture.service.recoverableAudioID == nil,
+                       "Explicit discard must release exactly the selected audio")
+    }
+
+    @MainActor
+    private static func passiveRecoveryAndAttentionIdentity() async {
+        let fixture = Fixture()
+        defer { fixture.teardown() }
+        await fixture.start()
+        fixture.service.recoveryText = "Text already sent"
+        fixture.service.recoveryMessage = "Text sent, unverified"
+        await Harness.flush()
+        Harness.expect(!fixture.isVisible && !fixture.model.showsDetails && fixture.model.attentionIdentity == nil,
+                       "A fully dispatched unconfirmed transcript must stay passive")
+        fixture.controller.show()
+        await Harness.flush()
+        Harness.expect(fixture.isVisible && fixture.model.showsDetails && fixture.model.recoveryText == "Text already sent",
+                       "Passive text must remain manually accessible")
+        fixture.controller.dismiss()
+        await Harness.flush()
+        fixture.service.state = .listening
+        await Harness.flush()
+        let id = UUID()
+        fixture.service.recoveryAttentionID = id
+        await Harness.flush()
+        Harness.expect(!fixture.model.showsDetails && fixture.model.attentionIdentity == nil,
+                       "Recovery attention must wait while the microphone is live")
+        fixture.service.state = .paused
+        await Harness.flush()
+        Harness.expect(fixture.model.attentionIdentity == "recovery:" + id.uuidString,
+                       "A stopped capture must expose the identified recovery notice")
+        fixture.controller.dismiss()
+        fixture.service.state = .succeeded("newer success")
+        await Harness.flush()
+        fixture.service.recoveryMessage = "Late receipt for the old record"
+        await Harness.flush()
+        Harness.expect(!fixture.isVisible && fixture.model.attentionIdentity == nil,
+                       "An old dismissed record must not reopen after a newer success")
+        fixture.controller.show()
+        await Harness.flush()
+        Harness.expect(fixture.model.recoveryText == "Text already sent", "Dismiss must preserve the payload")
     }
 
     @MainActor
@@ -278,7 +387,7 @@ struct DictationPanelControllerRegression {
     }
 
     @MainActor
-    private static func savedTranscriptExpiresAndIsForgotten() async {
+    private static func savedTranscriptExpiryOnlyHides() async {
         let fixture = Fixture()
         defer { fixture.teardown() }
         await expiringRecoveryPanel(fixture)
@@ -290,18 +399,18 @@ struct DictationPanelControllerRegression {
         fixture.fades.release()
         await Harness.flush()
         Harness.expect(!fixture.isVisible, "The faded saved-text panel must be hidden")
-        Harness.expect(fixture.service.clearedRecoveryTexts == [saved] && fixture.service.recoveryText.isEmpty,
-                       "Expiry must forget the text in the service with the shown snapshot")
-        Harness.expect(fixture.model.recoveryText.isEmpty && fixture.model.recoveryMessage == nil,
-                       "Expiry must forget the text in the panel model")
+        Harness.expect(fixture.service.clearedRecoveryTexts.isEmpty && fixture.service.recoveryText == saved,
+                       "Expiry must retain the text in the service")
+        Harness.expect(fixture.model.recoveryText == saved,
+                       "Expiry must retain the text in the panel model")
         Harness.expect(fixture.clock.pending == 0, "No timer may survive the hide")
 
         fixture.controller.show()
         await Harness.flush()
         Harness.expect(fixture.isVisible && fixture.panel?.alphaValue == 1, "Manual show presents Ready at full alpha")
-        Harness.expect(fixture.model.recoveryText.isEmpty && !fixture.model.showsDetails,
-                       "Manual show must not resurrect expired text")
-        Harness.expect(fixture.clock.pending == 0, "Ready stays untimed")
+        Harness.expect(fixture.model.recoveryText == saved && fixture.model.showsDetails,
+                       "Manual show must make retained text available")
+        Harness.expect(fixture.clock.pending == 1, "Manually opened text has its own display grace")
         expectNoKeyFocus(fixture, "Manual show")
 
         await publishRecovery(fixture, saved + " plus more", "Updated")
@@ -310,7 +419,7 @@ struct DictationPanelControllerRegression {
         await fixture.advance(.seconds(10))
         fixture.fades.release()
         await Harness.flush()
-        Harness.expect(!fixture.isVisible && fixture.service.recoveryText.isEmpty, "New text expires too")
+        Harness.expect(!fixture.isVisible && fixture.service.recoveryText == saved + " plus more", "New text hides without deletion")
 
         // Voice mode must not exempt saved text.
         let voice = Fixture()
@@ -328,8 +437,8 @@ struct DictationPanelControllerRegression {
         await voice.advance(.seconds(10))
         voice.fades.release()
         await Harness.flush()
-        Harness.expect(!voice.isVisible && voice.model.recoveryText.isEmpty && voice.service.recoveryText.isEmpty,
-                       "Voice-mode saved text is forgotten and hidden")
+        Harness.expect(!voice.isVisible && voice.model.recoveryText == saved && voice.service.recoveryText == saved,
+                       "Voice-mode saved text is retained and hidden")
     }
 
     @MainActor
@@ -380,10 +489,10 @@ struct DictationPanelControllerRegression {
         await fixture.advance(.seconds(10))
         fixture.fades.release()
         await Harness.flush()
-        Harness.expect(!fixture.isVisible && fixture.model.recoveryText.isEmpty, "Precondition: expired and hidden")
+        Harness.expect(!fixture.isVisible && fixture.model.recoveryText == saved, "Precondition: retained and hidden")
         await publishRecovery(fixture, saved, "Late message-only republish")
-        Harness.expect(!fixture.isVisible && fixture.model.recoveryText.isEmpty,
-                       "A delayed publication of the expired text must not resurrect it")
+        Harness.expect(!fixture.isVisible && fixture.model.recoveryText == saved,
+                       "A delayed publication must keep retained text hidden")
         fixture.service.recoveryText = saved
         await Harness.flush()
         Harness.expect(!fixture.isVisible, "A duplicate text publication must not resurrect an expired panel")
@@ -395,7 +504,7 @@ struct DictationPanelControllerRegression {
     }
 
     @MainActor
-    private static func explicitCloseDiscardsTranscript() async {
+    private static func explicitCloseRetainsTranscript() async {
         let fixture = Fixture()
         defer { fixture.teardown() }
         fixture.service.autoClear = false
@@ -403,13 +512,13 @@ struct DictationPanelControllerRegression {
         fixture.controller.dismiss()
         await Harness.flush()
         Harness.expect(!fixture.isVisible && fixture.clock.pending == 0, "X hides immediately and cancels the timer")
-        Harness.expect(fixture.service.clearedRecoveryTexts == [saved] && fixture.model.recoveryText.isEmpty,
-                       "X discards the shown transcript with its snapshot")
+        Harness.expect(fixture.service.clearedRecoveryTexts.isEmpty && fixture.model.recoveryText == saved,
+                       "X must retain the shown transcript")
         await publishRecovery(fixture, saved, "Message only")
         Harness.expect(!fixture.isVisible, "Late publications must not reopen an explicitly closed panel")
         fixture.controller.show()
         await Harness.flush()
-        Harness.expect(fixture.isVisible && fixture.model.recoveryText.isEmpty, "Manual show cannot resurrect the discarded text")
+        Harness.expect(fixture.isVisible && fixture.model.recoveryText == saved, "Manual show reopens the retained text")
 
         let active = Fixture()
         defer { active.teardown() }
@@ -419,8 +528,8 @@ struct DictationPanelControllerRegression {
         await publishRecovery(active)
         active.controller.dismiss()
         await Harness.flush()
-        Harness.expect(!active.isVisible && active.service.cancelCount == 1 && active.service.clearedRecoveryTexts == [saved],
-                       "X during a session still cancels it and discards the transcript")
+        Harness.expect(!active.isVisible && active.service.cancelCount == 1 && active.service.clearedRecoveryTexts.isEmpty && active.service.recoveryText == saved,
+                       "X during a session cancels it and retains the transcript")
     }
 
     @MainActor
@@ -433,13 +542,13 @@ struct DictationPanelControllerRegression {
             if action == "copy" {
                 Harness.expect(fixture.model.copyRecoveryText(write: { $0 == saved }), "Copy writes the shown snapshot")
             }
-            fixture.controller.debugPerform(.clearRecovery(saved))
+            fixture.controller.debugPerform(action == "copy" ? .copyRecovery(fixture.service.selectedRecoveryID, saved) : .clearRecovery(fixture.service.selectedRecoveryID, saved))
             await Harness.flush()
             Harness.expect(!fixture.isVisible && fixture.clock.pending == 0, "\(action) must close the panel immediately")
-            Harness.expect(fixture.service.clearedRecoveryTexts == [saved], "\(action) must consume exactly the shown snapshot")
+            Harness.expect(action == "copy" ? fixture.service.copiedRecoveryTexts == [saved] && fixture.service.clearedRecoveryTexts.isEmpty : fixture.service.clearedRecoveryTexts == [saved], "\(action) must acknowledge exactly the shown snapshot")
             await publishRecovery(fixture, saved, "Late message-only republish")
-            Harness.expect(!fixture.isVisible && fixture.model.recoveryText.isEmpty,
-                           "A delayed publication of the consumed text must not resurrect it after \(action)")
+            Harness.expect(!fixture.isVisible && (action == "copy" ? fixture.model.recoveryText == saved : fixture.model.recoveryText.isEmpty),
+                           "A delayed publication must stay hidden after \(action)")
             fixture.service.recoveryText = ""
             fixture.service.recoveryMessage = nil
             await Harness.flush()
@@ -456,7 +565,7 @@ struct DictationPanelControllerRegression {
         await stale.start()
         await publishRecovery(stale, "old text")
         await publishRecovery(stale, "newer text")
-        stale.controller.debugPerform(.clearRecovery("old text"))
+        stale.controller.debugPerform(.clearRecovery(nil, "old text"))
         await Harness.flush()
         Harness.expect(stale.isVisible && stale.model.recoveryText == "newer text", "A stale discard must keep the newer transcript")
         Harness.expect(stale.service.clearedRecoveryTexts == ["old text"], "The service still receives the snapshot for its own stale guard")
@@ -471,12 +580,78 @@ struct DictationPanelControllerRegression {
         await publishRecovery(active)
         active.model.showsDetails = true
         await Harness.flush()
-        active.controller.debugPerform(.clearRecovery(saved))
+        active.controller.debugPerform(.clearRecovery(active.service.selectedRecoveryID, saved))
         await Harness.flush()
         Harness.expect(active.isVisible && !active.model.showsDetails && active.model.recoveryText.isEmpty,
                        "Copy or discard during a session keeps the controls and closes the details")
         await Harness.flush()
         Harness.expect(active.clock.pending == 0, "No details timer survives a discard")
+    }
+
+    @MainActor
+    private static func equalTextRecordsKeepTheirIdentity() async {
+        let fixture = Fixture()
+        defer { fixture.teardown() }
+        await fixture.start()
+        await publishRecovery(fixture, "Repeated phrase")
+        let firstID = fixture.service.selectedRecoveryID
+        fixture.service.autoClear = false
+        fixture.controller.debugPerform(.clearRecovery(firstID, "Repeated phrase"))
+        await Harness.flush()
+        let newerID = UUID()
+        fixture.service.selectedRecoveryID = newerID
+        fixture.service.recoveryAttentionID = newerID
+        await Harness.flush()
+        Harness.expect(fixture.isVisible && fixture.model.selectedRecoveryID == newerID && fixture.model.recoveryText == "Repeated phrase",
+                       "A distinct record with identical text must remain available")
+        fixture.model.showsDetails = true
+        fixture.controller.debugPerform(.copyRecovery(firstID, "Repeated phrase"))
+        fixture.controller.debugPerform(.clearRecovery(firstID, "Repeated phrase"))
+        await Harness.flush()
+        Harness.expect(fixture.model.selectedRecoveryID == newerID && fixture.model.recoveryText == "Repeated phrase" && fixture.model.showsDetails,
+                       "Stale Copy and Discard must not change an equal-text newer record")
+        fixture.service.recoveryTextCount = 2
+        await Harness.flush()
+        fixture.controller.debugPerform(.nextRecovery)
+        Harness.expect(fixture.service.selectedNextRecoveryCount == 1 && fixture.model.recoveryTextCount == 2,
+                       "Transcript navigation must go through the service projection")
+    }
+
+    @MainActor
+    private static func previewHandoffKeepsRecoverySelection() async {
+        let fixture = Fixture()
+        defer { fixture.teardown() }
+        await fixture.start()
+        fixture.controller.showPreview(state: .succeeded("preview"), recoveryText: "Synthetic transcript")
+        let id = UUID()
+        fixture.service.recoveryText = "Actual transcript"
+        fixture.service.selectedRecoveryID = id
+        fixture.service.recoveryAttentionID = id
+        fixture.service.recoveryTextCount = 2
+        await Harness.flush()
+        fixture.service.state = .listening
+        await Harness.flush()
+        Harness.expect(!fixture.model.isPreview && fixture.model.recoveryText == "Actual transcript"
+                       && fixture.model.selectedRecoveryID == id && fixture.model.recoveryTextCount == 2,
+                       "A real capture must restore the canonical recovery selection after preview")
+    }
+
+    @MainActor
+    private static func manualTranscriptSelectionRestartsGrace() async {
+        let fixture = Fixture()
+        defer { fixture.teardown() }
+        await fixture.start()
+        fixture.service.recoveryText = "Repeated transcript"
+        fixture.service.selectedRecoveryID = UUID()
+        await Harness.flush()
+        fixture.controller.show()
+        await Harness.flush()
+        await fixture.advance(.seconds(9))
+        fixture.service.selectedRecoveryID = UUID()
+        await Harness.flush()
+        await fixture.advance(.seconds(2))
+        Harness.expect(fixture.isVisible && fixture.fades.started == 0,
+                       "Selecting an equal-text different record must start a fresh display grace")
     }
 
     @MainActor
@@ -507,8 +682,8 @@ struct DictationPanelControllerRegression {
         await fixture.advance(.seconds(10))
         Harness.expect(!fixture.model.showsDetails && fixture.isVisible && fixture.fades.started == 0,
                        "Only the popup closes; the session controls stay")
-        Harness.expect(fixture.model.recoveryText.isEmpty && fixture.service.recoveryText.isEmpty
-                       && fixture.service.clearedRecoveryTexts == [saved], "The expired recovery is forgotten")
+        Harness.expect(fixture.model.recoveryText == saved && fixture.service.recoveryText == saved
+                       && fixture.service.clearedRecoveryTexts.isEmpty, "The hidden recovery is retained")
         Harness.expect(fixture.service.cancelCount == 0 && fixture.model.state == .listening,
                        "Recovery expiry must not cancel the session")
 
@@ -520,16 +695,17 @@ struct DictationPanelControllerRegression {
         Harness.expect(fixture.model.recoveryText == "second recovery" && fixture.service.recoveryText == "second recovery",
                        "The first deadline must not clear newer recovery")
         await fixture.advance(.seconds(8))
-        Harness.expect(fixture.model.recoveryText.isEmpty && fixture.isVisible, "The newer recovery has its own deadline")
+        Harness.expect(fixture.model.recoveryText == "second recovery" && fixture.isVisible, "The newer recovery has its own display deadline")
         fixture.model.capsuleHovered = true
         await publishRecovery(fixture, "third recovery")
         await Harness.flush()
         Harness.expect(fixture.clock.pending == 0, "Hover pauses the active recovery deadline")
         fixture.model.capsuleHovered = false
         await Harness.flush()
-        Harness.expect(fixture.clock.pending == 1, "Hover-out restarts the active recovery deadline")
+        Harness.expect(fixture.clock.pending == 0, "Deferred recovery must wait while the microphone is live")
         fixture.service.state = .paused
         await Harness.flush()
+        Harness.expect(fixture.clock.pending == 1, "Stopped capture starts the deferred recovery display grace")
         await fixture.advance(.seconds(30))
         Harness.expect(fixture.isVisible && fixture.fades.started == 0, "State changes within a session never hide it")
     }
@@ -672,7 +848,7 @@ struct DictationPanelControllerRegression {
         defer { hidden.teardown() }
         await expiringRecoveryPanel(hidden)
         await hidden.advance(.seconds(10))
-        hidden.controller.debugPerform(.clearRecovery(saved))
+        hidden.controller.debugPerform(.clearRecovery(hidden.service.selectedRecoveryID, saved))
         await Harness.flush()
         hidden.fades.release()
         await Harness.flush()

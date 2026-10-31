@@ -17,8 +17,8 @@ struct DictationPanelPresentationRegression {
         resolved.showsDetails = true
         expect(resolved.copyRecoveryText(to: resolvedBoard), "Completed transcript must copy")
         expect(resolvedBoard.string(forType: .string) == "Completed transcript", "Copy must write the exact transcript")
-        expect(resolved.recoveryText.isEmpty && resolved.recoveryMessage == nil && !resolved.showsDetails,
-               "Successful copy must consume the saved transcript and close its details")
+        expect(resolved.recoveryText == "Completed transcript" && resolved.recoveryMessage == "No selected field" && !resolved.showsDetails,
+               "Successful copy must retain the saved transcript and close its details")
         resolvedBoard.clearContents()
         expect(!resolved.updateRecoveryText("Completed transcript", message: "Delayed update"),
                "A delayed pre-clear update is not a resolution")
@@ -110,12 +110,15 @@ struct DictationPanelPresentationRegression {
             }
             expect(model.shouldHideWhenFinished == !sessionIsActive,
                    "Saved text must expire once the session is over and never hide an active session")
+            model.recoveryAttentionID = UUID()
             let recoveryNotice = model.attentionIdentity
-            expect(recoveryNotice != nil, "Saved text must open the transcript popover in every state")
+            expect((recoveryNotice != nil) == !model.isCapturing, "Saved text must defer automatic details until capture stops")
             model.recoveryMessage = "A different status message"
             expect(model.attentionIdentity == recoveryNotice, "Status changes must not reopen the transcript popover")
             model.recoveryText += "New phrase."
-            expect(model.attentionIdentity != recoveryNotice, "New saved text must reopen the transcript popover")
+            expect(model.attentionIdentity == recoveryNotice, "Text updates must retain the recovery record identity")
+            model.recoveryAttentionID = UUID()
+            expect(model.isCapturing || model.attentionIdentity != recoveryNotice, "A new identified record must get its own notice")
             model.recoveryText = ""
             expect(model.size == CGSize(width: 150, height: 44), "Discarding recovery must preserve the compact capsule size")
         }
@@ -125,7 +128,7 @@ struct DictationPanelPresentationRegression {
         model.recoveryText = transcript
         expect(model.copyRecoveryText(to: pasteboard), "Copy must report a successful pasteboard write")
         expect(pasteboard.string(forType: .string) == transcript, "Copy must preserve the full multiline Unicode transcript")
-        expect(model.recoveryText.isEmpty, "Successful copy must clear the saved transcript")
+        expect(model.recoveryText == transcript, "Successful copy must retain the saved transcript")
         model.recoveryText = ""
         expect(!model.copyRecoveryText(to: pasteboard), "Copy must fail when no saved transcript exists")
         expect(pasteboard.string(forType: .string) == transcript, "An empty recovery must not erase the pasteboard")
@@ -148,7 +151,10 @@ struct DictationPanelPresentationRegression {
         expect(!model.copyRecoveryText(to: pasteboard), "A draft alone must never be copied as completed text")
         expect(pasteboard.string(forType: .string) == transcript, "Preview must leave the clipboard unchanged")
         model.recoveryText = "Older saved text"
-        expect(model.attentionIdentity?.hasPrefix("recovery:") == true, "Saved text must take attention priority over draft recognition")
+        model.recoveryAttentionID = UUID()
+        expect(model.attentionIdentity == draftIdentity, "Old saved text must not interrupt live draft recognition")
+        model.present(.paused)
+        expect(model.attentionIdentity?.hasPrefix("recovery:") == true, "Stopped capture must expose identified recovery")
         model.recoveryText = ""
         model.provisionalPreview = nil
         for (reason, message) in [(DictationEmptyReason.tooShort, "Recording too short"), (.noSpeech, "No speech detected"), (.noWordsRecognized, "No words recognized")] {
@@ -194,6 +200,27 @@ struct DictationPanelPresentationRegression {
         verifyPopover(name: "recovery-priority", required: ["Dictated text", "Saved phrase", "Copy", "Discard"], absent: ["Recent speech"])
         focusModel.recoveryText = ""
         focusModel.provisionalPreview = nil
+        focusModel.recoverableAudioID = UUID()
+        focusModel.recoveryAudioMessage = "Recognition failed. Recording saved."
+        focusModel.recoveryAttentionID = focusModel.recoverableAudioID
+        focusModel.present(.paused)
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2))
+        verifyPopover(name: "audio-recovery", required: ["Audio saved", "Retry transcription", "Discard audio"], absent: ["Copy"])
+        focusModel.recoverableAudioID = nil
+        focusModel.recoveryAudioMessage = nil
+        focusModel.recoveryText = "Text sent with no field confirmation."
+        focusModel.recoveryMessage = "Text sent, unverified"
+        focusModel.recoveryTextCount = 2
+        focusModel.recoveryAttentionID = nil
+        focusModel.present(.succeeded("sent"))
+        focusModel.showsDetails = false
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2))
+        expect(!focusModel.showsDetails, "Fully dispatched text must not automatically open recovery")
+        focusModel.showsDetails = true
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2))
+        verifyPopover(name: "sent-unverified-manual", required: ["Dictated text", "Text sent, unverified", "Next transcript"], absent: ["Retry transcription"])
+        focusModel.recoveryText = ""
+        focusModel.showsDetails = false
         focusModel.present(.idle)
         focusModel.emptyCompletion = .noSpeech
         focusModel.completionAttentionID = UUID()

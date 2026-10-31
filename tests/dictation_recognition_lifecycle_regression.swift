@@ -85,6 +85,32 @@ final class WhisperKit: @unchecked Sendable {
     func unloadModels() async { await SDKProbe.shared.cleanup(.whisperSmallEnglish) }
 }
 
+enum BarkModelVariant: Sendable {
+    case verbatim
+    case clean
+    var modelID: DictationModelID { self == .clean ? .underdogBark3CleanEnglish : .underdogBark3English }
+    var modelSHA256: [String: String] { [:] }
+}
+
+enum BarkRuntimeError: Error { case unsupportedSystem }
+
+struct BarkSpeechEngine: Sendable {
+    let modelID: DictationModelID
+    static func load(variant: BarkModelVariant, from root: URL) async throws -> Self {
+        await SDKProbe.shared.load(variant.modelID)
+        return Self(modelID: variant.modelID)
+    }
+    func transcribe(_ samples: [Float]) async throws -> String { await SDKProbe.shared.decode(modelID) }
+    func cleanup() async { await SDKProbe.shared.cleanup(modelID) }
+}
+
+private final class InstallProgressProbe: @unchecked Sendable {
+    private let lock = NSLock()
+    private var fractions: [Double] = []
+    func append(_ fraction: Double) { lock.withLock { fractions.append(fraction) } }
+    var values: [Double] { lock.withLock { fractions } }
+}
+
 private actor CompletionProbe {
     private(set) var completed = false
     func finish() { completed = true }
@@ -93,10 +119,18 @@ private actor CompletionProbe {
 @main
 struct DictationRecognitionLifecycleRegression {
     static func main() async throws {
-        for model in [DictationModelID.whisperSmallEnglish, .parakeetUnifiedEnglish, .parakeetV3Multilingual] {
+        for model in DictationModelID.allCases {
+            let backend = LocalDictationTranscriber(selectedModel: .whisperSmallEnglish)
+            let progress = InstallProgressProbe()
+            try await backend.install(model) { progress.append($0) }
+            require(progress.values == [0.42, 1], "\(model) must forward installation progress through its backend")
+        }
+        for model in [DictationModelID.whisperSmallEnglish, .parakeetUnifiedEnglish, .parakeetV3Multilingual, .underdogBark3English, .underdogBark3CleanEnglish] {
             try await sessionPinsDecodeAndUnload(model)
         }
-        try await cancellationDuringLoadDoesNotStartDecode()
+        for model in [DictationModelID.parakeetUnifiedEnglish, .underdogBark3English, .underdogBark3CleanEnglish] {
+            try await cancellationDuringLoadDoesNotStartDecode(model)
+        }
         print("Dictation recognition lifecycle regression passed with production actor methods and controlled SDK stubs")
     }
 
@@ -116,6 +150,12 @@ struct DictationRecognitionLifecycleRegression {
         try await backend.prepare(request: request)
         require(await SDKProbe.shared.loads[model] == 1, "preparation must reuse the loaded requested backend")
         try await backend.beginSession(plan)
+        if model == .underdogBark3English || model == .underdogBark3CleanEnglish {
+            do {
+                try await backend.install(model)
+                fatalError("installation replaced an active Bark session")
+            } catch BarkDictationError.transcriptionAlreadyRunning {}
+        }
         await backend.releaseModels()
         require(await SDKProbe.shared.cleanups[model, default: 0] == 0, "a session pin must prevent idle unload")
         do {
@@ -142,7 +182,8 @@ struct DictationRecognitionLifecycleRegression {
             fatalError("a replacement decode overlapped the draining SDK task")
         } catch WhisperKitDictationError.transcriptionAlreadyRunning {
         } catch ParakeetDictationError.transcriptionAlreadyRunning {
-        } catch ParakeetV3DictationError.transcriptionAlreadyRunning {}
+        } catch ParakeetV3DictationError.transcriptionAlreadyRunning {
+        } catch BarkDictationError.transcriptionAlreadyRunning {}
         await SDKProbe.shared.unblockDecode(model)
         await cancellation.value
         switch await transcription.result {
@@ -158,8 +199,7 @@ struct DictationRecognitionLifecycleRegression {
         require(await SDKProbe.shared.cleanups[model] == 2, "reloaded resources must remain releasable")
     }
 
-    private static func cancellationDuringLoadDoesNotStartDecode() async throws {
-        let model = DictationModelID.parakeetUnifiedEnglish
+    private static func cancellationDuringLoadDoesNotStartDecode(_ model: DictationModelID) async throws {
         let initialLoads = await SDKProbe.shared.loads[model, default: 0]
         let initialDecodes = await SDKProbe.shared.decodes[model, default: 0]
         let backend = LocalDictationTranscriber(selectedModel: .whisperSmallEnglish)

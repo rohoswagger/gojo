@@ -8,6 +8,12 @@ final class DictationPanelModel: ObservableObject {
     @Published var targetApplicationName: String?
     @Published var recoveryText = ""
     @Published var recoveryMessage: String?
+    @Published var recoveryAttentionID: UUID?
+    @Published var recoverableAudioID: UUID?
+    @Published var recoveryAudioMessage: String?
+    @Published var recoveryTextCount = 0
+    @Published var latestDeliveryUnconfirmed = false
+    @Published var selectedRecoveryID: UUID?
     @Published var activationMode = DictationActivationMode.saved()
     @Published var isPreview = false
     @Published var showsDetails = false
@@ -26,20 +32,31 @@ final class DictationPanelModel: ObservableObject {
     }
 
     var attentionIdentity: String? {
-        if !recoveryText.isEmpty { return "recovery:" + recoveryText }
+        if (!recoveryText.isEmpty || recoverableAudioID != nil), let id = recoveryAttentionID, !isCapturing {
+            return "recovery:" + id.uuidString
+        }
         if case .error = state { return errorPresentationID.uuidString }
         if emptyCompletion != nil, let id = completionAttentionID { return "empty:" + id.uuidString }
         if let preview = provisionalPreview { return "draft:" + preview.sessionID.uuidString }
         return nil
     }
 
-    func leavePreview(recoveryText: String, recoveryMessage: String?) {
+    func leavePreview(recoveryText: String, recoveryMessage: String?, recoverableAudioID: UUID? = nil, recoveryAudioMessage: String? = nil) {
         isPreview = false
         self.recoveryText = recoveryText
         self.recoveryMessage = recoveryMessage
+        self.recoverableAudioID = recoverableAudioID
+        self.recoveryAudioMessage = recoveryAudioMessage
         showsDetails = false
         provisionalPreview = nil
         clearWaveform()
+    }
+
+    var isCapturing: Bool {
+        switch state {
+        case .requestingPermission, .listening, .pausing: return true
+        default: return false
+        }
     }
 
     var isHandsFree: Bool { activationMode == .voiceMode }
@@ -53,7 +70,7 @@ final class DictationPanelModel: ObservableObject {
 
     var shouldHideWhenFinished: Bool {
         guard !Self.isActiveSession(state) else { return false }
-        if !recoveryText.isEmpty { return true }
+        if !recoveryText.isEmpty || recoverableAudioID != nil { return true }
         guard emptyCompletion == nil else { return false }
         if case .error = state { return true }
         guard !isHandsFree else { return false }
@@ -73,7 +90,7 @@ final class DictationPanelModel: ObservableObject {
         case .paused: return "Paused"
         case .transcribing: return "Transcribing"
         case .inserting: return "Adding text"
-        case .succeeded: return "Done"
+        case .succeeded: return latestDeliveryUnconfirmed ? "Text sent, unverified" : "Done"
         case .error: return "Could not dictate"
         }
     }
@@ -112,8 +129,9 @@ final class DictationPanelModel: ObservableObject {
 
     func copyRecoveryText(write: (String) -> Bool) -> Bool {
         let text = recoveryText
+        let id = selectedRecoveryID
         guard !text.isEmpty, write(text) else { return false }
-        clearRecoveryText(matching: text)
+        if recoveryText == text, selectedRecoveryID == id { showsDetails = false }
         return true
     }
 
@@ -128,6 +146,7 @@ final class DictationPanelModel: ObservableObject {
         let resolved = !recoveryText.isEmpty && text.isEmpty
         recoveryText = text
         recoveryMessage = message
+        if text.isEmpty { recoveryAttentionID = nil }
         if resolved { showsDetails = false }
         return resolved
     }
@@ -155,7 +174,10 @@ final class DictationPanelModel: ObservableObject {
 
 enum DictationPanelCommand {
     case start, pause, resume, finish, dismiss, settings
-    case clearRecovery(String)
+    case clearRecovery(UUID?, String)
+    case copyRecovery(UUID?, String)
+    case retryAudio(UUID), discardAudio(UUID)
+    case nextRecovery
 }
 
 struct DictationPanelCopyLabel: View {
@@ -202,6 +224,32 @@ struct DictationPanelView: View {
     @State private var openedDraftSessionID: UUID?
 
     var body: some View {
+        styledCapsule
+        .onHover {
+            isHovered = $0
+            model.capsuleHovered = $0
+        }
+        .onChange(of: model.recoveryText) { copiedRecoveryText = nil }
+        .onChange(of: model.selectedRecoveryID) { copiedRecoveryText = nil }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(model.isPreview ? "Gojo dictation preview" : "Gojo dictation controls")
+        .help(model.isPreview ? "Preview · " + model.title : model.title)
+        .task(id: model.attentionIdentity) {
+            guard model.attentionIdentity != nil else { return }
+            if model.recoveryText.isEmpty, model.errorMessage != nil,
+               dismissedErrorID == model.errorPresentationID { return }
+            if model.recoveryText.isEmpty, model.recoverableAudioID == nil, model.errorMessage == nil, model.emptyCompletion == nil,
+               let preview = model.provisionalPreview {
+                guard model.automaticallyOpensDraft, openedDraftSessionID != preview.sessionID else { return }
+                openedDraftSessionID = preview.sessionID
+                model.showsDetails = true
+                return
+            }
+            model.showsDetails = true
+        }
+    }
+
+    private var styledCapsule: some View {
         capsule
         .frame(width: model.size.width, height: model.size.height)
         .background(DictationPanelInk.background, in: RoundedRectangle(cornerRadius: 22))
@@ -211,30 +259,6 @@ struct DictationPanelView: View {
                 .allowsHitTesting(false)
         }
         .preferredColorScheme(.dark)
-        .onHover {
-            isHovered = $0
-            model.capsuleHovered = $0
-        }
-        .onChange(of: model.recoveryText) { copiedRecoveryText = nil }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(model.isPreview ? "Gojo dictation preview" : "Gojo dictation controls")
-        .help(model.isPreview ? "Preview · " + model.title : model.title)
-        .task(id: model.attentionIdentity) {
-            guard model.attentionIdentity != nil else {
-                model.showsDetails = false
-                return
-            }
-            if model.recoveryText.isEmpty, model.errorMessage != nil,
-               dismissedErrorID == model.errorPresentationID { return }
-            if model.recoveryText.isEmpty, model.errorMessage == nil, model.emptyCompletion == nil,
-               let preview = model.provisionalPreview {
-                guard model.automaticallyOpensDraft, openedDraftSessionID != preview.sessionID else { return }
-                openedDraftSessionID = preview.sessionID
-                model.showsDetails = true
-                return
-            }
-            model.showsDetails = true
-        }
     }
 
     private var capsule: some View {
@@ -283,7 +307,7 @@ struct DictationPanelView: View {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.orange)
-                } else if !model.recoveryText.isEmpty {
+                } else if !model.recoveryText.isEmpty || model.recoverableAudioID != nil {
                     Image(systemName: "text.badge.checkmark")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(DictationPanelInk.text)
@@ -348,12 +372,15 @@ struct DictationPanelView: View {
         }
     }
 
-    private var needsAttention: Bool { model.attentionIdentity != nil }
+    private var needsAttention: Bool { !model.recoveryText.isEmpty || model.recoverableAudioID != nil || model.attentionIdentity != nil }
 
     private var details: some View {
         Group {
-            if !model.recoveryText.isEmpty {
-                recovery
+            if !model.recoveryText.isEmpty || model.recoverableAudioID != nil {
+                VStack(spacing: 0) {
+                    if let id = model.recoverableAudioID { audioRecovery(id: id) }
+                    if !model.recoveryText.isEmpty { recovery }
+                }
             } else if model.errorMessage == nil, model.emptyCompletion == nil,
                       let preview = model.provisionalPreview {
                 VStack(alignment: .leading, spacing: 12) {
@@ -417,12 +444,44 @@ struct DictationPanelView: View {
         .buttonStyle(.plain)
     }
 
+    private func audioRecovery(id: UUID) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Audio saved")
+                .font(.system(size: 12, weight: .semibold))
+            Text(model.recoveryAudioMessage ?? "Speech recognition did not finish. You can retry the saved recording.")
+                .font(.system(size: 11))
+                .foregroundStyle(DictationPanelInk.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack {
+                Button("Retry transcription") { command(.retryAudio(id)) }
+                Spacer()
+                Button("Discard audio") { command(.discardAudio(id)) }
+                    .foregroundStyle(DictationPanelInk.secondary)
+            }
+            .font(.system(size: 11, weight: .medium))
+            .buttonStyle(.plain)
+            .frame(height: 26)
+        }
+        .foregroundStyle(DictationPanelInk.text)
+        .padding(16)
+        .frame(width: 312)
+    }
+
     private var recovery: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Dictated text")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(DictationPanelInk.secondary)
-            Text("Make sure a text field is selected before dictating.")
+            HStack {
+                Text("Dictated text")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(DictationPanelInk.secondary)
+                Spacer()
+                if model.recoveryTextCount > 1 {
+                    Button("Next transcript") { command(.nextRecovery) }
+                        .font(.system(size: 11))
+                        .buttonStyle(.plain)
+                        .help("\(model.recoveryTextCount) saved transcripts")
+                }
+            }
+            Text(model.recoveryMessage ?? "Text saved for copying.")
                 .font(.system(size: 11))
                 .foregroundStyle(DictationPanelInk.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -437,11 +496,12 @@ struct DictationPanelView: View {
             HStack {
                 Button {
                     let text = model.recoveryText
+                    let id = model.selectedRecoveryID
                     copiedRecoveryText = nil
                     if model.copyRecoveryText() {
                         copiedRecoveryText = text
                         dismissedErrorID = model.errorPresentationID
-                        command(.clearRecovery(text))
+                        command(.copyRecovery(id, text))
                     }
                 } label: {
                     DictationPanelCopyLabel(isCopied: copiedRecoveryText == model.recoveryText)
@@ -450,7 +510,7 @@ struct DictationPanelView: View {
                 Spacer()
                 Button("Discard") {
                     dismissedErrorID = model.errorPresentationID
-                    command(.clearRecovery(model.recoveryText))
+                    command(.clearRecovery(model.selectedRecoveryID, model.recoveryText))
                 }
                 .foregroundStyle(DictationPanelInk.secondary)
                 .frame(height: 26)

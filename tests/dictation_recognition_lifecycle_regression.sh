@@ -19,6 +19,7 @@ for filename, boundary in [
     ('WhisperKitDictationTranscriber.swift', '    private static func cachedModelFolderKey'),
     ('ParakeetUnifiedDictationTranscriber.swift', '    private static let repository'),
     ('ParakeetV3DictationTranscriber.swift', '    private static let repository'),
+    ('BarkDictationTranscriber.swift', '    private func cachedModelFolder'),
 ]:
     source = (root / filename).read_text()
     prefix = source[:source.index(boundary)]
@@ -29,8 +30,10 @@ for filename, boundary in [
     private static let modelSHA256: [String: String] = [:]
     private static func validateModel(at folder: URL) throws {}
     private static func removeCachedModel() throws { SDKProbe.deletedInstalledFiles() }
-    private func resolvePinnedModelFolder(allowDownload: Bool) async throws -> URL {
-        URL(fileURLWithPath: "/tmp")
+    private func resolvePinnedModelFolder(allowDownload: Bool, onProgress: @escaping @Sendable (Double) -> Void = { _ in }) async throws -> URL {
+        onProgress(0.42)
+        onProgress(1)
+        return URL(fileURLWithPath: "/tmp")
     }
 '''
     if filename.startswith('WhisperKit'):
@@ -42,8 +45,13 @@ for filename, boundary in [
         SDKProbe.deletedInstalledFiles()
     }
     private static func resolvePinnedModelFolder(
-        for model: WhisperDictationModel, allowDownload: Bool
-    ) async throws -> URL { URL(fileURLWithPath: "/tmp") }
+        for model: WhisperDictationModel, allowDownload: Bool,
+        onProgress: @escaping @Sendable (Double) -> Void = { _ in }
+    ) async throws -> URL {
+        onProgress(0.42)
+        onProgress(1)
+        return URL(fileURLWithPath: "/tmp")
+    }
 '''
     if filename.startswith('ParakeetV3'):
         helpers += '''
@@ -53,7 +61,19 @@ for filename, boundary in [
         return FakeAsrModels()
     }
 '''
-    error = re.search(r'^enum (WhisperKitDictationError|ParakeetDictationError|ParakeetV3DictationError):', source, re.M)
+    if filename.startswith('Bark'):
+        helpers = '''
+    private func cachedModelFolder() -> URL? { URL(fileURLWithPath: "/tmp") }
+    private func clearCachedModelFolder() {}
+    private func validateModel(at folder: URL) throws {}
+    private func removeCachedModel() throws { SDKProbe.deletedInstalledFiles() }
+    private func resolvePinnedModelFolder(allowDownload: Bool, onProgress: @escaping @Sendable (Double) -> Void = { _ in }) async throws -> URL {
+        onProgress(0.42)
+        onProgress(1)
+        return URL(fileURLWithPath: "/tmp")
+    }
+'''
+    error = re.search(r'^enum (WhisperKitDictationError|ParakeetDictationError|ParakeetV3DictationError|BarkDictationError):', source, re.M)
     if error is None:
         raise SystemExit(f'Missing production error enum in {filename}')
     (output / filename).write_text('import WhisperKit\n' + prefix + helpers + '}\n' + source[error.start():])
@@ -69,6 +89,7 @@ swiftc -swift-version 5 -warnings-as-errors -target "$(uname -m)-apple-macosx14.
   "$test_directory/WhisperKitDictationTranscriber.swift" \
   "$test_directory/ParakeetUnifiedDictationTranscriber.swift" \
   "$test_directory/ParakeetV3DictationTranscriber.swift" \
+  "$test_directory/BarkDictationTranscriber.swift" \
   tests/dictation_recognition_lifecycle_regression.swift \
   "$sdk_products/WhisperKit.o" "$sdk_products/ArgmaxCore.o" \
   -o "$test_directory/regression"

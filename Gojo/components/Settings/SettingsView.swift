@@ -1608,6 +1608,9 @@ struct DictationSettings: View {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .fixedSize(horizontal: false, vertical: true)
+                                if let download = dictation.modelDownload, download.model == model.id {
+                                    modelDownloadProgress(download, modelName: model.displayName)
+                                }
                                 if let error = dictation.modelErrors[model.id] {
                                     Text(error)
                                         .font(.caption)
@@ -1654,7 +1657,7 @@ struct DictationSettings: View {
             experienceSection
 
             Section {
-                Toggle("Polish English dictated text", isOn: cleanupEnabledBinding)
+                Toggle("AI polish (optional, English)", isOn: cleanupEnabledBinding)
                     .disabled(
                         !dictation.s1MiniInstalled || dictation.s1MiniOperation != nil
                     )
@@ -1675,7 +1678,7 @@ struct DictationSettings: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    Text("A purpose-built English transcript normalizer running privately through llama.cpp.")
+                    Text("Optional cleanup for English transcripts. Leave AI polish off to use the speech model’s output directly.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
@@ -2457,6 +2460,38 @@ struct DictationSettings: View {
         if dictation.preparingModel != nil { return true }
         if !dictation.canChangeModel { return true }
         return dictation.selectedModel == model && dictation.isModelInstalled(model)
+    }
+
+    @ViewBuilder
+    private func modelDownloadProgress(_ download: DictationModelDownload, modelName: String) -> some View {
+        switch download.phase {
+        case .preparing:
+            ProgressView("Preparing download…")
+                .progressViewStyle(.linear)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .accessibilityLabel("\(modelName) download")
+                .accessibilityValue("Preparing download")
+        case .downloading(let fraction):
+            ProgressView(value: fraction, total: 1) {
+                Text("File download progress")
+            } currentValueLabel: {
+                Text("\(Int(fraction * 100))%")
+                    .monospacedDigit()
+            }
+            .progressViewStyle(.linear)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .accessibilityLabel("\(modelName) download")
+            .accessibilityValue("\(Int(fraction * 100)) percent file download progress")
+        case .verifying:
+            ProgressView("Verifying model…")
+                .progressViewStyle(.linear)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .accessibilityLabel("\(modelName) download")
+                .accessibilityValue("Verifying model")
+        }
     }
 }
 

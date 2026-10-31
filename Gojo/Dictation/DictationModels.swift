@@ -56,14 +56,72 @@ enum DictationCopyOnlyReason: CaseIterable, Equatable, Sendable {
     }
 }
 
+enum DictationDeliveryDisposition: String, Equatable, Sendable {
+    case notSent
+    case partialUnknown
+    case allDispatched
+    case confirmed
+}
+
+struct DictationDeliveryReceipt: Equatable, Sendable {
+    let transactionID: UUID
+    let writerID: String
+    let disposition: DictationDeliveryDisposition
+    let writerQuiescent: Bool
+    let reason: String?
+
+    init(transactionID: UUID, writerID: String, disposition: DictationDeliveryDisposition,
+         writerQuiescent: Bool, reason: String? = nil) {
+        self.transactionID = transactionID
+        self.writerID = writerID
+        self.disposition = disposition
+        self.writerQuiescent = writerQuiescent
+        self.reason = reason
+    }
+
+    init?(dictionary: NSDictionary) {
+        guard let id = dictionary["transactionID"] as? String,
+              let transactionID = UUID(uuidString: id),
+              let writerID = dictionary["writerID"] as? String,
+              !writerID.isEmpty,
+              let rawDisposition = dictionary["disposition"] as? String,
+              let disposition = DictationDeliveryDisposition(rawValue: rawDisposition),
+              let quiescent = dictionary["writerQuiescent"] as? NSNumber else { return nil }
+        self.init(transactionID: transactionID, writerID: writerID, disposition: disposition,
+                  writerQuiescent: quiescent.boolValue, reason: dictionary["error"] as? String)
+    }
+}
+
 enum DictationInsertionOutcome: Equatable, Sendable {
     case verified
     case unverified
+    case notSent(String)
+    case partialUnknown(String)
+    case receipt(DictationDeliveryReceipt)
+
+    var disposition: DictationDeliveryDisposition {
+        switch self {
+        case .verified: return .confirmed
+        case .unverified: return .allDispatched
+        case .notSent: return .notSent
+        case .partialUnknown: return .partialUnknown
+        case .receipt(let receipt): return receipt.disposition
+        }
+    }
 
     var recoveryMessage: String? {
+        let reason: String?
         switch self {
-        case .verified: return nil
-        case .unverified: return "The app did not confirm receiving this text. It is saved for copying."
+        case .notSent(let message), .partialUnknown(let message): reason = message
+        case .receipt(let receipt): reason = receipt.reason
+        case .verified, .unverified: reason = nil
+        }
+        switch disposition {
+        case .confirmed, .allDispatched: return nil
+        case .notSent: return reason ?? "Gojo did not send this text. It is saved for copying."
+        case .partialUnknown:
+            let warning = "Some text may already be in the app. Review it before copying the saved transcript."
+            return reason.map { "\($0) \(warning)" } ?? warning
         }
     }
 }
@@ -774,9 +832,12 @@ enum DictationModelStorageError: Error {
 enum DictationEngineID: String, Sendable {
     case whisperKit
     case fluidAudio
+    case barkCoreML
 }
 
 enum DictationModelID: String, CaseIterable, Identifiable, Sendable {
+    case underdogBark3CleanEnglish = "bark:underdog-bark-3.0-clean"
+    case underdogBark3English = "bark:underdog-bark-3.0"
     case whisperSmallEnglish = "whisperkit:small.en_217MB"
     case whisperLargeV3 = "whisperkit:large-v3-v20240930_626MB"
     case parakeetUnifiedEnglish = "fluidaudio:parakeet-unified-en-0.6b"
@@ -790,6 +851,7 @@ enum DictationModelID: String, CaseIterable, Identifiable, Sendable {
             return .whisperKit
         case .parakeetUnifiedEnglish, .parakeetV3Multilingual:
             return .fluidAudio
+        case .underdogBark3English, .underdogBark3CleanEnglish: return .barkCoreML
         }
     }
 
@@ -811,8 +873,27 @@ enum DictationModelID: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .whisperSmallEnglish: return .smallEnglish
         case .whisperLargeV3: return .largeV3
-        case .parakeetUnifiedEnglish, .parakeetV3Multilingual: return nil
+        case .parakeetUnifiedEnglish, .parakeetV3Multilingual, .underdogBark3English, .underdogBark3CleanEnglish: return nil
         }
+    }
+}
+
+struct DictationModelDownload: Equatable, Sendable {
+    enum Phase: Equatable, Sendable {
+        case preparing
+        case downloading(Double)
+        case verifying
+    }
+
+    let id: UUID
+    let model: DictationModelID
+    let phase: Phase
+
+    func advancing(to fraction: Double) -> Self {
+        guard fraction.isFinite, phase != .verifying else { return self }
+        let fraction = min(1, max(0, fraction))
+        if case .downloading(let previous) = phase, fraction < previous { return self }
+        return Self(id: id, model: model, phase: fraction == 1 ? .verifying : .downloading(fraction))
     }
 }
 
@@ -842,6 +923,7 @@ struct DictationModelDescriptor: Identifiable, Sendable {
         switch engine {
         case .whisperKit: return "WhisperKit"
         case .fluidAudio: return "FluidAudio"
+        case .barkCoreML: return "Core ML"
         }
     }
 
@@ -866,6 +948,30 @@ struct DictationModelDescriptor: Identifiable, Sendable {
             isRecommended: false,
             capabilities: DictationModelCapabilities(
                 language: .automaticOnly(supportedLanguages: DictationSupportedLanguages.parakeetV3),
+                supportsTranslationToEnglish: false,
+                supportsRecognizedPreview: false
+            )
+        ),
+        DictationModelDescriptor(
+            id: .underdogBark3CleanEnglish,
+            displayName: "Underdog Bark 3.0 Clean",
+            detail: "English dictation with built-in filler and false-start removal. Apple silicon, macOS 15+. AI polish is optional.",
+            downloadSizeLabel: "447 MB",
+            isRecommended: false,
+            capabilities: DictationModelCapabilities(
+                language: .fixedEnglish,
+                supportsTranslationToEnglish: false,
+                supportsRecognizedPreview: false
+            )
+        ),
+        DictationModelDescriptor(
+            id: .underdogBark3English,
+            displayName: "Underdog Bark 3.0",
+            detail: "English transcription, including fillers. Apple silicon, macOS 15+. AI polish is optional.",
+            downloadSizeLabel: "202 MB",
+            isRecommended: false,
+            capabilities: DictationModelCapabilities(
+                language: .fixedEnglish,
                 supportsTranslationToEnglish: false,
                 supportsRecognizedPreview: false
             )

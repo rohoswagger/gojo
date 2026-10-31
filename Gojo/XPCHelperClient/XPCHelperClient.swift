@@ -28,205 +28,21 @@ private struct DictationCaptureTargetHint: Sendable {
 @_silgen_name("_AXUIElementGetWindow")
 private func _AXUIElementGetWindow(_ element: AXUIElement, _ identifier: UnsafeMutablePointer<CGWindowID>) -> AXError
 
-private struct DictationPasteboardSnapshot {
-    let items: [[NSPasteboard.PasteboardType: Data]]
-    let isComplete: Bool
-
-    init(pasteboard: NSPasteboard) {
-        var capturedItems: [[NSPasteboard.PasteboardType: Data]] = []
-        var capturedEveryType = true
-        for item in pasteboard.pasteboardItems ?? [] {
-            var capturedItem: [NSPasteboard.PasteboardType: Data] = [:]
-            for type in item.types {
-                guard let data = item.data(forType: type) else {
-                    capturedEveryType = false
-                    continue
-                }
-                capturedItem[type] = data
-            }
-            capturedItems.append(capturedItem)
-        }
-        items = capturedItems
-        isComplete = capturedEveryType
-    }
-
-    @discardableResult
-    func restore(to pasteboard: NSPasteboard) -> Bool {
-        pasteboard.clearContents()
-        guard !items.isEmpty else { return true }
-
-        let restoredItems = items.map { storedItem -> NSPasteboardItem in
-            let item = NSPasteboardItem()
-            for (type, data) in storedItem {
-                item.setData(data, forType: type)
-            }
-            return item
-        }
-        return pasteboard.writeObjects(restoredItems)
-    }
-}
-
 @MainActor
 private final class DictationApplicationInsertionService {
     static let shared = DictationApplicationInsertionService()
 
-    private static let commandKeyCode: CGKeyCode = 0x37
-    private static let pasteKeyCode: CGKeyCode = 0x09
-    private static let transientPasteboardType = NSPasteboard.PasteboardType(
-        "org.nspasteboard.TransientType"
-    )
     private static let protectedContentAttribute = "AXContainsProtectedContent"
     private static let isFocusedAttribute = "AXFocused"
 
     private init() {}
 
-    // Retained for future scoped compatibility targets that cannot receive
-    // Unicode events. Current opaque dictation targets use insertUnicode so
-    // dictated text never has to touch the global clipboard.
-    // Adapted from Pindrop's MIT-licensed OutputManager. The keyboard events
-    // must come from Gojo, the process the user grants Accessibility access to.
-    func insert(
-        _ text: String,
-        target: DictationApplicationPasteTarget
-    ) async -> NSDictionary {
-        guard !Task.isCancelled else {
-            return failure("insertionCancelled")
-        }
-        guard let targetApplication = NSRunningApplication(processIdentifier: target.pid),
-              !targetApplication.isTerminated else {
-            return failure("focusChanged")
-        }
-        guard let eventSource = CGEventSource(stateID: .hidSystemState),
-              let commandDown = CGEvent(
-                keyboardEventSource: eventSource,
-                virtualKey: Self.commandKeyCode,
-                keyDown: true
-              ),
-              let pasteDown = CGEvent(
-                keyboardEventSource: eventSource,
-                virtualKey: Self.pasteKeyCode,
-                keyDown: true
-              ),
-              let pasteUp = CGEvent(
-                keyboardEventSource: eventSource,
-                virtualKey: Self.pasteKeyCode,
-                keyDown: false
-              ),
-              let commandUp = CGEvent(
-                keyboardEventSource: eventSource,
-                virtualKey: Self.commandKeyCode,
-                keyDown: false
-              ) else {
-            return failure("pasteEventUnavailable")
-        }
-
-        commandDown.flags = .maskCommand
-        pasteDown.flags = .maskCommand
-        pasteUp.flags = .maskCommand
-
-        let pasteboard = NSPasteboard.general
-        let snapshot = DictationPasteboardSnapshot(pasteboard: pasteboard)
-        guard snapshot.isComplete else {
-            return failure("clipboardSnapshotUnavailable")
-        }
-        guard isTargetProcessFrontmost(target.pid),
-              isCapturedWindowFrontmost(
-                  targetPID: target.pid,
-                  targetWindowID: target.windowID
-              ) else {
-            return failure("focusChanged")
-        }
-
-        let transcriptItem = NSPasteboardItem()
-        transcriptItem.setString(text, forType: .string)
-        transcriptItem.setData(Data(), forType: Self.transientPasteboardType)
-
-        guard !Task.isCancelled else {
-            return failure("insertionCancelled")
-        }
-        pasteboard.clearContents()
-        guard pasteboard.writeObjects([transcriptItem]) else {
-            _ = snapshot.restore(to: pasteboard)
-            return failure("pasteboardWriteFailed")
-        }
-        let injectedChangeCount = pasteboard.changeCount
-        var commandIsDown = false
-        var pasteIsDown = false
-        var pasteEventPosted = false
-
-        do {
-            try await Task.sleep(for: .milliseconds(80))
-
-            guard isTargetProcessFrontmost(target.pid),
-                  isCapturedWindowFrontmost(
-                    targetPID: target.pid,
-                    targetWindowID: target.windowID
-                  ),
-                  pasteboard.changeCount == injectedChangeCount,
-                  pasteboard.string(forType: .string) == text else {
-                if pasteboard.changeCount == injectedChangeCount {
-                    _ = snapshot.restore(to: pasteboard)
-                }
-                return failure("focusChanged")
-            }
-
-            try Task.checkCancellation()
-            commandDown.post(tap: .cghidEventTap)
-            commandIsDown = true
-            try await Task.sleep(for: .milliseconds(50))
-            guard isTargetProcessFrontmost(target.pid),
-                  isCapturedWindowFrontmost(
-                    targetPID: target.pid,
-                    targetWindowID: target.windowID
-                  ) else {
-                commandUp.post(tap: .cghidEventTap)
-                commandIsDown = false
-                if pasteboard.changeCount == injectedChangeCount {
-                    _ = snapshot.restore(to: pasteboard)
-                }
-                return failure("focusChanged")
-            }
-            try Task.checkCancellation()
-            pasteDown.post(tap: .cghidEventTap)
-            pasteIsDown = true
-            pasteEventPosted = true
-            try await Task.sleep(for: .milliseconds(50))
-            try Task.checkCancellation()
-            pasteUp.post(tap: .cghidEventTap)
-            pasteIsDown = false
-            try await Task.sleep(for: .milliseconds(50))
-            try Task.checkCancellation()
-            commandUp.post(tap: .cghidEventTap)
-            commandIsDown = false
-            try await Task.sleep(for: .milliseconds(300))
-        } catch {
-            if pasteIsDown {
-                pasteUp.post(tap: .cghidEventTap)
-            }
-            if commandIsDown {
-                commandUp.post(tap: .cghidEventTap)
-            }
-            if !pasteEventPosted,
-               pasteboard.changeCount == injectedChangeCount {
-                _ = snapshot.restore(to: pasteboard)
-            }
-            return failure("insertionCancelled")
-        }
-
-        return [
-            "authorized": true,
-            "success": true,
-            "method": "application-paste",
-            "verified": false,
-            "clipboardRestored": false,
-        ]
-    }
-
     func insertUnicode(
         _ text: String,
-        target: DictationApplicationPasteTarget
+        target: DictationApplicationPasteTarget,
+        cancellation: DictationDeliveryCancellation
     ) async -> NSDictionary {
-        guard !Task.isCancelled else {
+        guard !cancellation.isCancelled else {
             return unicodeFailure("insertionCancelled")
         }
         guard let targetApplication = NSRunningApplication(
@@ -240,7 +56,7 @@ private final class DictationApplicationInsertionService {
         }
         var postedChunkCount = 0
         for (index, chunk) in chunks.enumerated() {
-            guard !Task.isCancelled else {
+            guard !cancellation.isCancelled else {
                 let failure = DictationUnicodeTextInjector.failure(
                     afterPostedChunks: postedChunkCount,
                     fallbackCode: "insertionCancelled"
@@ -274,10 +90,10 @@ private final class DictationApplicationInsertionService {
                     partialInsertion: failure.isPartialInsertion
                 )
             }
-            guard DictationUnicodeTextInjector.post(chunk) else {
+            guard cancellation.withCommitPermission({ DictationUnicodeTextInjector.post(chunk) }) == true else {
                 let failure = DictationUnicodeTextInjector.failure(
                     afterPostedChunks: postedChunkCount,
-                    fallbackCode: Task.isCancelled ? "insertionCancelled" : "unicodeEventUnavailable"
+                    fallbackCode: cancellation.isCancelled ? "insertionCancelled" : "unicodeEventUnavailable"
                 )
                 return unicodeFailure(
                     failure.code,
@@ -303,16 +119,6 @@ private final class DictationApplicationInsertionService {
             "success": true,
             "method": "application-unicode",
             "verified": false,
-        ]
-    }
-
-    private func failure(_ error: String) -> NSDictionary {
-        [
-            "authorized": true,
-            "success": false,
-            "method": "application-paste",
-            "verified": false,
-            "error": error,
         ]
     }
 
@@ -919,12 +725,12 @@ final class XPCHelperClient: NSObject, @unchecked Sendable {
         return availableDisplays[index]
     }
 
-    nonisolated func insertText(_ text: String, token: String) async -> NSDictionary {
-        await performTextInsertion(text, token: token, retainingTarget: false)
+    nonisolated func insertText(_ text: String, token: String, transactionID: UUID = UUID()) async -> NSDictionary {
+        await performTextInsertion(text, token: token, transactionID: transactionID, retainingTarget: false)
     }
 
-    nonisolated func insertTextRetainingTarget(_ text: String, token: String) async -> NSDictionary {
-        await performTextInsertion(text, token: token, retainingTarget: true)
+    nonisolated func insertTextRetainingTarget(_ text: String, token: String, transactionID: UUID = UUID()) async -> NSDictionary {
+        await performTextInsertion(text, token: token, transactionID: transactionID, retainingTarget: true)
     }
 
     nonisolated func releaseTextTarget(_ token: String) async {
@@ -976,114 +782,96 @@ final class XPCHelperClient: NSObject, @unchecked Sendable {
     private nonisolated func performTextInsertion(
         _ text: String,
         token: String,
+        transactionID: UUID,
         retainingTarget: Bool
     ) async -> NSDictionary {
-        do {
-            try Task.checkCancellation()
-            let service = await MainActor.run {
-                ensureRemoteService()
+        let cancellation = DictationDeliveryCancellation()
+        if Task.isCancelled { cancellation.cancel() }
+        return await withTaskCancellationHandler {
+            await DictationDeliveryWriter.shared.perform(transactionID: transactionID) {
+                await self.executeTextInsertion(text, token: token, transactionID: transactionID,
+                                                retainingTarget: retainingTarget, cancellation: cancellation)
             }
-            try Task.checkCancellation()
+        } onCancel: {
+            cancellation.cancel()
+        }
+    }
+
+    private nonisolated func executeTextInsertion(
+        _ text: String,
+        token: String,
+        transactionID: UUID,
+        retainingTarget: Bool,
+        cancellation: DictationDeliveryCancellation
+    ) async -> NSDictionary {
+        let hostWriterID = await DictationDeliveryWriter.shared.identity
+        func failure(_ code: String, requested: Bool) -> NSDictionary {
+            ["authorized": true, "success": false, "method": "none", "error": code,
+             "transactionID": transactionID.uuidString,
+             "writerID": requested ? "helper:unacknowledged" : hostWriterID,
+             "disposition": requested ? "partialUnknown" : "notSent",
+             "writerQuiescent": !requested]
+        }
+        guard !cancellation.isCancelled else { return failure("insertionCancelled", requested: false) }
+        var requested = false
+        do {
+            let service = await MainActor.run { ensureRemoteService() }
+            guard !cancellation.isCancelled else { return failure("insertionCancelled", requested: false) }
             let result: NSDictionary = try await service.withContinuation { service, continuation in
-                let reply: (NSDictionary) -> Void = { result in
-                    continuation.resume(returning: result)
-                }
+                let reply: (NSDictionary) -> Void = { result in continuation.resume(returning: result) }
+                requested = true
                 if retainingTarget {
-                    service.insertTextRetainingTarget(text, token: token, with: reply)
+                    service.insertTextRetainingTarget(text, token: token, transactionID: transactionID.uuidString, with: reply)
                 } else {
-                    service.insertText(text, token: token, with: reply)
+                    service.insertText(text, token: token, transactionID: transactionID.uuidString, with: reply)
                 }
             }
             let authorized = (result["authorized"] as? NSNumber)?.boolValue == true
-            await MainActor.run {
-                notifyAuthorizationChange(authorized)
-            }
-            let insertionResult = await resolveTextInsertionResult(result, text: text)
-            if retainingTarget,
-               (insertionResult["success"] as? NSNumber)?.boolValue != true {
+            await MainActor.run { notifyAuthorizationChange(authorized) }
+            let insertionResult = await resolveTextInsertionResult(result, text: text,
+                transactionID: transactionID, hostWriterID: hostWriterID, cancellation: cancellation)
+            if retainingTarget, (insertionResult["success"] as? NSNumber)?.boolValue != true {
                 await releaseTextTarget(token)
             }
             return insertionResult
         } catch {
-            if retainingTarget {
-                await releaseTextTarget(token)
-            }
-            if error is CancellationError {
-                return [
-                    "authorized": true,
-                    "success": false,
-                    "method": "none",
-                    "error": "insertionCancelled",
-                ]
-            }
-            return [
-                "authorized": false,
-                "success": false,
-                "method": "none",
-                "error": "helperUnavailable",
-            ]
+            return failure(error is CancellationError ? "insertionCancelled" : "helperUnavailable", requested: requested)
         }
     }
 
     private nonisolated func resolveTextInsertionResult(
         _ result: NSDictionary,
-        text: String
+        text: String,
+        transactionID: UUID,
+        hostWriterID: String,
+        cancellation: DictationDeliveryCancellation
     ) async -> NSDictionary {
         let error = result["error"] as? String
-        guard error == "applicationPasteRequired" || error == "applicationUnicodeRequired" else {
-            return result
-        }
-        guard !Task.isCancelled else {
-            return [
-                "authorized": true,
-                "success": false,
-                "method": "none",
-                "error": "insertionCancelled",
-            ]
-        }
-        if result["error"] as? String == "applicationPasteRequired",
-           let pid = result["pid"] as? NSNumber,
-           let windowID = result["windowID"] as? NSNumber {
-            let targetPID = pid_t(pid.int32Value)
-            let targetWindowID = CGWindowID(truncating: windowID)
-            return await DictationApplicationInsertionService.shared.insert(
+        guard error == "applicationPasteRequired" || error == "applicationUnicodeRequired" else { return result }
+        var hostResult: NSDictionary
+        if cancellation.isCancelled {
+            hostResult = ["authorized": true, "success": false, "method": "none", "error": "insertionCancelled"]
+        } else if error == "applicationPasteRequired" {
+            hostResult = ["authorized": true, "success": false, "method": "none", "error": "automaticPasteDisabled"]
+        } else if let pid = result["pid"] as? NSNumber, let windowID = result["windowID"] as? NSNumber {
+            hostResult = await DictationApplicationInsertionService.shared.insertUnicode(
                 text,
-                target: DictationApplicationPasteTarget(
-                    pid: targetPID,
-                    windowID: targetWindowID
-                )
+                target: DictationApplicationPasteTarget(pid: pid_t(pid.int32Value), windowID: CGWindowID(truncating: windowID)),
+                cancellation: cancellation
             )
+        } else {
+            hostResult = ["authorized": true, "success": false, "method": "application-unicode", "error": "focusChanged"]
         }
-        if result["error"] as? String == "applicationPasteRequired" {
-            return [
-                "authorized": true,
-                "success": false,
-                "method": "application-paste",
-                "verified": false,
-                "error": "focusChanged",
-            ]
+        var receipt: [String: Any] = [:]
+        for (key, value) in hostResult {
+            if let key = key as? String { receipt[key] = value }
         }
-        if result["error"] as? String == "applicationUnicodeRequired",
-           let pid = result["pid"] as? NSNumber,
-           let windowID = result["windowID"] as? NSNumber {
-            return await DictationApplicationInsertionService.shared.insertUnicode(
-                text,
-                target: DictationApplicationPasteTarget(
-                    pid: pid_t(pid.int32Value),
-                    windowID: CGWindowID(truncating: windowID)
-                )
-            )
-        }
-        if result["error"] as? String == "applicationUnicodeRequired" {
-            return [
-                "authorized": true,
-                "success": false,
-                "method": "application-unicode",
-                "verified": false,
-                "error": "focusChanged",
-            ]
-        }
-        return result
+        receipt["transactionID"] = transactionID.uuidString
+        receipt["writerID"] = hostWriterID
+        receipt["writerQuiescent"] = true
+        receipt["disposition"] = (hostResult["success"] as? NSNumber)?.boolValue == true ? "allDispatched"
+            : ((hostResult["partialInsertion"] as? NSNumber)?.boolValue == true ? "partialUnknown" : "notSent")
+        return NSDictionary(dictionary: receipt)
     }
 
     nonisolated func focusedWindowSnapshot(promptIfNeeded: Bool) async -> NSDictionary? {

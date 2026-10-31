@@ -13,6 +13,7 @@ private struct ExpectedAction {
 private final class FixtureDictation: ObservableObject {
     var selectedModel = DictationModelID.parakeetUnifiedEnglish
     var preparingModel: DictationModelID?
+    var modelDownload: DictationModelDownload?
     var switchingModel: DictationModelID?
     var removingModel: DictationModelID?
     var canChangeModel = true
@@ -89,7 +90,7 @@ private struct ModelSectionFixture: View {
             /* PRODUCTION_MODEL_SECTION */
         }
         .formStyle(.grouped)
-        .frame(width: 500, height: 440)
+        .frame(width: 500, height: 700)
         .background(Color(NSColor.windowBackgroundColor))
         .tint(Color(nsColor: .controlAccentColor))
         .preferredColorScheme(scheme)
@@ -122,22 +123,36 @@ private struct DictationModelSettingsRegression {
     private static func scenario(_ name: String) -> (FixtureDictation, [ExpectedAction]) {
         let service = FixtureDictation()
         switch name {
-        case "enabled":
+        case "enabled", "failure":
+            if name == "failure" {
+                service.modelErrors[.parakeetV3Multilingual] = "Could not download this model. Check your connection and try again."
+            }
             return (service, [
                 .init(model: .parakeetUnifiedEnglish, title: "Selected", disabled: true),
                 .init(model: .parakeetUnifiedEnglish, title: "Remove", disabled: false, removal: true),
                 .init(model: .parakeetV3Multilingual, title: "Download", disabled: false),
+                .init(model: .underdogBark3CleanEnglish, title: "Download", disabled: false),
+                .init(model: .underdogBark3English, title: "Download", disabled: false),
                 .init(model: .whisperSmallEnglish, title: "Use", disabled: false),
                 .init(model: .whisperSmallEnglish, title: "Remove", disabled: false, removal: true),
                 .init(model: .whisperLargeV3, title: "Download", disabled: false),
             ])
-        case "preparing":
+        case "preparing", "downloading", "verifying":
             service.canChangeModel = false
             service.preparingModel = .parakeetV3Multilingual
+            let phase: DictationModelDownload.Phase
+            switch name {
+            case "downloading": phase = .downloading(0.42)
+            case "verifying": phase = .verifying
+            default: phase = .preparing
+            }
+            service.modelDownload = DictationModelDownload(id: UUID(), model: .parakeetV3Multilingual, phase: phase)
             return (service, [
                 .init(model: .parakeetUnifiedEnglish, title: "Selected", disabled: true),
                 .init(model: .parakeetUnifiedEnglish, title: "Remove", disabled: true, removal: true),
                 .init(model: .parakeetV3Multilingual, title: "Downloading…", disabled: true),
+                .init(model: .underdogBark3CleanEnglish, title: "Download", disabled: true),
+                .init(model: .underdogBark3English, title: "Download", disabled: true),
                 .init(model: .whisperSmallEnglish, title: "Use", disabled: true),
                 .init(model: .whisperSmallEnglish, title: "Remove", disabled: true, removal: true),
                 .init(model: .whisperLargeV3, title: "Download", disabled: true),
@@ -149,6 +164,8 @@ private struct DictationModelSettingsRegression {
                 .init(model: .parakeetUnifiedEnglish, title: "Selected", disabled: true),
                 .init(model: .parakeetUnifiedEnglish, title: "Remove", disabled: true, removal: true),
                 .init(model: .parakeetV3Multilingual, title: "Download", disabled: true),
+                .init(model: .underdogBark3CleanEnglish, title: "Download", disabled: true),
+                .init(model: .underdogBark3English, title: "Download", disabled: true),
                 .init(model: .whisperSmallEnglish, title: "Switching…", disabled: true),
                 .init(model: .whisperSmallEnglish, title: "Remove", disabled: true, removal: true),
                 .init(model: .whisperLargeV3, title: "Download", disabled: true),
@@ -160,6 +177,8 @@ private struct DictationModelSettingsRegression {
                 .init(model: .parakeetUnifiedEnglish, title: "Selected", disabled: true),
                 .init(model: .parakeetUnifiedEnglish, title: "Remove", disabled: true, removal: true),
                 .init(model: .parakeetV3Multilingual, title: "Download", disabled: true),
+                .init(model: .underdogBark3CleanEnglish, title: "Download", disabled: true),
+                .init(model: .underdogBark3English, title: "Download", disabled: true),
                 .init(model: .whisperSmallEnglish, title: "Use", disabled: true),
                 .init(model: .whisperSmallEnglish, title: "Removing…", disabled: true, removal: true),
                 .init(model: .whisperLargeV3, title: "Download", disabled: true),
@@ -170,6 +189,8 @@ private struct DictationModelSettingsRegression {
                 .init(model: .parakeetUnifiedEnglish, title: "Selected", disabled: true),
                 .init(model: .parakeetUnifiedEnglish, title: "Remove", disabled: true, removal: true),
                 .init(model: .parakeetV3Multilingual, title: "Download", disabled: true),
+                .init(model: .underdogBark3CleanEnglish, title: "Download", disabled: true),
+                .init(model: .underdogBark3English, title: "Download", disabled: true),
                 .init(model: .whisperSmallEnglish, title: "Use", disabled: true),
                 .init(model: .whisperSmallEnglish, title: "Remove", disabled: true, removal: true),
                 .init(model: .whisperLargeV3, title: "Download", disabled: true),
@@ -185,8 +206,7 @@ private struct DictationModelSettingsRegression {
         return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
     }
 
-    private static func pixels(_ observation: VNRecognizedTextObservation, bitmap: NSBitmapImageRep, dark: Bool, scale: Int) -> ActionPixels {
-        let box = observation.boundingBox
+    private static func pixels(_ box: CGRect, bitmap: NSBitmapImageRep, dark: Bool, scale: Int) -> ActionPixels {
         let x0 = max(0, Int(box.minX * Double(bitmap.pixelsWide)))
         let x1 = min(bitmap.pixelsWide, Int(ceil(box.maxX * Double(bitmap.pixelsWide))))
         let y0 = max(0, Int((1 - box.maxY) * Double(bitmap.pixelsHigh)))
@@ -225,7 +245,7 @@ private struct DictationModelSettingsRegression {
             .verifyHelpers(preparationExpectations).map { "preparation guard: \($0)" }
         for dark in [false, true] {
             for scale in [1, 2] {
-                for state in ["enabled", "disabled", "preparing", "switching", "removing"] {
+                for state in ["enabled", "disabled", "preparing", "downloading", "verifying", "failure", "switching", "removing"] {
                     let name = "\(dark ? "dark" : "light")-\(scale)x-\(state)"
                     let appearance: NSAppearance.Name = dark ? .darkAqua : .aqua
                     NSApp.appearance = NSAppearance(named: appearance)
@@ -234,12 +254,12 @@ private struct DictationModelSettingsRegression {
                     failures += fixture.verifyHelpers(expected).map { "\(name): \($0)" }
                     let host = NSHostingView(rootView: fixture)
                     host.appearance = NSAppearance(named: appearance)
-                    host.frame = CGRect(x: 0, y: 0, width: 500, height: 440)
+                    host.frame = CGRect(x: 0, y: 0, width: 500, height: 700)
                     host.layoutSubtreeIfNeeded()
                     RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.1))
                     host.layoutSubtreeIfNeeded()
                     guard let bitmap = NSBitmapImageRep(
-                        bitmapDataPlanes: nil, pixelsWide: 500 * scale, pixelsHigh: 440 * scale,
+                        bitmapDataPlanes: nil, pixelsWide: 500 * scale, pixelsHigh: 700 * scale,
                         bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
                         colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
                     ) else {
@@ -254,30 +274,54 @@ private struct DictationModelSettingsRegression {
                     try png.write(to: output.appendingPathComponent("\(name).png"))
                     let recognition = VNRecognizeTextRequest()
                     recognition.recognitionLevel = .accurate
-                    recognition.usesLanguageCorrection = false
+                    recognition.usesLanguageCorrection = true
                     try VNImageRequestHandler(cgImage: image).perform([recognition])
                     let observations = recognition.results ?? []
                     let rendered = observations.compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
-                    for text in ["Speech models", "Parakeet Unified", "Parakeet v3", "Whisper Small", "Whisper Large v3"] {
+                    for text in ["Speech models", "Parakeet Unified", "Parakeet v3", "Underdog Bark 3.0 Clean", "Underdog Bark 3.0", "Whisper Small", "Whisper Large v3"] {
                         if !rendered.localizedCaseInsensitiveContains(text) { failures.append("\(name): missing rendered text \(text)") }
                     }
+                    let progressLabels = ["Preparing download", "File download progress", "Verifying"]
+                    let expectedProgress: String?
+                    switch state {
+                    case "preparing": expectedProgress = progressLabels[0]
+                    case "downloading": expectedProgress = progressLabels[1]
+                    case "verifying": expectedProgress = progressLabels[2]
+                    default: expectedProgress = nil
+                    }
+                    for label in progressLabels {
+                        let count = rendered.components(separatedBy: label).count - 1
+                        let expectedCount = label == expectedProgress ? 1 : 0
+                        if count != expectedCount { failures.append("\(name): expected \(expectedCount) progress label \(label), found \(count)") }
+                    }
+                    if state == "downloading", !rendered.contains("42%") { failures.append("\(name): partial download percentage is missing") }
+                    if state == "failure", !rendered.contains("Check your connection") { failures.append("\(name): retryable download error is missing") }
                     let titles = Set(expected.map { normalized($0.title) })
-                    let actions = observations.filter {
-                        guard let text = $0.topCandidates(1).first?.string else { return false }
-                        return titles.contains(normalized(text))
-                    }.sorted {
+                    var actions: [(title: String, boundingBox: CGRect)] = []
+                    for observation in observations {
+                        guard let candidate = observation.topCandidates(1).first else { continue }
+                        let line = candidate.string
+                        for word in line.split(whereSeparator: \.isWhitespace) {
+                            let title = String(word)
+                            guard titles.contains(normalized(title)),
+                                  let rectangle = try candidate.boundingBox(for: word.startIndex..<word.endIndex),
+                                  rectangle.boundingBox.minX > 0.6 else { continue }
+                            actions.append((title, rectangle.boundingBox))
+                        }
+                    }
+                    actions.sort {
                         abs($0.boundingBox.midY - $1.boundingBox.midY) > 0.04
                             ? $0.boundingBox.midY > $1.boundingBox.midY
                             : $0.boundingBox.minX < $1.boundingBox.minX
                     }
-                    if actions.count != expected.count { failures.append("\(name): expected six rendered action labels, found \(actions.count)") }
+                    if actions.count != expected.count { failures.append("\(name): expected \(expected.count) rendered action labels, found \(actions.count)") }
                     var measurements: [String] = []
                     for (action, expectation) in zip(actions, expected) {
-                        let title = action.topCandidates(1).first!.string
+                        let title = action.title
                         if normalized(title) != normalized(expectation.title) {
                             failures.append("\(name): expected rendered \(expectation.title), found \(title)")
                         }
-                        let measurement = pixels(action, bitmap: bitmap, dark: dark, scale: scale)
+                        let measurement = pixels(action.boundingBox, bitmap: bitmap, dark: dark, scale: scale)
                         let minimum = expectation.disabled ? 2.0 : 4.5
                         if measurement.contrast < minimum {
                             failures.append("\(name): \(title) contrast \(String(format: "%.2f", measurement.contrast)):1 is below \(minimum):1")
@@ -367,7 +411,7 @@ private struct DictationModelSettingsRegression {
         let report = """
         # Speech models render regression
 
-        The test extracts the production Speech models section and its title/disabled helpers from SettingsView.swift. It compiles them with the real descriptors and renders an offscreen 500-point grouped Form in light and dark appearances at explicit 1x and 2x scales. Fixtures cover selected, available, blocked, preparing, switching, and removing actions. Each primary action has an explicit expected title and disabled result. An additional preparation probe leaves canChangeModel true to independently check that an active preparation disables the model helpers. Extraction checks both production disabled bindings, semantic primary/secondary label styling, and the action tint.
+        The test extracts the production Speech models section and its title/disabled helpers from SettingsView.swift. It compiles them with the real descriptors and renders an offscreen 500-by-700-point grouped Form in light and dark appearances at explicit 1x and 2x scales. Fixtures cover selected, available, blocked, preparing, partial download, verification, retryable failure, switching, and removing actions. Each active download has one progress label under its model. Partial download renders 42% file progress. Preparation and verification render native indeterminate bars. Each primary action has an explicit expected title and disabled result. An additional preparation probe leaves canChangeModel true to independently check that an active preparation disables the model helpers. Extraction checks both production disabled bindings, semantic primary/secondary label styling, and the action tint.
 
         \(evidence.joined(separator: "\n"))
 
@@ -387,6 +431,6 @@ private struct DictationModelSettingsRegression {
             failures.forEach { print($0) }
             exit(1)
         }
-        print("Production Settings render regression passed in 20 model states and 12 experience states. Artifacts: \(output.path)")
+        print("Production Settings render regression passed in 32 model states and 12 experience states. Artifacts: \(output.path)")
     }
 }

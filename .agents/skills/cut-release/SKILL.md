@@ -1,177 +1,75 @@
 ---
 name: cut-release
-description: Cut, re-cut/override, or roll back a Gojo macOS release (DMG on Cloudflare R2 + Sparkle appcast). Use when asked to "release", "cut a release", "ship a version", "publish vX.Y.Z", "override/re-cut the release", "delete the release", or anything about the release pipeline (scripts/release.sh, make release).
+description: Build, sign, notarize, publish, or roll back a Gojo release. Use for release tags, DMG publication, Sparkle updates, and the release pipeline.
 ---
 
-# Cutting a Gojo release
+# Release Gojo
 
-Gojo releases are cut locally with `scripts/release.sh` (wrapped as `make release`).
-The script: build → code-sign → notarize app → styled DMG → notarize DMG →
-Sparkle-sign → update `appcast.xml` → upload DMG to Cloudflare R2 → push tag
-→ commit+push appcast. There is **no GitHub Release** — the DMG lives in the
-`gojo-downloads` R2 bucket, served at `https://downloads.trygojo.com/`.
+Read `RELEASING.md` before acting. It defines the current signing, hosting, and verification procedure. Use `scripts/release.sh` for a new release and its pinned packaging dependencies. Never create a GitHub Release or attach a DMG to GitHub.
 
-Each release uploads two R2 objects: the immutable versioned `Gojo-X.Y.Z.dmg`
-(what appcast entries point at) and an always-latest `Gojo.dmg` (what the
-marketing site's download button points at).
+## Resolve the requested outcome
 
-## Signing modes
+- A request to release, publish, ship a version, or publish its DMG includes distribution to existing users through Sparkle. Use `make release VERSION=X.Y.Z ARGS=--public`. Do not stop after tagging or uploading the DMG.
+- An explicitly private or build-only request uses the script's private default or `make release-dry`. State that existing installs will not discover it.
+- An explicitly source-tag-only request creates only the source tag. State that no binary or update entry was published.
+- An explicitly download-only request can omit Sparkle. Do not infer that exception from the word "DMG" alone.
 
-Developer ID + notarization is always on unless `--adhoc` is passed. `.env.local`
-is fully configured (`MACOS_SIGNING_IDENTITY` = "Developer ID Application: Roshan
-Desai (L6U44C67P5)" + App Store Connect API key vars), verified working since
-v1.0.1. Ad-hoc (`ARGS=--adhoc`) needs no Apple account but leaves the build
-un-notarized, so downloaders must clear quarantine once:
-`xattr -dr com.apple.quarantine /Applications/Gojo.app`.
+The script defaults to private for historical distribution reasons. That CLI default does not change a user's request to publish. Existing authorization to publish covers the DMG and update entry; do not ask again just because `--public` is needed. If scope truly remains unclear, resolve it before external writes.
 
-## Publishing: private is the DEFAULT
+## Prepare a new version
 
-Gojo is sold through Stripe, so a bare `make release VERSION=X.Y.Z` publishes
-**nothing**: signed + notarized DMG plus tag, no R2 upload, no appcast entry.
-Hand the DMG to the paid channel yourself.
+1. Verify current remote main, tags, published version, and installed update channel. Do not downgrade or overwrite an immutable versioned artifact.
+2. Add the version's CHANGELOG entry and bump every MARKETING_VERSION occurrence before creating its source tag. Use the repository's PR workflow for changes.
+3. Build a clean reviewed source revision. Record source commit, version, monotonically increasing build number, architecture, minimum macOS version, bytes, SHA-256, and Sparkle signature.
+4. Keep Developer ID signing, hardened runtime, nested-component entitlements, notarization, and stapling intact. Never fall back to ad-hoc signing for a public release unless the user explicitly requests it.
+5. Publish the immutable `gojo-downloads/Gojo-X.Y.Z.dmg` and latest `gojo-downloads/Gojo.dmg` alias. Verify both public downloads against the notarized artifact.
+6. Publish the signed appcast entry and verify the live feed as described below. A tag, upload, or website deployment alone is incomplete.
 
-Pass `ARGS=--public` to publish — uploads the DMG to
-`downloads.trygojo.com` and commits an appcast entry, which is what existing
-installs Sparkle-update from. Ask before using it unless the user said to publish.
+Credentials are in gitignored `.env.local`. Never print signing keys or other secrets. Preserve existing Sparkle keys. Read the Cloudflare and Wrangler skills before R2 operations; verify commands against current CLI help. The R2 account is `54b7185040a2db03ec87bee9cd65135f`.
 
-**Never create a GitHub Release.** The script does not, and the repo has none by
-design; an attached DMG is a permanent front-page download link. A v1.1.0
-release was created by hand on 2026-07-31 and deleted on 2026-08-14 (tag kept).
-If asked to "delete the release", check `gh release list` — but for normal
-rollback the artifacts are the R2 objects, the tag, and the appcast entry.
+## Publish an already built or tagged artifact
 
-## Pre-release checklist (do this first, every time)
+Do not rebuild, move the tag, change the build number, or replace a versioned DMG just to add a missing feed entry. Reuse the exact verified artifact and its recorded size, build number, URL, minimum OS, and Ed25519 signature. A signature from another build is invalid even if its marketing version matches.
 
-1. **Bump the version** — `MARKETING_VERSION` in `Gojo.xcodeproj/project.pbxproj`
-   must equal the release version (the script's pre-flight enforces this). There
-   are several occurrences (4 as of 1.0.1); bump them all:
+If only a source tag exists, first build its exact source tree. Resolve missing release metadata explicitly and record any build-time version override. Preserve source correspondence and the pushed tag. Do not silently bypass signing or notarization checks to work around release-script preflight.
+
+## Publish and verify Sparkle
+
+1. Fetch the canonical live feed and repository appcast. Preserve older entries. Reject duplicate version entries or a non-increasing build number.
+2. Use `.github/scripts/update_appcast.py` with the verified artifact metadata and CHANGELOG notes. Check the generated enclosure URL, length, signature, build, short version, and minimum OS against the packaged app and recorded evidence.
+3. Download the enclosure URL and verify byte count, SHA-256, and Ed25519 signature against the public update key embedded in the shipped app.
+4. For manual publication of an existing artifact, submit and merge the appcast through a PR. The current `scripts/release.sh --public` path commits the feed directly to main; if it already did so, verify that committed file instead of creating a duplicate PR. Publish the exact repository file with explicit non-cacheable metadata. Re-upload those same bytes if the script uploaded them without that metadata:
+
    ```bash
-   sed -i '' "s/MARKETING_VERSION = [0-9.]*;/MARKETING_VERSION = X.Y.Z;/g" Gojo.xcodeproj/project.pbxproj
+   CLOUDFLARE_ACCOUNT_ID=54b7185040a2db03ec87bee9cd65135f \
+     npx wrangler@4 r2 object put gojo-downloads/appcast.xml --remote \
+       --content-type application/xml --cache-control no-cache --file appcast.xml
    ```
-2. **CHANGELOG** — there must be a `## [X.Y.Z]` section in `CHANGELOG.md` (used as
-   the Sparkle release notes). Promote `[Unreleased]` and update the link refs at
-   the bottom.
-3. **Commit + push** the bump, so the working tree is clean and on `main`
-   (pre-flight requires clean tree + `main` for a non-dry run). Note: `ez` refuses
-   to commit on trunk — release chores go directly on main with raw
-   `git commit` + `git push origin main` (the script itself does the same for the
-   appcast commit).
 
-## Cut a NEW version
+5. Fetch `https://updates.trygojo.com/appcast.xml` and the legacy `https://trygojo.com/appcast.xml` redirect without a cache-busting query. Both must serve the new version, build, enclosure URL, length, and signature. Compare the live feed to the reviewed uploaded bytes. A successful R2 PUT or a cache-busted response alone is insufficient. Resolve stale caches before declaring completion.
+6. Repeat artifact verification from the live enclosure. Exercise Check for Updates from an older installed app when practical and authorized. If that UI cannot be exercised, report that limitation separately from feed verification. Respect user exclusions such as no live microphone testing.
 
-```bash
-make release-dry VERSION=X.Y.Z   # optional: full build, stops before publish
-make release     VERSION=X.Y.Z   # private: DMG + tag only, nothing published
-make release     VERSION=X.Y.Z ARGS=--public   # also upload to R2 + update appcast
-```
+Modern installs read `updates.trygojo.com` directly from R2. Legacy installs use the HTTPS redirect at `trygojo.com/appcast.xml`. Do not rely on a GitHub Pages rebuild or an unrelated website deploy to publish the R2-backed feed.
 
-## Override / re-cut an EXISTING version
+## Completion gate
 
-Re-publishing the same version (e.g. you found a bug right after releasing). R2
-uploads simply overwrite, but the tag and appcast do NOT dedup, so tear those
-down first, in this order:
+Before saying "published", verify all requested outcomes:
 
-```bash
-# 1. Delete the remote tag
-git push origin :refs/tags/vX.Y.Z
+- Signed and notarized versioned DMG and latest alias download with the expected hashes.
+- Live canonical and legacy feeds advertise the exact signed artifact, with older entries intact.
+- Source tag and artifact correspondence are recorded; no tag was silently moved.
+- Update discovery was exercised, or its untested UI status is stated explicitly.
 
-# 2. Delete the LOCAL tag too — it blocks pre-flight
-#    ("Tag vX.Y.Z already exists locally") otherwise.
-git tag -d vX.Y.Z 2>/dev/null || true
+A publication report includes the download link, version/build, verification results, and any remaining limitation. If interrupted after DMG upload, record **DMG uploaded; Sparkle publication pending** and resume the feed step. Do not call the release complete.
 
-# 3. Remove the old appcast entry — update_appcast.py PREPENDS with no dedup, so
-#    re-running would create a SECOND vX.Y.Z <item>. Revert the appcast commit
-#    (find it: git log --oneline -- appcast.xml), then push.
-git revert --no-edit <appcast-commit-sha>
-git push origin main
+## Rollback and replacement
 
-# 4. Re-cut. --public is required to overwrite the R2 objects and re-add the
-#    appcast entry; without it the re-cut publishes nothing (private default).
-make release VERSION=X.Y.Z ARGS=--public
-```
+Treat shipped artifacts as immutable. A replacement normally gets a new version and increasing build number. Delete or move tags, overwrite historical DMGs, or remove feed entries only with explicit rollback or re-cut authorization. Merely adding a missing feed entry is not a re-cut.
 
-Verify after step 3: `grep -c '<title>Version X.Y.Z' appcast.xml` → `0`.
+For an authorized rollback, remove the affected feed entry through review, publish and verify both live feed paths, then repoint `Gojo.dmg` to a verified prior artifact. Preserve older feed entries. Remove the bad versioned object or tag only if that deletion is authorized. Installed copies cannot be remotely uninstalled.
 
-## Roll back / delete a release (no re-cut)
+## Local build failures
 
-```bash
-git push origin :refs/tags/vX.Y.Z
-git tag -d vX.Y.Z 2>/dev/null || true
-git revert --no-edit <appcast-commit-sha> && git push origin main   # so Sparkle stops offering it
+SPM and dmgbuild environments embed absolute paths. If the checkout moved, inspect stale package paths or venv shebangs before rebuilding task-owned caches. Do not delete unrelated user caches or model payloads. Check disk space when codesign reports an internal allocation error.
 
-# Optionally delete the versioned DMG from R2:
-CLOUDFLARE_ACCOUNT_ID=54b7185040a2db03ec87bee9cd65135f \
-  npx --yes wrangler@4 r2 object delete --remote "gojo-downloads/Gojo-X.Y.Z.dmg"
-```
-
-**`Gojo.dmg` (latest) still points at the rolled-back build** — re-upload the
-previous version's DMG over it, or the marketing site serves the bad build:
-
-```bash
-CLOUDFLARE_ACCOUNT_ID=54b7185040a2db03ec87bee9cd65135f \
-  npx --yes wrangler@4 r2 object put --remote --content-type application/x-apple-diskimage \
-  --file Gojo-<prev>.dmg "gojo-downloads/Gojo.dmg"
-```
-
-## ALWAYS verify the published DMG launches
-
-The DMG must be downloaded + launch-tested — a build can publish fine yet crash on
-launch (we shipped a broken one once: hardened runtime + ad-hoc → library
-validation killed it loading a vendored framework). After any release:
-
-```bash
-cd /tmp && rm -rf rv && mkdir rv && cd rv
-curl -fsSLO https://downloads.trygojo.com/Gojo-X.Y.Z.dmg
-shasum -a 256 Gojo-X.Y.Z.dmg          # compare against the script's printed SHA-256
-MP=$(hdiutil attach Gojo-X.Y.Z.dmg -nobrowse -readonly | grep -o '/Volumes/.*')
-codesign -dv --verbose=2 "$MP/Gojo.app" 2>&1 | grep -i flags
-# Developer ID: want 0x10000(runtime); adhoc: want 0x2(adhoc), NO "runtime"
-spctl -a -vv -t exec "$MP/Gojo.app"   # Developer ID: want "source=Notarized Developer ID"
-cp -R "$MP/Gojo.app" t.app && hdiutil detach "$MP" >/dev/null
-t.app/Contents/MacOS/Gojo & P=$!; sleep 6
-kill -0 $P 2>/dev/null && echo "LAUNCHES" && kill $P || echo "CRASHED"
-cd - >/dev/null && rm -rf /tmp/rv
-```
-
-## Gotchas
-
-- **Stale `.build/` caches after the repo moves on disk** (bit us cutting 1.0.1):
-  SPM's `workspace-state.json` and the dmgbuild venv both record **absolute
-  paths**. If the checkout has moved, the build fails with "There is no
-  XCFramework found at …" (pointing at the old path) and later
-  `dmgbuild: bad interpreter`. `make clean` does NOT fix it — it only removes
-  `.build/DerivedData`. Fix:
-  ```bash
-  rm -rf .build/release/SourcePackages .build/release/Build .build/dmg-venv
-  ```
-- **wrangler auth**: R2 upload needs a Cloudflare OAuth login (`npx wrangler login`).
-  The script pins `CLOUDFLARE_ACCOUNT_ID=54b7185040a2db03ec87bee9cd65135f` so it
-  never prompts for an account.
-- **Ad-hoc + hardened runtime**: `--adhoc` forces `ENABLE_HARDENED_RUNTIME=NO`.
-  Never ad-hoc-sign with hardened runtime — library validation crashes it at launch.
-- **Appcast path**: it lives at `appcast.xml` (GitHub Pages serves the Cloudflare Worker in `web/`),
-  not the repo root.
-- **Sparkle key**: `SPARKLE_PRIVATE_ED_KEY` in `.env.local` may be a file path OR
-  the raw key value (both supported). It is the one irreplaceable secret — losing
-  it breaks auto-updates for all installs.
-- **GitHub Pages** must stay enabled (Settings → Pages → `main` / the Cloudflare Worker in `web/`) or the
-  appcast (auto-update feed) 404s.
-- **Pages HTTPS enforcement must stay ON** (found broken 2026-07-08): with
-  `https_enforced: false`, the feed URL baked into shipped apps redirects to
-  `http://`, App Transport Security blocks it, and **every install silently stops
-  auto-updating**. Check: `gh api repos/rohoswagger/gojo/pages --jq '.https_enforced'`
-  → must be `true`. Fix: `gh api -X PUT repos/rohoswagger/gojo/pages -F https_enforced=true`.
-  Verify: `curl -fsSI https://trygojo.com/appcast.xml | grep -i location`
-  → must be `https://`.
-
-## After publishing
-
-- GitHub Pages rebuilds the appcast feed automatically (~1 min):
-  `gh api repos/rohoswagger/gojo/pages/builds/latest --jq '.status'`.
-- The Pages site uses a custom domain: `trygojo.com/appcast.xml`
-  **301-redirects** to `trygojo.com/appcast.xml`. Check the live feed
-  with `curl -fsSL` (follow redirects) or the canonical URL directly:
-  ```bash
-  curl -fsSL https://trygojo.com/appcast.xml | grep "Version X.Y.Z"
-  ```
-- Existing installs auto-update via Sparkle within ~24h (or on manual check).
+A notarized build also needs launch verification under the repository's safe development procedure. Use `GOJO_LICENSE=lifetime` for a debug launch and preserve the user's running production instance. Do not run an unqualified executable that can migrate shared licensing state. If launch testing is unavailable or excluded, state it; do not weaken signing or claim runtime proof from compilation.

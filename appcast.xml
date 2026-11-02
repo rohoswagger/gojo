@@ -6,6 +6,23 @@
     <description>Most recent changes to Gojo, with download links.</description>
     <language>en</language>
     <item>
+      <title>Version 1.8.1</title>
+      <pubDate>Mon, 02 Nov 2026 22:52:19 +0000</pubDate>
+      <sparkle:version>1793659788</sparkle:version>
+      <sparkle:shortVersionString>1.8.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+<h4>Added</h4>
+<ul><li>A global dictation switch in Settings that stops recording and disables dictation shortcuts, practice, and audio retries while preserving saved content and configuration.</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://downloads.trygojo.com/Gojo-1.8.1.dmg"
+        sparkle:edSignature="7nlYu98C+G+Nq2d94VrJDUPQcU8+U9OXIQTt/SzQOuc3D4GWCaD2uADOH4LGM0rVniOfd5rwOe3cwcax2IfBDg=="
+        length="18158121"
+        type="application/octet-stream" />
+    </item>
+
+    <item>
       <title>Version 1.8.0</title>
       <pubDate>Mon, 02 Nov 2026 17:58:24 +0000</pubDate>
       <sparkle:version>1793544122</sparkle:version>

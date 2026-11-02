@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.1] — 2026-11-02
+
 ### Added
 
 - A global dictation switch in Settings that stops recording and disables dictation shortcuts, practice, and audio retries while preserving saved content and configuration.
@@ -327,7 +329,11 @@ Meet Gojo — it turns the dead space around your MacBook's notch into a control
 - **Guided setup** — a polished first launch that gets you going in seconds.
 - **Automatic updates** — new versions install themselves; no re-downloading.
 
-[Unreleased]: https://github.com/rohoswagger/gojo/compare/v1.7.0...HEAD
+[Unreleased]: https://github.com/rohoswagger/gojo/compare/v1.8.1...HEAD
+[1.8.1]: https://github.com/rohoswagger/gojo/compare/v1.8.0...v1.8.1
+[1.8.0]: https://github.com/rohoswagger/gojo/compare/v1.7.2...v1.8.0
+[1.7.2]: https://github.com/rohoswagger/gojo/compare/v1.7.1...v1.7.2
+[1.7.1]: https://github.com/rohoswagger/gojo/compare/v1.7.0...v1.7.1
 [1.7.0]: https://github.com/rohoswagger/gojo/compare/v1.6.1...v1.7.0
 [1.6.1]: https://github.com/rohoswagger/gojo/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/rohoswagger/gojo/compare/v1.5.1...v1.6.0

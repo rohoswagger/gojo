@@ -6,6 +6,25 @@
     <description>Most recent changes to Gojo, with download links.</description>
     <language>en</language>
     <item>
+      <title>Version 1.8.0</title>
+      <pubDate>Mon, 02 Nov 2026 17:58:24 +0000</pubDate>
+      <sparkle:version>1793544122</sparkle:version>
+      <sparkle:shortVersionString>1.8.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[
+<h4>Added</h4>
+<ul><li>Bark 3.0 and Bark 3.0 Clean local English speech models, with optional AI polish.</li><li>Download progress and verification status for all local speech models.</li></ul>
+<h4>Fixed</h4>
+<ul><li>Confirmed and fully dispatched text insertion no longer automatically opens Copy/Discard.</li><li>Microphone engine faults preserve accepted audio, with explicit retry for failed recognition.</li><li>Pause, Resume, cancellation, and cleanup account for pending work and late insertion receipts.</li><li>Recovery controls retain saved content until explicit discard. Repeated Audio Retry clicks cannot insert the same recording twice.</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://downloads.trygojo.com/Gojo-1.8.0.dmg"
+        sparkle:edSignature="Y/F7AVN1ky3Mvl200nhnwE7e8x/zPGsHypmj1YY66NruJBCU8bnzo5Okzm5hH+UADuNJpaZpAkXWRUANJLyGDQ=="
+        length="18139258"
+        type="application/octet-stream" />
+    </item>
+
+    <item>
       <title>Version 1.7.2</title>
       <pubDate>Wed, 21 Oct 2026 17:23:36 +0000</pubDate>
       <sparkle:version>1792603251</sparkle:version>

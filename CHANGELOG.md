@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0] — 2026-11-01
+
+### Added
+
+- Bark 3.0 and Bark 3.0 Clean local English speech models, with optional AI polish.
+- Download progress and verification status for all local speech models.
+
+### Fixed
+
+- Confirmed and fully dispatched text insertion no longer automatically opens Copy/Discard.
+- Microphone engine faults preserve accepted audio, with explicit retry for failed recognition.
+- Pause, Resume, cancellation, and cleanup account for pending work and late insertion receipts.
+- Recovery controls retain saved content until explicit discard. Repeated Audio Retry clicks cannot insert the same recording twice.
+
 ## [1.7.2] — 2026-10-21
 
 ### Fixed

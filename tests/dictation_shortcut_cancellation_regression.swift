@@ -107,6 +107,23 @@ actor ControlledRecoverySleep {
 struct DictationShortcutCancellationRegression {
     @MainActor
     static func main() async {
+        let disabledTransport = XPCHelperClient()
+        disabledTransport.permission = HelperPermissionStatus(instanceID: UUID(), accessibilityAuthorized: true)
+        let disabled = DictationModifierHotKeyMonitor(transport: disabledTransport, isEnabled: false, observeConnectionChanges: false)
+        await disabled.start(promptIfNeeded: true)
+        await disabled.refreshReadiness()
+        await disabled.recoverIfNeeded()
+        precondition(disabledTransport.authorizationChecks == 0 && disabledTransport.prompts == 0 && disabledTransport.starts.isEmpty,
+            "persisted off must make startup, Settings retry, and recovery inert")
+        disabled.setEnabled(true)
+        await disabled.start()
+        precondition(disabled.isMonitoring && disabledTransport.starts.count == 1 && disabledTransport.prompts == 0,
+            "enable must restore only the dictation tap without prompting")
+        disabled.setEnabled(false)
+        await disabled.start(promptIfNeeded: true)
+        await disabled.recoverIfNeeded()
+        precondition(!disabled.isMonitoring && disabledTransport.starts.count == 1 && disabledTransport.prompts == 0,
+            "retry cannot resurrect a disabled dictation tap")
         let monitor = DictationModifierHotKeyMonitor.shared
         let service = GojoDictationService.shared
         var failures: [String] = []

@@ -3,6 +3,7 @@ import SwiftUI
 
 @MainActor
 final class DictationPanelModel: ObservableObject {
+    @Published var isEnabled = true
     @Published var state: DictationState = .idle
     @Published var samples = Array(repeating: Float.zero, count: 80)
     @Published var targetApplicationName: String?
@@ -81,6 +82,7 @@ final class DictationPanelModel: ObservableObject {
     }
 
     var title: String {
+        guard isEnabled else { return "Dictation is off" }
         if let emptyCompletionMessage { return emptyCompletionMessage }
         switch state {
         case .idle: return "Ready to dictate"
@@ -103,7 +105,7 @@ final class DictationPanelModel: ObservableObject {
     }
 
     var errorMessage: String? {
-        guard case .error(let failure) = state else { return nil }
+        guard isEnabled, case .error(let failure) = state else { return nil }
         return failure.localizedDescription
     }
 
@@ -286,7 +288,7 @@ struct DictationPanelView: View {
                 Button("Pause") { command(.pause) }
             }
             if model.state == .paused {
-                Button("Resume") { command(.resume) }
+                Button("Resume") { command(.resume) }.disabled(!model.isEnabled)
                 Button("Finish") { command(.finish) }
             }
             Button("Cancel") { command(.dismiss) }
@@ -338,7 +340,7 @@ struct DictationPanelView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(!needsAttention && model.state != .paused && !(model.state == .listening && model.isHandsFree))
+        .disabled(!needsAttention && (!model.isEnabled || (model.state != .paused && !(model.state == .listening && model.isHandsFree))))
         .help(model.errorMessage ?? (needsAttention ? "View dictation details" : model.state == .paused ? "Resume listening" : model.isHandsFree ? "Pause listening" : model.title))
         .accessibilityLabel(needsAttention ? "View dictation details" : model.state == .paused ? "Resume voice mode" : model.isHandsFree ? "Pause voice mode" : "Microphone waveform")
         .accessibilityValue(model.isPreview ? "Preview · " + model.title : model.title)
@@ -346,29 +348,34 @@ struct DictationPanelView: View {
 
     @ViewBuilder
     private var primaryAction: some View {
-        switch model.state {
-        case .idle:
-            icon("mic.fill", label: "Start voice mode", hint: "Keep listening between phrases.", prominent: true) { command(.start) }
-        case .succeeded:
-            if model.shouldHideWhenFinished, model.recoveryText.isEmpty {
-                icon("checkmark", label: "Text inserted", hint: "Dictation complete.", prominent: true) {}
-                    .disabled(true)
-            } else {
-                icon("mic.fill", label: "Start voice mode", hint: "Keep listening between phrases.", prominent: true) { command(.start) }
-            }
-        case .error:
-            if model.permissionSettingsURL != nil {
-                icon("gearshape", label: "Open permission settings", hint: "Open the permission Gojo needs.", prominent: true) { command(.settings) }
-            } else {
-                Color.clear.frame(width: 26, height: 26).accessibilityHidden(true)
-            }
-        case .paused:
-            icon("play.fill", label: "Resume voice mode", hint: "Turn the microphone back on.", prominent: true) { command(.resume) }
-        case .listening, .pausing:
-            icon("checkmark", label: "Finish dictation", hint: "Stop and add the remaining text.", prominent: true) { command(.finish) }
-        case .requestingPermission, .transcribing, .inserting:
-            icon("checkmark", label: "Finishing dictation", hint: "Text is being processed.", prominent: true) {}
+        if !model.isEnabled {
+            icon("mic.slash.fill", label: "Dictation is off", hint: "Enable dictation in Settings.", prominent: true) {}
                 .disabled(true)
+        } else {
+            switch model.state {
+            case .idle:
+                icon("mic.fill", label: "Start voice mode", hint: "Keep listening between phrases.", prominent: true) { command(.start) }
+            case .succeeded:
+                if model.shouldHideWhenFinished, model.recoveryText.isEmpty {
+                    icon("checkmark", label: "Text inserted", hint: "Dictation complete.", prominent: true) {}
+                        .disabled(true)
+                } else {
+                    icon("mic.fill", label: "Start voice mode", hint: "Keep listening between phrases.", prominent: true) { command(.start) }
+                }
+            case .error:
+                if model.permissionSettingsURL != nil {
+                    icon("gearshape", label: "Open permission settings", hint: "Open the permission Gojo needs.", prominent: true) { command(.settings) }
+                } else {
+                    Color.clear.frame(width: 26, height: 26).accessibilityHidden(true)
+                }
+            case .paused:
+                icon("play.fill", label: "Resume voice mode", hint: "Turn the microphone back on.", prominent: true) { command(.resume) }
+            case .listening, .pausing:
+                icon("checkmark", label: "Finish dictation", hint: "Stop and add the remaining text.", prominent: true) { command(.finish) }
+            case .requestingPermission, .transcribing, .inserting:
+                icon("checkmark", label: "Finishing dictation", hint: "Text is being processed.", prominent: true) {}
+                    .disabled(true)
+            }
         }
     }
 
@@ -454,6 +461,7 @@ struct DictationPanelView: View {
                 .fixedSize(horizontal: false, vertical: true)
             HStack {
                 Button("Retry transcription") { command(.retryAudio(id)) }
+                    .disabled(!model.isEnabled)
                 Spacer()
                 Button("Discard audio") { command(.discardAudio(id)) }
                     .foregroundStyle(DictationPanelInk.secondary)

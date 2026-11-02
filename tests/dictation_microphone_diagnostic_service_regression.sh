@@ -11,7 +11,7 @@ from pathlib import Path
 import re
 import sys
 
-source = Path(sys.argv[2]).read_text()
+source = Path(sys.argv[2]).read_text().replace("UserDefaults.standard", "fixtureDefaults")
 template = Path("tests/dictation_microphone_diagnostic_service_regression.swift").read_text()
 
 def member(name, optional=False):
@@ -27,7 +27,8 @@ def member(name, optional=False):
     return source[match.start():match.start() + end.end()] + "\n"
 
 members = [member(name) for name in (
-    "isDictationInactive", "processShortcutEvent", "rejectShortcutStart",
+    "isDictationInactive", "processShortcutEvent", "admitsActivation", "rejectShortcutStart",
+    "setEnabled", "beginPractice", "beginShortcut", "startVoiceMode", "retryRecovery", "handleSystemWake",
     "testMicrophone", "cancelMicrophoneTest", "receive",
     "makeRecognitionRequest", "makeSessionPlan", "receiveCompletion",
     "observeCorrections", "setLearnsCorrections", "cancelCorrectionObservationTask", "resetCorrectionLearning",

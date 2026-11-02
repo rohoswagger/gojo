@@ -4,7 +4,7 @@ import os
 
 @MainActor
 final class DictationModifierHotKeyMonitor: ObservableObject {
-    static let shared = DictationModifierHotKeyMonitor(transport: XPCHelperClient.shared)
+    static let shared = DictationModifierHotKeyMonitor(transport: XPCHelperClient.shared, isEnabled: DictationEnablementPreferences.isEnabled())
 
     @Published private(set) var helperState: DictationHelperState = .checking
     @Published private(set) var accessibilityState: DictationAccessibilityState = .unknown
@@ -15,6 +15,7 @@ final class DictationModifierHotKeyMonitor: ObservableObject {
     private let transport: any DictationHotkeyTransport
     private let sleepForRecovery: @Sendable (Duration) async throws -> Void
     private var observers: [NSObjectProtocol] = []
+    private var dictationEnabled: Bool
     private var desiredEnabled = false
     private var active = false
     private var eventGate = DictationTapEventGate()
@@ -26,8 +27,9 @@ final class DictationModifierHotKeyMonitor: ObservableObject {
     private var startRequests = DictationEventTapStartRequestPolicy()
     private var machine = DictationModifierShortcutStateMachine(mode: .holdToTalk)
 
-    init(transport: any DictationHotkeyTransport, observeConnectionChanges: Bool = true,
+    init(transport: any DictationHotkeyTransport, isEnabled: Bool = true, observeConnectionChanges: Bool = true,
          sleepForRecovery: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }) {
+        self.dictationEnabled = isEnabled
         self.transport = transport
         self.sleepForRecovery = sleepForRecovery
         transport.dictationInputHandler = { [weak self] event in self?.handleEventTapInput(event) }
@@ -103,8 +105,14 @@ final class DictationModifierHotKeyMonitor: ObservableObject {
     }
     #endif
 
+    func setEnabled(_ enabled: Bool) {
+        guard dictationEnabled != enabled else { return }
+        dictationEnabled = enabled
+        if !enabled { stop() }
+    }
+
     func start(promptIfNeeded: Bool = false) async {
-        guard !Task.isCancelled else { return }
+        guard dictationEnabled, !Task.isCancelled else { return }
         desiredEnabled = true
         if startRequests.enqueue(promptIfNeeded: promptIfNeeded) {
             reconciliationGeneration &+= 1
@@ -122,7 +130,7 @@ final class DictationModifierHotKeyMonitor: ObservableObject {
     }
 
     func refreshReadiness() async {
-        guard !Task.isCancelled else { return }
+        guard dictationEnabled, !Task.isCancelled else { return }
         if desiredEnabled { await start(promptIfNeeded: false); return }
         let generation = recoveryPolicy.startGeneration
         do {
@@ -243,7 +251,7 @@ final class DictationModifierHotKeyMonitor: ObservableObject {
     }
 
     private func owns(_ generation: UInt) -> Bool {
-        desiredEnabled && recoveryPolicy.ownsStartAttempt(generation)
+        dictationEnabled && desiredEnabled && recoveryPolicy.ownsStartAttempt(generation)
     }
 
     private func record(_ permission: HelperPermissionStatus) {

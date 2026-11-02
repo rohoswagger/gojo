@@ -18,6 +18,7 @@ struct DictationCaptureLivenessRegression {
             exit(1)
         }
         defer { timeout.cancel() }
+        try await disabledCaptureCannotPreparePromptOrRestart()
         try defaultInputKeepsTheEngineManagedDevice()
         try explicitInputIsBoundAndFailuresRemainVisible()
         try await delayedConfigurationNotificationDoesNotStopHealthyCapture()
@@ -212,6 +213,47 @@ private actor CaptureCompletion {
 }
 
 extension DictationCaptureLivenessRegression {
+    private static func disabledCaptureCannotPreparePromptOrRestart() async throws {
+        let system = CaptureSystemStub()
+        let gate = CaptureReadinessGate()
+        let capture = AVAudioEngineCaptureService(
+            authorizationStatus: { system.status },
+            requestAuthorization: { fatalError("off must never request microphone permission") },
+            captureEngineFactory: { system.makeEngine() },
+            readinessSleep: { try await gate.sleep() }, isEnabled: false)
+        await capture.prepareForCaptureIfAuthorized()
+        require(system.count == 0, "persisted off must not prepare an audio engine")
+        do { _ = try await capture.requestPermission(); fatalError("off requested permission") }
+        catch is CancellationError {}
+        do { try await capture.runMicrophoneDiagnostic(); fatalError("off admitted diagnostic") }
+        catch is CancellationError {}
+        do { try await capture.startCapture(); fatalError("off admitted held capture") }
+        catch is CancellationError {}
+        do { _ = try await capture.startContinuousCapture(pauseDuration: 0.9); fatalError("off admitted voice capture") }
+        catch is CancellationError {}
+        require(system.count == 0, "disabled entry points cannot allocate capture hardware")
+        await capture.setEnabled(true)
+        await capture.prepareForCaptureIfAuthorized()
+        require(system.count == 1 && system.engine(0).starts == 0, "enable may prepare authorized hardware without recording")
+        let start = Task { try await capture.startCapture() }
+        await gate.waitForArrival(1)
+        system.engine(0).emit(amplitude: 0.2)
+        await gate.advance()
+        try await start.value
+        await capture.setEnabled(false)
+        require(!system.engine(0).isRunning, "global disable must stop active capture")
+        await capture.prepareForCaptureIfAuthorized()
+        for _ in 0..<20 { await Task.yield() }
+        require(system.count == 1, "off must suppress background preparation after stopping")
+        await capture.setEnabled(true)
+        await capture.prepareForCaptureIfAuthorized()
+        require(system.count == 2, "fresh enable must use a fresh prepared engine")
+        await capture.setEnabled(false)
+        require(system.engine(1).stops == 1, "off must discard the prepared graph")
+        await capture.setEnabled(false)
+        require(system.engine(1).stops == 1, "repeated off must be idempotent")
+    }
+
     private static func defaultInputKeepsTheEngineManagedDevice() throws {
         var boundDevices: [UInt32] = []
         let selected = DictationInputDevices.ResolvedInput(

@@ -92,6 +92,8 @@ where TargetProvider: DictationTargetCapturing,
     private var readyCompletions: Set<UUID> = []
     private var deliveryAdmissionBlocked = false
     private var captureAdmissionBlocked = false
+    private var isEnabled: Bool
+    private var admissionGeneration: UInt = 0
     private var recoveryAttemptID: UUID?
     private var activePlan: DictationSessionPlan?
     private var sessionResourceCleanup: CaptureCleanup?
@@ -143,8 +145,10 @@ where TargetProvider: DictationTargetCapturing,
         acquireSessionResources: SessionResources? = nil,
         previewObserver: PreviewObserver? = nil,
         completionObserver: CompletionObserver? = nil,
-        previewInterval: Duration = .seconds(2)
+        previewInterval: Duration = .seconds(2),
+        isEnabled: Bool = true
     ) {
+        self.isEnabled = isEnabled
         self.targetProvider = targetProvider
         self.audioCapture = audioCapture
         self.transcriber = transcriber
@@ -177,14 +181,24 @@ where TargetProvider: DictationTargetCapturing,
     var recoveryAttentionID: UUID? { machine.recoveryAttentionID }
     var recoverySnapshot: (text: String, message: String?) { (recoveryText, recoveryMessage) }
 
+    func setEnabled(_ enabled: Bool) {
+        guard isEnabled != enabled else { return }
+        isEnabled = enabled
+        admissionGeneration &+= 1
+        if !enabled { cancel() }
+    }
+
     @discardableResult
     func hotKeyDown(
         plan: DictationSessionPlan = DictationSessionPlan()
     ) async -> Bool {
+        guard isEnabled else { return false }
+        let generation = admissionGeneration
         if captureAdmissionBlocked, await audioCapture.captureIsQuiescent() {
             captureAdmissionBlocked = false
             flushCompletions()
         }
+        guard isEnabled, generation == admissionGeneration else { return false }
         let mode = plan.mode
         let pauseDuration = plan.pauseDuration
         let targetPolicy = plan.targetPolicy
@@ -238,6 +252,7 @@ where TargetProvider: DictationTargetCapturing,
     }
 
     func lockVoiceMode() -> Bool {
+        guard isEnabled else { return false }
         let pauseDuration = activePlan?.pauseDuration ?? 0.9
         guard continuousSession == nil else { return false }
         if machine.state == .requestingPermission {
@@ -290,6 +305,7 @@ where TargetProvider: DictationTargetCapturing,
     }
 
     func resumeVoiceMode() {
+        guard isEnabled else { return }
         guard !captureAdmissionBlocked, recoveryPayloadBytes < recoveryHighWaterBytes,
               let session = continuousSession, case .paused = session.capturePhase,
               machine.handle(.resumeRequested) == .beginRequest else { return }
@@ -346,6 +362,7 @@ where TargetProvider: DictationTargetCapturing,
 
     @discardableResult
     func retryRecovery(id: UUID) async -> Bool {
+        guard isEnabled else { return false }
         if !deliveryAdmissionBlocked, !captureAdmissionBlocked,
            let original = machine.recoveryRecords.first(where: { $0.id == id }),
            original.sessionID == sessionID, original.outcome.disposition == .notSent,
@@ -1442,7 +1459,7 @@ where TargetProvider: DictationTargetCapturing,
 
     private func checkSession(_ expectedSession: UUID) throws {
         try Task.checkCancellation()
-        guard expectedSession == sessionID else { throw CancellationError() }
+        guard isEnabled, expectedSession == sessionID else { throw CancellationError() }
     }
 
     private func isCurrent(_ expectedSession: UUID, state expectedState: DictationState) -> Bool {

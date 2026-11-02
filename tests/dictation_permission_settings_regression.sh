@@ -14,7 +14,7 @@ import sys
 
 source = Path("Gojo/components/Settings/SettingsView.swift").read_text()
 source = source[source.index("struct DictationSettings: View {"):]
-names = ["permissionSection", "helperStatusLabel", "accessibilityStatusLabel", "shortcutStatusLabel",
+names = ["enablementSection", "permissionSection", "helperStatusLabel", "accessibilityStatusLabel", "shortcutStatusLabel",
          "microphoneTestLabel", "microphoneStatusLabel", "microphonePermissionGuidance"]
 
 def member(name):

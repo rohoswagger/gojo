@@ -5,6 +5,8 @@ import Vision
 
 @MainActor
 private final class FixtureDictation: ObservableObject {
+    @Published var isEnabled = true
+    func setEnabled(_ value: Bool) { isEnabled = value }
     @Published var microphoneTestState: DictationMicrophoneDiagnosticState = .idle
     var canTestMicrophone = true
     func testMicrophone() { fatalError("The render test must not start microphone capture") }
@@ -33,7 +35,7 @@ private struct PermissionSectionFixture: View {
     @ObservedObject var shortcutMonitor: FixtureShortcutMonitor
 
     var body: some View {
-        Form { permissionSection }
+        Form { enablementSection; permissionSection }
             .formStyle(.grouped)
             .frame(width: 500, height: 760)
             .background(Color(NSColor.windowBackgroundColor))
@@ -93,8 +95,9 @@ private struct DictationPermissionSettingsRegression {
         var evidence: [String] = []
         var exportedButtonCount = 0
         let connected = HelperPermissionStatus(instanceID: UUID(), accessibilityAuthorized: true)
-        let cases = ["helper-unavailable", "permission-pending", "microphone-denied", "microphone-restricted", "ready"]
+        let cases = ["helper-unavailable", "permission-pending", "microphone-denied", "microphone-restricted", "ready", "off"]
         for name in cases {
+            dictation.isEnabled = name != "off"
             monitor.helperState = name == "helper-unavailable" ? .unavailable(.timedOut) : .available(connected)
             monitor.accessibilityState = name == "helper-unavailable" ? .unknown : name == "permission-pending" ? .requesting : .trusted
             monitor.shortcutReadiness = name == "helper-unavailable" ? .unavailable(.helper(.timedOut)) : name == "permission-pending" ? .awaitingAccessibility : .ready
@@ -128,6 +131,10 @@ private struct DictationPermissionSettingsRegression {
             }
             expect(contains("Permissions") && contains("Gojo helper") && contains("Microphone test"), "\(name): production section must render its header and status rows")
             switch name {
+            case "off":
+                expect(contains("Enable dictation") && contains("Dictation is off") && contains("Off"), "Off must show the global toggle and disabled shortcut status")
+                let actions = records.filter { $0.role == NSAccessibility.Role.button.rawValue }
+                expect(actions.allSatisfy { !$0.enabled }, "Off must disable permission and capture actions")
             case "helper-unavailable":
                 expect(contains("Unavailable") && contains("Not checked") && contains("Retry connection"), "Unavailable helper must remain distinct from Accessibility denial and offer a connection retry")
                 expect(!contains("Enable Accessibility") && !contains("Denied") && !contains("Required"), "Unavailable helper must not show an Accessibility permission action or denial")

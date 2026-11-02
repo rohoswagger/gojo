@@ -637,6 +637,11 @@ actor DictationWarmupSequencer {
     private var speechTask: Task<Void, Never>?
     private var cleanupTask: Task<Void, Never>?
 
+    func cancelPending() {
+        speechTask?.cancel()
+        cleanupTask?.cancel()
+    }
+
     func startSpeechThenCleanup(
         generation: Generation,
         prepareSpeech: @escaping Prepare,
@@ -652,6 +657,7 @@ actor DictationWarmupSequencer {
             guard !Task.isCancelled else { return }
 
             await prepareSpeech()
+            guard !Task.isCancelled else { return }
             await speechReady(generation)
             startCleanup(
                 generation: generation,
@@ -1083,8 +1089,21 @@ enum DictationState: Equatable, Sendable {
     case error(DictationFailure)
 }
 
+enum DictationEnablementPreferences {
+    static let defaultsKey = "gojo.dictation.enabled"
+
+    static func isEnabled(in defaults: UserDefaults = .standard) -> Bool {
+        defaults.object(forKey: defaultsKey) as? Bool ?? true
+    }
+
+    static func setEnabled(_ enabled: Bool, in defaults: UserDefaults = .standard) {
+        defaults.set(enabled, forKey: defaultsKey)
+    }
+}
+
 enum DictationSettingsStatus {
-    static func title(for state: DictationState) -> String {
+    static func title(for state: DictationState, isEnabled: Bool = true) -> String {
+        guard isEnabled else { return "Off" }
         switch state {
         case .idle, .succeeded:
             return "Ready"
@@ -1116,6 +1135,13 @@ enum DictationShortcutEvent: Sendable {
     case finishVoiceMode
     case clearRecoveryText(String)
     case cancel
+
+    var requiresEnabledDictation: Bool {
+        switch self {
+        case .keyDown, .startVoiceMode, .lockVoiceMode, .resumeVoiceMode: return true
+        default: return false
+        }
+    }
 }
 
 /// Preserves callback order even when a global shortcut library delivers events
@@ -1126,8 +1152,23 @@ final class DictationShortcutEventQueue: @unchecked Sendable {
     private let lock = NSLock()
     private let handler: Handler
     private var tail: Task<Void, Never>?
+    private var activationEnabled = true
+    private var activationGeneration: UInt = 0
 
-    init(handler: @escaping Handler) {
+    func setActivationEnabled(_ enabled: Bool) {
+        lock.withLock {
+            guard activationEnabled != enabled else { return }
+            activationEnabled = enabled
+            activationGeneration &+= 1
+        }
+    }
+
+    private func admits(_ generation: UInt) -> Bool {
+        lock.withLock { activationEnabled && activationGeneration == generation }
+    }
+
+    init(isEnabled: Bool = true, handler: @escaping Handler) {
+        self.activationEnabled = isEnabled
         self.handler = handler
     }
 
@@ -1135,9 +1176,12 @@ final class DictationShortcutEventQueue: @unchecked Sendable {
         lock.withLock {
             let predecessor = tail
             let handler = self.handler
+            let generation = activationGeneration
             let next = Task {
                 await predecessor?.value
-                await handler(event)
+                if !event.requiresEnabledDictation || self.admits(generation) {
+                    await handler(event)
+                }
                 await completion?()
             }
             tail = next

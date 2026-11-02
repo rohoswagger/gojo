@@ -11,6 +11,7 @@ private struct ExpectedAction {
 
 @MainActor
 private final class FixtureDictation: ObservableObject {
+    var isEnabled = true
     var selectedModel = DictationModelID.parakeetUnifiedEnglish
     var preparingModel: DictationModelID?
     var modelDownload: DictationModelDownload?

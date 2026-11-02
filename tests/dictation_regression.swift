@@ -777,6 +777,11 @@ func waitForState<T, A, R, P, I>(
 @main
 struct DictationRegressionRunner {
     static func main() async {
+        testEnablementPersistence()
+        await testDisabledShortcutQueueInvalidatesOldStarts()
+        await testGlobalDisableStopsCapture()
+        await testDisableRevokesQuiescenceAdmission()
+        await testCancelledWarmupKeepsSerializationBarrier()
         await testPausedRetryFinishDuringSecureTargetCapture()
         await testPausedAudioRetryRejectsDuplicate()
         await testPausedAudioRetryReleasesFailedAndEmptyAttempts()
@@ -3030,6 +3035,143 @@ struct DictationRegressionRunner {
             events.contains("transcribe"),
             "empty model output failure should happen after transcription"
         )
+    }
+
+    static func testEnablementPersistence() {
+        let suite = "gojo.dictation.toggle.tests." + UUID().uuidString
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        assertEqual(DictationEnablementPreferences.isEnabled(in: defaults), true, "existing installations default to enabled")
+        DictationEnablementPreferences.setEnabled(false, in: defaults)
+        let relaunched = UserDefaults(suiteName: suite)!
+        assertEqual(DictationEnablementPreferences.isEnabled(in: relaunched), false, "off must survive a new preferences reader")
+        DictationEnablementPreferences.setEnabled(true, in: relaunched)
+        assertEqual(DictationEnablementPreferences.isEnabled(in: defaults), true, "explicit enable persists")
+        assertEqual(DictationSettingsStatus.title(for: .error(.microphonePermissionDenied), isEnabled: false), "Off", "off is distinct from a permission fault")
+    }
+
+    static func testDisabledShortcutQueueInvalidatesOldStarts() async {
+        actor Gate {
+            var waiting = false
+            var continuation: CheckedContinuation<Void, Never>?
+            func wait() async { waiting = true; await withCheckedContinuation { continuation = $0 } }
+            func release() { continuation?.resume(); continuation = nil }
+        }
+        let log = EventLog()
+        let gate = Gate()
+        let queue = DictationShortcutEventQueue { event in
+            if case .pauseVoiceMode = event { await gate.wait() }
+            await log.append(String(describing: event))
+        }
+        queue.send(.pauseVoiceMode)
+        await waitForCondition("queue must reach its suspended handler") { await gate.waiting }
+        queue.send(.keyDown) { await log.append("old start completed") }
+        queue.send(.lockVoiceMode)
+        queue.send(.resumeVoiceMode)
+        queue.setActivationEnabled(false)
+        queue.send(.startVoiceMode)
+        queue.send(.cancel) { await log.append("cancel completed") }
+        queue.setActivationEnabled(true)
+        queue.send(.keyDown)
+        await gate.release()
+        await queue.drain()
+        assertEqual(await log.snapshot(), ["pauseVoiceMode", "old start completed", "cancel", "cancel completed", "keyDown"], "off/on must revoke old activations while completing cleanup and completion callbacks")
+    }
+
+    static func testGlobalDisableStopsCapture() async {
+        let log = EventLog()
+        let audio = FakeAudioCapture(log: log)
+        let inserter = FakeInserter(log: log)
+        let controller = DictationController(targetProvider: FakeTargetProvider(log: log),
+            audioCapture: audio, transcriber: FakeTranscriber(log: log),
+            polisher: FakePolisher(log: log), inserter: inserter, isEnabled: false)
+        assertEqual(await controller.hotKeyDown(), false, "persisted off must reject initial capture")
+        assertEqual(await log.snapshot(), [], "off must not capture a target or request permission")
+        await controller.setEnabled(true)
+        assertEqual(await audio.starts, 0, "enabling does not record")
+        await controller.hotKeyDown()
+        await waitForState(.listening, controller: controller, message: "enabled explicit start must record")
+        await controller.setEnabled(false)
+        await waitForCondition("global disable must stop active audio") { await audio.cancellations == 1 }
+        await controller.hotKeyUp()
+        await controller.resumeVoiceMode()
+        assertEqual(await controller.lockVoiceMode(), false, "off cannot lock a microphone")
+        assertEqual(await controller.retryRecovery(id: UUID()), false, "off rejects recovery execution")
+        assertEqual(await inserter.insertionCount(), 0, "disabling revokes uncommitted text")
+        await controller.setEnabled(false)
+        await controller.setEnabled(true)
+        await controller.setEnabled(true)
+        assertEqual(await audio.starts, 1, "repeated toggles cannot replay a held key")
+        await controller.hotKeyDown()
+        await waitForCondition("a new explicit press may record after enable") { await audio.starts == 2 }
+        await controller.cancel()
+    }
+
+    static func testDisableRevokesQuiescenceAdmission() async {
+        actor Audio: DictationAudioCapturing {
+            var cancellations = 0
+            var probes = 0
+            var waiting = false
+            var continuation: CheckedContinuation<Bool, Never>?
+            func requestPermission() async -> Bool { true }
+            func startCapture() async throws {}
+            func stopCapture() async throws -> DictationAudio { DictationAudio(samples: []) }
+            func cancelCapture() async { cancellations += 1 }
+            func captureIsQuiescent() async -> Bool {
+                probes += 1
+                if probes == 1 { return false }
+                if probes == 2 {
+                    waiting = true
+                    return await withCheckedContinuation { continuation = $0 }
+                }
+                return true
+            }
+            func release() { continuation?.resume(returning: true); continuation = nil }
+        }
+        let log = EventLog()
+        let audio = Audio()
+        let controller = DictationController(targetProvider: FakeTargetProvider(log: log),
+            audioCapture: audio, transcriber: FakeTranscriber(log: log),
+            polisher: FakePolisher(log: log), inserter: FakeInserter(log: log))
+        await controller.hotKeyDown()
+        await waitForState(.listening, controller: controller, message: "quiescence fixture must record")
+        await controller.cancel()
+        await waitForCondition("cleanup must report blocked capture") { await audio.probes == 1 }
+        let staleStart = Task { await controller.hotKeyDown() }
+        await waitForCondition("new admission must suspend at quiescence") { await audio.waiting }
+        await controller.setEnabled(false)
+        await controller.setEnabled(true)
+        await audio.release()
+        assertEqual(await staleStart.value, false, "off/on must invalidate an admission awaiting physical cleanup")
+        assertEqual(await controller.state, .idle, "stale admission must not enter startup")
+        assertEqual(await controller.hotKeyDown(), true, "fresh activation may start after quiescence")
+        await controller.cancel()
+    }
+
+    static func testCancelledWarmupKeepsSerializationBarrier() async {
+        actor Gate {
+            var waiting = false
+            var continuation: CheckedContinuation<Void, Never>?
+            func wait() async { waiting = true; await withCheckedContinuation { continuation = $0 } }
+            func release() { continuation?.resume(); continuation = nil }
+        }
+        let log = EventLog()
+        let gate = Gate()
+        let sequencer = DictationWarmupSequencer()
+        await sequencer.startSpeechThenCleanup(generation: 1,
+            prepareSpeech: { await log.append("old speech"); await gate.wait() },
+            speechReady: { _ in await log.append("old ready") },
+            shouldRunCleanup: { _ in true }, prepareCleanup: { await log.append("old cleanup") })
+        await waitForCondition("old warmup must suspend") { await gate.waiting }
+        await sequencer.cancelPending()
+        await sequencer.startSpeechThenCleanup(generation: 2,
+            prepareSpeech: { await log.append("new speech") },
+            speechReady: { _ in await log.append("new ready") },
+            shouldRunCleanup: { _ in false }, prepareCleanup: {})
+        assertEqual(await log.snapshot(), ["old speech"], "canceling must retain the drain barrier for noncooperative inference")
+        await gate.release()
+        await waitForCondition("new warmup must run after the old operation drains") { await log.count(of: "new ready") == 1 }
+        assertEqual(await log.snapshot(), ["old speech", "new speech", "new ready"], "canceled warmup cannot schedule cleanup or publish ready")
     }
 
     static func testShortcutEventOrdering() async {

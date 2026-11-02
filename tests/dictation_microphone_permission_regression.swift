@@ -19,7 +19,7 @@ private final class MicrophoneAuthorizationStub {
         self.status = status
     }
 
-    func makePermission() -> DictationMicrophonePermission {
+    func makePermission(isEnabled: Bool = true) -> DictationMicrophonePermission {
         DictationMicrophonePermission(
             authorizationStatus: { self.status },
             requestAccess: {
@@ -29,7 +29,8 @@ private final class MicrophoneAuthorizationStub {
                     self.requestStarted?.resume()
                     self.requestStarted = nil
                 }
-            }
+            },
+            isEnabled: isEnabled
         )
     }
 
@@ -58,6 +59,8 @@ struct DictationMicrophonePermissionRegression {
         }
         defer { timeout.cancel() }
 
+        await globalOffPreventsQueuedPermissionPrompt()
+        await globalOffRevokesPendingCapturePermission()
         await settingsAndCaptureShareOneDecision()
         await captureCancellationDoesNotCancelTheSharedDecision()
         await concurrentWaitersRemainPending()
@@ -68,6 +71,50 @@ struct DictationMicrophonePermissionRegression {
         await cancelledEntryDoesNotStartAPrompt()
         activationRefreshReadsSystemSettingsChanges()
         print("Dictation microphone permission regression passed")
+    }
+
+    @MainActor
+    private static func globalOffPreventsQueuedPermissionPrompt() async {
+        let stub = MicrophoneAuthorizationStub(status: .notDetermined)
+        let permission = stub.makePermission(isEnabled: false)
+        await permission.requestIfNeeded()
+        require(stub.requestCount == 0, "persisted off must make Settings permission requests inert")
+        permission.setEnabled(true)
+        let request = Task { @MainActor in await permission.requestAuthorization() }
+        let revoke = Task { @MainActor in
+            permission.setEnabled(false)
+            permission.setEnabled(true)
+        }
+        _ = await request.value
+        await revoke.value
+        require(stub.requestCount == 0 && !permission.isRequesting, "off/on must revoke a prompt queued by an old permission request")
+        let explicit = Task { @MainActor in await permission.requestAuthorization() }
+        await stub.waitForRequest()
+        require(stub.requestCount == 1, "a new explicit request may ask after enable")
+        stub.resolve(with: .authorized)
+        _ = await explicit.value
+    }
+
+    @MainActor
+    private static func globalOffRevokesPendingCapturePermission() async {
+        let stub = MicrophoneAuthorizationStub(status: .notDetermined)
+        let permission = stub.makePermission()
+        let capture = AVAudioEngineCaptureService(
+            authorizationStatus: { .notDetermined },
+            requestAuthorization: { await permission.requestAuthorization() })
+        let request = Task { try await capture.requestPermission() }
+        await stub.waitForRequest()
+        permission.setEnabled(false)
+        await capture.setEnabled(false)
+        permission.setEnabled(true)
+        await capture.setEnabled(true)
+        do { _ = try await request.value; fatalError("off/on revived the old permission waiter") }
+        catch is CancellationError {}
+        catch { fatalError("unexpected permission cancellation: \(error)") }
+        stub.resolve(with: .authorized)
+        let authorized = try! await capture.requestPermission()
+        require(authorized, "a fresh request may use the completed authorization decision")
+        require(stub.requestCount == 1, "global toggles cannot replay an authorization prompt")
     }
 
     @MainActor

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A global dictation switch in Settings that stops recording and disables dictation shortcuts, practice, and audio retries while preserving saved content and configuration.
+
 ## [1.8.0] — 2026-11-01
 
 ### Added

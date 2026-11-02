@@ -157,6 +157,16 @@ private final class MicrophoneAuthorizationWaiter: @unchecked Sendable {
     private let lock = NSLock()
     private var continuation: CheckedContinuation<AVAuthorizationStatus, Error>?
     private var result: Result<AVAuthorizationStatus, Error>?
+    private var requestTask: Task<Void, Never>?
+
+    func installRequest(_ task: Task<Void, Never>) {
+        let finished = lock.withLock {
+            guard result == nil else { return true }
+            requestTask = task
+            return false
+        }
+        if finished { task.cancel() }
+    }
 
     func install(_ continuation: CheckedContinuation<AVAuthorizationStatus, Error>) -> Bool {
         lock.lock()
@@ -176,7 +186,10 @@ private final class MicrophoneAuthorizationWaiter: @unchecked Sendable {
         self.result = result
         let continuation = self.continuation
         self.continuation = nil
+        let request = requestTask
+        requestTask = nil
         lock.unlock()
+        if case .failure = result { request?.cancel() }
         continuation?.resume(with: result)
     }
 }
@@ -218,6 +231,8 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
     private var inputDeviceObserver: DictationInputDeviceObserver?
     private var context: CaptureContext?
     private var preparedContext: CaptureContext?
+    private var isEnabled: Bool
+    private var admissionGeneration: UInt = 0
     private var continuousContext: ContinuousCaptureContext?
     private var continuousPump: Task<Void, Never>?
     private var continuousStartID: UUID?
@@ -227,6 +242,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
     private let readinessSleep: @Sendable () async throws -> Void
     private let readinessPollLimit: Int
     private var diagnosticID: UUID?
+    private var authorizationWaiters: [UUID: MicrophoneAuthorizationWaiter] = [:]
     private let levelObserver: LevelObserver
     private var configurationChangeObserver: (any NSObjectProtocol)?
 
@@ -243,14 +259,32 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
         readinessSleep: @escaping @Sendable () async throws -> Void = {
             try await Task.sleep(for: .milliseconds(20))
         },
+        isEnabled: Bool = true,
         levelObserver: @escaping LevelObserver = { _ in }
     ) {
+        self.isEnabled = isEnabled
         self.authorizationStatus = authorizationStatus
         self.makeCaptureEngine = captureEngineFactory ?? { SystemDictationCaptureEngine(try makeAudioEngine()) }
         self.requestAuthorization = requestAuthorization
         self.readinessPollLimit = max(1, readinessPollLimit)
         self.readinessSleep = readinessSleep
         self.levelObserver = levelObserver
+    }
+
+    func setEnabled(_ enabled: Bool) async {
+        guard isEnabled != enabled else { return }
+        isEnabled = enabled
+        admissionGeneration &+= 1
+        if !enabled {
+            for waiter in authorizationWaiters.values { waiter.finish(.failure(CancellationError())) }
+            discardPreparedCapture()
+            cancelMicrophoneDiagnostic()
+            await cancelCapture()
+        }
+    }
+
+    private func checkEnabled(generation: UInt? = nil) throws {
+        guard isEnabled, generation == nil || generation == admissionGeneration else { throw CancellationError() }
     }
 
     func configure(_ configuration: DictationCaptureConfiguration) async throws {
@@ -278,19 +312,32 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
     }
 
     func requestPermission() async throws -> Bool {
+        try checkEnabled()
+        let generation = admissionGeneration
         try Task.checkCancellation()
         let waiter = MicrophoneAuthorizationWaiter()
+        let id = UUID()
+        authorizationWaiters[id] = waiter
+        defer { authorizationWaiters.removeValue(forKey: id) }
         let status = try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 guard waiter.install(continuation) else { return }
-                Task { [requestAuthorization] in
-                    waiter.finish(.success(await requestAuthorization()))
+                let task = Task { [requestAuthorization] in
+                    do {
+                        try checkEnabled(generation: generation)
+                        try Task.checkCancellation()
+                        waiter.finish(.success(await requestAuthorization()))
+                    } catch {
+                        waiter.finish(.failure(error))
+                    }
                 }
+                waiter.installRequest(task)
             }
         } onCancel: {
             waiter.finish(.failure(CancellationError()))
         }
         try Task.checkCancellation()
+        try checkEnabled(generation: generation)
         try Self.requireAuthorization(status)
         return true
     }
@@ -306,6 +353,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
     }
 
     private func checkAuthorization() throws {
+        try checkEnabled()
         do {
             try Self.requireAuthorization(authorizationStatus())
         } catch {
@@ -316,6 +364,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
     }
 
     func prepareForCaptureIfAuthorized() async {
+        guard isEnabled else { return }
         observeConfigurationChangesIfNeeded()
         guard authorizationStatus() == .authorized else {
             discardPreparedCapture()
@@ -964,6 +1013,7 @@ actor AVAudioEngineCaptureService: DictationAudioCapturing {
     }
 
     func runMicrophoneDiagnostic() async throws {
+        try checkEnabled()
         guard context == nil, continuousContext == nil, diagnosticID == nil else {
             throw AVAudioEngineCaptureError.alreadyCapturing
         }

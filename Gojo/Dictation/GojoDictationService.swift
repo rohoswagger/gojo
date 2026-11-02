@@ -245,10 +245,11 @@ final class GojoDictationService: ObservableObject {
 
     static let shared = GojoDictationService()
     private static let selectedModelKey = "gojo.dictation.selectedModelID"
-    nonisolated private static let shortcutEventQueue = DictationShortcutEventQueue { event in
+    nonisolated private static let shortcutEventQueue = DictationShortcutEventQueue(isEnabled: DictationEnablementPreferences.isEnabled()) { event in
         await GojoDictationService.shared.processShortcutEvent(event)
     }
 
+    @Published private(set) var isEnabled: Bool
     @Published private(set) var state: DictationState = .idle
     @Published private(set) var microphoneTestState: DictationMicrophoneDiagnosticState = .idle
     @Published private(set) var selectedModel: DictationModelID
@@ -308,6 +309,7 @@ final class GojoDictationService: ObservableObject {
     private var readyCueSessionID: UUID?
     private var completionSessionID: UUID?
     @Published private var sessionResourceCount = 0
+    private let settingsUserDefaults: UserDefaults
     private let modelResidency: DictationModelResidency
     private let localTranscriber: LocalDictationTranscriber
     private let pipelineTranscriber: DictationTranscriberRouter
@@ -325,12 +327,17 @@ final class GojoDictationService: ObservableObject {
     private var correctionObservationGeneration = UUID()
     @Published private var shortcutPreflighting = false
     @Published private var awaitingControllerStart = false
+    private var enablementTask: Task<Void, Never>?
+    private var readinessTask: Task<Void, Never>?
+    private var enablementGeneration: UInt = 0
     private var shortcutGeneration: UInt = 0
     private var shortcutSessionGate = DictationShortcutSessionGate()
     private var transcriberWarmGeneration: UInt = 0
     private let warmupSequencer = DictationWarmupSequencer()
 
-    private init() {
+    private init(settingsUserDefaults: UserDefaults = .standard) {
+        self.settingsUserDefaults = settingsUserDefaults
+        isEnabled = DictationEnablementPreferences.isEnabled(in: settingsUserDefaults)
         let savedSelection = UserDefaults.standard.string(forKey: Self.selectedModelKey)
         let initialModel = DictationModelID.resolveSelection(savedSelection)
         selectedModel = initialModel
@@ -381,7 +388,7 @@ final class GojoDictationService: ObservableObject {
                 self.receive(state)
             }
         }
-        let audioCapture = AVAudioEngineCaptureService { [weak self] level in
+        let audioCapture = AVAudioEngineCaptureService(isEnabled: isEnabled) { [weak self] level in
             Task { @MainActor in
                 guard let self else { return }
                 if level == 0 || self.state == .listening {
@@ -440,10 +447,11 @@ final class GojoDictationService: ObservableObject {
             },
             completionObserver: { [weak self] id, completion, plan in
                 Task { @MainActor in self?.receiveCompletion(completion, id: id, plan: plan) }
-            }
+            },
+            isEnabled: isEnabled
         )
         self.audioCapture = audioCapture
-        Task { await audioCapture.prepareForCaptureIfAuthorized() }
+        if isEnabled { Task { await audioCapture.prepareForCaptureIfAuthorized() } }
         initialModelStatusTask = Task(priority: .utility) { [localTranscriber] in
             await Self.scanInstalledModels(using: localTranscriber)
         }
@@ -472,7 +480,7 @@ final class GojoDictationService: ObservableObject {
     /// hundred megabytes of CoreML weights load. The transcriber caches the
     /// loaded manager, so this is a one-time cost per model per launch.
     private func warmSelectedTranscriber() {
-        guard selectedProvider == .local else { return }
+        guard isEnabled, selectedProvider == .local else { return }
         transcriberWarmGeneration &+= 1
         let generation = transcriberWarmGeneration
         let model = selectedModel
@@ -496,6 +504,10 @@ final class GojoDictationService: ObservableObject {
                     do {
                         let lease = await self.modelResidency.acquireRead()
                         do {
+                            guard await self.shouldPrepareTranscriberWarmup(generation: generation), !Task.isCancelled else {
+                                await self.modelResidency.release(lease)
+                                return
+                            }
                             try await localTranscriber.prepare(request: request)
                             await self.modelResidency.release(lease)
                         } catch {
@@ -521,8 +533,12 @@ final class GojoDictationService: ObservableObject {
                 shouldRunCleanup: { [self] completedGeneration in
                     await self.shouldRunS1MiniWarmup(generation: completedGeneration)
                 },
-                prepareCleanup: { [polisher, modelResidency] in
+                prepareCleanup: { [self, polisher, modelResidency] in
                     let lease = await modelResidency.acquireRead(.polisher)
+                    guard await self.shouldRunS1MiniWarmup(generation: generation), !Task.isCancelled else {
+                        await modelResidency.release(lease)
+                        return
+                    }
                     await polisher.prepareIfInstalled()
                     await modelResidency.release(lease)
                 }
@@ -545,20 +561,20 @@ final class GojoDictationService: ObservableObject {
     }
 
     private func shouldPrepareTranscriberWarmup(generation: UInt) -> Bool {
-        generation == transcriberWarmGeneration
+        isEnabled && generation == transcriberWarmGeneration
             && selectedProvider == .local
             && installedModels.contains(selectedModel)
     }
 
     private func shouldRunS1MiniWarmup(generation: UInt) -> Bool {
-        generation == transcriberWarmGeneration
+        isEnabled && generation == transcriberWarmGeneration
             && cleanupEnabled
             && s1MiniInstalled
             && modelErrors[selectedModel] == nil
     }
 
     var stateDetail: String? {
-        guard case .error(let failure) = state else { return nil }
+        guard isEnabled, case .error(let failure) = state else { return nil }
         return failure.localizedDescription
     }
 
@@ -582,7 +598,7 @@ final class GojoDictationService: ObservableObject {
     }
 
     var canTestMicrophone: Bool {
-        microphoneTestTask == nil && !shortcutPreflighting && !awaitingControllerStart && isDictationInactive
+        isEnabled && microphoneTestTask == nil && !shortcutPreflighting && !awaitingControllerStart && isDictationInactive
     }
 
     private var isDictationInactive: Bool {
@@ -614,12 +630,22 @@ final class GojoDictationService: ObservableObject {
     }
 
     func beginShortcut() {
+        guard isEnabled else { return }
         shortcutPreflighting = true
         Self.sendShortcutEvent(.keyDown)
     }
 
     private func processShortcutEvent(_ event: DictationShortcutEvent) async {
         guard let controller else { return }
+        if event.requiresEnabledDictation {
+            guard isEnabled else { return }
+            shortcutGeneration &+= 1
+        }
+        let generation = shortcutGeneration
+        if event.requiresEnabledDictation {
+            await enablementTask?.value
+            guard admitsActivation(generation) else { return }
+        }
         switch event {
         case .keyDown, .startVoiceMode:
             let requestsVoiceMode: Bool
@@ -638,12 +664,14 @@ final class GojoDictationService: ObservableObject {
             if let microphoneTestTask {
                 microphoneTestTask.cancel()
                 await microphoneTestTask.value
+                guard admitsActivation(generation) else { return }
             }
-            shortcutGeneration &+= 1
             shortcutPreflighting = true
             defer { shortcutPreflighting = false }
             if requestsVoiceMode, !isDictationInactive {
-                receive(await controller.state)
+                let currentState = await controller.state
+                guard admitsActivation(generation) else { return }
+                receive(currentState)
                 if !(await controller.isVoiceModeActive) { rejectShortcutStart() }
                 return
             }
@@ -654,7 +682,9 @@ final class GojoDictationService: ObservableObject {
                 // the controller (the session may already be inserting), so the
                 // controller makes the call; on success, mirror .idle here
                 // before the guards below run.
-                if await controller.cancelIfTranscribing() {
+                let canceled = await controller.cancelIfTranscribing()
+                guard admitsActivation(generation) else { return }
+                if canceled {
                     dictationShortcutLogger.notice("keyDown canceled in-flight transcription")
                     shortcutSessionGate.reset()
                     receive(.idle)
@@ -690,6 +720,7 @@ final class GojoDictationService: ObservableObject {
                 // shortcut activation uses that cached result instead of hashing
                 // hundreds of megabytes before the microphone can start.
                 await loadInitialModelStatusIfNeeded()
+                guard admitsActivation(generation) else { return }
             }
             #if DEBUG
             let modelMilliseconds = Int(
@@ -740,7 +771,9 @@ final class GojoDictationService: ObservableObject {
             activePracticeFieldID = practiceID
             lastCompletion = nil
             completionAttentionID = nil
-            if await controller.hotKeyDown(plan: plan) {
+            let accepted = await controller.hotKeyDown(plan: plan)
+            guard admitsActivation(generation) else { return }
+            if accepted {
                 if requestsVoiceMode { DictationModifierHotKeyMonitor.shared.adoptVoiceModeSession() }
                 shortcutSessionGate.acceptKeyDown()
                 shortcutPreflighting = false
@@ -785,6 +818,58 @@ final class GojoDictationService: ObservableObject {
         }
     }
 
+    private func admitsActivation(_ generation: UInt) -> Bool {
+        isEnabled && generation == shortcutGeneration
+    }
+
+    func setEnabled(_ enabled: Bool) {
+        guard isEnabled != enabled else { return }
+        isEnabled = enabled
+        DictationEnablementPreferences.setEnabled(enabled, in: settingsUserDefaults)
+        shortcutGeneration &+= 1
+        transcriberWarmGeneration &+= 1
+        Self.shortcutEventQueue.setActivationEnabled(enabled)
+        DictationModifierHotKeyMonitor.shared.setEnabled(enabled)
+        DictationMicrophonePermission.shared.setEnabled(enabled)
+        shortcutSessionGate.reset()
+        nextPracticeFieldID = nil
+        shortcutPreflighting = false
+        awaitingControllerStart = false
+        isPreparingTranscriber = false
+        if !enabled {
+            cancelMicrophoneTest()
+            activeLearningSessionID = nil
+            resetCorrectionLearning()
+            audioLevel = 0
+        }
+        readinessTask?.cancel()
+        readinessTask = nil
+        let predecessor = enablementTask
+        enablementGeneration &+= 1
+        let generation = enablementGeneration
+        enablementTask = Task { [weak self, controller, audioCapture, warmupSequencer] in
+            await predecessor?.value
+            if enabled {
+                guard let self, self.isEnabled, self.enablementGeneration == generation else { return }
+            }
+            await controller?.setEnabled(enabled)
+            await audioCapture?.setEnabled(enabled)
+            if !enabled { await warmupSequencer.cancelPending() }
+            guard let self, self.enablementGeneration == generation else { return }
+            if !enabled {
+                if let controller { self.receive(await controller.state) }
+                return
+            }
+            self.readinessTask = Task { @MainActor [weak self] in
+                guard let self, self.isEnabled, self.enablementGeneration == generation else { return }
+                await audioCapture?.prepareForCaptureIfAuthorized()
+                guard !Task.isCancelled, self.isEnabled, self.enablementGeneration == generation else { return }
+                self.warmSelectedTranscriber()
+                await DictationModifierHotKeyMonitor.shared.start(promptIfNeeded: false)
+            }
+        }
+    }
+
     private func rejectShortcutStart() {
         shortcutSessionGate.reset()
         DictationModifierHotKeyMonitor.shared.rejectCurrentDictationStart()
@@ -793,8 +878,11 @@ final class GojoDictationService: ObservableObject {
     func testMicrophone() {
         guard canTestMicrophone, let audioCapture else { return }
         microphoneTestState = .testing
+        let generation = shortcutGeneration
         microphoneTestTask = Task { [weak self] in
             do {
+                await self?.enablementTask?.value
+                guard self?.admitsActivation(generation) == true else { throw CancellationError() }
                 try await audioCapture.runMicrophoneDiagnostic()
                 try Task.checkCancellation()
                 self?.microphoneTestState = .passed
@@ -818,6 +906,7 @@ final class GojoDictationService: ObservableObject {
     }
 
     func startVoiceMode() {
+        guard isEnabled else { return }
         shortcutPreflighting = true
         Self.sendShortcutEvent(.startVoiceMode)
     }
@@ -826,7 +915,13 @@ final class GojoDictationService: ObservableObject {
     func resumeVoiceMode() { Self.sendShortcutEvent(.resumeVoiceMode) }
     func finishVoiceMode() { Self.sendShortcutEvent(.finishVoiceMode) }
     func retryRecovery(id: UUID) {
-        Task { await controller?.retryRecovery(id: id) }
+        guard isEnabled else { return }
+        let generation = shortcutGeneration
+        Task {
+            await enablementTask?.value
+            guard admitsActivation(generation) else { return }
+            await controller?.retryRecovery(id: id)
+        }
     }
 
     func discardRecovery(id: UUID) {
@@ -874,10 +969,12 @@ final class GojoDictationService: ObservableObject {
     /// re-prepares after the HAL has settled.
     func handleSystemWake() {
         DictationMicrophonePermission.shared.refresh()
-        guard let audioCapture else { return }
+        guard isEnabled, let audioCapture else { return }
+        let generation = shortcutGeneration
         Task {
             await audioCapture.discardPreparedCapture()
             try? await Task.sleep(for: .seconds(1))
+            guard admitsActivation(generation) else { return }
             await audioCapture.prepareForCaptureIfAuthorized()
         }
     }
@@ -1124,7 +1221,7 @@ final class GojoDictationService: ObservableObject {
     }
 
     func beginPractice(fieldID: UUID) {
-        guard isDictationInactive else { return }
+        guard isEnabled, isDictationInactive else { return }
         nextPracticeFieldID = fieldID
         startVoiceMode()
     }
@@ -1303,6 +1400,7 @@ final class GojoDictationService: ObservableObject {
     }
 
     private func scheduleS1MiniWarmupAfterSpeech() {
+        guard isEnabled else { return }
         let generation = transcriberWarmGeneration
         Task { [self, warmupSequencer, polisher] in
             await warmupSequencer.startCleanupAfterCurrentSpeech(
@@ -1310,8 +1408,12 @@ final class GojoDictationService: ObservableObject {
                 shouldRunCleanup: { [self] completedGeneration in
                     await self.shouldRunS1MiniWarmup(generation: completedGeneration)
                 },
-                prepareCleanup: { [polisher, modelResidency] in
+                prepareCleanup: { [self, polisher, modelResidency] in
                     let lease = await modelResidency.acquireRead(.polisher)
+                    guard await self.shouldRunS1MiniWarmup(generation: generation), !Task.isCancelled else {
+                        await modelResidency.release(lease)
+                        return
+                    }
                     await polisher.prepareIfInstalled()
                     await modelResidency.release(lease)
                 }
@@ -1346,7 +1448,7 @@ final class GojoDictationService: ObservableObject {
                 guard let self else { return }
                 s1MiniInstalled = true
                 updateCleanupEnabled(true)
-                await polisher.prepareIfInstalled()
+                if isEnabled { await polisher.prepareIfInstalled() }
             } catch is CancellationError {
                 return
             } catch {
@@ -1440,7 +1542,7 @@ final class GojoDictationService: ObservableObject {
 
     func observeCorrections(to text: String, targetIdentity: String?, eligible: Bool, sessionID: UUID) {
         cancelCorrectionObservationTask()
-        guard eligible, learnsCorrections, activeLearningSessionID == sessionID,
+        guard isEnabled, eligible, learnsCorrections, activeLearningSessionID == sessionID,
               !text.isEmpty,
               let targetIdentity,
               targetIdentity.hasSuffix(":accessibility") else { return }

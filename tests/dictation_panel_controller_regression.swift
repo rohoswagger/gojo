@@ -7,6 +7,7 @@ import SwiftUI
 @MainActor
 final class GojoDictationService: ObservableObject {
     static let shared = GojoDictationService()
+    @Published var isEnabled = true
     @Published var state: DictationState = .idle
     @Published var audioLevel: Float = 0
     @Published var recoveryText = ""
@@ -256,6 +257,7 @@ struct DictationPanelControllerRegression {
 
     @MainActor
     static func run() async {
+        await offSnapshotKeepsSavedTextAvailable()
         await audioRecoveryActionsRetainIdentity()
         await passiveRecoveryAndAttentionIdentity()
         await savedTranscriptExpiryOnlyHides()
@@ -274,6 +276,24 @@ struct DictationPanelControllerRegression {
         await replacementClampsAndPreservesPosition()
         await manualReadyIsUntimed()
         await reviewedLifecycleEdges()
+    }
+
+    @MainActor
+    private static func offSnapshotKeepsSavedTextAvailable() async {
+        let fixture = Fixture()
+        defer { fixture.teardown() }
+        await fixture.start()
+        fixture.service.isEnabled = false
+        fixture.service.state = .error(.microphonePermissionDenied)
+        await Harness.flush()
+        Harness.expect(!fixture.model.isEnabled && fixture.model.title == "Dictation is off", "panel must observe the actual global off snapshot")
+        Harness.expect(fixture.model.errorMessage == nil, "off must not display a stale permission fault")
+        fixture.model.recoveryText = "Saved before global off"
+        Harness.expect(fixture.model.copyRecoveryText(write: { $0 == "Saved before global off" }), "copying old text must remain available while off")
+        Harness.expect(fixture.model.clearRecoveryText(matching: "Saved before global off"), "discarding old text must remain available while off")
+        fixture.service.isEnabled = true
+        await Harness.flush()
+        Harness.expect(fixture.model.isEnabled, "panel controls must observe enable without starting a session")
     }
 
     private static let saved = "saved words that could not be inserted"

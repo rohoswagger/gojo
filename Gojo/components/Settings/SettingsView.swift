@@ -1433,6 +1433,8 @@ struct DictationSettings: View {
 
     var body: some View {
         Form {
+            enablementSection
+
             Section {
                 LabeledContent("Push to talk", value: "Hold ⌃⌥")
                 LabeledContent("Lock microphone", value: "⌃⌥ then Space")
@@ -1472,7 +1474,7 @@ struct DictationSettings: View {
                                 .foregroundStyle(.secondary)
                         }
                     } else {
-                        Text(DictationSettingsStatus.title(for: dictation.state))
+                        Text(DictationSettingsStatus.title(for: dictation.state, isEnabled: dictation.isEnabled))
                     }
                 }
                 if let detail = dictation.stateDetail {
@@ -1920,6 +1922,7 @@ struct DictationSettings: View {
             cancelVocabularyImport()
         }
         .task {
+            guard dictation.isEnabled else { return }
             await microphonePermission.requestIfNeeded()
         }
         .task {
@@ -1930,6 +1933,19 @@ struct DictationSettings: View {
             Task {
                 await shortcutMonitor.refreshReadiness()
             }
+        }
+    }
+
+    private var enablementSection: some View {
+        Section {
+            Toggle("Enable dictation", isOn: Binding(
+                get: { dictation.isEnabled },
+                set: { dictation.setEnabled($0) }
+            ))
+        } footer: {
+            Text(dictation.isEnabled
+                 ? "Dictation is available from the shortcut, voice controls, and practice field."
+                 : "Dictation is off. Models and settings are kept for when you turn it on again.")
         }
     }
 
@@ -1994,6 +2010,7 @@ struct DictationSettings: View {
         } header: {
             Text("Permissions")
         }
+        .disabled(!dictation.isEnabled)
     }
 
     private var helperStatusLabel: String {
@@ -2014,6 +2031,7 @@ struct DictationSettings: View {
     }
 
     private var shortcutStatusLabel: String {
+        guard dictation.isEnabled else { return "Off" }
         switch shortcutMonitor.shortcutReadiness {
         case .stopped: return "Inactive"
         case .checking: return "Checking…"
@@ -2068,12 +2086,12 @@ struct DictationSettings: View {
                     Text(dictation.activePracticeFieldID == practiceFieldID ? "Finish" : "Start")
                         .frame(width: 52)
                 }
-                .disabled(dictation.activePracticeFieldID == nil && !dictation.canChangeModel)
+                .disabled(!dictation.isEnabled || (dictation.activePracticeFieldID == nil && !dictation.canChangeModel))
                 Button("Cancel") { dictation.cancelPractice(fieldID: practiceFieldID) }
                     .disabled(dictation.activePracticeFieldID != practiceFieldID)
                 Spacer()
                 Text(dictation.activePracticeFieldID == practiceFieldID
-                     ? DictationSettingsStatus.title(for: dictation.state) : "Ready to practice")
+                     ? DictationSettingsStatus.title(for: dictation.state, isEnabled: dictation.isEnabled) : dictation.isEnabled ? "Ready to practice" : "Dictation is off")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

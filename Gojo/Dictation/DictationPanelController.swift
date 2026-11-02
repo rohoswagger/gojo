@@ -116,6 +116,9 @@ final class DictationPanelController {
         guard !isObserving else { return }
         isObserving = true
 
+        service.$isEnabled
+            .sink { [weak self] enabled in self?.model.isEnabled = enabled }
+            .store(in: &subscriptions)
         service.$state
             .receive(on: RunLoop.main)
             .sink { [weak self] state in self?.receive(state) }

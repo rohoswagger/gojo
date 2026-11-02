@@ -73,6 +73,7 @@ extension DictationFailure: LocalizedError {
 
 @MainActor
 private final class GojoDictationService {
+    var isEnabled = true
     private let modelResidency = DictationModelResidency {}
     private var activeSessionID: UUID?
     private var readyCueSessionID: UUID?

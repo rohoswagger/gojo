@@ -3,6 +3,9 @@ import Combine
 import Foundation
 import os
 
+private let fixtureSuite = "gojo.dictation.service.tests." + UUID().uuidString
+private let fixtureDefaults = UserDefaults(suiteName: fixtureSuite)!
+
 private let dictationTargetLogger = Logger(subsystem: "gojo.tests", category: "target")
 private let dictationShortcutLogger = Logger(subsystem: "gojo.tests", category: "shortcut")
 private let dictationPipelineLogger = Logger(subsystem: "gojo.tests", category: "pipeline")
@@ -41,6 +44,21 @@ private final class EventLog {
 @MainActor
 private final class AVAudioEngineCaptureService {
     var currentInputDevice: DictationInputDevice? { get async { nil } }
+    private(set) var stops = 0
+    private(set) var enabled = true
+    var enablementGate: ManualGate?
+    func blockNextEnablement(_ gate: ManualGate) { enablementGate = gate }
+    private(set) var preparations = 0
+    func setEnabled(_ enabled: Bool) async {
+        if let gate = enablementGate {
+            enablementGate = nil
+            await gate.wait()
+        }
+        self.enabled = enabled
+        if !enabled { stops += 1 }
+    }
+    func prepareForCaptureIfAuthorized() async { preparations += 1 }
+    func discardPreparedCapture() async {}
     let completion = ManualGate()
     let log: EventLog
     var completesImmediately = true
@@ -73,6 +91,15 @@ private final class Controller {
     var acceptsShortcut = true
     private var currentState: DictationState = .idle
     private(set) var starts = 0
+    private(set) var cancellations = 0
+    private(set) var enabled = true
+    private(set) var retries = 0
+    private(set) var resumes = 0
+    func setEnabled(_ enabled: Bool) async {
+        self.enabled = enabled
+        if !enabled { cancellations += 1; currentState = .idle }
+    }
+    func retryRecovery(id: UUID) async { retries += 1 }
     private(set) var plans: [DictationSessionPlan] = []
     var isVoiceModeActive: Bool { get async { false } }
     var state: DictationState {
@@ -97,7 +124,7 @@ private final class Controller {
     func hotKeyUp() async {}
     func lockVoiceMode() async -> Bool { false }
     func pauseVoiceMode() async {}
-    func resumeVoiceMode() async {}
+    func resumeVoiceMode() async { resumes += 1 }
     func finishVoiceMode() async {}
     func clearRecoveryText(matching text: String) async -> Bool { true }
     func cancel() async { currentState = .idle }
@@ -106,6 +133,8 @@ private final class Controller {
 @MainActor
 private final class DictationModifierHotKeyMonitor {
     static let shared = DictationModifierHotKeyMonitor()
+    func setEnabled(_ enabled: Bool) {}
+    func start(promptIfNeeded: Bool = false) async {}
     func adoptVoiceModeSession() {}
     func rejectCurrentDictationStart() {}
 }
@@ -120,6 +149,12 @@ private final class DictationPanelController {
 private final class DictationModelDownloadPromptController {
     static let shared = DictationModelDownloadPromptController()
     func present(title: String = "", message: String = "") {}
+}
+
+@MainActor private final class DictationMicrophonePermission {
+    static let shared = DictationMicrophonePermission()
+    func refresh() {}
+    func setEnabled(_ enabled: Bool) {}
 }
 
 private enum DictationProvider { case local, openRouter }
@@ -172,6 +207,24 @@ extension DictationFailure: LocalizedError {
 
 @MainActor
 private final class GojoDictationService {
+    var isEnabled = true
+    private let settingsUserDefaults: UserDefaults
+    nonisolated private static let shortcutEventQueue = DictationShortcutEventQueue { _ in }
+    nonisolated static func sendShortcutEvent(_ event: DictationShortcutEvent) { shortcutEventQueue.send(event) }
+    private var enablementTask: Task<Void, Never>?
+    private var readinessTask: Task<Void, Never>?
+    private var enablementGeneration: UInt = 0
+    private var transcriberWarmGeneration: UInt = 0
+    private let warmupSequencer = DictationWarmupSequencer()
+    var isPreparingTranscriber = false
+    private(set) var warmups = 0
+    private func warmSelectedTranscriber() { warmups += 1 }
+    func settleEnablement() async { await enablementTask?.value }
+    func startBlockedWarmup(_ gate: ManualGate) async {
+        await warmupSequencer.startSpeechThenCleanup(generation: 1,
+            prepareSpeech: { await gate.wait() }, speechReady: { _ in },
+            shouldRunCleanup: { _ in false }, prepareCleanup: {})
+    }
     @Published private(set) var state: DictationState = .idle
     @Published private(set) var microphoneTestState: DictationMicrophoneDiagnosticState = .idle
     private var microphoneTestTask: Task<Void, Never>?
@@ -232,7 +285,9 @@ private final class GojoDictationService {
     let modelScan = ManualGate()
     var blocksModelScan = false
 
-    init(controller: Controller, audioCapture: AVAudioEngineCaptureService) {
+    init(controller: Controller, audioCapture: AVAudioEngineCaptureService, defaults: UserDefaults = fixtureDefaults) {
+        settingsUserDefaults = defaults
+        isEnabled = DictationEnablementPreferences.isEnabled(in: defaults)
         self.controller = controller
         self.audioCapture = audioCapture
     }
@@ -257,7 +312,10 @@ private struct DictationMicrophoneDiagnosticServiceRegression {
             fputs("Microphone diagnostic service regression timed out\n", stderr)
             exit(1)
         }
-        defer { timeout.cancel() }
+        defer { timeout.cancel(); fixtureDefaults.removePersistentDomain(forName: fixtureSuite) }
+        await globalDisableRevokesPreflightAndBlocksActions()
+        await disableDoesNotWaitForBlockedWarmup()
+        await rapidTogglesPreserveFinalOperationalState()
         await diagnosticWaitsForShortcutPreflight()
         await diagnosticWaitsForControllerPublication()
         await idleDiagnosticRunsAndCanRunAgain()
@@ -278,6 +336,84 @@ private struct DictationMicrophoneDiagnosticServiceRegression {
             require(ContinuousClock.now < deadline, message)
             await Task.yield()
         }
+    }
+
+    @MainActor
+    private static func globalDisableRevokesPreflightAndBlocksActions() async {
+        let log = EventLog()
+        let audio = AVAudioEngineCaptureService(log: log)
+        let controller = Controller(log: log)
+        let service = GojoDictationService(controller: controller, audioCapture: audio)
+        service.blocksModelScan = true
+        let oldStart = Task { await service.process(.keyDown) }
+        await waitUntil("old start must suspend in production model preflight") { service.modelScan.arrivals == 1 }
+        service.setEnabled(false)
+        service.setEnabled(false)
+        await service.settleEnablement()
+        require(!DictationEnablementPreferences.isEnabled(in: fixtureDefaults), "production setter must persist off in the isolated suite")
+        let restored = GojoDictationService(controller: controller, audioCapture: audio)
+        require(!restored.isEnabled, "new service preference reader must restore off")
+        service.testMicrophone()
+        service.beginShortcut()
+        service.startVoiceMode()
+        service.beginPractice(fieldID: UUID())
+        service.retryRecovery(id: UUID())
+        service.handleSystemWake()
+        await service.process(.resumeVoiceMode)
+        await service.process(.keyDown)
+        require(!service.canTestMicrophone && audio.starts == 0 && audio.preparations == 0 && controller.starts == 0 && controller.retries == 0 && controller.resumes == 0,
+            "off must block diagnostics, shortcut, panel, practice, recovery retry, resume, and wake preparation")
+        require(controller.cancellations == 1 && audio.stops == 1, "repeated off must revoke controller and microphone only once")
+        service.setEnabled(true)
+        await service.settleEnablement()
+        service.modelScan.release()
+        await oldStart.value
+        require(controller.starts == 0, "off/on cannot revive an old service preflight")
+        await service.process(.keyDown)
+        require(controller.starts == 1, "new explicit action may start after enable")
+        require(DictationEnablementPreferences.isEnabled(in: fixtureDefaults), "production setter must persist re-enable")
+    }
+
+    @MainActor
+    private static func disableDoesNotWaitForBlockedWarmup() async {
+        let log = EventLog()
+        let audio = AVAudioEngineCaptureService(log: log)
+        let controller = Controller(log: log)
+        let service = GojoDictationService(controller: controller, audioCapture: audio)
+        let gate = ManualGate()
+        await service.startBlockedWarmup(gate)
+        await waitUntil("warmup must be in its noncooperative operation") { gate.arrivals == 1 }
+        await service.process(.keyDown)
+        service.setEnabled(false)
+        await service.settleEnablement()
+        require(controller.cancellations == 1 && audio.stops == 1, "global off must revoke active recording before blocked warmup drains")
+        gate.release()
+        service.setEnabled(true)
+        await service.settleEnablement()
+    }
+
+    @MainActor
+    private static func rapidTogglesPreserveFinalOperationalState() async {
+        let log = EventLog()
+        let audio = AVAudioEngineCaptureService(log: log)
+        let controller = Controller(log: log)
+        let service = GojoDictationService(controller: controller, audioCapture: audio)
+        let gate = ManualGate()
+        audio.blockNextEnablement(gate)
+        service.setEnabled(false)
+        await waitUntil("old disable must suspend in its capture permit mutation") { gate.arrivals == 1 }
+        service.setEnabled(true)
+        service.setEnabled(false)
+        service.setEnabled(true)
+        let freshStart = Task { await service.process(.keyDown) }
+        for _ in 0..<10 { await Task.yield() }
+        require(controller.starts == 0, "fresh activation must wait until every older permit mutation completes")
+        gate.release()
+        await service.settleEnablement()
+        await freshStart.value
+        require(service.isEnabled && controller.enabled && audio.enabled, "off/on/off/on must settle both operational adapters to the final user preference")
+        require(controller.cancellations == 2 && audio.stops == 2, "each disable must revoke old work exactly once")
+        require(controller.starts == 1 && audio.starts == 0, "only the fresh explicit activation may start after rapid toggles")
     }
 
     @MainActor
@@ -331,10 +467,10 @@ private struct DictationMicrophoneDiagnosticServiceRegression {
     @MainActor
     private static func learningOptOutCancelsNowAndOptInWaitsForNewPlan() async {
         let defaultsKey = DictationCorrectionLearningPolicy.defaultsKey
-        let previous = UserDefaults.standard.object(forKey: defaultsKey)
+        let previous = fixtureDefaults.object(forKey: defaultsKey)
         defer {
-            if let previous { UserDefaults.standard.set(previous, forKey: defaultsKey) }
-            else { UserDefaults.standard.removeObject(forKey: defaultsKey) }
+            if let previous { fixtureDefaults.set(previous, forKey: defaultsKey) }
+            else { fixtureDefaults.removeObject(forKey: defaultsKey) }
         }
         let log = EventLog()
         let service = GojoDictationService(controller: Controller(log: log), audioCapture: AVAudioEngineCaptureService(log: log))

@@ -296,14 +296,26 @@ assert '"writerQuiescent": !requested' in client
 assert 'requested ? "partialUnknown" : "notSent"' in client
 assert 'receipt["writerID"] = hostWriterID' in client
 
-# Automatic delivery uses direct AX or Unicode. Posting Cmd-V cannot prove
-# clipboard consumption, so automatic paste and post-AX fallback are disabled.
-assert "insertWithGuardedPaste" not in helper
-assert "waitForPasteConfirmation" not in helper
-assert "NSPasteboard.general" not in helper
+# Direct AX comes first. Chromium/Electron fields accept AXSelectedText without
+# mutating, so a guarded, AX-verified paste runs only when the field is provably
+# untouched. Unconfirmed writes must never be reported as delivered.
 assert "NSPasteboard.general" not in client
 assert "pasteDown.post" not in client
 assert "AXUIElementSetAttributeValue(" in helper
+ax_insert = helper.index("AXUIElementSetAttributeValue(")
+assert ax_insert < helper.index("self.insertWithGuardedPaste(text, target: target, reply: complete)")
+assert "guard target.allowsPasteFallback else" in helper
+assert "expectation.confirmsNoMutation(currentValue: currentValue)" in helper
+assert "insertWithGuardedPaste(expectation.insertionText" in helper
+unconfirmed = helper[helper.index("private func waitForAccessibilityConfirmation("):helper.index("private func pasteMutationExpectation(")]
+assert '"success": true, "method": "accessibility", "verified": false' not in unconfirmed, "Unconfirmed AX writes must not count as delivered."
+assert '"org.nspasteboard.TransientType"' in helper
+assert "guard snapshot.isComplete else" in helper
+assert "pasteboard.changeCount == injectedChangeCount" in helper
+assert "snapshot.restore(to: pasteboard)" in helper
+assert '"error": "pasteNotConfirmed"' in helper
+paste_unconfirmed = helper[helper.index('"error": "pasteNotConfirmed"') - 200:helper.index('"error": "pasteNotConfirmed"')]
+assert '"disposition": "partialUnknown"' in paste_unconfirmed, "A posted Cmd-V that is not confirmed may still land."
 assert "waitForAccessibilityConfirmation(" in helper
 assert '"disposition": "allDispatched"' in helper
 assert '"disposition": "partialUnknown"' in helper

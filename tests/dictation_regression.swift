@@ -570,6 +570,24 @@ actor ContinuousTranscriber: LocalDictationTranscribing {
     }
 }
 
+actor CaretMoveTargetProvider: DictationTargetCapturing {
+    typealias Target = String
+
+    private let start: DictationTargetResolution<String>
+    private var atDelivery: Result<DictationTargetResolution<String>, DictationFailure>
+
+    init(start: DictationTargetResolution<String>, atDelivery: Result<DictationTargetResolution<String>, DictationFailure>) {
+        self.start = start
+        self.atDelivery = atDelivery
+    }
+
+    func captureTarget(purpose: DictationSessionPurpose) async throws -> DictationTargetResolution<String> { start }
+
+    func captureAdditionalTarget(purpose: DictationSessionPurpose) async throws -> DictationTargetResolution<String> {
+        try atDelivery.get()
+    }
+}
+
 actor RetainedInserter: DictationTextInserting {
     typealias Target = String
     private(set) var chunks: [String] = []
@@ -817,6 +835,7 @@ struct DictationRegressionRunner {
         await testSuccessfulControllerFlow()
         await testModelPreparationFailureMessage()
         await testStartupReleaseFinishesAfterCaptureStarts()
+        await testHoldDeliversToCaretFieldAtDelivery()
         await testStartupReleaseLatchResetsOnCancel()
         await testStartupReleaseLatchResetsOnFailure()
         await testPolishingFallbacks()
@@ -2859,9 +2878,38 @@ struct DictationRegressionRunner {
         assertEqual(await inserter.insertionCount(), 1, "the transcript should be inserted once")
         assertEqual(
             await log.snapshot(),
-            ["target", "permission", "start", "stop", "transcribe", "polish", "insert"],
-            "polishing must run after transcription and before insertion"
+            ["target", "permission", "start", "stop", "transcribe", "polish", "target", "insert"],
+            "polishing must run after transcription, and the caret field is recaptured right before insertion"
         )
+    }
+
+    static func testHoldDeliversToCaretFieldAtDelivery() async {
+        let cases: [(String, DictationTargetResolution<String>, Result<DictationTargetResolution<String>, DictationFailure>, [String], String?)] = [
+            ("field moved", .captured("field-a"), .success(.captured("field-b")), ["field-b"], nil),
+            ("started outside a field", .copyOnly(.noFocusedTextField), .success(.captured("field-b")), ["field-b"], nil),
+            ("caret left all fields", .captured("field-a"), .success(.copyOnly(.noFocusedTextField)), [],
+             DictationCopyOnlyReason.noFocusedTextField.message),
+            ("caret moved to a password field", .captured("field-a"), .failure(.secureTextTarget), [],
+             "\(String(describing: DictationFailure.secureTextTarget)) Your text is saved for copying."),
+        ]
+        for (name, start, atDelivery, expectedTargets, expectedMessage) in cases {
+            let log = EventLog()
+            let inserter = RetainedInserter()
+            let controller = DictationController(
+                targetProvider: CaretMoveTargetProvider(start: start, atDelivery: atDelivery),
+                audioCapture: FakeAudioCapture(log: log),
+                transcriber: FakeTranscriber(log: log, behavior: .fixed("hello")),
+                polisher: FakePolisher(log: log, behavior: .polish("Hello.")), inserter: inserter
+            )
+            await controller.hotKeyDown()
+            await waitForState(.listening, controller: controller, message: "\(name): hold should listen")
+            await controller.hotKeyUp()
+            await waitForState(.succeeded("Hello."), controller: controller, message: "\(name): hold should finish")
+            assertEqual(await inserter.targets, expectedTargets, "\(name): text must go to the caret field at delivery")
+            assertEqual(await controller.recoveryMessage, expectedMessage, "\(name): only undeliverable text is saved")
+            let expectedReleases = start.capturedTarget.map { [$0] } ?? []
+            assertEqual(await inserter.releases, expectedReleases, "\(name): the start target must be released exactly once")
+        }
     }
 
     static func testStartupReleaseFinishesAfterCaptureStarts() async {
@@ -2903,7 +2951,7 @@ struct DictationRegressionRunner {
         assertEqual(await inserter.insertionCount(), 1, "latched startup release should insert exactly once")
         assertEqual(
             await log.snapshot(),
-            ["target", "permission", "start-waiting", "start", "stop", "transcribe", "polish", "insert"],
+            ["target", "permission", "start-waiting", "start", "stop", "transcribe", "polish", "target", "insert"],
             "latched startup release should replay through the normal finish pipeline once"
         )
     }
@@ -3821,7 +3869,7 @@ struct DictationRegressionRunner {
             assertEqual(await inserter.chunks, ["replacement"], "cancellation must discard stale inference without affecting replacement")
             assertEqual(await transcriber.maximumActive, 1, "cross-mode restarts must not overlap inference")
             assertEqual(await audio.cancellations, 1, "obsolete cleanup must not cancel replacement capture")
-            assertEqual(await inserter.releases, Array(repeating: "focused-field", count: initialMode == .continuous ? 1 : 2), "cancelled held targets and completed continuous targets must each release once")
+            assertEqual(await inserter.releases, ["focused-field", "focused-field"], "cancelled, replaced and completed targets must each release once")
         }
     }
 
@@ -4362,7 +4410,7 @@ struct DictationRegressionRunner {
             await controller.hotKeyUp()
             await waitForState(.succeeded("Full processed text."), controller: controller, message: "another hold must append saved text")
             assertEqual(await controller.recoveryText, "Full processed text. Full processed text.", "new completed holds must append without losing earlier text")
-            assertEqual(await target.captures, 2, "each hold must capture only its initial target")
+            assertEqual(await target.captures, 4, "each hold must capture at start and again for the caret before delivery")
             await controller.clearRecoveryText()
             assertEqual(await controller.recoveryText, "", "only explicit discard must clear saved text")
 

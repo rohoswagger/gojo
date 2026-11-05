@@ -643,6 +643,33 @@ where TargetProvider: DictationTargetCapturing,
             try checkSession(expectedSession)
             guard machine.state == .transcribing else { return }
             completedTranscript = transcript
+            if activePlan?.purpose == .focusedField {
+                let startTarget = initialResolution?.capturedTarget
+                let current: DictationTargetResolution<TargetProvider.Target>
+                do {
+                    current = try await targetProvider.captureAdditionalTarget(purpose: activePlan!.purpose)
+                } catch {
+                    if let startTarget { await inserter.releaseTarget(startTarget) }
+                    initialResolution = nil
+                    try checkSession(expectedSession)
+                    guard machine.state == .transcribing else { return }
+                    try recoverTranscript(transcript, reason: "\(Self.userFacingDetail(for: error)) Your text is saved for copying.",
+                                          sessionID: expectedSession)
+                    transition(.transcriptSaved(transcript))
+                    operation = nil
+                    return
+                }
+                if let startTarget { await inserter.releaseTarget(startTarget) }
+                guard expectedSession == sessionID, !Task.isCancelled, machine.state == .transcribing else {
+                    if let target = current.capturedTarget { await inserter.releaseTarget(target) }
+                    initialResolution = nil
+                    try checkSession(expectedSession)
+                    return
+                }
+                initialResolution = current
+                targetSnapshot = current.capturedTarget
+                targetObserver?(current.capturedTarget)
+            }
             guard let target = initialResolution?.capturedTarget else {
                 try recoverTranscript(
                     transcript,

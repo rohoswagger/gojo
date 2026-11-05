@@ -143,6 +143,7 @@ final class DisplayState {
     var screens: [DictationPanelScreen]
     var pointer: String?
     var session: String?
+    var pointerMoved: (@MainActor () -> Void)?
     init(screens: [DictationPanelScreen], pointer: String? = nil, session: String? = nil) {
         self.screens = screens
         self.pointer = pointer
@@ -177,7 +178,11 @@ final class Fixture {
             displays: DictationPanelDisplays(
                 screens: { displayState.screens },
                 pointerDisplayID: { displayState.pointer },
-                sessionDisplayID: { displayState.session }
+                sessionDisplayID: { displayState.session },
+                watchPointer: { moved in
+                    displayState.pointerMoved = moved
+                    return { displayState.pointerMoved = nil }
+                }
             ),
             sleeper: { try await clock.sleep($0) },
             fade: { await fades.fade($0) }
@@ -275,6 +280,7 @@ struct DictationPanelControllerRegression {
         await reassertsOnlyVisiblePanel()
         await replacementClampsAndPreservesPosition()
         await manualReadyIsUntimed()
+        await activeSessionFollowsPointerDisplay()
         await reviewedLifecycleEdges()
     }
 
@@ -1007,13 +1013,39 @@ struct DictationPanelControllerRegression {
         multi.displays.session = "left"
         multi.service.sessionDisplayID = 2
         await Harness.flush()
-        Harness.expect(left.visibleFrame.contains(multi.panel!.frame),
-                       "A same-app session target change follows its display even if the pointer is elsewhere")
+        Harness.expect(Fixture.menuBarScreen.visibleFrame.contains(multi.panel!.frame),
+                       "A session target on another display does not pull the panel away from the pointer")
         multi.displays.screens = [Fixture.menuBarScreen]
         multi.center.post(name: NSApplication.didChangeScreenParametersNotification, object: nil)
         await Harness.flush()
         Harness.expect(Fixture.menuBarScreen.visibleFrame.contains(multi.panel!.frame),
                        "A disconnected display falls back to the session display")
+    }
+
+    @MainActor
+    private static func activeSessionFollowsPointerDisplay() async {
+        let left = DictationPanelScreen(id: "left", visibleFrame: CGRect(x: -21920, y: -20310, width: 1920, height: 1080))
+        let fixture = Fixture(screens: [Fixture.menuBarScreen, left], pointer: "primary", session: "primary")
+        defer { fixture.teardown() }
+        await fixture.start()
+        Harness.expect(fixture.displays.pointerMoved == nil, "Idle dictation does not watch the pointer")
+        fixture.service.state = .listening
+        await Harness.flush()
+        Harness.expect(Fixture.menuBarScreen.visibleFrame.contains(fixture.panel!.frame), "Listening opens on the pointer display")
+        fixture.displays.pointer = "left"
+        fixture.displays.pointerMoved?()
+        await Harness.flush()
+        Harness.expect(left.visibleFrame.contains(fixture.panel!.frame), "The panel jumps to the display the pointer moved onto")
+        fixture.service.state = .transcribing
+        await Harness.flush()
+        fixture.displays.pointer = "primary"
+        fixture.displays.pointerMoved?()
+        await Harness.flush()
+        Harness.expect(Fixture.menuBarScreen.visibleFrame.contains(fixture.panel!.frame), "The panel keeps following during transcription")
+        fixture.service.state = .succeeded("Hello.")
+        await Harness.flush()
+        Harness.expect(fixture.displays.pointerMoved == nil, "The pointer watch stops when the session ends")
+        expectNoKeyFocus(fixture, "Pointer following")
     }
 
     @MainActor

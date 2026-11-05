@@ -85,6 +85,44 @@ private final class DictationCorrectionObservation {
     }
 }
 
+private struct PasteboardSnapshot {
+    let items: [[NSPasteboard.PasteboardType: Data]]
+    let isComplete: Bool
+
+    init(pasteboard: NSPasteboard) {
+        var capturedItems: [[NSPasteboard.PasteboardType: Data]] = []
+        var capturedEveryType = true
+        for item in pasteboard.pasteboardItems ?? [] {
+            var capturedItem: [NSPasteboard.PasteboardType: Data] = [:]
+            for type in item.types {
+                guard let data = item.data(forType: type) else {
+                    capturedEveryType = false
+                    continue
+                }
+                capturedItem[type] = data
+            }
+            capturedItems.append(capturedItem)
+        }
+        items = capturedItems
+        isComplete = capturedEveryType
+    }
+
+    @discardableResult
+    func restore(to pasteboard: NSPasteboard) -> Bool {
+        pasteboard.clearContents()
+        guard !items.isEmpty else { return true }
+
+        let restoredItems = items.map { storedItem -> NSPasteboardItem in
+            let item = NSPasteboardItem()
+            for (type, data) in storedItem {
+                item.setData(data, forType: type)
+            }
+            return item
+        }
+        return pasteboard.writeObjects(restoredItems)
+    }
+}
+
 @_silgen_name("_AXUIElementGetWindow")
 private func _AXUIElementGetWindow(_ element: AXUIElement, _ identifier: UnsafeMutablePointer<CGWindowID>) -> AXError
 
@@ -192,6 +230,10 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
     private static let correctionPollInterval: TimeInterval = 0.5
     private static let correctionStabilityInterval: UInt64 = 2_000_000_000
     private static let correctionSnapshotGrace: UInt64 = 2_000_000_000
+    private static let pasteKeyCode: CGKeyCode = 9
+    private static let transientPasteboardType = NSPasteboard.PasteboardType(
+        "org.nspasteboard.TransientType"
+    )
     private static let protectedContentAttribute = "AXContainsProtectedContent"
     private static let isFocusedAttribute = kAXFocusedAttribute as String
 
@@ -799,10 +841,14 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
                 return
             }
 
-            complete([
-                "authorized": true, "success": false, "method": "accessibility",
-                "disposition": "partialUnknown", "verified": false, "error": "axInsertionFailed",
-            ])
+            guard target.allowsPasteFallback else {
+                complete([
+                    "authorized": true, "success": false, "method": "accessibility",
+                    "disposition": "partialUnknown", "verified": false, "error": "axInsertionFailed",
+                ])
+                return
+            }
+            self.insertWithGuardedPaste(text, target: target, reply: complete)
         }
     }
 
@@ -1630,6 +1676,133 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
         )
     }
 
+    private func insertWithGuardedPaste(
+        _ text: String,
+        target: CapturedTextTarget,
+        reply: @escaping (NSDictionary) -> Void
+    ) {
+        guard isStillFocused(target) else {
+            reply(textInsertionFailure(authorized: true, error: "focusChanged"))
+            return
+        }
+        guard let eventSource = CGEventSource(stateID: .hidSystemState),
+              let keyDown = CGEvent(
+                keyboardEventSource: eventSource,
+                virtualKey: Self.pasteKeyCode,
+                keyDown: true
+              ),
+              let keyUp = CGEvent(
+                keyboardEventSource: eventSource,
+                virtualKey: Self.pasteKeyCode,
+                keyDown: false
+              ) else {
+            reply(textInsertionFailure(authorized: true, error: "pasteEventUnavailable"))
+            return
+        }
+
+        keyDown.flags = .maskCommand
+        keyUp.flags = .maskCommand
+
+        let pasteboard = NSPasteboard.general
+        let snapshot = PasteboardSnapshot(pasteboard: pasteboard)
+        guard snapshot.isComplete else {
+            reply(textInsertionFailure(authorized: true, error: "clipboardSnapshotUnavailable"))
+            return
+        }
+        let transcriptItem = NSPasteboardItem()
+        transcriptItem.setString(text, forType: .string)
+        transcriptItem.setData(Data(), forType: Self.transientPasteboardType)
+
+        pasteboard.clearContents()
+        guard pasteboard.writeObjects([transcriptItem]) else {
+            _ = snapshot.restore(to: pasteboard)
+            reply(textInsertionFailure(authorized: true, error: "pasteboardWriteFailed"))
+            return
+        }
+        let injectedChangeCount = pasteboard.changeCount
+
+        // Re-check after touching the pasteboard and immediately before sending
+        // Cmd-V. This closes the last focus-change window before the side effect.
+        guard isStillFocused(target) else {
+            if pasteboard.changeCount == injectedChangeCount {
+                _ = snapshot.restore(to: pasteboard)
+            }
+            reply(textInsertionFailure(authorized: true, error: "focusChanged"))
+            return
+        }
+        guard let expectation = pasteMutationExpectation(text, into: target.element) else {
+            if pasteboard.changeCount == injectedChangeCount {
+                _ = snapshot.restore(to: pasteboard)
+            }
+            reply(textInsertionFailure(authorized: true, error: "pasteVerificationUnavailable"))
+            return
+        }
+
+        keyDown.post(tap: .cghidEventTap)
+        keyUp.post(tap: .cghidEventTap)
+
+        waitForPasteConfirmation(
+            expectation: expectation,
+            target: target,
+            pasteboard: pasteboard,
+            injectedChangeCount: injectedChangeCount,
+            snapshot: snapshot,
+            attemptsRemaining: 20,
+            reply: reply
+        )
+    }
+
+    private func waitForPasteConfirmation(
+        expectation: PasteMutationExpectation,
+        target: CapturedTextTarget,
+        pasteboard: NSPasteboard,
+        injectedChangeCount: Int,
+        snapshot: PasteboardSnapshot,
+        attemptsRemaining: Int,
+        reply: @escaping (NSDictionary) -> Void
+    ) {
+        if expectation.confirms(
+            currentValue: copyString(target.element, attribute: kAXValueAttribute as String)
+        ) {
+            let shouldRestore = pasteboard.changeCount == injectedChangeCount
+            let restored = shouldRestore ? snapshot.restore(to: pasteboard) : false
+            reply([
+                "authorized": true,
+                "success": true,
+                "method": "paste",
+                "verified": true,
+                "clipboardRestored": restored,
+            ])
+            return
+        }
+        guard attemptsRemaining > 0 else {
+            // Keep the transcript on the clipboard when consumption is not
+            // confirmed. Restoring here could make a delayed Cmd-V insert the
+            // user's previous clipboard contents.
+            reply([
+                "authorized": true,
+                "success": false,
+                "method": "paste",
+                "verified": false,
+                "clipboardRestored": false,
+                "disposition": "partialUnknown",
+                "error": "pasteNotConfirmed",
+            ])
+            return
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            self?.waitForPasteConfirmation(
+                expectation: expectation,
+                target: target,
+                    pasteboard: pasteboard,
+                injectedChangeCount: injectedChangeCount,
+                snapshot: snapshot,
+                attemptsRemaining: attemptsRemaining - 1,
+                reply: reply
+            )
+        }
+    }
+
     private func waitForAccessibilityConfirmation(
         expectation: PasteMutationExpectation,
         target: CapturedTextTarget,
@@ -1643,9 +1816,19 @@ class GojoXPCHelper: NSObject, GojoXPCHelperProtocol {
             return
         }
         guard attemptsRemaining > 0 else {
+            // Chromium and Electron fields accept AXSelectedText without
+            // changing their value. Paste only when the field is provably
+            // untouched, so the transcript cannot land twice.
+            let currentValue = copyString(target.element, attribute: kAXValueAttribute as String)
+            if target.allowsPasteFallback,
+               expectation.confirmsNoMutation(currentValue: currentValue),
+               isStillFocused(target) {
+                insertWithGuardedPaste(expectation.insertionText, target: target, reply: reply)
+                return
+            }
             reply([
-                "authorized": true, "success": true, "method": "accessibility", "verified": false,
-                "disposition": "allDispatched", "error": "axInsertionNotConfirmed",
+                "authorized": true, "success": false, "method": "accessibility", "verified": false,
+                "disposition": "partialUnknown", "error": "axInsertionNotConfirmed",
             ])
             return
         }

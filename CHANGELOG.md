@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.2] — 2026-11-04
+
+### Fixed
+
+- Dictation inserts text again in Chromium and Electron apps such as browsers, Slack, VS Code and T3 Code. When a field ignores direct text insertion, Gojo pastes the transcript and confirms it landed. Text that cannot be confirmed is saved for copying instead of being reported as delivered.
+
 ## [1.8.1] — 2026-11-02
 
 ### Added

@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.8.2] — 2026-11-04
 
+### Changed
+
+- Dictation now inserts text where your caret is when the transcript is ready. You can click into a different field while you speak. If no text field has the caret, the transcript is saved for copying.
+- While you dictate, the dictation panel moves to the display that has your mouse pointer.
+
 ### Fixed
 
 - Dictation inserts text again in Chromium and Electron apps such as browsers, Slack, VS Code and T3 Code. When a field ignores direct text insertion, Gojo pastes the transcript and confirms it landed. Text that cannot be confirmed is saved for copying instead of being reported as delivered.

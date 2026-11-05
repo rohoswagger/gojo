@@ -13,6 +13,7 @@ struct DictationPanelDisplays {
     var screens: @MainActor () -> [DictationPanelScreen]
     var pointerDisplayID: @MainActor () -> String?
     var sessionDisplayID: @MainActor () -> String?
+    var watchPointer: @MainActor (@escaping @MainActor () -> Void) -> () -> Void = { _ in {} }
 
     @MainActor
     static func live(service: GojoDictationService) -> DictationPanelDisplays {
@@ -26,6 +27,12 @@ struct DictationPanelDisplays {
             sessionDisplayID: {
                 (NSScreen.screens.first { $0.directDisplayID == service.sessionDisplayID }
                     ?? NSScreen.main ?? NSScreen.screens.first)?.displayUUID
+            },
+            watchPointer: { moved in
+                let monitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged, .rightMouseDragged]) { _ in
+                    MainActor.assumeIsolated { moved() }
+                }
+                return { if let monitor { NSEvent.removeMonitor(monitor) } }
             }
         )
     }
@@ -72,6 +79,7 @@ final class DictationPanelController {
     private var displayedOnID: String?
     private var preferences: DictationPanelPreferences
     private var lastServiceState: DictationState?
+    private var stopPointerWatch: (() -> Void)?
 
     private var isPresented = false
     private var isHiding = false
@@ -198,12 +206,6 @@ final class DictationPanelController {
         notificationCenter.publisher(for: NSApplication.didChangeScreenParametersNotification)
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.screensChanged() }
-            .store(in: &subscriptions)
-        service.$sessionDisplayID
-            .removeDuplicates()
-            .dropFirst()
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in self?.reassertPanel(followSession: true) }
             .store(in: &subscriptions)
         workspaceNotificationCenter.publisher(for: NSWorkspace.activeSpaceDidChangeNotification)
             .receive(on: RunLoop.main)
@@ -338,6 +340,14 @@ final class DictationPanelController {
         }
         let previousServiceState = lastServiceState
         lastServiceState = state
+        if isActive(state) {
+            if stopPointerWatch == nil {
+                stopPointerWatch = displays.watchPointer { [weak self] in self?.pointerMoved() }
+            }
+        } else {
+            stopPointerWatch?()
+            stopPointerWatch = nil
+        }
         if isActive(state), previousServiceState.map({ !isActive($0) }) ?? true {
             consumedRecovery = nil
             canonicalRecoveryText = ""
@@ -666,13 +676,17 @@ final class DictationPanelController {
     /// Re-asserts an intentionally visible panel after a Space or frontmost-app
     /// change without activating Gojo or taking key focus. Timer-hidden and
     /// manually dismissed panels stay hidden.
-    private func reassertPanel(followSession: Bool = false) {
+    private func pointerMoved() {
+        guard isPresented, !isHiding, let pointer = displays.pointerDisplayID(), pointer != displayedOnID else { return }
+        screensChanged(preferredDisplayID: pointer)
+    }
+
+    private func reassertPanel() {
         guard isPresented, !isHiding, let panel else { return }
         panel.level = DictationFloatingPanel.presentationLevel
         panel.collectionBehavior = DictationFloatingPanel.presentationBehavior
         panel.orderFrontRegardless()
-        let target = followSession ? displays.sessionDisplayID() : displays.pointerDisplayID()
-        screensChanged(preferredDisplayID: target)
+        screensChanged(preferredDisplayID: displays.pointerDisplayID())
     }
 
     private func placePanel(preferredDisplayID: String?) {

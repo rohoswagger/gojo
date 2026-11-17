@@ -204,6 +204,13 @@ struct GeneralSettings: View {
                         name: Notification.Name.showOnAllDisplaysChanged, object: nil)
                 }
                 Picker("Preferred display", selection: $coordinator.preferredScreenUUID) {
+                    if let preferredUUID = coordinator.preferredScreenUUID {
+                        if !screens.contains(where: { $0.uuid == preferredUUID }) {
+                            Text("Disconnected display").tag(preferredUUID as String?)
+                        }
+                    } else {
+                        Text("No preferred display").tag(nil as String?)
+                    }
                     ForEach(screens, id: \.uuid) { screen in
                         Text(screen.name).tag(screen.uuid as String?)
                     }

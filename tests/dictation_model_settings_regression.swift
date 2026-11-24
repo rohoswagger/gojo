@@ -276,8 +276,16 @@ private struct DictationModelSettingsRegression {
                     let recognition = VNRecognizeTextRequest()
                     recognition.recognitionLevel = .accurate
                     recognition.usesLanguageCorrection = true
-                    recognition.customWords = ["Verifying", "Verifying model"]
-                    try VNImageRequestHandler(cgImage: image).perform([recognition])
+                    let recognitionBitmap = NSBitmapImageRep(
+                        bitmapDataPlanes: nil, pixelsWide: 500, pixelsHigh: 700,
+                        bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                        colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
+                    )!
+                    let context = NSGraphicsContext(bitmapImageRep: recognitionBitmap)!
+                    context.imageInterpolation = .high
+                    context.cgContext.draw(image, in: CGRect(x: 0, y: 0, width: 500, height: 700))
+                    context.flushGraphics()
+                    try VNImageRequestHandler(cgImage: recognitionBitmap.cgImage!).perform([recognition])
                     let observations = recognition.results ?? []
                     let rendered = observations.compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
                     for text in ["Speech models", "Parakeet Unified", "Parakeet v3", "Underdog Bark 3.0 Clean", "Underdog Bark 3.0", "Whisper Small", "Whisper Large v3"] {

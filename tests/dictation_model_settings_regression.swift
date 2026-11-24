@@ -278,6 +278,17 @@ private struct DictationModelSettingsRegression {
                     recognition.usesLanguageCorrection = true
                     try VNImageRequestHandler(cgImage: image).perform([recognition])
                     let observations = recognition.results ?? []
+                    let recognitionBitmap = NSBitmapImageRep(
+                        bitmapDataPlanes: nil, pixelsWide: 500, pixelsHigh: 700,
+                        bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                        colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0
+                    )!
+                    let context = NSGraphicsContext(bitmapImageRep: recognitionBitmap)!
+                    context.imageInterpolation = .high
+                    context.cgContext.draw(image, in: CGRect(x: 0, y: 0, width: 500, height: 700))
+                    context.flushGraphics()
+                    try VNImageRequestHandler(cgImage: recognitionBitmap.cgImage!).perform([recognition])
+                    let logicalResolutionText = (recognition.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
                     let rendered = observations.compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
                     for text in ["Speech models", "Parakeet Unified", "Parakeet v3", "Underdog Bark 3.0 Clean", "Underdog Bark 3.0", "Whisper Small", "Whisper Large v3"] {
                         if !rendered.localizedCaseInsensitiveContains(text) { failures.append("\(name): missing rendered text \(text)") }
@@ -291,7 +302,10 @@ private struct DictationModelSettingsRegression {
                     default: expectedProgress = nil
                     }
                     for label in progressLabels {
-                        let count = rendered.components(separatedBy: label).count - 1
+                        let count = max(
+                            rendered.components(separatedBy: label).count - 1,
+                            logicalResolutionText.components(separatedBy: label).count - 1
+                        )
                         let expectedCount = label == expectedProgress ? 1 : 0
                         if count != expectedCount { failures.append("\(name): expected \(expectedCount) progress label \(label), found \(count)") }
                     }

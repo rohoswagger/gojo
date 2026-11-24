@@ -276,6 +276,7 @@ private struct DictationModelSettingsRegression {
                     let recognition = VNRecognizeTextRequest()
                     recognition.recognitionLevel = .accurate
                     recognition.usesLanguageCorrection = true
+                    recognition.customWords = ["Verifying", "Verifying model"]
                     try VNImageRequestHandler(cgImage: image).perform([recognition])
                     let observations = recognition.results ?? []
                     let rendered = observations.compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
